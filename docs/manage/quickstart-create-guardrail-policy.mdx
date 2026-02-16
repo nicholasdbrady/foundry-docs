@@ -1,0 +1,73 @@
+---
+title: "Quickstart: Create a Guardrail Policy"
+description: "Learn how to create a guardrail policy for model deployments in Microsoft Foundry so that you can govern the usage of guardrail controls across your subscription."
+---
+# Quickstart: Create a guardrail policy
+
+In this quickstart, you create a policy in Microsoft Foundry to govern the use of guardrail controls for model deployments across your subscription.
+
+When you create a policy assignment in Foundry, the system creates a series of individual policies and associates them with a policy initiative. In the Foundry portal, you view the status of the policy initiative rather than individual policies. You can also review and manage these policies directly in Azure Policy via the Azure portal.
+
+## Prerequisites
+
+- An Azure account with an active subscription. If you don't have one, create a [free Azure account, which includes a free trial subscription](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
+
+- A Foundry project. If you don't have one, [create a project](/setup/create-projects).
+
+- The appropriate roles for using Azure Policy to create a policy for your subscription. You can learn more about Azure Policy roles in the [overview of Azure Policy](https://learn.microsoft.com/azure/governance/policy/overview#azure-policy-and-azure-rbac).
+
+<Note>
+This capability is available only in the [Microsoft Foundry (new) portal](/overview/what-is-foundry#microsoft-foundry-portals).
+</Note>
+## Create the guardrail policy
+
+1. Sign in to [Microsoft Foundry](https://ai.azure.com/?cid=learnDocs). Make sure the **New Foundry** toggle is on. These steps refer to **Foundry (new)**.
+
+![](/images/new-foundry.png)
+
+1. On the toolbar, select **Operate**.
+
+1. On the left pane, select **Compliance**.
+
+1. Select **Create policy**.
+
+    ![Screenshot of the Compliance pane of Foundry Control Plane.](/images/compliance-tab.png)
+
+1. Select the controls to add to the policy. Guardrail controls include content safety filters, prompt shields, and groundedness checks that help ensure the safe and responsible operation of your AI models. These controls represent the minimum settings required for a model deployment to be considered compliant with the policy.
+
+    As you configure each control, select **Add control** to add it to the policy.
+
+    ![Screenshot of the area for adding controls.](/images/create-new-policy.png)
+
+1. Select **Next** to move to scope selection. You can scope your policy to a single subscription or a resource group.
+
+   Select the desired scope, select the subscription or resource group that you want to apply to the policy, and then choose **Select**.
+
+    ![Screenshot of the area for selecting a scope.](/images/select-scope.png)
+
+1. Select **Next** to add exceptions to the policy. The exception options depend on your scope selection:
+   - If you scoped to a *subscription*, you can create exceptions for entire resource groups or individual model deployments within that subscription.
+   - If you scoped to a *resource group*, you can create exceptions only for individual model deployments.
+
+    ![Screenshot of the area for configuring exceptions.](/images/select-exception.png)
+
+1. Select **Next** to move to the review stage. Here, you name your policy and review the scope, exceptions, and controls that define the policy. When you're ready, select **Submit** to create the policy.
+
+    ![Screenshot of the area for reviewing and submitting a guardrail policy.](/images/submit-policy.png)
+
+## Verify your policy
+
+After you submit your policy, verify that it was created successfully:
+
+1. On the **Compliance** pane, select the **Policies** tab.
+
+1. Locate your newly created policy in the policy list.
+
+1. Check that the policy name, scope, and status are correct.
+
+<Note>
+It takes some time for Azure Policy to perform a compliance scan. Initial compliance results might not appear immediately after policy creation.
+</Note>
+## Related content
+
+- [Register and manage custom agents](/manage/register-custom-agent)

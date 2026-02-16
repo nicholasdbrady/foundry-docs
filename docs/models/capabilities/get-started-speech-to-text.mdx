@@ -1,0 +1,1096 @@
+---
+title: "Speech to text quickstart"
+description: "In this quickstart, learn how to use the Speech service for real-time speech to text conversion."
+sidebarTitle: "Speech to text quickstart"
+---
+# Quickstart: Recognize and convert speech to text
+
+In this quickstart, you try real-time speech to text in [Microsoft Foundry](https://ai.azure.com/?cid=learnDocs). 
+
+## Prerequisites
+
+- An Azure subscription. [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
+- A Foundry project. If you need to create a project, see [Create a Microsoft Foundry project](../../../../../ai-foundry/how-to/create-projects.md).
+
+## Try real-time speech to text
+
+#### [Foundry (new) portal](#tab/new-foundry)
+
+1. Sign in to [Microsoft Foundry](https://ai.azure.com/?cid=learnDocs). Make sure the **New Foundry** toggle is on. These steps refer to **Foundry (new)**.
+
+![](/images/new-foundry.png)
+1. Select **Build** from the top right menu.
+1. Select **Models** on the left pane. 
+1. The **AI Services** tab shows the Foundry models that can be used out of the box in the Foundry portal. Select **Azure Speech - Speech to text** to open the Speech to Text playground.
+1. Optionally use the **Parameters** section to change the task, language, profanity policy, and other settings. You can also add special instructions for the LLM.
+1. Use the **Upload files** section to select your audio file. Then select **Start**.
+1. View the transcription output in the **Transcript** tab. Optionally view the raw API response output in the **JSON** tab.
+1. Switch to the **Code** tab to get the sample code for using the speech to text feature in your application.
+
+## Other Foundry (new) features
+
+The following Speech features are available in the Foundry (new) portal:
+- [Speech MCP server](https://learn.microsoft.com/azure/ai-foundry/agents/how-to/tools/azure-ai-speech)
+- [Speech to text quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/get-started-speech-to-text)
+- [Text to speech quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/get-started-text-to-speech)
+- [Text to speech avatar quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/text-to-speech-avatar/batch-synthesis-avatar)
+- [Voice live quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/voice-live-quickstart)
+
+#### [Foundry (classic) portal](#tab/classic-foundry)
+
+1. Sign in to [Microsoft Foundry](https://ai.azure.com/?cid=learnDocs).  Make sure the **New Foundry** toggle is off.  These steps refer to **Foundry (classic)**.
+
+![](/images/classic-foundry.png)
+1. Select **Playgrounds** from the left pane and then select a playground to use. In this example, select **Try the Speech playground**.
+
+    ![Screenshot of the project level playgrounds that you can use.](/images/azure-ai-services-playgrounds.png)
+
+1. Select **Real-time transcription**.
+1. Select **Show advanced options** to configure speech to text options such as: 
+
+    - **Language identification**: Used to identify languages spoken in audio when compared against a list of supported languages. For more information about language identification options such as at-start and continuous recognition, see [Language identification](../../../language-identification.md).
+    - **Speaker diarization**: Used to identify and separate speakers in audio. Diarization distinguishes between the different speakers who participate in the conversation. The Speech service provides information about which speaker was speaking a particular part of transcribed speech. For more information about speaker diarization, see the [real-time speech to text with speaker diarization](../../../get-started-stt-diarization.md) quickstart.
+    - **Custom endpoint**: Use a deployed model from custom speech to improve recognition accuracy. To use Microsoft's baseline model, leave this set to None. For more information about custom speech, see [Custom Speech](../../../custom-speech-overview.md).
+    - **Output format**: Choose between simple and detailed output formats. Simple output includes display format and timestamps. Detailed output includes more formats (such as display, lexical, ITN, and masked ITN), timestamps, and N-best lists. 
+    - **Phrase list**: Improve transcription accuracy by providing a list of known phrases, such as names of people or specific locations. Use commas or semicolons to separate each value in the phrase list. For more information about phrase lists, see [Phrase lists](../../../improve-accuracy-phrase-list.md).
+
+1. Select an audio file to upload, or record audio in real-time. In this example, we use the `Call1_separated_16k_health_insurance.wav` file that's available in the [Speech SDK repository on GitHub](https://github.com/Azure-Samples/cognitive-services-speech-sdk/raw/master/scenarios/call-center/sampledata/Call1_separated_16k_health_insurance.wav). You can download the file or use your own audio file.
+
+    ![Screenshot of the option to select an audio file or speak into a microphone.](/images/real-time-speech-to-text-audio.png)
+
+1. You can view the real-time transcription at the bottom of the page.
+
+    ![Screenshot of the real-time transcription results in Microsoft Foundry.](/images/real-time-speech-to-text-results.png)
+
+1. You can select the **JSON** tab to see the JSON output of the transcription. Properties include `Offset`, `Duration`, `RecognitionStatus`, `Display`, `Lexical`, `ITN`, and more.
+
+    ![Screenshot of the real-time transcription results in JSON format in Microsoft Foundry.](/images/real-time-speech-to-text-results-json.png)
+## Prerequisites
+
+## Set up the environment
+
+The Speech SDK is available as a [NuGet package](https://www.nuget.org/packages/Microsoft.CognitiveServices.Speech) and implements .NET Standard 2.0. You install the Speech SDK later in this guide. For any other requirements, see [Install the Speech SDK](../../../quickstarts/setup-platform.md).
+
+### Set environment variables
+
+## Recognize speech from a microphone
+
+<Tip>
+Try out the [Azure Speech in Foundry Tools Toolkit](https://marketplace.visualstudio.com/items?itemName=ms-azureaispeech.azure-ai-speech-toolkit) to easily build and run samples on Visual Studio Code.
+</Tip>
+Follow these steps to create a console application and install the Speech SDK.
+
+1. Open a command prompt window in the folder where you want the new project. Run this command to create a console application with the .NET CLI.
+
+   ```dotnetcli
+   dotnet new console
+   ```
+
+   This command creates the *Program.cs* file in your project directory.
+
+1. Install the Speech SDK in your new project with the .NET CLI.
+
+   ```dotnetcli
+   dotnet add package Microsoft.CognitiveServices.Speech
+   ```
+
+1. Replace the contents of *Program.cs* with the following code:
+
+   ```csharp
+   using System;
+   using System.IO;
+   using System.Threading.Tasks;
+   using Microsoft.CognitiveServices.Speech;
+   using Microsoft.CognitiveServices.Speech.Audio;
+
+   class Program 
+   {
+       // This example requires environment variables named "SPEECH_KEY" and "ENDPOINT"
+       static string speechKey = Environment.GetEnvironmentVariable("SPEECH_KEY");
+       static string endpoint = Environment.GetEnvironmentVariable("ENDPOINT");
+
+       static void OutputSpeechRecognitionResult(SpeechRecognitionResult speechRecognitionResult)
+       {
+           switch (speechRecognitionResult.Reason)
+           {
+               case ResultReason.RecognizedSpeech:
+                   Console.WriteLine($"RECOGNIZED: Text={speechRecognitionResult.Text}");
+                   break;
+               case ResultReason.NoMatch:
+                   Console.WriteLine($"NOMATCH: Speech could not be recognized.");
+                   break;
+               case ResultReason.Canceled:
+                   var cancellation = CancellationDetails.FromResult(speechRecognitionResult);
+                   Console.WriteLine($"CANCELED: Reason={cancellation.Reason}");
+
+                   if (cancellation.Reason == CancellationReason.Error)
+                   {
+                       Console.WriteLine($"CANCELED: ErrorCode={cancellation.ErrorCode}");
+                       Console.WriteLine($"CANCELED: ErrorDetails={cancellation.ErrorDetails}");
+                       Console.WriteLine($"CANCELED: Did you set the speech resource key and endpoint values?");
+                   }
+                   break;
+           }
+       }
+
+       async static Task Main(string[] args)
+       {
+           var speechConfig = SpeechConfig.FromEndpoint(new Uri(endpoint), speechKey);
+           speechConfig.SpeechRecognitionLanguage = "en-US";
+
+           using var audioConfig = AudioConfig.FromDefaultMicrophoneInput();
+           using var speechRecognizer = new SpeechRecognizer(speechConfig, audioConfig);
+
+           Console.WriteLine("Speak into your microphone.");
+           var speechRecognitionResult = await speechRecognizer.RecognizeOnceAsync();
+           OutputSpeechRecognitionResult(speechRecognitionResult);
+       }
+   }
+   ```
+
+1. To change the speech recognition language, replace `en-US` with another [supported language](~/articles/ai-services/speech-service/language-support.md). For example, use `es-ES` for Spanish (Spain). If you don't specify a language, the default is `en-US`. For details about how to identify one of multiple languages that might be spoken, see [Language identification](~/articles/ai-services/speech-service/language-identification.md).
+
+1. Run your new console application to start speech recognition from a microphone:
+
+   ```console
+   dotnet run
+   ```
+
+   <Warning>
+
+</Warning>   > Make sure that you set the `SPEECH_KEY` and `ENDPOINT` [environment variables](#set-environment-variables). If you don't set these variables, the sample fails with an error message.
+
+1. Speak into your microphone when prompted. What you speak should appear as text:
+
+   ```output
+   Speak into your microphone.
+   RECOGNIZED: Text=I'm excited to try speech to text.
+   ```
+
+## Remarks
+
+Here are some other considerations:
+
+- This example uses the `RecognizeOnceAsync` operation to transcribe utterances of up to 30 seconds, or until silence is detected. For information about continuous recognition for longer audio, including multi-lingual conversations, see [How to recognize speech](~/articles/ai-services/speech-service/how-to-recognize-speech.md).
+- To recognize speech from an audio file, use `FromWavFileInput` instead of `FromDefaultMicrophoneInput`:
+
+   ```csharp
+   using var audioConfig = AudioConfig.FromWavFileInput("YourAudioFile.wav");
+   ```
+
+- For compressed audio files such as MP4, install GStreamer and use `PullAudioInputStream` or `PushAudioInputStream`. For more information, see [How to use compressed input audio](~/articles/ai-services/speech-service/how-to-use-codec-compressed-audio-input-streams.md).
+
+## Clean up resources
+
+## Prerequisites
+
+## Set up the environment
+
+The Speech SDK is available as a [NuGet package](https://www.nuget.org/packages/Microsoft.CognitiveServices.Speech) and implements .NET Standard 2.0. You install the Speech SDK later in this guide. For other requirements, see [Install the Speech SDK](../../../quickstarts/setup-platform.md).
+
+### Set environment variables
+
+## Recognize speech from a microphone
+
+<Tip>
+Try out the [Azure Speech in Foundry Tools Toolkit](https://marketplace.visualstudio.com/items?itemName=ms-azureaispeech.azure-ai-speech-toolkit) to easily build and run samples on Visual Studio Code.
+</Tip>
+Follow these steps to create a console application and install the Speech SDK.
+
+1. Create a new C++ console project in [Visual Studio Community](https://visualstudio.microsoft.com/downloads/) named `SpeechRecognition`.
+
+1. Select **Tools** > **Nuget Package Manager** > **Package Manager Console**. In the **Package Manager Console**, run this command:
+
+    ```console
+    Install-Package Microsoft.CognitiveServices.Speech
+    ```
+
+1. Replace the contents of `SpeechRecognition.cpp` with the following code:
+
+   ```cpp
+   #include <iostream> 
+   #include <stdlib.h>
+   #include <speechapi_cxx.h>
+    
+   using namespace Microsoft::CognitiveServices::Speech;
+   using namespace Microsoft::CognitiveServices::Speech::Audio;
+    
+   std::string GetEnvironmentVariable(const char* name);
+    
+   int main()
+   {
+       // This example requires environment variables named "SPEECH_KEY" and "ENDPOINT"
+       auto speechKey = GetEnvironmentVariable("SPEECH_KEY");
+       auto endpoint = GetEnvironmentVariable("ENDPOINT");
+        
+       if (std::string(speechKey).empty() || std::string(endpoint).empty()) {
+           std::cout << "Please set both SPEECH_KEY and ENDPOINT environment variables." << std::endl;
+           return -1;
+       }
+    
+       auto speechConfig = SpeechConfig::FromEndpoint(endpoint, speechKey);
+    
+       speechConfig->SetSpeechRecognitionLanguage("en-US");
+    
+       auto audioConfig = AudioConfig::FromDefaultMicrophoneInput();
+       auto speechRecognizer = SpeechRecognizer::FromConfig(speechConfig, audioConfig);
+    
+       std::cout << "Speak into your microphone.\n";
+       auto result = speechRecognizer->RecognizeOnceAsync().get();
+    
+       if (result->Reason == ResultReason::RecognizedSpeech)
+       {
+           std::cout << "RECOGNIZED: Text=" << result->Text << std::endl;
+       }
+       else if (result->Reason == ResultReason::NoMatch)
+       {
+           std::cout << "NOMATCH: Speech could not be recognized." << std::endl;
+       }
+       else if (result->Reason == ResultReason::Canceled)
+       {
+           auto cancellation = CancellationDetails::FromResult(result);
+           std::cout << "CANCELED: Reason=" << (int)cancellation->Reason << std::endl;
+    
+           if (cancellation->Reason == CancellationReason::Error)
+           {
+               std::cout << "CANCELED: ErrorCode=" << (int)cancellation->ErrorCode << std::endl;
+               std::cout << "CANCELED: ErrorDetails=" << cancellation->ErrorDetails << std::endl;
+               std::cout << "CANCELED: Did you set the speech resource key and endpoint values?" << std::endl;
+           }
+       }
+   }
+    
+   std::string GetEnvironmentVariable(const char* name)
+   {
+   #if defined(_MSC_VER)
+       size_t requiredSize = 0;
+       (void)getenv_s(&requiredSize, nullptr, 0, name);
+       if (requiredSize == 0)
+       {
+           return "";
+       }
+       auto buffer = std::make_unique<char[]>(requiredSize);
+       (void)getenv_s(&requiredSize, buffer.get(), requiredSize, name);
+       return buffer.get();
+   #else
+       auto value = getenv(name);
+       return value ? value : "";
+   #endif
+   }
+   ```
+
+1. To change the speech recognition language, replace `en-US` with another [supported language](~/articles/ai-services/speech-service/language-support.md). For example, use `es-ES` for Spanish (Spain). If you don't specify a language, the default is `en-US`. For details about how to identify one of multiple languages that might be spoken, see [Language identification](~/articles/ai-services/speech-service/language-identification.md).
+
+1. To start speech recognition from a microphone, [Build and run](/cpp/build/vscpp-step-2-build) your new console application.
+
+   <Warning>
+
+</Warning>   > Make sure that you set the `SPEECH_KEY` and `ENDPOINT` [environment variables](#set-environment-variables). If you don't set these variables, the sample fails with an error message.
+
+1. Speak into your microphone when prompted. What you speak should appear as text:
+
+   ```output
+   Speak into your microphone.
+   RECOGNIZED: Text=I'm excited to try speech to text.
+   ```
+
+## Remarks
+
+Here are some other considerations:
+
+- This example uses the `RecognizeOnceAsync` operation to transcribe utterances of up to 30 seconds, or until silence is detected. For information about continuous recognition for longer audio, including multi-lingual conversations, see [How to recognize speech](~/articles/ai-services/speech-service/how-to-recognize-speech.md).
+- To recognize speech from an audio file, use `FromWavFileInput` instead of `FromDefaultMicrophoneInput`:
+
+  ```cpp
+  auto audioConfig = AudioConfig::FromWavFileInput("YourAudioFile.wav");
+  ```
+
+- For compressed audio files such as MP4, install GStreamer and use `PullAudioInputStream` or `PushAudioInputStream`. For more information, see [How to use compressed input audio](~/articles/ai-services/speech-service/how-to-use-codec-compressed-audio-input-streams.md).
+
+## Clean up resources
+
+## Prerequisites
+
+## Set up the environment
+
+Install the Speech SDK for Go. For requirements and instructions, see [Install the Speech SDK](../../../quickstarts/setup-platform.md).
+
+### Set environment variables
+
+## Recognize speech from a microphone
+
+Follow these steps to create a GO module.
+
+1. Open a command prompt window in the folder where you want the new project. Create a new file named  *speech-recognition.go*.
+
+1. Copy the following code into *speech-recognition.go*:
+
+   ```go
+   package main
+
+   import (
+       "bufio"
+       "fmt"
+       "os"
+
+       "github.com/Microsoft/cognitive-services-speech-sdk-go/audio"
+       "github.com/Microsoft/cognitive-services-speech-sdk-go/speech"
+   )
+
+   func sessionStartedHandler(event speech.SessionEventArgs) {
+       defer event.Close()
+       fmt.Println("Session Started (ID=", event.SessionID, ")")
+   }
+
+   func sessionStoppedHandler(event speech.SessionEventArgs) {
+       defer event.Close()
+       fmt.Println("Session Stopped (ID=", event.SessionID, ")")
+   }
+
+   func recognizingHandler(event speech.SpeechRecognitionEventArgs) {
+       defer event.Close()
+       fmt.Println("Recognizing:", event.Result.Text)
+   }
+
+   func recognizedHandler(event speech.SpeechRecognitionEventArgs) {
+       defer event.Close()
+       fmt.Println("Recognized:", event.Result.Text)
+   }
+
+   func cancelledHandler(event speech.SpeechRecognitionCanceledEventArgs) {
+       defer event.Close()
+       fmt.Println("Received a cancellation: ", event.ErrorDetails)
+       fmt.Println("Did you set the speech resource key and region values?")
+   }
+
+   func main() {
+       // This example requires environment variables named "SPEECH_KEY" and "SPEECH_REGION"
+       speechKey :=  os.Getenv("SPEECH_KEY")
+       speechRegion := os.Getenv("SPEECH_REGION")
+
+       audioConfig, err := audio.NewAudioConfigFromDefaultMicrophoneInput()
+       if err != nil {
+           fmt.Println("Got an error: ", err)
+           return
+       }
+       defer audioConfig.Close()
+       speechConfig, err := speech.NewSpeechConfigFromSubscription(speechKey, speechRegion)
+       if err != nil {
+           fmt.Println("Got an error: ", err)
+           return
+       }
+       defer speechConfig.Close()
+       speechRecognizer, err := speech.NewSpeechRecognizerFromConfig(speechConfig, audioConfig)
+       if err != nil {
+           fmt.Println("Got an error: ", err)
+           return
+       }
+       defer speechRecognizer.Close()
+       speechRecognizer.SessionStarted(sessionStartedHandler)
+       speechRecognizer.SessionStopped(sessionStoppedHandler)
+       speechRecognizer.Recognizing(recognizingHandler)
+       speechRecognizer.Recognized(recognizedHandler)
+       speechRecognizer.Canceled(cancelledHandler)
+       speechRecognizer.StartContinuousRecognitionAsync()
+       defer speechRecognizer.StopContinuousRecognitionAsync()
+       bufio.NewReader(os.Stdin).ReadBytes('\n')
+   }
+   ```
+
+1. Run the following commands to create a *go.mod* file that links to components hosted on GitHub:
+
+   ```cmd
+   go mod init speech-recognition
+   go get github.com/Microsoft/cognitive-services-speech-sdk-go
+   ```
+
+   <Warning>
+
+</Warning>   > Make sure that you set the `SPEECH_KEY` and `SPEECH_REGION` [environment variables](#set-environment-variables). If you don't set these variables, the sample fails with an error message.
+
+1. Build and run the code:
+
+   ```cmd
+   go build
+   go run speech-recognition
+   ```
+
+## Clean up resources
+
+## Prerequisites
+
+## Set up the environment
+
+To set up your environment, [install the Speech SDK](~/articles/ai-services/speech-service/quickstarts/setup-platform.md). The sample in this quickstart works with the [Java Runtime](~/articles/ai-services/speech-service/quickstarts/setup-platform.md).
+
+1. Install [Apache Maven](https://maven.apache.org/install.html). Then run `mvn -v` to confirm successful installation.
+1. Create a new `pom.xml` file in the root of your project, and copy the following code into it:
+
+   ```xml
+   <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+       <modelVersion>4.0.0</modelVersion>
+       <groupId>com.microsoft.cognitiveservices.speech.samples</groupId>
+       <artifactId>quickstart-eclipse</artifactId>
+       <version>1.0.0-SNAPSHOT</version>
+       <build>
+           <sourceDirectory>src</sourceDirectory>
+           <plugins>
+           <plugin>
+               <artifactId>maven-compiler-plugin</artifactId>
+               <version>3.7.0</version>
+               <configuration>
+               <source>1.8</source>
+               <target>1.8</target>
+               </configuration>
+           </plugin>
+           </plugins>
+       </build>
+       <dependencies>
+           <dependency>
+           <groupId>com.microsoft.cognitiveservices.speech</groupId>
+           <artifactId>client-sdk</artifactId>
+           <version>1.43.0</version>
+           </dependency>
+       </dependencies>
+   </project>
+   ```
+
+1. Install the Speech SDK and dependencies.
+
+   ```console
+   mvn clean dependency:copy-dependencies
+   ```
+
+### Set environment variables
+
+## Recognize speech from a microphone
+
+Follow these steps to create a console application for speech recognition.
+
+1. Create a new file named *SpeechRecognition.java* in the same project root directory.
+1. Copy the following code into *SpeechRecognition.java*:
+
+   ```java
+   import com.microsoft.cognitiveservices.speech.*;
+   import com.microsoft.cognitiveservices.speech.audio.AudioConfig;
+
+   import java.net.URI;
+   import java.net.URISyntaxException;
+   import java.util.concurrent.ExecutionException;
+   import java.util.concurrent.Future;
+
+   public class SpeechRecognition {
+       // This example requires environment variables named "SPEECH_KEY" and "ENDPOINT"
+       private static String speechKey = System.getenv("SPEECH_KEY");
+       private static String endpoint = System.getenv("ENDPOINT");
+
+       public static void main(String[] args) throws InterruptedException, ExecutionException, URISyntaxException {
+           SpeechConfig speechConfig = SpeechConfig.fromEndpoint(new URI(endpoint), speechKey);
+           speechConfig.setSpeechRecognitionLanguage("en-US");
+           recognizeFromMicrophone(speechConfig);
+       }
+
+       public static void recognizeFromMicrophone(SpeechConfig speechConfig) throws InterruptedException, ExecutionException {
+           AudioConfig audioConfig = AudioConfig.fromDefaultMicrophoneInput();
+           SpeechRecognizer speechRecognizer = new SpeechRecognizer(speechConfig, audioConfig);
+
+           System.out.println("Speak into your microphone.");
+           Future<SpeechRecognitionResult> task = speechRecognizer.recognizeOnceAsync();
+           SpeechRecognitionResult speechRecognitionResult = task.get();
+
+           if (speechRecognitionResult.getReason() == ResultReason.RecognizedSpeech) {
+               System.out.println("RECOGNIZED: Text=" + speechRecognitionResult.getText());
+           }
+           else if (speechRecognitionResult.getReason() == ResultReason.NoMatch) {
+               System.out.println("NOMATCH: Speech could not be recognized.");
+           }
+           else if (speechRecognitionResult.getReason() == ResultReason.Canceled) {
+               CancellationDetails cancellation = CancellationDetails.fromResult(speechRecognitionResult);
+               System.out.println("CANCELED: Reason=" + cancellation.getReason());
+
+               if (cancellation.getReason() == CancellationReason.Error) {
+                   System.out.println("CANCELED: ErrorCode=" + cancellation.getErrorCode());
+                   System.out.println("CANCELED: ErrorDetails=" + cancellation.getErrorDetails());
+                   System.out.println("CANCELED: Did you set the speech resource key and endpoint values?");
+               }
+           }
+
+           System.exit(0);
+       }
+   }
+   ```
+
+1. To change the speech recognition language, replace `en-US` with another [supported language](~/articles/ai-services/speech-service/language-support.md). For example, use `es-ES` for Spanish (Spain). If you don't specify a language, the default is `en-US`. For details about how to identify one of multiple languages that might be spoken, see [Language identification](~/articles/ai-services/speech-service/language-identification.md).
+
+1. Run your new console application to start speech recognition from a microphone:
+
+   ```console
+   javac SpeechRecognition.java -cp ".;target\dependency\*"
+   java -cp ".;target\dependency\*" SpeechRecognition
+   ```
+
+   <Warning>
+
+</Warning>   > Make sure that you set the `SPEECH_KEY` and `ENDPOINT` [environment variables](#set-environment-variables). If you don't set these variables, the sample fails with an error message.
+
+1. Speak into your microphone when prompted. What you speak should appear as text:
+
+   ```output
+   Speak into your microphone.
+   RECOGNIZED: Text=I'm excited to try speech to text.
+   ```
+
+## Remarks
+
+Here are some other considerations:
+
+- This example uses the `RecognizeOnceAsync` operation to transcribe utterances of up to 30 seconds, or until silence is detected. For information about continuous recognition for longer audio, including multi-lingual conversations, see [How to recognize speech](~/articles/ai-services/speech-service/how-to-recognize-speech.md).
+- To recognize speech from an audio file, use `fromWavFileInput` instead of `fromDefaultMicrophoneInput`:
+
+   ```java
+   AudioConfig audioConfig = AudioConfig.fromWavFileInput("YourAudioFile.wav");
+   ```
+
+- For compressed audio files such as MP4, install GStreamer and use `PullAudioInputStream` or `PushAudioInputStream`. For more information, see [How to use compressed input audio](~/articles/ai-services/speech-service/how-to-use-codec-compressed-audio-input-streams.md).
+
+## Clean up resources
+
+## Prerequisites
+
+You also need a *.wav* audio file on your local machine. You can use your own *.wav* file (up to 30 seconds) or download the [https://crbn.us/whatstheweatherlike.wav](https://crbn.us/whatstheweatherlike.wav) sample file.
+
+## Setup
+
+1. Create a new folder `transcription-quickstart` and go to the quickstart folder with the following command:
+
+    ```shell
+    mkdir transcription-quickstart && cd transcription-quickstart
+    ```
+    
+1. Create the `package.json` with the following command:
+
+    ```shell
+    npm init -y
+    ```
+
+1. Install the Speech SDK for JavaScript with:
+
+    ```console
+    npm install microsoft-cognitiveservices-speech-sdk
+    ```
+
+### Retrieve resource information
+
+## Recognize speech from a file
+
+To transcribe speech from a file:
+
+1. Create a new file named *transcription.js* with the following content:
+
+    ```javascript
+    import { readFileSync, createReadStream } from "fs";
+    import { SpeechConfig, AudioConfig, ConversationTranscriber, AudioInputStream } from "microsoft-cognitiveservices-speech-sdk";
+    // This example requires environment variables named "ENDPOINT" and "SPEECH_KEY"
+    const speechConfig = SpeechConfig.fromEndpoint(new URL(process.env.ENDPOINT), process.env.SPEECH_KEY);
+    function fromFile() {
+        const filename = "katiesteve.wav";
+        const audioConfig = AudioConfig.fromWavFileInput(readFileSync(filename));
+        const conversationTranscriber = new ConversationTranscriber(speechConfig, audioConfig);
+        const pushStream = AudioInputStream.createPushStream();
+        createReadStream(filename).on('data', function (chunk) {
+            pushStream.write(chunk.slice());
+        }).on('end', function () {
+            pushStream.close();
+        });
+        console.log("Transcribing from: " + filename);
+        conversationTranscriber.sessionStarted = function (s, e) {
+            console.log("SessionStarted event");
+            console.log("SessionId:" + e.sessionId);
+        };
+        conversationTranscriber.sessionStopped = function (s, e) {
+            console.log("SessionStopped event");
+            console.log("SessionId:" + e.sessionId);
+            conversationTranscriber.stopTranscribingAsync();
+        };
+        conversationTranscriber.canceled = function (s, e) {
+            console.log("Canceled event");
+            console.log(e.errorDetails);
+            conversationTranscriber.stopTranscribingAsync();
+        };
+        conversationTranscriber.transcribed = function (s, e) {
+            console.log("TRANSCRIBED: Text=" + e.result.text + " Speaker ID=" + e.result.speakerId);
+        };
+        // Start conversation transcription
+        conversationTranscriber.startTranscribingAsync(function () { }, function (err) {
+            console.trace("err - starting transcription: " + err);
+        });
+    }
+    fromFile();
+    ```
+
+    In *transcription.js*, replace *YourAudioFile.wav* with your own *.wav* file. This example only recognizes speech from a *.wav* file. For information about other audio formats, see [How to use compressed input audio](~/articles/ai-services/speech-service/how-to-use-codec-compressed-audio-input-streams.md). This example supports up to 30 seconds of audio.
+
+    To change the speech recognition language, replace `en-US` with another [supported language](~/articles/ai-services/speech-service/language-support.md). For example, use `es-ES` for Spanish (Spain). If you don't specify a language, the default is `en-US`. For details about how to identify one of multiple languages that might be spoken, see [Language identification](~/articles/ai-services/speech-service/language-identification.md).
+
+1. Run your new console application to start speech recognition from a file:
+
+   ```console
+   node transcription.js
+   ```
+
+Wait a few moments to get the response.
+
+## Output
+
+The speech from the audio file should be output as text:
+
+```output
+RECOGNIZED: Text=I'm excited to try speech to text.
+```
+
+## Remarks
+
+This example uses the `recognizeOnceAsync` operation to transcribe utterances of up to 30 seconds, or until silence is detected. For information about continuous recognition for longer audio, including multi-lingual conversations, see [How to recognize speech](~/articles/ai-services/speech-service/how-to-recognize-speech.md).
+
+<Note>
+Recognizing speech from a microphone is not supported in Node.js. It's supported only in a browser-based JavaScript environment. For more information, see the [React sample](https://github.com/Azure-Samples/AzureSpeechReactSample) and the [implementation of speech to text from a microphone](https://github.com/Azure-Samples/AzureSpeechReactSample/blob/main/src/App.js#L29) on GitHub.
+
+The React sample shows design patterns for the exchange and management of authentication tokens. It also shows the capture of audio from a microphone or file for speech to text conversions.
+</Note>
+## Clean up resources
+
+## Prerequisites
+
+## Set up the environment
+
+The Speech SDK for Python is available as a [Python Package Index (PyPI) module](https://pypi.org/project/azure-cognitiveservices-speech/). The Speech SDK for Python is compatible with Windows, Linux, and macOS.
+
+- For Windows, install the [Microsoft Visual C++ Redistributable for Visual Studio 2015, 2017, 2019, and 2022](/cpp/windows/latest-supported-vc-redist) for your platform. Installing this package for the first time might require a restart.
+- On Linux, you must use the x64 target architecture.
+
+Install a version of [Python from 3.7 or later](https://www.python.org/downloads/). For other requirements, see [Install the Speech SDK](../../../quickstarts/setup-platform.md).
+
+### Set environment variables
+
+## Recognize speech from a microphone
+
+<Tip>
+Try out the [Azure Speech in Foundry Tools Toolkit](https://marketplace.visualstudio.com/items?itemName=ms-azureaispeech.azure-ai-speech-toolkit) to easily build and run samples on Visual Studio Code.
+</Tip>
+Follow these steps to create a console application.
+
+1. Open a command prompt window in the folder where you want the new project. Create a new file named *speech_recognition.py*.
+
+1. Run this command to install the Speech SDK:  
+
+   ```console
+   pip install azure-cognitiveservices-speech
+   ```
+
+1. Copy the following code into *speech_recognition.py*:
+
+   ```Python
+   import os
+   import azure.cognitiveservices.speech as speechsdk
+
+   def recognize_from_microphone():
+        # This example requires environment variables named "SPEECH_KEY" and "ENDPOINT"
+        # Replace with your own subscription key and endpoint, the endpoint is like : "https://YourServiceRegion.api.cognitive.microsoft.com"
+       speech_config = speechsdk.SpeechConfig(subscription=os.environ.get('SPEECH_KEY'), endpoint=os.environ.get('ENDPOINT'))
+       speech_config.speech_recognition_language="en-US"
+
+       audio_config = speechsdk.audio.AudioConfig(use_default_microphone=True)
+       speech_recognizer = speechsdk.SpeechRecognizer(speech_config=speech_config, audio_config=audio_config)
+
+       print("Speak into your microphone.")
+       speech_recognition_result = speech_recognizer.recognize_once_async().get()
+
+       if speech_recognition_result.reason == speechsdk.ResultReason.RecognizedSpeech:
+           print("Recognized: {}".format(speech_recognition_result.text))
+       elif speech_recognition_result.reason == speechsdk.ResultReason.NoMatch:
+           print("No speech could be recognized: {}".format(speech_recognition_result.no_match_details))
+       elif speech_recognition_result.reason == speechsdk.ResultReason.Canceled:
+           cancellation_details = speech_recognition_result.cancellation_details
+           print("Speech Recognition canceled: {}".format(cancellation_details.reason))
+           if cancellation_details.reason == speechsdk.CancellationReason.Error:
+               print("Error details: {}".format(cancellation_details.error_details))
+               print("Did you set the speech resource key and endpoint values?")
+
+   recognize_from_microphone()
+   ```
+
+1. To change the speech recognition language, replace `en-US` with another [supported language](~/articles/ai-services/speech-service/language-support.md). For example, use `es-ES` for Spanish (Spain). If you don't specify a language, the default is `en-US`. For details about how to identify one of multiple languages that might be spoken, see [language identification](~/articles/ai-services/speech-service/language-identification.md). 
+
+1. Run your new console application to start speech recognition from a microphone:
+
+   ```console
+   python speech_recognition.py
+   ```
+
+   <Warning>
+
+</Warning>   > Make sure that you set the `SPEECH_KEY` and `ENDPOINT` [environment variables](#set-environment-variables). If you don't set these variables, the sample fails with an error message.
+
+1. Speak into your microphone when prompted. What you speak should appear as text:
+
+   ```output
+   Speak into your microphone.
+   RECOGNIZED: Text=I'm excited to try speech to text.
+   ```
+
+## Remarks
+
+Here are some other considerations:
+
+- This example uses the `recognize_once_async` operation to transcribe utterances of up to 30 seconds, or until silence is detected. For information about continuous recognition for longer audio, including multi-lingual conversations, see [How to recognize speech](~/articles/ai-services/speech-service/how-to-recognize-speech.md).
+- To recognize speech from an audio file, use `filename` instead of `use_default_microphone`:
+
+   ```python
+   audio_config = speechsdk.audio.AudioConfig(filename="YourAudioFile.wav")
+   ```
+
+- For compressed audio files such as MP4, install GStreamer and use `PullAudioInputStream` or `PushAudioInputStream`. For more information, see [How to use compressed input audio](~/articles/ai-services/speech-service/how-to-use-codec-compressed-audio-input-streams.md).
+
+## Clean up resources
+
+## Prerequisites
+
+## Set up the environment
+
+The Speech SDK for Swift is distributed as a framework bundle. The framework supports both Objective-C and Swift on both iOS and macOS.
+
+The Speech SDK can be used in Xcode projects as a [CocoaPod](https://cocoapods.org/), or [downloaded directly](https://aka.ms/csspeech/macosbinary) and linked manually. This guide uses a CocoaPod. Install the CocoaPod dependency manager as described in its [installation instructions](https://guides.cocoapods.org/using/getting-started.html).
+
+### Set environment variables
+
+## Recognize speech from a microphone
+
+Follow these steps to recognize speech in a macOS application.
+
+1. Clone the [Azure-Samples/cognitive-services-speech-sdk](https://github.com/Azure-Samples/cognitive-services-speech-sdk) repository to get the [Recognize speech from a microphone in Swift on macOS](https://github.com/Azure-Samples/cognitive-services-speech-sdk/tree/master/quickstart/swift/macos/from-microphone) sample project. The repository also has iOS samples.
+1. Navigate to the directory of the downloaded sample app (`helloworld`) in a terminal.
+1. Run the command `pod install`. This command generates a `helloworld.xcworkspace` Xcode workspace containing both the sample app and the Speech SDK as a dependency.
+1. Open the `helloworld.xcworkspace` workspace in Xcode.
+1. Open the file named *AppDelegate.swift* and locate the `applicationDidFinishLaunching` and `recognizeFromMic` methods as shown here.
+
+   ```swift
+   import Cocoa
+
+   @NSApplicationMain
+   class AppDelegate: NSObject, NSApplicationDelegate {
+       var label: NSTextField!
+       var fromMicButton: NSButton!
+
+       var sub: String!
+       var region: String!
+
+       @IBOutlet weak var window: NSWindow!
+
+       func applicationDidFinishLaunching(_ aNotification: Notification) {
+           print("loading")
+           // load subscription information
+           sub = ProcessInfo.processInfo.environment["SPEECH_KEY"]
+           region = ProcessInfo.processInfo.environment["SPEECH_REGION"]
+
+           label = NSTextField(frame: NSRect(x: 100, y: 50, width: 200, height: 200))
+           label.textColor = NSColor.black
+           label.lineBreakMode = .byWordWrapping
+
+           label.stringValue = "Recognition Result"
+           label.isEditable = false
+
+           self.window.contentView?.addSubview(label)
+
+           fromMicButton = NSButton(frame: NSRect(x: 100, y: 300, width: 200, height: 30))
+           fromMicButton.title = "Recognize"
+           fromMicButton.target = self
+           fromMicButton.action = #selector(fromMicButtonClicked)
+           self.window.contentView?.addSubview(fromMicButton)
+       }
+
+       @objc func fromMicButtonClicked() {
+           DispatchQueue.global(qos: .userInitiated).async {
+               self.recognizeFromMic()
+           }
+       }
+
+       func recognizeFromMic() {
+           var speechConfig: SPXSpeechConfiguration?
+           do {
+               try speechConfig = SPXSpeechConfiguration(subscription: sub, region: region)
+           } catch {
+               print("error \(error) happened")
+               speechConfig = nil
+           }
+           speechConfig?.speechRecognitionLanguage = "en-US"
+
+           let audioConfig = SPXAudioConfiguration()
+
+           let reco = try! SPXSpeechRecognizer(speechConfiguration: speechConfig!, audioConfiguration: audioConfig)
+
+           reco.addRecognizingEventHandler() {reco, evt in
+               print("intermediate recognition result: \(evt.result.text ?? "(no result)")")
+               self.updateLabel(text: evt.result.text, color: .gray)
+           }
+
+           updateLabel(text: "Listening ...", color: .gray)
+           print("Listening...")
+
+           let result = try! reco.recognizeOnce()
+           print("recognition result: \(result.text ?? "(no result)"), reason: \(result.reason.rawValue)")
+           updateLabel(text: result.text, color: .black)
+
+           if result.reason != SPXResultReason.recognizedSpeech {
+               let cancellationDetails = try! SPXCancellationDetails(fromCanceledRecognitionResult: result)
+               print("cancelled: \(result.reason), \(cancellationDetails.errorDetails)")
+               print("Did you set the speech resource key and region values?")
+               updateLabel(text: "Error: \(cancellationDetails.errorDetails)", color: .red)
+           }
+       }
+
+       func updateLabel(text: String?, color: NSColor) {
+           DispatchQueue.main.async {
+               self.label.stringValue = text!
+               self.label.textColor = color
+           }
+       }
+   }
+   ```
+
+1. In *AppDelegate.m*, use the [environment variables that you previously set](#set-environment-variables) for your Speech resource key and region.
+
+   ```swift
+   sub = ProcessInfo.processInfo.environment["SPEECH_KEY"]
+   region = ProcessInfo.processInfo.environment["SPEECH_REGION"]
+   ```
+
+1. To change the speech recognition language, replace `en-US` with another [supported language](~/articles/ai-services/speech-service/language-support.md). For example, use `es-ES` for Spanish (Spain). If you don't specify a language, the default is `en-US`. For details about how to identify one of multiple languages that might be spoken, see [Language identification](~/articles/ai-services/speech-service/language-identification.md).
+1. To make the debug output visible, select **View** > **Debug Area** > **Activate Console**.
+1. Build and run the example code by selecting **Product** > **Run** from the menu or selecting the **Play** button.
+
+   <Warning>
+
+</Warning>   > Make sure that you set the `SPEECH_KEY` and `SPEECH_REGION` [environment variables](#set-environment-variables). If you don't set these variables, the sample fails with an error message.
+
+After you select the button in the app and say a few words, you should see the text that you spoke on the lower part of the screen. When you run the app for the first time, it prompts you to give the app access to your computer's microphone.
+
+## Remarks
+
+This example uses the `recognizeOnce` operation to transcribe utterances of up to 30 seconds, or until silence is detected. For information about continuous recognition for longer audio, including multi-lingual conversations, see [How to recognize speech](~/articles/ai-services/speech-service/how-to-recognize-speech.md).
+
+## Objective-C
+
+The Speech SDK for Objective-C shares client libraries and reference documentation with the Speech SDK for Swift. For Objective-C code examples, see the [recognize speech from a microphone in Objective-C on macOS](https://github.com/Azure-Samples/cognitive-services-speech-sdk/tree/master/quickstart/objectivec/macos/from-microphone) sample project in GitHub.
+
+## Clean up resources
+
+## Prerequisites
+
+You also need a *.wav* audio file on your local machine. You can use your own *.wav* file (up to 30 seconds) or download the [https://crbn.us/whatstheweatherlike.wav](https://crbn.us/whatstheweatherlike.wav) sample file.
+
+## Setup
+
+1. Create a new folder `transcription-quickstart` and go to the quickstart folder with the following command:
+
+    ```shell
+    mkdir transcription-quickstart && cd transcription-quickstart
+    ```
+    
+1. Create the `package.json` with the following command:
+
+    ```shell
+    npm init -y
+    ```
+
+1. Update the `package.json` to ECMAScript with the following command:
+    ```shell
+    npm pkg set type=module
+    ```
+
+1. Install the Speech SDK for JavaScript with:
+
+    ```console
+    npm install microsoft-cognitiveservices-speech-sdk
+    ```
+
+1. You need to install the Node.js type definitions to avoid TypeScript errors. Run the following command:
+
+    ```shell
+    npm install --save-dev @types/node
+    ```
+
+### Retrieve resource information
+
+## Recognize speech from a file
+
+To transcribe speech from a file:
+
+1. Create a new file named *transcription.ts* with the following content:
+
+    ```typescript
+    import { readFileSync } from "fs";
+    import { 
+        SpeechConfig, 
+        AudioConfig, 
+        SpeechRecognizer, 
+        ResultReason, 
+        CancellationDetails, 
+        CancellationReason,
+        SpeechRecognitionResult 
+    } from "microsoft-cognitiveservices-speech-sdk";
+    
+    // This example requires environment variables named "ENDPOINT" and "SPEECH_KEY"
+    const speechConfig: SpeechConfig = SpeechConfig.fromEndpoint(new URL(process.env.ENDPOINT!), process.env.SPEECH_KEY!);
+    speechConfig.speechRecognitionLanguage = "en-US";
+    
+    function fromFile(): void {
+        const audioConfig: AudioConfig = AudioConfig.fromWavFileInput(readFileSync("YourAudioFile.wav"));
+        const speechRecognizer: SpeechRecognizer = new SpeechRecognizer(speechConfig, audioConfig);
+    
+        speechRecognizer.recognizeOnceAsync((result: SpeechRecognitionResult) => {
+            switch (result.reason) {
+                case ResultReason.RecognizedSpeech:
+                    console.log(`RECOGNIZED: Text=${result.text}`);
+                    break;
+                case ResultReason.NoMatch:
+                    console.log("NOMATCH: Speech could not be recognized.");
+                    break;
+                case ResultReason.Canceled:
+                    const cancellation: CancellationDetails = CancellationDetails.fromResult(result);
+                    console.log(`CANCELED: Reason=${cancellation.reason}`);
+    
+                    if (cancellation.reason === CancellationReason.Error) {
+                        console.log(`CANCELED: ErrorCode=${cancellation.ErrorCode}`);
+                        console.log(`CANCELED: ErrorDetails=${cancellation.errorDetails}`);
+                        console.log("CANCELED: Did you set the speech resource key and region values?");
+                    }
+                    break;
+            }
+            speechRecognizer.close();
+        });
+    }
+    
+    fromFile();
+    ```
+
+    In *transcription.ts*, replace *YourAudioFile.wav* with your own *.wav* file. This example only recognizes speech from a *.wav* file. For information about other audio formats, see [How to use compressed input audio](~/articles/ai-services/speech-service/how-to-use-codec-compressed-audio-input-streams.md). This example supports up to 30 seconds of audio.
+
+    To change the speech recognition language, replace `en-US` with another [supported language](~/articles/ai-services/speech-service/language-support.md). For example, use `es-ES` for Spanish (Spain). If you don't specify a language, the default is `en-US`. For details about how to identify one of multiple languages that might be spoken, see [Language identification](~/articles/ai-services/speech-service/language-identification.md).
+
+1. Create the `tsconfig.json` file to transpile the TypeScript code and copy the following code for ECMAScript.
+
+    ```json
+    {
+        "compilerOptions": {
+          "module": "NodeNext",
+          "target": "ES2022", // Supports top-level await
+          "moduleResolution": "NodeNext",
+          "skipLibCheck": true, // Avoid type errors from node_modules
+          "strict": true // Enable strict type-checking options
+        },
+        "include": ["*.ts"]
+    }
+    ```
+
+1. Transpile from TypeScript to JavaScript.
+
+    ```shell
+    tsc
+    ```
+
+    This command should produce no output if successful.
+
+1. Run your new console application to start speech recognition from a file:
+
+   ```console
+   node transcription.js
+   ```
+
+Wait a few moments to get the response.
+
+## Output
+
+The speech from the audio file should be output as text:
+
+```output
+RECOGNIZED: Text=I'm excited to try speech to text.
+```
+
+## Remarks
+
+This example uses the `recognizeOnceAsync` operation to transcribe utterances of up to 30 seconds, or until silence is detected. For information about continuous recognition for longer audio, including multi-lingual conversations, see [How to recognize speech](~/articles/ai-services/speech-service/how-to-recognize-speech.md).
+
+## Clean up resources
+
+## Prerequisites
+
+You also need a *.wav* audio file on your local machine. You can use your own *.wav* file up to 60 seconds or download the [https://crbn.us/whatstheweatherlike.wav](https://crbn.us/whatstheweatherlike.wav) sample file.
+
+### Set environment variables
+
+## Recognize speech from a file
+
+Open a console window and run the following cURL command. Replace *YourAudioFile.wav* with the path and name of your audio file.  
+
+<Tabs>
+  <Tab title="Windows">
+
+    ```terminal
+    curl --location --request POST "https://%SPEECH_REGION%.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=en-US&format=detailed" ^
+    --header "Ocp-Apim-Subscription-Key: %SPEECH_KEY%" ^
+    --header "Content-Type: audio/wav" ^
+    --data-binary "@YourAudioFile.wav"
+    ```
+
+  </Tab>
+  <Tab title="Linux">
+
+    ```terminal
+    audio_file=@'YourAudioFile.wav'
+
+    curl --location --request POST \
+    "https://${SPEECH_REGION}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=en-US&format=detailed" \
+    --header "Ocp-Apim-Subscription-Key: ${SPEECH_KEY}" \
+    --header "Content-Type: audio/wav" \
+    --data-binary $audio_file
+    ```
+
+  </Tab>
+  <Tab title="macOS">
+
+    ```terminal
+    audio_file=@'YourAudioFile.wav'
+
+    curl --location --request POST \
+    "https://${SPEECH_REGION}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=en-US&format=detailed" \
+    --header "Ocp-Apim-Subscription-Key: ${SPEECH_KEY}" \
+    --header "Content-Type: audio/wav" \
+    --data-binary $audio_file
+    ```
+
+    * * *
+
+    <Warning>
+    Make sure that you set the `SPEECH_KEY` and `SPEECH_REGION` [environment variables](#set-environment-variables). If you don't set these variables, the sample fails with an error message.
+    </Warning>
+    You should receive a response similar to what is shown here. The `DisplayText` should be the text that was recognized from your audio file. The command recognizes up to 60 seconds of audio and converts it to text.
+
+    ```output
+    {
+        "RecognitionStatus": "Success",
+        "DisplayText": "My voice is my passport, verify me.",
+        "Offset": 6600000,
+        "Duration": 32100000
+    }
+    ```
+
+    For more information, see [Speech to text REST API for short audio](../../../rest-speech-to-text-short.md).
+
+    ## Clean up resources
+
+    ## Next step
+
+    [Learn more about speech recognition](how-to-recognize-speech.md)
+
+  </Tab>
+</Tabs>

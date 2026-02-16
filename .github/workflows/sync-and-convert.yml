@@ -1,0 +1,124 @@
+name: Sync and Convert Docs
+
+on:
+  schedule:
+    - cron: '0 16 * * *'  # Daily at 8:00 AM PST (16:00 UTC)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  sync-and-convert:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -e ".[scripts]"
+
+      - name: Extract manifest
+        run: python scripts/extract_manifest.py
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download docs
+        run: python scripts/download_docs.py
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Convert to MDX
+        run: python scripts/convert_to_mdx.py
+
+      - name: Build navigation
+        run: python scripts/build_navigation.py
+
+      - name: Validate outputs
+        run: |
+          echo "::group::Validation"
+          test -f manifest.json || { echo "::error::manifest.json missing"; exit 1; }
+          test -f docs.json || { echo "::error::docs.json missing"; exit 1; }
+          DOC_COUNT=$(find docs -name '*.mdx' | wc -l)
+          echo "Converted docs: $DOC_COUNT"
+          test "$DOC_COUNT" -gt 0 || { echo "::error::No MDX docs produced"; exit 1; }
+          python -c "import json; json.load(open('manifest.json')); json.load(open('docs.json'))" \
+            || { echo "::error::JSON validation failed"; exit 1; }
+          echo "✅ All outputs valid ($DOC_COUNT docs)"
+          echo "::endgroup::"
+
+      - name: Check for changes
+        id: changes
+        run: |
+          git add docs/ docs.json manifest.json path_map.json
+          if git diff --staged --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No upstream changes detected"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Upstream changes detected"
+          fi
+
+      - name: Commit changes
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit -m "docs: sync and convert from upstream
+
+          Automated daily sync from MicrosoftDocs/azure-ai-docs
+
+          Co-authored-by: github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
+          git push
+
+  build-docker:
+    needs: sync-and-convert
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Pull latest (includes any sync commit)
+        run: git pull --ff-only origin ${{ github.ref_name }}
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest
+            type=sha,prefix=
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Verify image
+        run: |
+          echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"ci","version":"1.0"}}}' \
+            | docker run -i --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest 2>/dev/null \
+            | python -c "import sys,json; r=json.load(sys.stdin); assert r['result']['serverInfo']['name']=='foundry-docs'; print('✅ MCP server responds correctly')"
