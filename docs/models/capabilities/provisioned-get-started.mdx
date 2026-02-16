@@ -52,7 +52,7 @@ Once you have verified your quota, you can create a deployment. Navigate to Foun
 
 1. Sign in to [Microsoft Foundry](https://ai.azure.com/?cid=learnDocs). Make sure the **New Foundry** toggle is on. These steps refer to **Foundry (new)**.
 
-![](/images/new-foundry.png)
+<img src="/images/new-foundry.png" />
 1. From the Foundry portal homepage, choose the subscription that was enabled for provisioned deployments & select the desired resource in a region where you have the quota. 
 1. Select **Discover** in the upper-right navigation, then **Models** in the left pane.
 1. Select the **Collections** filter and filter by **Direct from Azure** to see the models held and served by Azure directly. A selection of these models support provisioned throughput deployment option. 
@@ -89,9 +89,9 @@ For more information on the purchase model and reservations, see:
 * [Foundry provisioned throughput onboarding guide](/models/capabilities/provisioned-throughput-onboarding) 
 * [Guide for Foundry provisioned throughput reservations](/models/capabilities/provisioned-throughput) 
 
-<Warning>
+<Info>
 Capacity availability for model deployments is dynamic and changes frequently across regions and models. To prevent you from purchasing a reservation for more PTUs than you can use, create deployments first, and then purchase the Azure Reservation to cover the PTUs you have deployed. This best practice will ensure that you can take full advantage of the reservation discount and prevent you from purchasing a term commitment that you cannot use.
-</Warning>
+</Info>
 ## Make your first inferencing calls
 The inferencing code for provisioned deployments is the same as a standard deployment type. The following code snippet shows a chat completions call to a GPT-4 model. For your first time using these models programmatically, we recommend starting with our [quickstart guide](/models/capabilities/responses). Our recommendation is to use the OpenAI library with version 1.0 or greater since this includes retry logic within the library.
 
@@ -118,9 +118,9 @@ The inferencing code for provisioned deployments is the same as a standard deplo
     print(response.choices[0].message.content)
 ```
 
-<Warning>
+<Info>
 For production, use a secure way of storing and accessing your credentials like [Azure Key Vault](https://learn.microsoft.com/azure/key-vault/general/overview). For more information about credential security, see this [security](../../../ai-services/security-features.md) article.
-</Warning>
+</Info>
 
 ## Understand expected throughput
 
@@ -133,7 +133,9 @@ PTU deployment utilization = (PTUs consumed in the time period) / (PTUs deployed
 
 You can find the utilization measure in the Azure-Monitor section for your resource. To access the monitoring dashboards sign-in to [https://portal.azure.com](https://portal.azure.com), go to your Azure OpenAI resource and select the Metrics page from the left nav. On the metrics page, select the 'Provisioned-managed utilization V2' metric. If you have more than one deployment in the resource, you should also split the values by each deployment by selecting the 'Apply Splitting' button.
 
-![Screenshot of the provisioned managed utilization on the resource's metrics blade in the Azure portal.](/images/azure-monitor-utilization.jpg)
+<Frame>
+  <img src="/images/azure-monitor-utilization.jpg" alt="Screenshot of the provisioned managed utilization on the resource's metrics blade in the Azure portal." />
+</Frame>
 
 ## Handle high utilization
 Provisioned deployments provide you with an allocated amount of compute capacity to run a given model. The 'Provisioned-Managed Utilization V2' metric in Azure Monitor measures the utilization of the deployment in one-minute increments. Provisioned-Managed deployments are also optimized so that calls accepted are processed with a consistent per-call max latency. When the workload exceeds its allocated capacity, the service returns a 429 HTTP status code until the utilization drops down below 100%. The time before retrying is provided in the `retry-after` and `retry-after-ms` response headers that provide the time in seconds and milliseconds respectively. This approach maintains the per-call latency targets while giving the developer control over how to handle high-load situations – for example retry or divert to another experience/endpoint. 

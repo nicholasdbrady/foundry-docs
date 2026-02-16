@@ -15,7 +15,9 @@ Foundry resource is the next version and renaming of former "Foundry Tools". It 
 
 A Foundry resource can organize the work for multiple use cases, and is [typically shared](/setup/planning) between a team of developers that work on use cases in a similar business or data domain. Projects act as folders to group related work. 
 
-![Diagram showing Foundry resource containing multiple projects, each with deployments and connections.](/images/projects-multi-setup.png)
+<Frame>
+  <img src="/images/projects-multi-setup.png" alt="Diagram showing Foundry resource containing multiple projects, each with deployments and connections." />
+</Frame>
 
 <Note>
 Only the default project is available in the Foundry (new) portal. Use the Foundry (classic) portal to interact with all other projects on a Foundry resource.
@@ -40,7 +42,9 @@ If your organization requires customized Azure configurations like alternative n
 
 The Foundry resource is listed under **Foundry** > **Foundry** in the Azure portal. The API kind is **AIServices**. Look for the logo as shown here:
 
-![Screenshot of the Foundry resource in the Azure portal.](/images/ai-services-resource-portal.png)
+<Frame>
+  <img src="/images/ai-services-resource-portal.png" alt="Screenshot of the Foundry resource in the Azure portal." />
+</Frame>
 
 <Tip>
 [Foundry portal](https://ai.azure.com/?cid=learnDocs) provides a way to [create a new Foundry resource](https://learn.microsoft.com/azure/ai-foundry/how-to/create-projects) with basic, defaulted, settings.
@@ -97,10 +101,10 @@ Before you create a Foundry resource, you must have an Azure resource group to c
 
 To create a resource, you'll need one of the Azure locations available for your subscription. You can retrieve a list of available locations with the [az account list-locations](https://learn.microsoft.com/cli/azure/account#az-account-list-locations) command. Most Foundry Tools can be accessed from several locations. Choose the one closest to you, or see which locations are available for the service.
 
-<Warning>
+<Info>
 * Remember your Azure location, as you will need it when calling the Microsoft Foundry resources.
 * The availability of some Foundry Tools can vary by region. For more information, see [Azure products by region](https://azure.microsoft.com/global-infrastructure/services/?products=cognitive-services).
-</Warning>
+</Info>
 ```azurecli-interactive
 az account list-locations --query "[].{Region:name}" --out table
 ```
@@ -115,9 +119,9 @@ az group create --name ai-services-resource-group --location westus2
 
 To create and subscribe to a new Foundry resource, use the [az cognitiveservices account create](https://learn.microsoft.com/cli/azure/cognitiveservices/account#az-cognitiveservices-account-create) command. This command adds a new billable resource to the resource group you created earlier. When you create your new resource, you'll need to know the kind of service you want to use, along with its pricing tier (or SKU) and an Azure location.
 
-<Warning>
+<Info>
 Azure provides more than one resource kinds for Foundry Tools. Be sure to create one with the `kind` of `AIServices`.
-</Warning>
+</Info>
 You can create a Foundry resource named `foundry-multi-service-resource` with the command below.
 
 ```azurecli-interactive
@@ -170,10 +174,10 @@ Before you create a Foundry resource, you must have an Azure resource group to c
 
 To create a resource, you'll need one of the Azure locations available for your subscription. You can retrieve a list of available locations with the [Get-AzLocation](/powershell/module/az.resources/get-azlocation) command. Most Foundry Tools can be accessed from several locations. Choose the one closest to you, or see which locations are available for the service.
 
-<Warning>
+<Info>
 * Remember your Azure location, as you will need it when calling the Foundry resources.
 * The availability of some Foundry Tools can vary by region. For more information, see [Azure products by region](https://azure.microsoft.com/global-infrastructure/services/?products=cognitive-services).
-</Warning>
+</Info>
 ```azurepowershell-interactive
 Get-AzLocation | Select-Object -Property Location, DisplayName
 ```
@@ -188,9 +192,9 @@ New-AzResourceGroup -Name ai-services-resource-group -Location westus2
 
 To create and subscribe to a new Foundry resource, use the [New-AzCognitiveServicesAccount](/powershell/module/az.cognitiveservices/new-azcognitiveservicesaccount) command. This command adds a new billable resource to the resource group you created earlier. When you create your new resource, you'll need to know the "kind" of service you want to use, along with its pricing tier (or SKU) and an Azure location:
 
-<Warning>
+<Info>
 Azure provides more than one resource kinds for Foundry Tools. Be sure to create one with the `Type` (kind) of `AIServices`.
-</Warning>
+</Info>
 You can create a Foundry resource named `foundry-multi-service-resource` with the command below.
 
 ```azurepowershell-interactive
@@ -266,15 +270,17 @@ Built-in Azure RBAC developer roles for Foundry include:
 <Note>
 The Azure AI Owner role will be available to assign in the Azure and Foundry portal soon.
 </Note>
-![Diagram of the built-in roles in Foundry.](/images/detailed-rbac-diagram.png)
+<Frame>
+  <img src="/images/detailed-rbac-diagram.png" alt="Diagram of the built-in roles in Foundry." />
+</Frame>
 
 For larger enterprises with strict role based access requirements, we recommend utilizing the Azure AI User role the least  privilege developer permissions. For smaller enterprises wanting their developers to self-serve within their organization, we recommend utilizing the Azure AI Owner role for developer permissions as well as resource creation permissions. 
 
 Only authorized users, typically the Azure subscription or resource group owner, can assign a role via either [Azure portal](link to Azure portal) or [Foundry portal via Admin](Link to Foundry portal). [Learn more about role-based access control](/security/rbac-foundry).
 
-<Warning>
+<Info>
 Azure Owner and Contributor roles do only include management permissions, and not development permissions. Development permissions are required to build with all capabilities in Foundry.
-</Warning>
+</Info>
 ## Start building in your first project
 
 With permissions set up, you're now ready to start building Foundry. In [Foundry portal](https://ai.azure.com/) open or [create your first project](/setup/create-projects). Projects organize your agent and model customization work in Foundry, and you can [create multiple under the same resource](/setup/create-projects#create-multiple-projects-on-the-same-resource).

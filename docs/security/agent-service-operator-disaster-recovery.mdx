@@ -10,7 +10,7 @@ This article refers to the [Microsoft Foundry (new)](/overview/what-is-foundry#m
 
 This article describes how to recover from human or automation errors that cause Azure resource or data loss for Foundry Agent Service projects that use the [Standard deployment mode](https://learn.microsoft.com/azure/ai-foundry/agents/concepts/standard-agent-setup). Incidents include accidental deletion of Microsoft Foundry accounts or projects, deletion of agents or threads, and loss or corruption of state in Azure Cosmos DB, Azure AI Search, or Azure Storage that supports the capability host.
 
-<Warning>
+<Info>
 This article is part of a three-part series.
 
 To understand platform limitations, prevention controls, and baseline configuration, see the [Agent Service disaster recovery overview](/security/agent-service-disaster-recovery). That article explains why some losses are unrecoverable and why recovery often means reconstruction rather than restoration.
@@ -18,7 +18,7 @@ To understand platform limitations, prevention controls, and baseline configurat
 To learn how to architect your solution for high availability and resiliency to prevent these scenarios, see [High availability and resiliency](/security/high-availability-resiliency).
 
 If you're looking for recommendations on how to recover from platform or regional outages, see [Platform outage recovery](/security/agent-service-platform-disaster-recovery) for warm standby, regional failover, and failback.
-</Warning>
+</Info>
 ## Prerequisites
 
 - Azure subscription with access to the affected Foundry account
@@ -142,9 +142,9 @@ This data resides in the currently associated Azure Cosmos DB, Azure AI Search, 
 
 - Recovery point: Total loss of thread text and uploaded files for all agents that were in the project. No recovery of this data is supported.
 
-  <Warning>
+  <Info>
 
-</Warning>  > Even if you use the same Azure Cosmos DB, Azure AI Search, or Azure Storage accounts, lingering data from the previous project's agents isn't reused and is unreachable. There's no supported method to migrate orphaned data to the new project's new capability host.
+</Info>  > Even if you use the same Azure Cosmos DB, Azure AI Search, or Azure Storage accounts, lingering data from the previous project's agents isn't reused and is unreachable. There's no supported method to migrate orphaned data to the new project's new capability host.
 
 ## Agent Service
 
@@ -426,11 +426,11 @@ If the index was tied to knowledge uploaded as part of a thread, there are no re
 
 When other recovery options aren't available, you can perform a complete reset of your project's AI Agent Service capability host. This reset is a *fresh start* that restores functionality but permanently orphans all agents, threads, and related state.
 
-<Warning>
+<Danger>
 Performing these steps permanently orphans all existing agent state, making all agent data permanently unretrievable through any Foundry Agent Service API call. This process restores functionality but *provides no data recovery point*.
 
 This reset is a **last resort** after you exhaust all other options. **All agents and threads are permanently lost.**
-</Warning>
+</Danger>
 1. Remove the *delete* lock from the Foundry account.
 
 1. Delete the project's capability host by sending a [`Project Capability Hosts - Delete`](https://learn.microsoft.com/rest/api/aifoundry/accountmanagement/project-capability-hosts/delete) API request for the project that you're resetting.
@@ -454,9 +454,9 @@ This reset is a **last resort** after you exhaust all other options. **All agent
    - Your Azure Cosmos DB, Azure AI Search, and Azure Storage accounts are deployed.
    - The project's managed identity has the same permissions to these resources as before the reset.
 
-   <Warning>
+   <Info>
 
-</Warning>   > Even if you reuse the same Azure Cosmos DB, Azure AI Search, or Azure Storage accounts, lingering data from the previous association isn't reused and is unreachable. No supported method exists to migrate orphaned data to the new capability host.
+</Info>   > Even if you reuse the same Azure Cosmos DB, Azure AI Search, or Azure Storage accounts, lingering data from the previous association isn't reused and is unreachable. No supported method exists to migrate orphaned data to the new capability host.
 
 1. Redeploy agents from source control or from application code. They function as new agents with new IDs and no access to prior threads or data. This *fresh start* restores workload functionality without any historical data.
 
@@ -469,4 +469,4 @@ This reset is a **last resort** after you exhaust all other options. **All agent
 
 Account for platform failures in your recovery design.
 
-[Recovery strategies for platform outages](/security/agent-service-platform-disaster-recovery)
+<Card title="Recovery strategies for platform outages" icon="arrow-right" href="agent-service-platform-disaster-recovery.md" />

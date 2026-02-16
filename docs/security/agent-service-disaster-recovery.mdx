@@ -10,7 +10,7 @@ This article refers to the [Microsoft Foundry (new)](/overview/what-is-foundry#m
 
 Use this article as the starting point for disaster recovery (DR) planning for Foundry Agent Service in the [Standard deployment mode](https://learn.microsoft.com/azure/ai-foundry/agents/concepts/standard-agent-setup). It explains what you can and can't recover, what to prepare before an incident, and where to find recovery procedures for platform outages and resource or data loss.
 
-<Warning>
+<Info>
 This is the overview article in a three-part series.
 
 - You're here: Understand limitations, prevention controls, and required baseline configuration.
@@ -18,7 +18,7 @@ This is the overview article in a three-part series.
 - For human-caused or automation-caused deletions and localized data loss, see [Agent Service resource and data loss recovery strategies](/security/agent-service-operator-disaster-recovery).
 
 To reduce the likelihood of recovery events, see [High availability and resiliency for Foundry projects and agent services](/security/high-availability-resiliency).
-</Warning>
+</Info>
 ## Scope and definitions
 
 This series focuses on DR for Foundry projects that use Agent Service in Standard deployment mode.
@@ -54,11 +54,11 @@ Agent Service is stateful. Recovery focuses on preserving and restoring state st
 
 The Agent Service has important limitations that shape your workload's disaster recovery (DR) design. Consider these factors when you set realistic recovery point objectives (RPOs) and recovery time objectives (RTOs).
 
-<Warning>
+<Info>
 Agent Service doesn't provide built-in disaster recovery capabilities. It doesn't replicate state, create backups, or support point-in-time restore. One project can't use the data of another project. The service doesn't have any supported method for active-active, multi-region replication. Microsoft Support can't recover orphaned data, migrate data between projects, or combine state from multiple sources.
 
 The recommendations in this guide are compensating controls. Recovery might not be possible. An incident can permanently remove an agent and its data, such as threads and knowledge.
-</Warning>
+</Info>
 ## Unrecoverable scenarios and expectations
 
 Plan for scenarios where recovery isn't possible or where recovery restores only functionality (not state):
@@ -88,14 +88,12 @@ Configure your resources to support recovery before an incident happens. Enable 
 
 In the standard deployment model, the Agent Service is a jointly managed service. Microsoft operates and maintains the control plane and capability host. You operate the agent stateful resources; Azure Cosmos DB, Azure AI Search, and Azure Storage account. All of these services depend on your deployment region's availability. If Azure is experiencing a prolonged region-wide outage, your approach to recovery focuses on getting another instance running in a region that isn't experiencing an outage.
 
-[Agent Service platform outage recovery strategies](/security/agent-service-platform-disaster-recovery)
-
+<Card title="Agent Service platform outage recovery strategies" icon="arrow-right" href="agent-service-platform-disaster-recovery.md" />
 ## Recover from resource and data loss incidents
 
 The Agent Service has a significant amount of state and interconnected resources that you're responsible for in your workload. A user or automation process can delete or corrupt that state. The disruption might be accidental or malicious. Your recovery approach varies based on which resource or data element was lost.
 
-[Agent Service resource and data loss recovery strategies](/security/agent-service-operator-disaster-recovery)
-
+<Card title="Agent Service resource and data loss recovery strategies" icon="arrow-right" href="agent-service-operator-disaster-recovery.md" />
 ## Business continuity
 
 Disaster recovery is only one part of your business continuity strategy. For agent-based flows, plan how you continue to deliver value when agents are inoperable or data is lost. Set realistic expectations with users and business partners. Fall back to planned contingencies as needed.

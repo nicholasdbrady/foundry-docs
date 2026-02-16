@@ -5,9 +5,9 @@ sidebarTitle: "Set Up Tracing for AI Agents in Microsoft Foundry"
 ---
 # Set up tracing in Microsoft Foundry (preview)
 
-<Warning>
+<Info>
 Items marked (preview) in this article are currently in public preview. This preview is provided without a service-level agreement, and we don't recommend it for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
-</Warning>
+</Info>
 Use tracing (preview) to debug your AI agents and monitor their behavior in production. Tracing captures detailed telemetry—including latency, exceptions, prompt content, and retrieval operations—so you can identify and fix issues faster.
 
 ## Prerequisites
@@ -22,7 +22,7 @@ Foundry stores traces in [Azure Application Insights](https://learn.microsoft.co
 
 1. Sign in to [Microsoft Foundry](https://ai.azure.com/?cid=learnDocs). Make sure the **New Foundry** toggle is on. These steps refer to **Foundry (new)**.
 
-![](/images/new-foundry.png)
+<img src="/images/new-foundry.png" />
 1. Open your Foundry project.
 1. In the left navigation, select **Tracing**.
 1. Create or connect an Application Insights resource:
@@ -33,13 +33,13 @@ Foundry stores traces in [Azure Application Insights](https://learn.microsoft.co
 
 After you connect the resource, your project is ready to use tracing.
 
-<Warning>
+<Info>
 Make sure you have the permissions you need to query telemetry.
 
 - For log-based queries, start by assigning the [Log Analytics Reader role](https://learn.microsoft.com/azure/azure-monitor/logs/manage-access).
 - To learn how to assign roles, see [Assign Azure roles using the Azure portal](https://learn.microsoft.com/azure/role-based-access-control/role-assignments-portal).
 - To manage access at scale, use [Microsoft Entra groups](/security/rbac-foundry#use-microsoft-entra-groups-with-foundry).
-</Warning>
+</Info>
 ## Instrument AI agents
 
 Choose the approach that matches how you build and run your agent.
@@ -59,9 +59,9 @@ Install OpenTelemetry and the Azure SDK tracing plugin using:
 pip install azure-ai-projects azure-identity opentelemetry-sdk azure-core-tracing-opentelemetry
 ```
 
-<Warning>
+<Info>
 Using a project's endpoint in your application requires configuring Microsoft Entra ID. If you don't configure Microsoft Entra ID, use the Azure Application Insights connection string.
-</Warning>
+</Info>
 After running your agent, you can begin to [view and analyze traces in Foundry portal](#view-traces-in-the-foundry-portal).
 
 For detailed instructions and SDK-specific code examples, see [Tracing with azure-ai-projects (Python SDK)](https://github.com/Azure/azure-sdk-for-python/tree/main/sdk/ai/azure-ai-projects#tracing) and [Telemetry samples for agents](https://github.com/Azure/azure-sdk-for-python/tree/main/sdk/ai/azure-ai-projects/samples/agents/telemetry).
@@ -99,7 +99,9 @@ You can search for a known Conversation ID, search by a Response ID, or search b
 - Ordered actions, run steps, and tool calls
 - Inputs and outputs between a user and an agent
 
-![Screenshot of the Conversation details pane in Foundry showing a conversation ID with a trace timeline and run-step details.](/images/conversation.png)
+<Frame>
+  <img src="/images/conversation.png" alt="Screenshot of the Conversation details pane in Foundry showing a conversation ID with a trace timeline and run-step details." />
+</Frame>
 
 ## Verify tracing works
 

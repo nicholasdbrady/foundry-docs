@@ -118,9 +118,9 @@ In the same [`response.create`](/api-sdk/realtime-audio-reference#realtimeclient
 
 When the server responds with a [`response.done`](/api-sdk/realtime-audio-reference#realtimeservereventresponsecreated) event, the response contains the metadata you provided. You can identify the corresponding response for the client-sent event via the `response.metadata` field.
 
-<Warning>
+<Info>
 If you create any responses outside the default conversation, be sure to always check the `response.metadata` field to help you identify the corresponding response for the client-sent event. You should even check the `response.metadata` field for responses that are part of the default conversation. That way, you can ensure that you're handling the correct response for the client-sent event.
-</Warning>
+</Info>
 ### Custom context for out-of-band responses
 
 You can also construct a custom context that the model uses outside of the session's default conversation. To create a response with custom context, set the `conversation` field to `none` and provide the custom context in the `input` array. The `input` array can contain new inputs or references to existing conversation items.
@@ -174,7 +174,9 @@ The session relies on caller-initiated [`input_audio_buffer.commit`](/api-sdk/re
 - The server responds by sending the [`input_audio_buffer.committed`](/api-sdk/realtime-audio-reference#realtimeservereventinputaudiobuffercommitted) event.
 - The server responds by sending the [`conversation.item.created`](/api-sdk/realtime-audio-reference#realtimeservereventconversationitemcreated) event.
 
-![Diagram of the Realtime API input audio sequence without server decision mode.](/images/input-audio-buffer-client-managed.png)
+<Frame>
+  <img src="/images/input-audio-buffer-client-managed.png" alt="Diagram of the Realtime API input audio sequence without server decision mode." />
+</Frame>
 
 <!--
 sequenceDiagram
@@ -200,7 +202,9 @@ In this case, the server evaluates user audio from the client (as sent via [`inp
 - The server commits the input audio buffer by sending the [`input_audio_buffer.committed`](/api-sdk/realtime-audio-reference#realtimeservereventinputaudiobuffercommitted) event.
 - The server sends the [`conversation.item.created`](/api-sdk/realtime-audio-reference#realtimeservereventconversationitemcreated) event with the user message item created from the audio buffer.
 
-![Diagram of the real time API input audio sequence with server decision mode.](/images/input-audio-buffer-server-vad.png)
+<Frame>
+  <img src="/images/input-audio-buffer-server-vad.png" alt="Diagram of the real time API input audio sequence with server decision mode." />
+</Frame>
 
 <!-- 
 sequenceDiagram
@@ -257,7 +261,9 @@ Optionally, the client can truncate or delete items in the conversation:
 - The client deletes an item in the conversation with a [`conversation.item.delete`](/api-sdk/realtime-audio-reference#realtimeclienteventconversationitemdelete) event.
 - The server [`conversation.item.deleted`](/api-sdk/realtime-audio-reference#realtimeservereventconversationitemdeleted) event is returned to sync the client and server state.
 
-![Diagram of the real-time API conversation item sequence.](/images/conversation-item-sequence.png)
+<Frame>
+  <img src="/images/conversation-item-sequence.png" alt="Diagram of the real-time API conversation item sequence." />
+</Frame>
 
 <!-- 
 sequenceDiagram

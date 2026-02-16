@@ -60,7 +60,7 @@ The `AZURE_AI_PROJECT_ENDPOINT` value refers to your Microsoft Foundry project e
 - You need the latest prerelease package. See the [quickstart](/get-started/get-started-code) for details.
 - If you use API key for authentication, your connection ID should be in the format of `/subscriptions/{{subscriptionID}}/resourceGroups/{{resourceGroupName}}/providers/Microsoft.CognitiveServices/accounts/{{foundryAccountName}}/projects/{{foundryProjectName}}/connections/{{foundryConnectionName}}`.
 </Note>
-<Warning>
+<Info>
 **For API key authentication to work**, your OpenAPI specification file must include:
 1. A `securitySchemes` section with your API key configuration, such as the header name and parameter name.
 1. A `security` section that references the security scheme.
@@ -69,7 +69,7 @@ The `AZURE_AI_PROJECT_ENDPOINT` value refers to your Microsoft Foundry project e
 Without these configurations, the API key isn't included in requests. For detailed setup instructions, see the [Authenticate with API key](#authenticate-with-api-key) section.
 
 You can also use token-based authentication (for example, a Bearer token) by storing the token in a project connection. For Bearer token auth, create a **Custom keys** connection with key set to `Authorization` and value set to `Bearer <token>` (replace `<token>` with your actual token). The word `Bearer` followed by a space must be included in the value. For details, see [Set up a Bearer token connection](#set-up-a-bearer-token-connection).
-</Warning>
+</Info>
 ### Quick verification
 
 First, verify your environment is configured correctly:
@@ -1144,9 +1144,9 @@ You can use token-based authentication (for example, a Bearer token) with the sa
       - **key**: `Authorization` (must match the `name` field in your `securitySchemes`)
       - **value**: `Bearer <token>` (replace `<token>` with your actual token)
 
-   <Warning>
+   <Info>
 
-</Warning>   > The value must include the word `Bearer` followed by a space before the token. For example: `Bearer eyJhbGciOiJSUzI1NiIs...`. If you omit `Bearer `, the API receives a raw token without the required authorization scheme prefix, and the request fails.
+</Info>   > The value must include the word `Bearer` followed by a space before the token. For example: `Bearer eyJhbGciOiJSUzI1NiIs...`. If you omit `Bearer `, the API receives a raw token without the required authorization scheme prefix, and the request fails.
 
 1. After you create the connection, use it with the `project_connection` auth type in your code, the same way you would for API key authentication. The connection ID uses the same format: `/subscriptions/{{subscriptionID}}/resourceGroups/{{resourceGroupName}}/providers/Microsoft.CognitiveServices/accounts/{{foundryAccountName}}/projects/{{foundryProjectName}}/connections/{{foundryConnectionName}}`.
 
@@ -1158,14 +1158,18 @@ To set up authentication by using Managed Identity:
 
 1. Make sure your Foundry resource has system assigned managed identity enabled.
 
-   ![A screenshot showing the managed identity selector in the Azure portal.](/images/managed-identity-portal.png)
+   <Frame>
+  <img src="/images/managed-identity-portal.png" alt="A screenshot showing the managed identity selector in the Azure portal." />
+</Frame>
 
 1. Create a resource for the service you want to connect to through OpenAPI spec.
 1. Assign proper access to the resource.
    1. Select **Access Control** for your resource.
    1. Select **Add** and then **add role assignment** at the top of the screen.
 
-      ![A screenshot showing the role assignment selector in the Azure portal.](/images/role-assignment-portal.png)
+      <Frame>
+  <img src="/images/role-assignment-portal.png" alt="A screenshot showing the role assignment selector in the Azure portal." />
+</Frame>
         
    1. Select the proper role assignment needed, usually it requires at least the *READER* role. Then select **Next**.
    1. Select **Managed identity** and then select **select members**.

@@ -27,7 +27,7 @@ This article shows you how to use Foundry Control Plane capabilities to track ag
   - [Cost Management Reader](https://learn.microsoft.com/azure/role-based-access-control/built-in-roles/management-and-governance#cost-management-reader) role
 
 <Note>
-This capability is available only in the  Foundry (new) portal. Look for ![](/images/new-foundry.png) in the portal banner to confirm you're using Foundry (new).
+This capability is available only in the  Foundry (new) portal. Look for <img src="/images/new-foundry.png" /> in the portal banner to confirm you're using Foundry (new).
 </Note>
 ## How monitoring works
 
@@ -35,18 +35,17 @@ Foundry Control Plane discovers all the agents that you can access. It uses the 
 
 Foundry Control Plane supports:
 
-> [!div class="checklist"]
->
-> - Foundry agents, including [prompt-based agents](/agents/development/overview), [workflows](/agents/development/workflow), and [hosted agents](/agents/development/hosted-agents).
-> - [Azure SRE Agent](https://learn.microsoft.com/azure/sre-agent/).
-> - [Azure Logic Apps agent loops](https://learn.microsoft.com/azure/logic-apps/agent-workflows-concepts).
-> - [Custom agents](/manage/register-custom-agent) registered manually.
-
+<Check>Foundry agents, including [prompt-based agents](/agents/development/overview), [workflows](/agents/development/workflow), and [hosted agents](/agents/development/hosted-agents).</Check>
+<Check>[Azure SRE Agent](https://learn.microsoft.com/azure/sre-agent/).</Check>
+<Check>[Azure Logic Apps agent loops](https://learn.microsoft.com/azure/logic-apps/agent-workflows-concepts).</Check>
+<Check>[Custom agents](/manage/register-custom-agent) registered manually.</Check>
 Because Foundry Control Plane aggregates information across resources within the subscription, different users might see different agents listed, depending on their access.
 
 Foundry Control Plane aggregates logs and metrics available across each Application Insights resource that's connected to each agent.
 
-![Architecture diagram that shows how Foundry Control Plane uses Application Insights to collect logs and metrics across resources.](/images/observability-app-insights-architecture.png)
+<Frame>
+  <img src="/images/observability-app-insights-architecture.png" alt="Architecture diagram that shows how Foundry Control Plane uses Application Insights to collect logs and metrics across resources." />
+</Frame>
 
 Foundry Control Plane requires agents to log diagnostic information by following OpenTelemetry standards with [semantic conventions for Generative AI](https://opentelemetry.io/docs/specs/semconv/gen-ai/) applications. You don't need to configure Application Insights on each resource, but doing so is strongly recommended. When Control Plane has this data, it can provide:
 
@@ -55,9 +54,9 @@ Foundry Control Plane requires agents to log diagnostic information by following
 - **Anomaly detection**: Identify cost spikes, performance degradation, and emerging issues through trend analysis.
 - **Drill-down analysis**: Move from fleet-level metrics to individual agent traces and logs for detailed investigation.
 
-<Warning>
+<Info>
 Agents running on resources without Application Insights don't have health metrics, cost tracking, or drill-down traces.
-</Warning>
+</Info>
 ## Configure monitoring
 
 Follow these steps for each project where you want to configure monitoring:
@@ -74,7 +73,9 @@ Follow these steps for each project where you want to configure monitoring:
 
 1. Ensure that there's an associated resource for the category **AppInsights**.
 
-    ![Screenshot of the administration portal that shows how to verify if a project has an associated Application Insights resource.](/images/verify-app-insights.png)
+    <Frame>
+  <img src="/images/verify-app-insights.png" alt="Screenshot of the administration portal that shows how to verify if a project has an associated Application Insights resource." />
+</Frame>
 
 1. If there's no associated resource, add one by selecting **Add connection** and then selecting **Application Insights**.
 
@@ -90,13 +91,15 @@ You can view aggregated metrics for all agents within a selected project by usin
 
 1. Sign in to [Microsoft Foundry](https://ai.azure.com/?cid=learnDocs). Make sure the **New Foundry** toggle is on. These steps refer to **Foundry (new)**.
 
-![](/images/new-foundry.png)
+<img src="/images/new-foundry.png" />
 
 1. On the toolbar, select **Operate**.
 
 1. The **Overview** pane displays common metrics and insights for all discovered agents within the subscription by default.
 
-    ![Animation of the Overview pane that displays trend-based health scores, alert summaries, and aggregated compliance metrics for a fleet.](/images/control-plane-overview.gif)
+    <Frame>
+  <img src="/images/control-plane-overview.gif" alt="Animation of the Overview pane that displays trend-based health scores, alert summaries, and aggregated compliance metrics for a fleet." />
+</Frame>
 
 1. Use the project dropdown list to scope down the metrics to specific projects, if necessary.
 
@@ -110,7 +113,7 @@ You can view all your assets under a specific project, along with top-level metr
 
 1. Sign in to [Microsoft Foundry](https://ai.azure.com/?cid=learnDocs). Make sure the **New Foundry** toggle is on. These steps refer to **Foundry (new)**.
 
-![](/images/new-foundry.png)
+<img src="/images/new-foundry.png" />
 
 1. On the toolbar, select **Operate**.
 
@@ -118,13 +121,17 @@ You can view all your assets under a specific project, along with top-level metr
 
 1. Select the **Agents** tab.
 
-    ![Screenshot of the Agents tab that shows all registered agents with top-level metrics.](/images/agents-tab-overview-metrics.png)
+    <Frame>
+  <img src="/images/agents-tab-overview-metrics.png" alt="Screenshot of the Agents tab that shows all registered agents with top-level metrics." />
+</Frame>
 
    The tab shows the details of agents discovered within the subscription. To learn about these details, see [Agent inventory](/manage/how-to-manage-agents#agent-inventory).
 
 1. To view more granular information on the performance of an individual agent, select an agent. The pane that appears provides quick insights into the selected agent's health and recent activity. Use it to identify problems and take corrective actions.  
 
-    ![Screenshot of the Foundry pane that shows details of a selected agent.](/images/agent-details.png)
+    <Frame>
+  <img src="/images/agent-details.png" alt="Screenshot of the Foundry pane that shows details of a selected agent." />
+</Frame>
 
     The pane contains these sections:
 

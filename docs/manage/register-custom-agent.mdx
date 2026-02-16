@@ -19,7 +19,7 @@ This article shows you how to register a custom agent in Foundry Control Plane. 
 - An agent that you deploy and expose through a reachable endpoint. The endpoint can be either a public endpoint or an endpoint that's reachable from the network where you deploy the Foundry resource.
 
 <Note>
-This capability is available only in the  Foundry (new) portal. Look for ![](/images/new-foundry.png) in the portal banner to confirm you're using Foundry (new).
+This capability is available only in the  Foundry (new) portal. Look for <img src="/images/new-foundry.png" /> in the portal banner to confirm you're using Foundry (new).
 </Note>
 ## Add a custom agent
 
@@ -29,27 +29,26 @@ When you register a custom agent, Foundry uses API Management to act as a proxy 
 
 The following diagram shows the resulting architecture when you register a custom agent.
 
-![Diagram that shows the resulting architecture after a custom agent is registered and configured.](/images/custom-agent-architecture.png)
+<Frame>
+  <img src="/images/custom-agent-architecture.png" alt="Diagram that shows the resulting architecture after a custom agent is registered and configured." />
+</Frame>
 
 ### Verify your agent
 
 Verify that your agent meets the requirements for registration:
 
-> [!div class="checklist"]
->
-> - Your agent exposes an exclusive endpoint.
-> - The network where you deploy the Foundry resource can reach the agent's endpoint.
-> - The agent communicates by using one of the supported protocols: HTTP (general) or A2A (more specific).
-> - Your agent emits data by using the OpenTelemetry semantic conventions for generative AI solutions (or you don't need this capability).
-> - You can configure the endpoint that users use to communicate with the agent. After you register an agent, Foundry Control Plane generates a new URL. *Clients and users must use this URL to communicate with the agent*.
-
+<Check>Your agent exposes an exclusive endpoint.</Check>
+<Check>The network where you deploy the Foundry resource can reach the agent's endpoint.</Check>
+<Check>The agent communicates by using one of the supported protocols: HTTP (general) or A2A (more specific).</Check>
+<Check>Your agent emits data by using the OpenTelemetry semantic conventions for generative AI solutions (or you don't need this capability).</Check>
+<Check>You can configure the endpoint that users use to communicate with the agent. After you register an agent, Foundry Control Plane generates a new URL. *Clients and users must use this URL to communicate with the agent*.</Check>
 ### Prepare your Foundry project
 
 Before you register the custom agent that you added to a Foundry project, make sure that you configured the project correctly:
 
 1. Sign in to [Microsoft Foundry](https://ai.azure.com/?cid=learnDocs). Make sure the **New Foundry** toggle is on. These steps refer to **Foundry (new)**.
 
-![](/images/new-foundry.png)
+<img src="/images/new-foundry.png" />
 
 1. Ensure that an AI gateway is configured in your project:
 
@@ -61,7 +60,9 @@ Before you register the custom agent that you added to a Foundry project, make s
 
     1. The pane lists all the AI gateways configured and mapped to a Foundry resource. Check if the Foundry resource that you want to use has an associated AI gateway.
 
-        ![Screenshot of the Foundry administration portal that shows steps for verifying if a project has an AI gateway configured.](/images/verify-ai-gateway.png)
+        <Frame>
+  <img src="/images/verify-ai-gateway.png" alt="Screenshot of the Foundry administration portal that shows steps for verifying if a project has an AI gateway configured." />
+</Frame>
 
     1. If the Foundry resource that you want to use doesn't have an AI gateway configured (it isn't listed), add one by using the **Add AI Gateway** option.
 
@@ -81,7 +82,9 @@ Before you register the custom agent that you added to a Foundry project, make s
 
     1. Ensure that there's an associated resource in the **AppInsights** category.
 
-        ![Screenshot of the administration portal that shows steps to verify if a project has an associated Application Insights resource.](/images/verify-app-insights.png)
+        <Frame>
+  <img src="/images/verify-app-insights.png" alt="Screenshot of the administration portal that shows steps to verify if a project has an associated Application Insights resource." />
+</Frame>
 
     1. If there's no associated resource, add one by selecting **Add connection** > **Application Insights**.
 
@@ -93,7 +96,9 @@ Your project is configured for observability and tracing.
 
 1. On the **Overview** pane, select **Register agent**.
 
-    ![Screenshot of the button for registering an agent on the Overview pane of the Foundry portal.](/images/register-custom-agent.png)
+    <Frame>
+  <img src="/images/register-custom-agent.png" alt="Screenshot of the button for registering an agent on the Overview pane of the Foundry portal." />
+</Frame>
 
 1. The registration wizard appears. First, complete the details about the agent that you want to register. The following properties describe the agent as it runs on its platform:
 
@@ -119,7 +124,9 @@ Your project is configured for observability and tracing.
 
 1. To show only custom agents, use the **Source** filter and select **Custom**.
 
-    ![Screenshot of a registered custom agent.](/images/register-custom-agent-example.png)
+    <Frame>
+  <img src="/images/register-custom-agent-example.png" alt="Screenshot of a registered custom agent." />
+</Frame>
 
 ### Connect clients to the agent
 
@@ -131,7 +138,9 @@ To distribute the new URL so that your clients can call the agent:
 
 1. On the details pane, under **Agent URL**, select the **Copy** option.
 
-    ![Screenshot of steps to copy the new URL of the agent after registration.](/images/register-custom-agent-url.png)
+    <Frame>
+  <img src="/images/register-custom-agent-url.png" alt="Screenshot of steps to copy the new URL of the agent after registration." />
+</Frame>
 
 1. Use the new URL to call the agent instead of the original endpoint.
 
@@ -169,7 +178,9 @@ To block incoming requests to your agent:
 
 1. Select **Update status**, and then select **Block**.
 
-    ![Screenshot of steps to block incoming requests to an agent.](/images/register-custom-agent-block.png)
+    <Frame>
+  <img src="/images/register-custom-agent-block.png" alt="Screenshot of steps to block incoming requests to an agent." />
+</Frame>
 
 1. Confirm the operation.
 
@@ -203,7 +214,9 @@ To get the best level of fidelity, Foundry expects custom agents to comply with 
 
    To see the details, select an entry.
 
-    ![Screenshot of a call to the agent's endpoint under the route for runs and streams.](/images/custom-agent-trace.png)
+    <Frame>
+  <img src="/images/custom-agent-trace.png" alt="Screenshot of a call to the agent's endpoint under the route for runs and streams." />
+</Frame>
 
     <Tip>
 
@@ -264,13 +277,10 @@ Configure the collector with the Azure Monitor exporter to forward data to Appli
 
 If you don't see traces, check the following items:
 
-> [!div class="checklist"]
->
-> - The project where you register your agent has Application Insights configured. If you configured Application Insights after you registered the custom agent, you need to unregister the agent and register it again. Application Insights configuration isn't automatically updated after registration if you changed it.
-> - You configured the agent (running on its infrastructure) to send traces to Application Insights, and you're using the same Application Insights resource that your project uses.
-> - Instrumentation complies with OpenTelemetry semantic conventions for generative AI.
-> - Traces include spans with attributes `operation="create_agent"` and `gen_ai.agents.id="<agent-id>"` (or `gen_ai.agents.name="<agent-id>"`). In the latter attribute, `"<agent-id>"` is the **OpenTelemetry Agent ID** value that you configured during registration.
-
+<Check>The project where you register your agent has Application Insights configured. If you configured Application Insights after you registered the custom agent, you need to unregister the agent and register it again. Application Insights configuration isn't automatically updated after registration if you changed it.</Check>
+<Check>You configured the agent (running on its infrastructure) to send traces to Application Insights, and you're using the same Application Insights resource that your project uses.</Check>
+<Check>Instrumentation complies with OpenTelemetry semantic conventions for generative AI.</Check>
+<Check>Traces include spans with attributes `operation="create_agent"` and `gen_ai.agents.id="<agent-id>"` (or `gen_ai.agents.name="<agent-id>"`). In the latter attribute, `"<agent-id>"` is the **OpenTelemetry Agent ID** value that you configured during registration.</Check>
 ## Related content
 
 - [What is Microsoft Foundry Control Plane?](/manage/overview)

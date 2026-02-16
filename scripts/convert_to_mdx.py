@@ -153,13 +153,13 @@ def simplify_front_matter(content: str) -> tuple[str, dict]:
 
 
 def convert_callouts(content: str) -> str:
-    """Convert > [!TIP], > [!NOTE], > [!WARNING], > [!IMPORTANT] to MDX components."""
+    """Convert > [!TIP], > [!NOTE], > [!WARNING], > [!IMPORTANT], > [!CAUTION] to MDX callouts."""
     callout_map = {
         "TIP": "Tip",
         "NOTE": "Note",
         "WARNING": "Warning",
-        "IMPORTANT": "Warning",
-        "CAUTION": "Warning",
+        "IMPORTANT": "Info",
+        "CAUTION": "Danger",
     }
 
     def replace_callout(match):
@@ -182,9 +182,107 @@ def convert_callouts(content: str) -> str:
 
 
 def convert_nextstep(content: str) -> str:
-    """Convert > [!div class="nextstepaction"] blocks to plain links."""
+    """Convert > [!div class="nextstepaction"] blocks to Mintlify Card links."""
+    def replace_nextstep(match):
+        block = re.sub(r'^>\s?', '', match.group(1), flags=re.MULTILINE).strip()
+        # Extract markdown links from the block
+        links = re.findall(r'\[([^\]]+)\]\(([^)]+)\)', block)
+        if links:
+            cards = []
+            for text, href in links:
+                cards.append(f'<Card title="{text}" icon="arrow-right" href="{href}" />')
+            return "\n".join(cards)
+        return block
+
     content = re.sub(
         r'>\s*\[!div\s+class="nextstepaction"\]\s*\n((?:>.*\n?)*)',
+        replace_nextstep,
+        content
+    )
+    return content
+
+
+def convert_checklists(content: str) -> str:
+    """Convert > [!div class="checklist"] blocks to Mintlify Check components."""
+    def replace_checklist(match):
+        block = match.group(1)
+        lines = []
+        for line in block.split("\n"):
+            stripped = re.sub(r'^>\s?', '', line).strip()
+            if stripped.startswith("* ") or stripped.startswith("- "):
+                item = stripped[2:].strip()
+                lines.append(f"<Check>{item}</Check>")
+            elif stripped:
+                lines.append(stripped)
+        return "\n".join(lines)
+
+    content = re.sub(
+        r'>\s*\[!div\s+class="checklist"\]\s*\n((?:>.*\n?)*)',
+        replace_checklist,
+        content
+    )
+    return content
+
+
+def convert_selectors(content: str) -> str:
+    """Convert > [!div class="op_single_selector"] blocks to Mintlify Tabs."""
+    def replace_selector(match):
+        block = match.group(1)
+        tabs = []
+        for line in block.split("\n"):
+            stripped = re.sub(r'^>\s?', '', line).strip()
+            link_match = re.match(r'^-\s*\[([^\]]+)\]\(([^)]+)\)', stripped)
+            if link_match:
+                title = link_match.group(1)
+                href = link_match.group(2)
+                tabs.append(f'  <Tab title="{title}">\n    [{title}]({href})\n  </Tab>')
+        if tabs:
+            return "<Tabs>\n" + "\n".join(tabs) + "\n</Tabs>"
+        return ""
+
+    content = re.sub(
+        r'>\s*\[!div\s+class="op_single_selector"\]\s*\n((?:>.*\n?)*)',
+        replace_selector,
+        content
+    )
+    # Multi-selector — convert to plain links (no clean Mintlify mapping)
+    content = re.sub(
+        r'>\s*\[!div\s+class="op_multi_selector"[^\]]*\]\s*\n((?:>.*\n?)*)',
+        lambda m: re.sub(r'^>\s?', '', m.group(1), flags=re.MULTILINE),
+        content
+    )
+    return content
+
+
+def convert_columns(content: str) -> str:
+    """Convert :::row:::/:::column::: blocks to Mintlify Columns/Card layout."""
+    # Count columns in each row to set cols attribute
+    def replace_row(match):
+        row_content = match.group(1)
+        # Split by column markers
+        columns = re.split(r':::column[^:]*:::\s*\n?', row_content)
+        columns = [re.sub(r':::column-end:::\s*\n?', '', c).strip() for c in columns if c.strip()]
+        if not columns:
+            return ""
+        n = len(columns)
+        cards = []
+        for col in columns:
+            cards.append(f"  <Card>\n    {col}\n  </Card>")
+        return f'<Columns cols={{{n}}}>\n' + "\n".join(cards) + "\n</Columns>"
+
+    content = re.sub(
+        r':::row:::\s*\n(.*?):::row-end:::\s*\n?',
+        replace_row,
+        content,
+        flags=re.DOTALL,
+    )
+    return content
+
+
+def strip_table_wrappers(content: str) -> str:
+    """Strip [!div class="mx-tdBreakAll"] and similar table CSS wrappers."""
+    content = re.sub(
+        r'>\s*\[!div\s+class="mx-td[^"]*"\]\s*\n((?:>.*\n?)*)',
         lambda m: re.sub(r'^>\s?', '', m.group(1), flags=re.MULTILINE),
         content
     )
@@ -192,20 +290,55 @@ def convert_nextstep(content: str) -> str:
 
 
 def convert_images(content: str) -> str:
-    """Convert :::image to standard markdown images."""
+    """Convert :::image to Mintlify components.
+
+    - type="content" / default → <Frame><img ... /></Frame>
+    - type="complex" with :::image-end::: → <Frame caption="long desc"><img ... /></Frame>
+    - type="icon" → <img ... /> (no alt, no frame)
+    - lightbox → wraps in <Frame> (Mintlify supports zoom by default)
+    """
+    # First: handle complex images with long descriptions (multi-line :::image ... :::image-end:::)
+    def replace_complex_image(match):
+        tag = match.group(1)
+        long_desc = match.group(2).strip()
+        source = re.search(r'source="([^"]+)"', tag)
+        alt = re.search(r'alt-text="([^"]+)"', tag)
+        src = source.group(1) if source else ""
+        alt_text = alt.group(1) if alt else ""
+        src = re.sub(r'\?.*$', '', src)
+        if src and not src.startswith("http"):
+            src = f"/images/{PurePosixPath(src).name}"
+        caption = long_desc.replace('"', '\\"') if long_desc else ""
+        if caption:
+            return f'<Frame caption="{caption}">\n  <img src="{src}" alt="{alt_text}" />\n</Frame>'
+        return f'<Frame>\n  <img src="{src}" alt="{alt_text}" />\n</Frame>'
+
+    content = re.sub(
+        r':::image\s+(.*?):::\s*\n(.*?):::image-end:::',
+        replace_complex_image,
+        content,
+        flags=re.DOTALL,
+    )
+
+    # Then: handle single-line :::image ... :::
     def replace_image(match):
         full = match.group(0)
+        img_type = re.search(r'type="([^"]+)"', full)
         source = re.search(r'source="([^"]+)"', full)
         alt = re.search(r'alt-text="([^"]+)"', full)
         src = source.group(1) if source else ""
         alt_text = alt.group(1) if alt else ""
-        # Clean up the source path
-        src = re.sub(r'\?.*$', '', src)  # strip query params
+        src = re.sub(r'\?.*$', '', src)
         if src and not src.startswith("http"):
             src = f"/images/{PurePosixPath(src).name}"
-        return f"![{alt_text}]({src})"
 
-    # Match :::image ... ::: (single or multi-line)
+        # Icons: no frame, no alt required
+        if img_type and img_type.group(1) == "icon":
+            return f'<img src="{src}" />'
+
+        # Content and default: wrap in Frame
+        return f'<Frame>\n  <img src="{src}" alt="{alt_text}" />\n</Frame>'
+
     content = re.sub(
         r':::image[^:]*?:::', replace_image, content, flags=re.DOTALL
     )
@@ -344,13 +477,13 @@ def clean_up(content: str) -> str:
     content = re.sub(r'monikerRange:.*\n', '', content)
     # Remove :::no-loc directives
     content = re.sub(r':::no-loc\s+text="([^"]+)":::', r'\1', content)
-    # Remove :::row/:::column directives (simplify to plain content)
+    # Remove any leftover :::row/:::column directives not caught by convert_columns
     content = re.sub(r':::row:::\s*\n?', '', content)
     content = re.sub(r':::row-end:::\s*\n?', '', content)
     content = re.sub(r':::column[^:]*:::\s*\n?', '', content)
     content = re.sub(r':::column-end:::\s*\n?', '', content)
     # Remove customer intent comments
-    content = re.sub(r'#\s*customer intent:.*\n', '', content)
+    content = re.sub(r'#\s*customer intent:.*\n', '', content, flags=re.IGNORECASE)
     # Collapse 3+ blank lines to 2
     content = re.sub(r'\n{3,}', '\n\n', content)
     return content.strip() + "\n"
@@ -439,6 +572,8 @@ def convert_doc(doc: dict) -> str | None:
     # Step 4: Convert callouts
     body = convert_callouts(body)
     body = convert_nextstep(body)
+    body = convert_checklists(body)
+    body = convert_selectors(body)
 
     # Step 5: Convert tabs
     body = convert_tabs(body)
@@ -449,13 +584,19 @@ def convert_doc(doc: dict) -> str | None:
     # Step 7: Convert zone pivots
     body = convert_zone_pivots(body)
 
-    # Step 8: Rewrite links
+    # Step 8: Convert columns (after zone pivots strip markers)
+    body = convert_columns(body)
+
+    # Step 9: Rewrite links
     body = rewrite_links(body, source_path)
 
-    # Step 9: Strip code includes
+    # Step 10: Strip code includes
     body = strip_code_includes(body)
 
-    # Step 10: Final cleanup
+    # Step 11: Strip table CSS wrappers
+    body = strip_table_wrappers(body)
+
+    # Step 12: Final cleanup
     body = clean_up(body)
 
     # Build final MDX

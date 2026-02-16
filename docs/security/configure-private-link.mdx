@@ -22,9 +22,9 @@ End-to-end network isolation isn't supported in the new Foundry portal experienc
     - On the Foundry project resource: **Contributor** (or **Owner**) to create private endpoint connections. If you don't have approval permissions, the private endpoint connection stays in a **Pending** state until the resource owner approves it.
     - If you manage private DNS zones: **Private DNS Zone Contributor** (or equivalent) for the private DNS zone that you link to the virtual network.
 
-    <Warning>
+    <Info>
 
-</Warning>    > Don't use the 172.17.0.0/16 IP address range for your virtual network. This range is the default subnet range used by the Docker bridge network on-premises.
+</Info>    > Don't use the 172.17.0.0/16 IP address range for your virtual network. This range is the default subnet range used by the Docker bridge network on-premises.
 
 ## Securely connect to Foundry
 
@@ -88,14 +88,16 @@ To remove a private endpoint, use the following information:
 
 In some situations, you might want to allow someone to connect to your secured project over a public endpoint, instead of through the virtual network. Or you might want to remove the project from the virtual network and re-enable public access.
 
-<Warning>
+<Info>
 Enabling public access doesn't remove any private endpoints that exist. All communications between components behind the virtual network that the private endpoints connect to are still secured. It enables public access only to the project, in addition to the private access through any private endpoints.
-</Warning>
+</Info>
 1. From the [Azure portal](https://portal.azure.com), select your project.
 1. From the left side of the page, select **Resource Management**, **Networking**, and then select the **Firewalls and virtual networks** tab.
 1. Select **All networks**, and then select **Save**.
 
-    ![Screenshot of the firewalls and virtual networks tab with the all networks option selected.](/images/foundry-portal-firewall.png)
+    <Frame>
+  <img src="/images/foundry-portal-firewall.png" alt="Screenshot of the firewalls and virtual networks tab with the all networks option selected." />
+</Frame>
 
 ## DNS configuration
 
@@ -165,7 +167,9 @@ For Agent Service network isolation scenarios (including network injection, end-
 
 If you're building agents or running evaluations and you want end-to-end network isolation, use the guidance in [How to use a virtual network with the Azure AI Agent Service](https://learn.microsoft.com/azure/ai-services/agents/how-to/virtual-networks). That article includes required DNS zones, a reference architecture, and known limitations.
 
-![Diagram of the recommended network isolation for Foundry.](/images/agent-eval-networking.png)
+<Frame>
+  <img src="/images/agent-eval-networking.png" alt="Diagram of the recommended network isolation for Foundry." />
+</Frame>
 
 ## Network injection for Agent Service and evaluations
 
@@ -175,7 +179,9 @@ Network-secured Standard Agents and evaluations support full network isolation a
 
 To secure egress (outbound) traffic through network injection, configure an Azure Firewall or another firewall. This configuration helps inspect and control outbound traffic before it leaves your virtual network.
 
-![Diagram of the hub and spoke network isolation for Foundry projects and agents.](/images/hub-spoke-network.png)
+<Frame>
+  <img src="/images/hub-spoke-network.png" alt="Diagram of the hub and spoke network isolation for Foundry projects and agents." />
+</Frame>
 
 ## Next steps
 

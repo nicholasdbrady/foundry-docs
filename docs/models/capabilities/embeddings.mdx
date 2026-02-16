@@ -9,12 +9,10 @@ This tutorial will walk you through using the Azure OpenAI [embeddings](../conce
 
 In this tutorial, you learn how to:
 
-> [!div class="checklist"]
-> * Download a sample dataset and prepare it for analysis.
-> * Create environment variables for your resources endpoint and API key.
-> * Use one of the following models: text-embedding-ada-002 (Version 2), text-embedding-3-large, text-embedding-3-small  models.
-> * Use [cosine similarity](../concepts/understand-embeddings.md) to rank search results.
-
+<Check>Download a sample dataset and prepare it for analysis.</Check>
+<Check>Create environment variables for your resources endpoint and API key.</Check>
+<Check>Use one of the following models: text-embedding-ada-002 (Version 2), text-embedding-3-large, text-embedding-3-small  models.</Check>
+<Check>Use [cosine similarity](../concepts/understand-embeddings.md) to rank search results.</Check>
 ## Prerequisites
 
 * An Azure subscription - [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn)
@@ -110,7 +108,9 @@ df
 
 **Output:**
 
-![Screenshot of the initial DataFrame table results from the csv file.](/images/initial-dataframe.png)
+<Frame>
+  <img src="/images/initial-dataframe.png" alt="Screenshot of the initial DataFrame table results from the csv file." />
+</Frame>
 
 The initial table has more columns than we need we'll create a new smaller DataFrame called `df_bills` which will contain only the columns for `text`, `summary`, and `title`.
 
@@ -121,7 +121,9 @@ df_bills
 
 **Output:**
 
-![Screenshot of the smaller DataFrame table results with only text, summary, and title columns displayed.](/images/cleanup-dataframe.png)
+<Frame>
+  <img src="/images/cleanup-dataframe.png" alt="Screenshot of the smaller DataFrame table results with only text, summary, and title columns displayed." />
+</Frame>
 
 Next we'll perform some light data cleaning by removing redundant whitespace and cleaning up the punctuation to prepare the data for tokenization.
 
@@ -167,7 +169,9 @@ df_bills
 
 **Output:**
 
-![Screenshot of the DataFrame with a new column called n_tokens.](/images/tokens-dataframe.png)
+<Frame>
+  <img src="/images/tokens-dataframe.png" alt="Screenshot of the DataFrame with a new column called n_tokens." />
+</Frame>
 
 To understand the n_tokens column a little more as well how text ultimately is tokenized, it can be helpful to run the following code:
 
@@ -262,7 +266,9 @@ df_bills
 
 **Output:**
 
-![Screenshot of the formatted results from df_bills command.](/images/embed-text-documents.png)
+<Frame>
+  <img src="/images/embed-text-documents.png" alt="Screenshot of the formatted results from df_bills command." />
+</Frame>
 
 As we run the search code block below, we'll embed the search query *"Can I get information on cable company tax revenue?"* with the same **text-embedding-ada-002 (Version 2)** model. Next we'll find the closest bill embedding to the newly embedded text from our query ranked by [cosine similarity](../concepts/understand-embeddings.md).
 
@@ -293,7 +299,9 @@ res = search_docs(df_bills, "Can I get information on cable company tax revenue?
 
 **Output**:
 
-![Screenshot of the formatted results of res once the search query has been run.](/images/query-result.png)
+<Frame>
+  <img src="/images/query-result.png" alt="Screenshot of the formatted results of res once the search query has been run." />
+</Frame>
 
 Finally, we'll show the top result from document search based on user query against the entire knowledge base. This returns the top result of the "Taxpayer's Right to View Act of 1993." This document has a cosine similarity score of 0.76 between the query and the document:
 
@@ -323,8 +331,7 @@ If you created an Azure OpenAI resource solely for completing this tutorial and 
 ## Next steps
 
 Learn more about Azure OpenAI's models:
-[Azure OpenAI models](/models/catalog/models-sold-directly-by-azure)
-* Store your embeddings and perform vector (similarity) search using your choice of Azure service:
+<Card title="Azure OpenAI models" icon="arrow-right" href="../../foundry-models/concepts/models-sold-directly-by-azure.md" />* Store your embeddings and perform vector (similarity) search using your choice of Azure service:
   * [Azure AI Search](https://learn.microsoft.com/azure/search/vector-search-overview)
   * [Azure SQL Database](https://learn.microsoft.com/azure/azure-sql/database/ai-artificial-intelligence-intelligent-applications)
   * [Azure Cosmos DB for MongoDB vCore](https://learn.microsoft.com/azure/cosmos-db/mongodb/vcore/vector-search)

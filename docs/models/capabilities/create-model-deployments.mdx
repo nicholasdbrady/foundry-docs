@@ -9,11 +9,11 @@ sidebarTitle: "Deploy models using Azure CLI and Bicep"
 This article refers to the [Microsoft Foundry (new)](../what-is-foundry.md#microsoft-foundry-portals) portal.
 </Note><!-- > 🔄 [Switch to the Microsoft Foundry (classic) documentation]() if you're using the classic portal. -->
 
-<Warning>
+<Info>
 If you're currently using an Azure AI Inference beta SDK with Microsoft Foundry Models or Azure OpenAI service, we strongly recommend that you transition to the generally available [OpenAI/v1 API](https://aka.ms/openai/v1), which uses an OpenAI stable SDK.
 
 For more information on how to migrate to the OpenAI/v1 API by using an SDK in your programming language of choice, see [Migrate from Azure AI Inference SDK to OpenAI SDK](../how-to/model-inference-to-openai-migration.md).
-</Warning>
+</Info>
 In this article, you learn how to add a new model deployment to a Foundry Models endpoint. The deployment is available for inference in your Foundry resource when you specify the deployment name in your requests.
 
 ## Prerequisites
@@ -226,17 +226,15 @@ cd azureai-model-inference-bicep/infra
 
 When deploying third-party models, ensure you have the following permissions in your account:
 
-> [!div class="checklist"]
-> * On the Azure subscription:
->   * `Microsoft.MarketplaceOrdering/agreements/offers/plans/read`
->   * `Microsoft.MarketplaceOrdering/agreements/offers/plans/sign/action`
->   * `Microsoft.MarketplaceOrdering/offerTypes/publishers/offers/plans/agreements/read`
->   * `Microsoft.Marketplace/offerTypes/publishers/offers/plans/agreements/read`
->   * `Microsoft.SaaS/register/action`
-> * On the resource group—to create and use the SaaS resource:
->   * `Microsoft.SaaS/resources/read`
->   * `Microsoft.SaaS/resources/write`
-## Add the model
+<Check>On the Azure subscription:</Check>
+<Check>`Microsoft.MarketplaceOrdering/agreements/offers/plans/read`</Check>
+<Check>`Microsoft.MarketplaceOrdering/agreements/offers/plans/sign/action`</Check>
+<Check>`Microsoft.MarketplaceOrdering/offerTypes/publishers/offers/plans/agreements/read`</Check>
+<Check>`Microsoft.Marketplace/offerTypes/publishers/offers/plans/agreements/read`</Check>
+<Check>`Microsoft.SaaS/register/action`</Check>
+<Check>On the resource group—to create and use the SaaS resource:</Check>
+<Check>`Microsoft.SaaS/resources/read`</Check>
+<Check>`Microsoft.SaaS/resources/write`</Check>## Add the model
 
 1. Use the template `ai-services-deployment-template.bicep` to describe model deployments:
 

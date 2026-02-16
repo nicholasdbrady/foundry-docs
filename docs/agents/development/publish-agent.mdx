@@ -19,9 +19,9 @@ Publishing enables you to share agents with teammates, your organization, or cus
 - Familiarity with [Agent identity concepts in Foundry](/agents/development/agent-identity)
 - Install the required language runtimes, global tools, and VS Code extensions as described in [Prepare your development environment](/developer-experience/install-cli-sdk)
 
-<Warning>
+<Info>
 Code in this article uses packages that are currently in preview. This preview is provided without a service-level agreement, and we don't recommend it for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
-</Warning>
+</Info>
 ## When to use agent applications
 Anyone with the AI User role on a Foundry project can interact with all the agents it contains with conversations and state shared between all users. This is appropriate for development tasks like authoring, debugging, and testing agents, but it’s not typically suitable for distribution of an agent to non-developers. 
 
@@ -42,7 +42,9 @@ It’s also a prerequisite for:
 
 Before publishing, it's important to understand the relationship between projects, agent versions, applications, and deployments.
 
-![Diagram illustrating how Foundry projects organize agent versions, applications, and deployments, highlighting governance and RBAC roles.](/images/azure-agent-identity-overview.png)
+<Frame>
+  <img src="/images/azure-agent-identity-overview.png" alt="Diagram illustrating how Foundry projects organize agent versions, applications, and deployments, highlighting governance and RBAC roles." />
+</Frame>
 
 A Foundry **project** is a work organization concept that groups related resources such as agents, files, and indexes. An **agent** represents a composable unit — defined by its instructions, model, and tools. An **agent version** captures a specific immutable snapshot of an agent. Every time you make changes to your agent, such as updating the prompt or adding tools, a new agent version is created. When you create an agent version, it's exposed under the project where developers with project access can create, run, and test it.
 
@@ -54,7 +56,9 @@ During development, all unpublished agents in a project share a default Agent Id
 
 Each Agent Application acts as a routing table to specific agent deployments. Currently, an Agent Application supports one active deployment, directing 100% of the traffic received by the application’s endpoint to that deployment. When you publish a new agent version to an existing application, 100% of the traffic received by the application’s endpoint will be directed to the deployment referencing the new agent version.  
 
-![Diagram of an Agent Application routing traffic to a deployment running a specific agent version, showing a stable entry point and traffic flow.](/images/agent-application-routing-diagram.png)
+<Frame>
+  <img src="/images/agent-application-routing-diagram.png" alt="Diagram of an Agent Application routing traffic to a deployment running a specific agent version, showing a stable entry point and traffic flow." />
+</Frame>
 
 ### Anatomy of an Agent Application and deployment
 
@@ -158,9 +162,9 @@ This section shows you how to publish an agent using the Foundry portal interfac
 ### REST API
 To publish an agent version you must create an application and deployment that reference your agent version.
 
-<Warning>
+<Info>
 Agent Applications are Azure resources. Use the latest API version available for your subscription and account when calling the management endpoint.
-</Warning>
+</Info>
 1. Create agent application. Update agentName field to the name of the agent you want to publish. 
 ```
 PUT https://management.azure.com/subscriptions/{{subscription_id}}/resourceGroups/{{resource_group}}/providers/Microsoft.CognitiveServices/accounts/{{account_name}}/projects/{{project_name}}/applications/{{application_name}}?api-version={{api_version}}
@@ -380,8 +384,6 @@ If you no longer need a published endpoint, delete the Agent Application Azure r
 
 ## Next steps
 
-[Manage agents at scale](/manage/how-to-manage-agents)
-
-[Prepare your development environment](/developer-experience/install-cli-sdk)
-
-[Get started with the SDK](/get-started/get-started-code)
+<Card title="Manage agents at scale" icon="arrow-right" href="../../control-plane/how-to-manage-agents.md" />
+<Card title="Prepare your development environment" icon="arrow-right" href="../../../how-to/develop/install-cli-sdk.md" />
+<Card title="Get started with the SDK" icon="arrow-right" href="../../../quickstarts/get-started-code.md" />

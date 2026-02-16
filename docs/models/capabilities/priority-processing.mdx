@@ -9,11 +9,11 @@ sidebarTitle: "Enable priority processing for Microsoft Foundry Models (preview)
 This article refers to the [Microsoft Foundry (new)](../what-is-foundry.md#microsoft-foundry-portals) portal.
 </Note><!-- > 🔄 [Switch to the Microsoft Foundry (classic) documentation]() if you're using the classic portal. -->
 
-<Warning>
+<Info>
 Priority processing is in preview and available by invitation only. [Register here](https://aka.ms/priority-register-interest) to be notified when it becomes more broadly available.
 
 This preview is provided without a service-level agreement and isn't recommended for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
-</Warning>
+</Info>
 Priority processing provides low-latency performance with the flexibility of pay-as-you-go. It operates on a pay-as-you-go token model, offering rapid response times without long-term contract commitments. In this article, you enable priority processing on a model deployment, verify which service tier processed your requests, and monitor associated costs.
 
 ## Prerequisites
@@ -88,7 +88,9 @@ You can enable priority processing at the deployment level and [(optionally) at 
 
 In the [Microsoft Foundry](https://ai.azure.com/?cid=learnDocs) portal, you can enable priority processing during deployment setup. Turn on the **Priority processing (preview)** toggle on the deployment details page when creating the deployment or update the setting of a deployed model by editing the deployment details.
 
-![Screenshot showing how to enable priority processing during model deployment in the Foundry portal.](/images/enable-priority-processing-foundry.png)
+<Frame>
+  <img src="/images/enable-priority-processing-foundry.png" alt="Screenshot showing how to enable priority processing during model deployment in the Foundry portal." />
+</Frame>
 
 <Note>
 If you prefer to use code to enable priority processing at the deployment level, you can do so via the REST API for deployment by setting the `service_tier` attribute as follows: `"properties" : {"service_tier" : "priority"}`. Allowed values for the `service_tier` attribute are `default` and `priority`. `default` implies standard processing, while `priority` enables priority processing.
@@ -107,7 +109,9 @@ To view the volume of requests processed by standard processing versus priority 
 1. Select **Add filter** to select the standard deployment for which priority processing requests were processed.
 1. Select **Apply splitting** to split the values by **ServiceTierRequest** and **ServiceTierResponse**.
 
-![Screenshot of the priority processing utilization on the resource's metrics page in the Azure portal.](/images/azure-monitor-priority-processsing-utilization.png)
+<Frame>
+  <img src="/images/azure-monitor-priority-processsing-utilization.png" alt="Screenshot of the priority processing utilization on the resource's metrics page in the Azure portal." />
+</Frame>
 
 For more information about monitoring your deployments, see [Monitor Azure OpenAI](../how-to/monitor-openai.md).
 
@@ -119,7 +123,9 @@ You can see a breakdown of costs for priority and standard requests in the Azure
 1. (Optional) Filter by resource.
 1. To filter by deployment name: Add a filter for billing **Tag** > select **deployment** as the value, then choose your deployment name.
 
-![Screenshot of the priority processing utilization on the resource's cost analysis page in the Azure portal.](/images/cost-analysis-priority-processing.png)
+<Frame>
+  <img src="/images/cost-analysis-priority-processing.png" alt="Screenshot of the priority processing utilization on the resource's cost analysis page in the Azure portal." />
+</Frame>
 
 For information about pricing for priority processing, see the [Azure OpenAI Service pricing overview](https://azure.microsoft.com/pricing/details/cognitive-services/openai-service/).
 
