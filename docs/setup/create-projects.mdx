@@ -51,89 +51,89 @@ If your organization requires customized Azure configurations like alternative n
         1. Start your script with the following code to create the `client` connection and variables used throughout this article. This example creates the project in East US:
         
             ```python
-# source: https://github.com/Azure/agent-first-sdk/blob/main/tests/management_sdk/manage_ai_foundry.ipynb
+            # source: https://github.com/Azure/agent-first-sdk/blob/main/tests/management_sdk/manage_ai_foundry.ipynb
 
-# <create_client>
-from azure.identity import DefaultAzureCredential
-from azure.mgmt.cognitiveservices import CognitiveServicesManagementClient
+            # <create_client>
+            from azure.identity import DefaultAzureCredential
+            from azure.mgmt.cognitiveservices import CognitiveServicesManagementClient
 
-subscription_id = 'your-subscription-id'
-resource_group_name = 'your-resource-group-name'
-foundry_resource_name = 'your-foundry-resource-name'
-foundry_project_name = 'your-foundry-project-name'
-location = 'eastus'
+            subscription_id = 'your-subscription-id'
+            resource_group_name = 'your-resource-group-name'
+            foundry_resource_name = 'your-foundry-resource-name'
+            foundry_project_name = 'your-foundry-project-name'
+            location = 'eastus'
 
-client = CognitiveServicesManagementClient(
-    credential=DefaultAzureCredential(), 
-    subscription_id=subscription_id,
-    api_version="2025-04-01-preview"
-)
-# </create_client>
-# TODO: add code to create create a new resource group
+            client = CognitiveServicesManagementClient(
+                credential=DefaultAzureCredential(), 
+                subscription_id=subscription_id,
+                api_version="2025-04-01-preview"
+            )
+            # </create_client>
+            # TODO: add code to create create a new resource group
 
-# <create_resource_project>
-# Create resource
-resource = client.accounts.begin_create(
-    resource_group_name=resource_group_name,
-    account_name=foundry_resource_name,
-    account={
-        "location": location,
-        "kind": "AIServices",
-        "sku": {"name": "S0",},
-        "identity": {"type": "SystemAssigned"},
-        "properties": {
-            "allowProjectManagement": True,
-            "customSubDomainName": foundry_resource_name
-        }
-    }
-)
+            # <create_resource_project>
+            # Create resource
+            resource = client.accounts.begin_create(
+                resource_group_name=resource_group_name,
+                account_name=foundry_resource_name,
+                account={
+                    "location": location,
+                    "kind": "AIServices",
+                    "sku": {"name": "S0",},
+                    "identity": {"type": "SystemAssigned"},
+                    "properties": {
+                        "allowProjectManagement": True,
+                        "customSubDomainName": foundry_resource_name
+                    }
+                }
+            )
 
-# Wait for the resource creation to complete
-resource_result = resource.result()
+            # Wait for the resource creation to complete
+            resource_result = resource.result()
 
-# Create default project
-project = client.projects.begin_create(
-    resource_group_name=resource_group_name,
-    account_name=foundry_resource_name,
-    project_name=foundry_project_name,
-    project={
-        "location": location,
-        "identity": {
-            "type": "SystemAssigned"
-        },
-        "properties": {}
-    }
-)
-# </create_resource_project>
-# TODO: code to do role assignment to give user project manager role on the account
+            # Create default project
+            project = client.projects.begin_create(
+                resource_group_name=resource_group_name,
+                account_name=foundry_resource_name,
+                project_name=foundry_project_name,
+                project={
+                    "location": location,
+                    "identity": {
+                        "type": "SystemAssigned"
+                    },
+                    "properties": {}
+                }
+            )
+            # </create_resource_project>
+            # TODO: code to do role assignment to give user project manager role on the account
 
-# <create_additional>
-# Create additional project
-new_project_name = 'your-new-project-name'
+            # <create_additional>
+            # Create additional project
+            new_project_name = 'your-new-project-name'
 
-project = client.projects.begin_create(
-    resource_group_name=resource_group_name,
-    account_name=foundry_resource_name,
-    project_name=new_project_name,
-    project={
-        "location": location,
-        "identity": {
-            "type": "SystemAssigned"
-        },
-        "properties": {}
-    }
-)
-# </create_additional>
-# <show_project>
-# Get project
-project = client.projects.get(
-    resource_group_name=resource_group_name,
-    account_name=foundry_resource_name,
-    project_name=foundry_project_name
-)
-print(project)
-# </show_project>
-```
+            project = client.projects.begin_create(
+                resource_group_name=resource_group_name,
+                account_name=foundry_resource_name,
+                project_name=new_project_name,
+                project={
+                    "location": location,
+                    "identity": {
+                        "type": "SystemAssigned"
+                    },
+                    "properties": {}
+                }
+            )
+            # </create_additional>
+            # <show_project>
+            # Get project
+            project = client.projects.get(
+                resource_group_name=resource_group_name,
+                account_name=foundry_resource_name,
+                project_name=foundry_project_name
+            )
+            print(project)
+            # </show_project>
+            ```
     
         1. (Optional) If you have multiple accounts, add the tenant ID of the Microsoft Entra ID you want to use into the `DefaultAzureCredential`.
                 
@@ -222,89 +222,89 @@ Especially for getting started, create a new resource group for your project. Th
     - Add the following code to create a Foundry project by using the variables and `client` connection from the [Prerequisites](#prerequisites).
 
         ```python
-# source: https://github.com/Azure/agent-first-sdk/blob/main/tests/management_sdk/manage_ai_foundry.ipynb
+        # source: https://github.com/Azure/agent-first-sdk/blob/main/tests/management_sdk/manage_ai_foundry.ipynb
 
-# <create_client>
-from azure.identity import DefaultAzureCredential
-from azure.mgmt.cognitiveservices import CognitiveServicesManagementClient
+        # <create_client>
+        from azure.identity import DefaultAzureCredential
+        from azure.mgmt.cognitiveservices import CognitiveServicesManagementClient
 
-subscription_id = 'your-subscription-id'
-resource_group_name = 'your-resource-group-name'
-foundry_resource_name = 'your-foundry-resource-name'
-foundry_project_name = 'your-foundry-project-name'
-location = 'eastus'
+        subscription_id = 'your-subscription-id'
+        resource_group_name = 'your-resource-group-name'
+        foundry_resource_name = 'your-foundry-resource-name'
+        foundry_project_name = 'your-foundry-project-name'
+        location = 'eastus'
 
-client = CognitiveServicesManagementClient(
-    credential=DefaultAzureCredential(), 
-    subscription_id=subscription_id,
-    api_version="2025-04-01-preview"
-)
-# </create_client>
-# TODO: add code to create create a new resource group
+        client = CognitiveServicesManagementClient(
+            credential=DefaultAzureCredential(), 
+            subscription_id=subscription_id,
+            api_version="2025-04-01-preview"
+        )
+        # </create_client>
+        # TODO: add code to create create a new resource group
 
-# <create_resource_project>
-# Create resource
-resource = client.accounts.begin_create(
-    resource_group_name=resource_group_name,
-    account_name=foundry_resource_name,
-    account={
-        "location": location,
-        "kind": "AIServices",
-        "sku": {"name": "S0",},
-        "identity": {"type": "SystemAssigned"},
-        "properties": {
-            "allowProjectManagement": True,
-            "customSubDomainName": foundry_resource_name
-        }
-    }
-)
+        # <create_resource_project>
+        # Create resource
+        resource = client.accounts.begin_create(
+            resource_group_name=resource_group_name,
+            account_name=foundry_resource_name,
+            account={
+                "location": location,
+                "kind": "AIServices",
+                "sku": {"name": "S0",},
+                "identity": {"type": "SystemAssigned"},
+                "properties": {
+                    "allowProjectManagement": True,
+                    "customSubDomainName": foundry_resource_name
+                }
+            }
+        )
 
-# Wait for the resource creation to complete
-resource_result = resource.result()
+        # Wait for the resource creation to complete
+        resource_result = resource.result()
 
-# Create default project
-project = client.projects.begin_create(
-    resource_group_name=resource_group_name,
-    account_name=foundry_resource_name,
-    project_name=foundry_project_name,
-    project={
-        "location": location,
-        "identity": {
-            "type": "SystemAssigned"
-        },
-        "properties": {}
-    }
-)
-# </create_resource_project>
-# TODO: code to do role assignment to give user project manager role on the account
+        # Create default project
+        project = client.projects.begin_create(
+            resource_group_name=resource_group_name,
+            account_name=foundry_resource_name,
+            project_name=foundry_project_name,
+            project={
+                "location": location,
+                "identity": {
+                    "type": "SystemAssigned"
+                },
+                "properties": {}
+            }
+        )
+        # </create_resource_project>
+        # TODO: code to do role assignment to give user project manager role on the account
 
-# <create_additional>
-# Create additional project
-new_project_name = 'your-new-project-name'
+        # <create_additional>
+        # Create additional project
+        new_project_name = 'your-new-project-name'
 
-project = client.projects.begin_create(
-    resource_group_name=resource_group_name,
-    account_name=foundry_resource_name,
-    project_name=new_project_name,
-    project={
-        "location": location,
-        "identity": {
-            "type": "SystemAssigned"
-        },
-        "properties": {}
-    }
-)
-# </create_additional>
-# <show_project>
-# Get project
-project = client.projects.get(
-    resource_group_name=resource_group_name,
-    account_name=foundry_resource_name,
-    project_name=foundry_project_name
-)
-print(project)
-# </show_project>
-```
+        project = client.projects.begin_create(
+            resource_group_name=resource_group_name,
+            account_name=foundry_resource_name,
+            project_name=new_project_name,
+            project={
+                "location": location,
+                "identity": {
+                    "type": "SystemAssigned"
+                },
+                "properties": {}
+            }
+        )
+        # </create_additional>
+        # <show_project>
+        # Get project
+        project = client.projects.get(
+            resource_group_name=resource_group_name,
+            account_name=foundry_resource_name,
+            project_name=foundry_project_name
+        )
+        print(project)
+        # </show_project>
+        ```
 
         References: [CognitiveServicesManagementClient](https://learn.microsoft.com/python/api/azure-mgmt-cognitiveservices/azure.mgmt.cognitiveservices.CognitiveServicesManagementClient).
 
@@ -421,7 +421,8 @@ Sign in to [Microsoft Foundry](https://ai.azure.com/?cid=learnDocs). Make sure t
     {/* 1. Select **Operate** in the upper-right navigation.
     1. Select **Admin** in the left pane.
     1. Select the Parent resource you want to add a project to.
-    1. Select **Add project**. */}
+    1. Select **Add project**. 
+    */}
       
     
     
@@ -433,89 +434,89 @@ Sign in to [Microsoft Foundry](https://ai.azure.com/?cid=learnDocs). Make sure t
     Add this code to your script to create a new project on your existing resource:
 
     ```python
-# source: https://github.com/Azure/agent-first-sdk/blob/main/tests/management_sdk/manage_ai_foundry.ipynb
+    # source: https://github.com/Azure/agent-first-sdk/blob/main/tests/management_sdk/manage_ai_foundry.ipynb
 
-# <create_client>
-from azure.identity import DefaultAzureCredential
-from azure.mgmt.cognitiveservices import CognitiveServicesManagementClient
+    # <create_client>
+    from azure.identity import DefaultAzureCredential
+    from azure.mgmt.cognitiveservices import CognitiveServicesManagementClient
 
-subscription_id = 'your-subscription-id'
-resource_group_name = 'your-resource-group-name'
-foundry_resource_name = 'your-foundry-resource-name'
-foundry_project_name = 'your-foundry-project-name'
-location = 'eastus'
+    subscription_id = 'your-subscription-id'
+    resource_group_name = 'your-resource-group-name'
+    foundry_resource_name = 'your-foundry-resource-name'
+    foundry_project_name = 'your-foundry-project-name'
+    location = 'eastus'
 
-client = CognitiveServicesManagementClient(
-    credential=DefaultAzureCredential(), 
-    subscription_id=subscription_id,
-    api_version="2025-04-01-preview"
-)
-# </create_client>
-# TODO: add code to create create a new resource group
+    client = CognitiveServicesManagementClient(
+        credential=DefaultAzureCredential(), 
+        subscription_id=subscription_id,
+        api_version="2025-04-01-preview"
+    )
+    # </create_client>
+    # TODO: add code to create create a new resource group
 
-# <create_resource_project>
-# Create resource
-resource = client.accounts.begin_create(
-    resource_group_name=resource_group_name,
-    account_name=foundry_resource_name,
-    account={
-        "location": location,
-        "kind": "AIServices",
-        "sku": {"name": "S0",},
-        "identity": {"type": "SystemAssigned"},
-        "properties": {
-            "allowProjectManagement": True,
-            "customSubDomainName": foundry_resource_name
+    # <create_resource_project>
+    # Create resource
+    resource = client.accounts.begin_create(
+        resource_group_name=resource_group_name,
+        account_name=foundry_resource_name,
+        account={
+            "location": location,
+            "kind": "AIServices",
+            "sku": {"name": "S0",},
+            "identity": {"type": "SystemAssigned"},
+            "properties": {
+                "allowProjectManagement": True,
+                "customSubDomainName": foundry_resource_name
+            }
         }
-    }
-)
+    )
 
-# Wait for the resource creation to complete
-resource_result = resource.result()
+    # Wait for the resource creation to complete
+    resource_result = resource.result()
 
-# Create default project
-project = client.projects.begin_create(
-    resource_group_name=resource_group_name,
-    account_name=foundry_resource_name,
-    project_name=foundry_project_name,
-    project={
-        "location": location,
-        "identity": {
-            "type": "SystemAssigned"
-        },
-        "properties": {}
-    }
-)
-# </create_resource_project>
-# TODO: code to do role assignment to give user project manager role on the account
+    # Create default project
+    project = client.projects.begin_create(
+        resource_group_name=resource_group_name,
+        account_name=foundry_resource_name,
+        project_name=foundry_project_name,
+        project={
+            "location": location,
+            "identity": {
+                "type": "SystemAssigned"
+            },
+            "properties": {}
+        }
+    )
+    # </create_resource_project>
+    # TODO: code to do role assignment to give user project manager role on the account
 
-# <create_additional>
-# Create additional project
-new_project_name = 'your-new-project-name'
+    # <create_additional>
+    # Create additional project
+    new_project_name = 'your-new-project-name'
 
-project = client.projects.begin_create(
-    resource_group_name=resource_group_name,
-    account_name=foundry_resource_name,
-    project_name=new_project_name,
-    project={
-        "location": location,
-        "identity": {
-            "type": "SystemAssigned"
-        },
-        "properties": {}
-    }
-)
-# </create_additional>
-# <show_project>
-# Get project
-project = client.projects.get(
-    resource_group_name=resource_group_name,
-    account_name=foundry_resource_name,
-    project_name=foundry_project_name
-)
-print(project)
-# </show_project>
-```
+    project = client.projects.begin_create(
+        resource_group_name=resource_group_name,
+        account_name=foundry_resource_name,
+        project_name=new_project_name,
+        project={
+            "location": location,
+            "identity": {
+                "type": "SystemAssigned"
+            },
+            "properties": {}
+        }
+    )
+    # </create_additional>
+    # <show_project>
+    # Get project
+    project = client.projects.get(
+        resource_group_name=resource_group_name,
+        account_name=foundry_resource_name,
+        project_name=foundry_project_name
+    )
+    print(project)
+    # </show_project>
+    ```
     
     
     # [Azure CLI](#tab/azurecli)
@@ -547,89 +548,89 @@ print(project)
   <Tab title="Python SDK">
 
     ```python
-# source: https://github.com/Azure/agent-first-sdk/blob/main/tests/management_sdk/manage_ai_foundry.ipynb
+    # source: https://github.com/Azure/agent-first-sdk/blob/main/tests/management_sdk/manage_ai_foundry.ipynb
 
-# <create_client>
-from azure.identity import DefaultAzureCredential
-from azure.mgmt.cognitiveservices import CognitiveServicesManagementClient
+    # <create_client>
+    from azure.identity import DefaultAzureCredential
+    from azure.mgmt.cognitiveservices import CognitiveServicesManagementClient
 
-subscription_id = 'your-subscription-id'
-resource_group_name = 'your-resource-group-name'
-foundry_resource_name = 'your-foundry-resource-name'
-foundry_project_name = 'your-foundry-project-name'
-location = 'eastus'
+    subscription_id = 'your-subscription-id'
+    resource_group_name = 'your-resource-group-name'
+    foundry_resource_name = 'your-foundry-resource-name'
+    foundry_project_name = 'your-foundry-project-name'
+    location = 'eastus'
 
-client = CognitiveServicesManagementClient(
-    credential=DefaultAzureCredential(), 
-    subscription_id=subscription_id,
-    api_version="2025-04-01-preview"
-)
-# </create_client>
-# TODO: add code to create create a new resource group
+    client = CognitiveServicesManagementClient(
+        credential=DefaultAzureCredential(), 
+        subscription_id=subscription_id,
+        api_version="2025-04-01-preview"
+    )
+    # </create_client>
+    # TODO: add code to create create a new resource group
 
-# <create_resource_project>
-# Create resource
-resource = client.accounts.begin_create(
-    resource_group_name=resource_group_name,
-    account_name=foundry_resource_name,
-    account={
-        "location": location,
-        "kind": "AIServices",
-        "sku": {"name": "S0",},
-        "identity": {"type": "SystemAssigned"},
-        "properties": {
-            "allowProjectManagement": True,
-            "customSubDomainName": foundry_resource_name
+    # <create_resource_project>
+    # Create resource
+    resource = client.accounts.begin_create(
+        resource_group_name=resource_group_name,
+        account_name=foundry_resource_name,
+        account={
+            "location": location,
+            "kind": "AIServices",
+            "sku": {"name": "S0",},
+            "identity": {"type": "SystemAssigned"},
+            "properties": {
+                "allowProjectManagement": True,
+                "customSubDomainName": foundry_resource_name
+            }
         }
-    }
-)
+    )
 
-# Wait for the resource creation to complete
-resource_result = resource.result()
+    # Wait for the resource creation to complete
+    resource_result = resource.result()
 
-# Create default project
-project = client.projects.begin_create(
-    resource_group_name=resource_group_name,
-    account_name=foundry_resource_name,
-    project_name=foundry_project_name,
-    project={
-        "location": location,
-        "identity": {
-            "type": "SystemAssigned"
-        },
-        "properties": {}
-    }
-)
-# </create_resource_project>
-# TODO: code to do role assignment to give user project manager role on the account
+    # Create default project
+    project = client.projects.begin_create(
+        resource_group_name=resource_group_name,
+        account_name=foundry_resource_name,
+        project_name=foundry_project_name,
+        project={
+            "location": location,
+            "identity": {
+                "type": "SystemAssigned"
+            },
+            "properties": {}
+        }
+    )
+    # </create_resource_project>
+    # TODO: code to do role assignment to give user project manager role on the account
 
-# <create_additional>
-# Create additional project
-new_project_name = 'your-new-project-name'
+    # <create_additional>
+    # Create additional project
+    new_project_name = 'your-new-project-name'
 
-project = client.projects.begin_create(
-    resource_group_name=resource_group_name,
-    account_name=foundry_resource_name,
-    project_name=new_project_name,
-    project={
-        "location": location,
-        "identity": {
-            "type": "SystemAssigned"
-        },
-        "properties": {}
-    }
-)
-# </create_additional>
-# <show_project>
-# Get project
-project = client.projects.get(
-    resource_group_name=resource_group_name,
-    account_name=foundry_resource_name,
-    project_name=foundry_project_name
-)
-print(project)
-# </show_project>
-```
+    project = client.projects.begin_create(
+        resource_group_name=resource_group_name,
+        account_name=foundry_resource_name,
+        project_name=new_project_name,
+        project={
+            "location": location,
+            "identity": {
+                "type": "SystemAssigned"
+            },
+            "properties": {}
+        }
+    )
+    # </create_additional>
+    # <show_project>
+    # Get project
+    project = client.projects.get(
+        resource_group_name=resource_group_name,
+        account_name=foundry_resource_name,
+        project_name=foundry_project_name
+    )
+    print(project)
+    # </show_project>
+    ```
 
     References: [CognitiveServicesManagementClient](https://learn.microsoft.com/python/api/azure-mgmt-cognitiveservices/azure.mgmt.cognitiveservices.CognitiveServicesManagementClient).
 

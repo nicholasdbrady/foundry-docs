@@ -525,22 +525,27 @@ CODE_SAMPLES_DIR = RAW_DIR / "code_samples"
 def resolve_code_includes(content: str) -> str:
     """Resolve :::code directives by inlining the actual source file content."""
     def replace_code_directive(match):
-        lang = match.group(1) or ""
-        source = match.group(2)
+        indent = match.group(1)
+        lang = match.group(2) or ""
+        source = match.group(3)
         # source starts with ~/ — map to code_samples directory
         rel_path = source.lstrip("~/")
         code_file = CODE_SAMPLES_DIR / rel_path
         if code_file.exists():
             code = code_file.read_text(encoding="utf-8", errors="replace").strip()
-            return f"```{lang}\n{code}\n```"
         else:
             filename = PurePosixPath(rel_path).name
-            return f"```{lang}\n// Source: {filename} (not available)\n```"
+            code = f"// Source: {filename} (not available)"
+        # Indent code content and closing fence to match the directive's indentation
+        # so the code block stays valid inside list items / nested contexts.
+        indented_code = '\n'.join(indent + line if line else line for line in code.split('\n'))
+        return f"{indent}```{lang}\n{indented_code}\n{indent}```"
 
     content = re.sub(
-        r':::code\s+language="(\w+)"\s+source="([^"]+)"(?:\s+[^:]*)?:::',
+        r'^([ \t]*):::code\s+language="(\w+)"\s+source="([^"]+)"(?:\s+[^:]*)?:::',
         replace_code_directive,
-        content
+        content,
+        flags=re.MULTILINE,
     )
     return content
 
@@ -565,13 +570,39 @@ def replace_html_comments(content: str) -> str:
     """Replace HTML comments <!-- ... --> with MDX-compatible {/* ... */}.
 
     Skips content inside code fences to avoid mangling code examples.
+    For multi-line comments, ensures all inner lines are indented to at
+    least the same level as the opening {/* so they don't break list contexts.
     """
     parts = _split_code_and_comments(content)
     for i, part in enumerate(parts):
         if not (part.lstrip().startswith('```') or part.lstrip().startswith('~~~') or part.lstrip().startswith('{/*')):
+
+            def _convert_comment(m, _part=part):
+                inner = m.group(1)
+                if '\n' not in inner:
+                    return '{/*' + inner + '*/}'
+                # Detect indent of the <!-- from the part text
+                start = m.start()
+                line_start = _part.rfind('\n', 0, start) + 1
+                indent = ' ' * (start - line_start)
+                lines = inner.split('\n')
+                result_lines = [lines[0]]  # first line follows {/*
+                for line in lines[1:]:
+                    if line.strip() == '':
+                        result_lines.append('')
+                    elif len(line) - len(line.lstrip()) < len(indent):
+                        result_lines.append(indent + line.lstrip())
+                    else:
+                        result_lines.append(line)
+                # Ensure closing */} is indented to match opening {/*
+                # Remove trailing empty lines, then add indented closing
+                while result_lines and result_lines[-1].strip() == '':
+                    result_lines.pop()
+                return '{/*' + '\n'.join(result_lines) + '\n' + indent + '*/}'
+
             parts[i] = re.sub(
                 r'<!--(.*?)-->',
-                lambda m: '{/*' + m.group(1) + '*/}',
+                _convert_comment,
                 part,
                 flags=re.DOTALL,
             )
@@ -1094,6 +1125,14 @@ def convert_doc(doc: dict) -> str | None:
 
     # Step 12: Replace HTML comments with MDX-compatible JSX comments
     body = replace_html_comments(body)
+
+    # Step 12b: Ensure JSX comments are separated from preceding list items
+    body = re.sub(
+        r'(^[ \t]*(?:[-*+]|\d+\.)\s+.+\n)([ \t]*\{/\*)',
+        r'\1\n\2',
+        body,
+        flags=re.MULTILINE,
+    )
 
     # Step 13: Fix void HTML elements (<br>, <hr>) for MDX/JSX
     body = fix_void_elements(body)
