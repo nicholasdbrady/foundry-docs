@@ -37,6 +37,47 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Download code samples
+        run: |
+          python -c "
+          import re, subprocess, json
+          from pathlib import Path
+
+          REPO_MAP = {
+              'foundry-samples-main': ('microsoft-foundry', 'foundry-samples', 'main'),
+              'azureai-model-inference-bicep': ('Azure', 'azureai-model-inference-bicep', 'main'),
+          }
+
+          raw = Path('raw_docs')
+          sources = set()
+          for f in raw.rglob('*.md'):
+              content = f.read_text(errors='replace')
+              for m in re.finditer(r'source=\"~/([^\"]+)\"', content):
+                  sources.add(m.group(1))
+
+          code_dir = Path('raw_docs/code_samples')
+          ok = fail = 0
+          for src in sorted(sources):
+              parts = src.split('/', 1)
+              prefix = parts[0]
+              if prefix not in REPO_MAP:
+                  fail += 1; continue
+              owner, repo, branch = REPO_MAP[prefix]
+              file_path = parts[1] if len(parts) > 1 else ''
+              dest = code_dir / src
+              if dest.exists():
+                  ok += 1; continue
+              url = f'https://raw.githubusercontent.com/{owner}/{repo}/{branch}/{file_path}'
+              dest.parent.mkdir(parents=True, exist_ok=True)
+              result = subprocess.run(['curl', '-sL', '-o', str(dest), '-w', '%{http_code}', url],
+                                      capture_output=True, text=True, timeout=30)
+              if result.stdout.strip() == '200':
+                  ok += 1
+              else:
+                  dest.unlink(missing_ok=True); fail += 1
+          print(f'Code samples: {ok} ok, {fail} failed')
+          "
+
       - name: Convert to MDX
         run: python scripts/convert_to_mdx.py
 
@@ -59,7 +100,7 @@ jobs:
       - name: Check for changes
         id: changes
         run: |
-          git add docs/ docs.json manifest.json path_map.json
+          git add docs/ docs.json manifest.json path_map.json raw_docs/code_samples/
           if git diff --staged --quiet; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
             echo "No upstream changes detected"
