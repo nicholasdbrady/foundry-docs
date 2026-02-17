@@ -7,7 +7,8 @@ sidebarTitle: "How to use vision-enabled chat models"
 
 <Note>
 This article refers to the [Microsoft Foundry (new)](../what-is-foundry.md#microsoft-foundry-portals) portal.
-</Note>{/* > 🔄 [Switch to the Microsoft Foundry (classic) documentation]() if you're using the classic portal. */}
+</Note>
+{/* > 🔄 [Switch to the Microsoft Foundry (classic) documentation]() if you're using the classic portal. */}
 
 Vision-enabled chat models are large multimodal models (LMM) developed by OpenAI that can analyze images and provide textual responses to questions about them. They incorporate both natural language processing and visual understanding. The current vision-enabled models are the [o-series reasoning models](/models/capabilities/reasoning), GPT-5 series, GPT-4.1 series, GPT-4.5, GPT-4o series.
 
@@ -16,6 +17,7 @@ The vision-enabled models can answer general questions about what's present in t
 <Tip>
 To use vision-enabled models, you call the Chat Completion API on a supported model that you have deployed. If you're not familiar with the Chat Completion API, see the [Vision-enabled chat how-to guide](https://learn.microsoft.com/azure/ai-foundry/openai/how-to/chatgpt).
 </Tip>
+
 ## Prerequisites
 
 - An Azure subscription - [Create one for free](https://azure.microsoft.com/free/cognitive-services)
@@ -100,8 +102,8 @@ Supported image formats include JPEG, PNG, GIF (first frame only), and WEBP.
     1. Then call the client's **create** method. The following code shows a sample request body. The format is the same as the chat completions API for GPT-4o, except that the message content can be an array containing text and images (either a valid HTTP or HTTPS URL to an image, or a base-64-encoded image). 
 
 <Info>
-
-</Info>    > Remember to set a `"max_tokens"` or `max_completion_tokens` value, or the return output will be cut off. For o-series reasoning models, use `max_completion_tokens` instead of `max_tokens`.
+Remember to set a `"max_tokens"` or `max_completion_tokens` value, or the return output will be cut off. For o-series reasoning models, use `max_completion_tokens` instead of `max_tokens`.
+</Info>
 
         ```python
         response = client.chat.completions.create(
@@ -169,6 +171,7 @@ When your base64 image data is ready, you can pass it to the API in the request 
 ...
 ```
 </Tip>
+
 ## Configure image detail level
 
 You can optionally define a `"detail"` parameter in the `"image_url"` field. Choose one of three values, `low`, `high`, or `auto`, to adjust the way the model interprets and processes images. 

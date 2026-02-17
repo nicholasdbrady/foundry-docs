@@ -48,6 +48,7 @@ Before you begin, make sure you have:
 <Note>
 The `AZURE_AI_PROJECT_ENDPOINT` value refers to your Microsoft Foundry project endpoint, not the external OpenAPI service endpoint. You can find this endpoint in the Microsoft Foundry portal under your project’s Overview page. This endpoint is required to authenticate the agent service and is separate from any OpenAPI endpoints defined in your specification file.
 </Note>
+
 ## Understand limitations
 
 - Your OpenAPI spec must include `operationId` for each operation, and `operationId` can include only letters, `-`, and `_`.
@@ -60,6 +61,7 @@ The `AZURE_AI_PROJECT_ENDPOINT` value refers to your Microsoft Foundry project e
 - You need the latest prerelease package. See the [quickstart](/get-started/get-started-code) for details.
 - If you use API key for authentication, your connection ID should be in the format of `/subscriptions/{{subscriptionID}}/resourceGroups/{{resourceGroupName}}/providers/Microsoft.CognitiveServices/accounts/{{foundryAccountName}}/projects/{{foundryProjectName}}/connections/{{foundryConnectionName}}`.
 </Note>
+
 <Info>
 **For API key authentication to work**, your OpenAPI specification file must include:
 1. A `securitySchemes` section with your API key configuration, such as the header name and parameter name.
@@ -70,6 +72,7 @@ Without these configurations, the API key isn't included in requests. For detail
 
 You can also use token-based authentication (for example, a Bearer token) by storing the token in a project connection. For Bearer token auth, create a **Custom keys** connection with key set to `Authorization` and value set to `Bearer <token>` (replace `<token>` with your actual token). The word `Bearer` followed by a space must be included in the value. For details, see [Set up a Bearer token connection](#set-up-a-bearer-token-connection).
 </Info>
+
 ### Quick verification
 
 First, verify your environment is configured correctly:
@@ -1094,8 +1097,8 @@ By using API key authentication, you can authenticate your OpenAPI spec by using
   1. Create or select a connection that stores the secret. See [Add a new connection to your project](/setup/connections-add).
 
 <Note>
-
-</Note>        > If you regenerate the API key at a later date, you need to update the connection with the new key.
+If you regenerate the API key at a later date, you need to update the connection with the new key.
+</Note>
     
    1. Enter the following information
       - key: `name` field of your security scheme. In this example, it should be `x-api-key`
@@ -1147,8 +1150,8 @@ You can use token-based authentication (for example, a Bearer token) with the sa
       - **value**: `Bearer <token>` (replace `<token>` with your actual token)
 
 <Info>
-
-</Info>   > The value must include the word `Bearer` followed by a space before the token. For example: `Bearer eyJhbGciOiJSUzI1NiIs...`. If you omit `Bearer `, the API receives a raw token without the required authorization scheme prefix, and the request fails.
+The value must include the word `Bearer` followed by a space before the token. For example: `Bearer eyJhbGciOiJSUzI1NiIs...`. If you omit `Bearer `, the API receives a raw token without the required authorization scheme prefix, and the request fails.
+</Info>
 
 1. After you create the connection, use it with the `project_connection` auth type in your code, the same way you would for API key authentication. The connection ID uses the same format: `/subscriptions/{{subscriptionID}}/resourceGroups/{{resourceGroupName}}/providers/Microsoft.CognitiveServices/accounts/{{foundryAccountName}}/projects/{{foundryProjectName}}/connections/{{foundryConnectionName}}`.
 

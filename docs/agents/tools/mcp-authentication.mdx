@@ -8,6 +8,7 @@ sidebarTitle: "Set up MCP server authentication"
 <Info>
 Items marked (preview) in this article are currently in public preview. This preview is provided without a service-level agreement, and we don't recommend it for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
 </Info>
+
 Most Model Context Protocol (MCP) servers require authentication to access the server and its underlying service. Proper authentication ensures your agents can securely connect to MCP servers, invoke their tools, and access protected resources while maintaining appropriate access controls.
 
 In this article, you:
@@ -18,6 +19,7 @@ In this article, you:
 <Note>
 If you don't already have an account with the MCP server publisher, create one through the publisher's website.
 </Note>
+
 ## Prerequisites
 
 Before you begin, you need:
@@ -49,6 +51,7 @@ Use the following guidance to choose a method:
 <Tip>
 When in doubt, start with Microsoft Entra authentication if the MCP server supports it. Microsoft Entra authentication eliminates the need to manage secrets and provides built-in token rotation.
 </Tip>
+
 ## Supported authentication methods
 
 | Method | Description | User context persists |
@@ -66,6 +69,7 @@ Use key-based authentication when the MCP server requires an API key, personal a
 <Note>
 People who have access to the project can access an API key stored in a project connection. Store only shared secrets in a project connection. For user-specific access, use OAuth identity passthrough.
 </Note>
+
 Pass an API key, a personal access token (PAT), or other credentials to MCP servers that support key-based authentication. For improved security, store shared credentials in a project connection instead of passing them at runtime.
 
 When you connect an MCP server to an agent in the Foundry portal, Foundry creates a project connection for you. Provide the credential name and credential value. For example, if you're connecting to the GitHub MCP server, you might provide:
@@ -112,6 +116,7 @@ When the agent invokes the MCP server, Agent Service uses the project's managed 
 <Note>
 To use OAuth identity passthrough, users interacting with your agent need at least the **Azure AI User** role on the project.
 </Note>
+
 OAuth identity passthrough is available for authentication to Microsoft and non-Microsoft MCP servers and underlying services that are compliant with OAuth, including Microsoft Entra.
 
 Use [OAuth identity](/entra/architecture/auth-oauth2) passthrough to prompt users interacting with your agent to sign in to the MCP server and its underlying service. Agent Service securely stores the user's credentials and uses them only within the context of the agent communicating with the MCP server.
@@ -126,6 +131,7 @@ Agent Service supports two OAuth options: **managed OAuth** and **custom OAuth**
 <Note>
 If you use custom OAuth, you receive a redirect URL after configuration. Add the redirect URL to your OAuth app so Agent Service can complete the flow.
 </Note>
+
 When you set up **custom OAuth**, provide the following information:
 
 - Client ID: required
@@ -187,11 +193,13 @@ Once the user has signed in and given consent once, they don't need to give cons
 <Note>
 If the user declines consent, the MCP tool call fails and returns an error. Your application should handle this case gracefully and inform the user that the tool requires authorization to function.
 </Note>
+
 ### Bring your own Microsoft Entra app registration
 
 <Note>
 Agent 365 MCP servers are only available to [Frontier tenants](https://adoption.microsoft.com/en-us/copilot/frontier-program/).
 </Note>
+
 To use identity passthrough with Microsoft services, bring your own [Microsoft Entra app registration](/entra/identity-platform/quickstart-register-app). By bringing your own Microsoft Entra app registration, you control what permissions you grant.
 
 The following steps use the Agent 365 MCP server as an example:
@@ -231,6 +239,7 @@ Use unauthenticated access only when the MCP server doesn't require authenticati
 <Info>
 Even when authentication isn't required, ensure you understand the MCP server's terms of service and rate limits before connecting.
 </Info>
+
 ## Set up authentication for an MCP server
 
 1. Identify the remote MCP server you want to connect to.

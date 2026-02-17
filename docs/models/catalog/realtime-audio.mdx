@@ -7,7 +7,8 @@ sidebarTitle: "Use the GPT Realtime API for speech and audio with Azure OpenAI"
 
 <Note>
 This article refers to the [Microsoft Foundry (new)](../what-is-foundry.md#microsoft-foundry-portals) portal.
-</Note>{/* > 🔄 [Switch to the Microsoft Foundry (classic) documentation]() if you're using the classic portal. */}
+</Note>
+{/* > 🔄 [Switch to the Microsoft Foundry (classic) documentation]() if you're using the classic portal. */}
 
 Azure OpenAI GPT Realtime API for speech and audio is part of the GPT-4o model family that supports low-latency, "speech in, speech out" conversational interactions. The GPT Realtime API is designed to handle real-time, low-latency conversational interactions. It's a great fit for use cases involving live interactions between a user and a model, such as customer support agents, voice assistants, and real-time translators.
 
@@ -40,6 +41,7 @@ Token limits vary by model:
 - **Preview models** (gpt-4o-realtime-preview, gpt-4o-mini-realtime-preview): Input 128,000 / Output 4,096 tokens
 - **GA models** (gpt-realtime, gpt-realtime-mini): Input 28,672 / Output 4,096 tokens
 </Note>
+
 For the Realtime API, use API version `2025-04-01-preview` in the URL for preview models. For GA models, use the GA API version (without the `-preview` suffix) when possible. 
 
 See the [models and versions documentation](/models/catalog/models-sold-directly-by-azure#audio-models) for more information.
@@ -121,6 +123,7 @@ When the server responds with a [`response.done`](/api-sdk/realtime-audio-refere
 <Info>
 If you create any responses outside the default conversation, be sure to always check the `response.metadata` field to help you identify the corresponding response for the client-sent event. You should even check the `response.metadata` field for responses that are part of the default conversation. That way, you can ensure that you're handling the correct response for the client-sent event.
 </Info>
+
 ### Custom context for out-of-band responses
 
 You can also construct a custom context that the model uses outside of the session's default conversation. To create a response with custom context, set the `conversation` field to `none` and provide the custom context in the `input` array. The `input` array can contain new inputs or references to existing conversation items.

@@ -6,11 +6,13 @@ description: "Learn how to plan for high availability and resiliency for Microso
 
 <Note>
 This article refers to the [Microsoft Foundry (new)](/overview/what-is-foundry#microsoft-foundry-portals) portal.
-</Note>{/* > 🔄 [Switch to the Microsoft Foundry (classic) documentation]() if you're using the classic portal. */}
+</Note>
+{/* > 🔄 [Switch to the Microsoft Foundry (classic) documentation]() if you're using the classic portal. */}
 
 <Info>
 Items marked (preview) in this article are currently in public preview. This preview is provided without a service-level agreement, and we don't recommend it for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
 </Info>
+
 Plan ahead to maintain business continuity and prepare for disaster recovery with [Microsoft Foundry](https://ai.azure.com/?cid=learnDocs).
 
 Microsoft strives to ensure that Azure services are always available. However, unplanned service outages might occur. Create a disaster recovery plan to handle regional service outages. In this article, you learn how to:
@@ -23,10 +25,12 @@ Microsoft strives to ensure that Azure services are always available. However, u
 <Info>
 Foundry itself doesn't provide automatic failover or disaster recovery.
 </Info>
+
 :::moniker-range="foundry-classic"
 <Note>
 The information in this article applies only to **Foundry project**. For disaster recovery for **hub-based project**, see [Disaster recovery for Foundry hubs](hub-disaster-recovery.md).
-</Note>:::moniker-end
+</Note>
+:::moniker-end
 
 ## Prerequisites
 
@@ -154,6 +158,7 @@ Basic mode provides almost no recovery capabilities for human or automation-base
 <Tip>
 Agent Service has no availability or state durability Service Level Agreement (SLA). Standard mode offloads SLAs and data durability assurances to the underlying storage components.
 </Tip>
+
 ### Use user-assigned managed identities
 
 When a component uses a managed identity to access a dependency, grant that identity the required role assignments on the dependency. With a system-assigned managed identity, a recovery action that recreates the faulted resource results in a new principal ID. You must then reapply all required role assignments on every dependency for the new principal ID and delete the old, now orphaned, assignments. Some dependencies (for example those used by tools or knowledge sources) might be owned by other teams, which adds cross-team coordination and delay during recovery.
@@ -165,6 +170,7 @@ Avoid treating a single user-assigned managed identity as a universal identity f
 
 For example, assign a dedicated user-assigned managed identity per project. Even if two projects have identical role assignments today, treat that situation as temporary. Future divergence can grant unnecessary permissions to one project if they share an identity, violating least privilege. Separate identities also let dependency logs distinguish activity per project.
 </Info>
+
 ### Use repeatable deployment techniques
 
 Define the account, projects, capability host, and dependencies in infrastructure as code (IaC) such as Bicep or Terraform. Some recovery steps require redeploying resources exactly as they were. Treat IaC as the source of truth to reproduce configuration and role assignments quickly. Build your IaC modular so that you can independently deploy each project.
@@ -202,6 +208,7 @@ A multiregional deployment relies on creating Foundry resources and other infras
 <Tip>
 Depending on your business requirements, you might treat Foundry services differently.
 </Tip>
+
 Foundry builds on other services. Some services replicate to other regions. You must manually create other services in multiple regions. The following table lists the services, who is responsible for replication, and an overview of the configuration:
 
 | Azure service | Geo-replicated by | Configuration |
@@ -254,6 +261,7 @@ Foundry doesn't sync or recover artifacts or metadata between projects. Dependin
 <Note>
 Jobs that run during a service outage don't automatically transition to the secondary project. They also don't typically resume and finish successfully in the primary project after the outage. Resubmit these jobs in the secondary project or in the primary project after the outage.
 </Note>
+
 ## Recovery options
 
 ### Resource deletion

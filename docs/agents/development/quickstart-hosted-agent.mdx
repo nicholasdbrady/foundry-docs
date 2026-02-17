@@ -32,6 +32,7 @@ Before you begin, you need:
 <Note>
 Hosted agents are currently in preview.
 </Note>
+
 ## Step 1: Set up the sample project
 
 Initialize a new project with the Foundry starter template and configure it with the agent-with-foundry-tools sample.
@@ -45,8 +46,8 @@ Initialize a new project with the Foundry starter template and configure it with
     This interactive command prompts you for an environment name (for example, `my-hosted-agent`). The environment name determines your resource group name (`rg-my-hosted-agent`).
 
 <Note>
-
-</Note>    > If a resource group with the same name already exists, `azd provision` uses the existing group. To avoid conflicts, choose a unique environment name or delete the existing resource group first.
+If a resource group with the same name already exists, `azd provision` uses the existing group. To avoid conflicts, choose a unique environment name or delete the existing resource group first.
+</Note>
 
 1. Initialize the agent sample:
 
@@ -66,20 +67,19 @@ Initialize a new project with the Foundry starter template and configure it with
     - **Max replicas** - enter a value for the maximum replicas of the container
 
 <Info>
+If you aren't using an MCP server, comment out or remove the following lines in the `agent.yaml` file:
 
-</Info>    > If you aren't using an MCP server, comment out or remove the following lines in the `agent.yaml` file:
-
-    >
-    > ```yaml
-    > - name: AZURE_AI_PROJECT_TOOL_CONNECTION_ID
-    >   value: <CONNECTION_ID_PLACEHOLDER>
-    > ```
+```yaml
+- name: AZURE_AI_PROJECT_TOOL_CONNECTION_ID
+value: <CONNECTION_ID_PLACEHOLDER>
+```
+</Info>
 
 1. Provision the required Azure resources:
 
 <Note>
-
-</Note>    > You need **Contributor** access on your Azure subscription for resource provisioning.
+You need **Contributor** access on your Azure subscription for resource provisioning.
+</Note>
 
     ```bash
     azd provision
@@ -98,8 +98,8 @@ Initialize a new project with the Foundry starter template and configure it with
     | Managed identity | Authenticates your agent to Azure services | No cost |
 
 <Tip>
-
-</Tip>    > Run `azd down` when you finish this quickstart to delete resources and stop incurring charges.
+Run `azd down` when you finish this quickstart to delete resources and stop incurring charges.
+</Tip>
 
 ## Step 2: Test the agent locally
 
@@ -206,6 +206,7 @@ The first deployment will take longer because Docker needs to build the image.
 <Warning>
 Your hosted agent incurs charges while deployed. After you finish testing, complete [Step 5: Clean up resources](#step-5-clean-up-resources) to delete resources and stop charges.
 </Warning>
+
 When finished, you will see a link to the Agent Playground and the endpoint for the agent which can be used to invoke the agent programmatically.
 
 ```bash
@@ -239,8 +240,8 @@ Use the link provided in the output from the `azd up` command, or navigate to th
 1. Verify that the agent responds with information from web search results. The response might take a few seconds as the agent queries external sources.
 
 <Tip>
-
-</Tip>  > If the playground doesn't load or the agent doesn't respond, verify the agent status is `Started` using the CLI command below.
+If the playground doesn't load or the agent doesn't respond, verify the agent status is `Started` using the CLI command below.
+</Tip>
   
 ### Find your resource names
 
@@ -283,6 +284,7 @@ To avoid charges, delete the resources when you're finished.
 <Warning>
 This command permanently deletes all Azure resources created in this quickstart, including the Foundry project, Container Registry, Application Insights, and your hosted agent. This action can't be undone.
 </Warning>
+
 To preview what will be deleted before confirming:
 
 ```bash

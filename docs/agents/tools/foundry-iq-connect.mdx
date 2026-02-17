@@ -8,6 +8,7 @@ sidebarTitle: "Connect Agents to Foundry IQ Knowledge Bases"
 <Info>
 Items marked (preview) in this article are currently in public preview. This preview is provided without a service-level agreement, and we don't recommend it for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
 </Info>
+
 In this article, you learn how to connect a knowledge base in Foundry IQ to an agent in Foundry Agent Service. The connection uses the [Model Context Protocol (MCP)](/agents/tools/model-context-protocol) to facilitate tool calls. When invoked by the agent, the knowledge base orchestrates the following operations:
 
 - Plans and decomposes a user query into subqueries.
@@ -80,6 +81,7 @@ Use the following values in the code samples.
 <Tip>
 We recommend you store the project endpoint, search endpoint, and knowledge base name in a `.env` file for local development.
 </Tip>
+
 ## Create a project connection
 
 Create a `RemoteTool` connection on your Microsoft Foundry project. This connection uses the project's managed identity to target the MCP endpoint of the knowledge base, allowing the agent to securely communicate with Azure AI Search for retrieval operations.
@@ -87,6 +89,7 @@ Create a `RemoteTool` connection on your Microsoft Foundry project. This connect
 <Note>
 The `RemoteTool` category and `ProjectManagedIdentity` authentication type are specific to Microsoft Foundry project connections.
 </Note>
+
 <Tabs>
   <Tab title="Python">
 
@@ -184,6 +187,7 @@ This instruction template optimizes for:
 <Tip>
 While this template provides a strong foundation, evaluate and iterate on the instructions based on your specific use case and objectives. Test different variations to find what works best for your scenario.
 </Tip>
+
 ## Create an agent with the MCP tool
 
 Create an agent that integrates the knowledge base as an MCP tool. The agent uses a system prompt to instruct when and how to call the knowledge base. It follows instructions on how to answer questions and automatically maintains its tool configuration and settings across conversation sessions.
@@ -193,6 +197,7 @@ Add the knowledge base MCP tool with the project connection you previously creat
 <Note>
 Azure AI Search knowledge bases expose the `knowledge_base_retrieve` MCP tool for agent integration. This is the only tool currently supported for use with Foundry Agent Service.
 </Note>
+
 <Tabs>
   <Tab title="Python">
 
@@ -288,6 +293,7 @@ In this preview, Foundry Agent Service doesn't support per-request headers for M
 
 For per-user authorization, use the [Azure OpenAI Responses API](https://learn.microsoft.com/azure/ai-foundry/openai/how-to/responses) instead.
 </Info>
+
 Optionally, if your knowledge base includes a [remote SharePoint knowledge source](https://learn.microsoft.com/azure/search/agentic-knowledge-source-how-to-sharepoint-remote), you must also include the `x-ms-query-source-authorization` header in the MCP tool connection.
 
 <Tabs>
@@ -476,6 +482,7 @@ Create a conversation session and send a user query to the agent. When appropria
 <Note>
 Deleting your agent and project connection doesn't delete your knowledge base or its knowledge sources. You must delete these objects separately on your Azure AI Search service. For more information, see [Delete a knowledge base](https://learn.microsoft.com/azure/search/agentic-retrieval-how-to-create-knowledge-base) and [Delete a knowledge source](https://learn.microsoft.com/azure/search/agentic-knowledge-source-how-to-search-index#delete-a-knowledge-source).
 </Note>
+
 ## Troubleshooting
 
 This section helps you troubleshoot common issues when connecting Foundry Agent Service to a Foundry IQ knowledge base.

@@ -10,6 +10,7 @@ When you build agentic applications by using open-source frameworks, you typical
 <Info>
 Hosted agents are currently in **public preview**. See [Limits, pricing, and availability (preview)](#limits-pricing-and-availability-preview) for current constraints.
 </Info>
+
 Hosted agents in Foundry Agent Service solve these challenges for Microsoft Foundry users. By using this managed platform, you can deploy and operate AI agents securely and at scale. You can use your custom agent code or a preferred agent framework with streamlined deployment and management.
 
 ## Prerequisites
@@ -93,6 +94,7 @@ Hosted agents follow a standard lifecycle: create, start, update, stop, and dele
 <Note>
 Hosted agents are currently in preview. For current constraints and availability, see [Limits, pricing, and availability (preview)](#limits-pricing-and-availability-preview).
 </Note>
+
 ### Hosting adapter
 
 The hosting adapter is a framework abstraction layer that helps expose supported agent frameworks (or your custom code) as an HTTP service for local testing and hosted deployments.
@@ -125,6 +127,7 @@ Agent Service handles:
 <Info>
 If you use Agent Service to host agents that interact with non-Microsoft servers or agents, you take on the risk. Review all data that you share with non-Microsoft servers or agents. Be aware of non-Microsoft practices for retention and location of data. You're responsible for managing whether your data flows outside your organization's Azure compliance and geographic boundaries, along with any related implications.
 </Info>
+
 ### Framework and language support
 
 | Framework | Python | C# |
@@ -350,8 +353,8 @@ To build your agent as a Docker container and upload it to Azure Container Regis
 1. Build your Docker image locally:
 
 <Info>
-
-</Info>    > **You MUST specify `--platform linux/amd64` when building your Docker image.** Hosted agents run on Linux AMD64 infrastructure. Images built for other architectures (such as ARM64 on Apple Silicon Macs) will fail to start with container runtime errors.
+**You MUST specify `--platform linux/amd64` when building your Docker image.** Hosted agents run on Linux AMD64 infrastructure. Images built for other architectures (such as ARM64 on Apple Silicon Macs) will fail to start with container runtime errors.
+</Info>
 
     ```bash
     docker build --platform linux/amd64 -t <YOUR_IMAGE_NAME>:<YOUR_TAG> .
@@ -484,6 +487,7 @@ Here are the key parameters:
 - Ensure that your container image is accessible from the Foundry project.
 - `DefaultAzureCredential` handles authentication automatically.
 </Note>
+
 ---
 
 The agent appears in the Foundry portal after you create it.
@@ -572,6 +576,7 @@ Example (scale-to-zero when idle):
 az cognitiveservices agent start --account-name myAccount --project-name myProject --name myAgent --agent-version 1 --min-replicas 0 --max-replicas 2
 ```
 </Tip>
+
 When you start an agent:
 
 - Current status: **Stopped**

@@ -21,6 +21,7 @@ This article shows you how to register a custom agent in Foundry Control Plane. 
 <Note>
 This capability is available only in the  Foundry (new) portal. Look for <img src="/images/new-foundry.png" /> in the portal banner to confirm you're using Foundry (new).
 </Note>
+
 ## Add a custom agent
 
 You can register a custom agent in Foundry Control Plane. Develop the agent in the technology of your choice, for both platform and infrastructure solutions.
@@ -164,6 +165,7 @@ async def stream_run():
 <Note>
 Although Foundry acts as a proxy for incoming requests for your agent, the original authorization and authentication schema in the original endpoint still applies. When you consume the new endpoint, *provide the same authentication mechanism as if you're using the original endpoint.*
 </Note>
+
 ## Block and unblock the agent
 
 For custom agents, Foundry doesn't have access to the underlying infrastructure where the agent runs, so start and stop operations aren't available. However, Foundry can block incoming requests to the agent so that clients can't consume it. This capability allows administrators to disable an agent if it misbehaves.
@@ -219,8 +221,8 @@ To get the best level of fidelity, Foundry expects custom agents to comply with 
 </Frame>
 
 <Tip>
-
-</Tip>    > In this example, you can see how clients use the new agent's endpoint to communicate with the agent. The example shows an agent served with the Agent Protocol from LangChain. Clients use the route `/runs/stream`.
+In this example, you can see how clients use the new agent's endpoint to communicate with the agent. The example shows an agent served with the Agent Protocol from LangChain. Clients use the route `/runs/stream`.
+</Tip>
 
 In this example, the trace doesn't include any details beyond the HTTP post. The agent's code doesn't include any further instrumentation. In the next section, you learn how to instrument your code and get details like tool calls and large language model (LLM) calls.
 
@@ -267,6 +269,7 @@ agent = create_agent(
 <Tip>
 You can pass the connection string to Application Insights by using the environment variable `APPLICATIONINSIGHTS_CONNECTION_STRING`.
 </Tip>
+
 ### Instrument platform solutions
 
 If your agent runs on a platform solution that supports OpenTelemetry but doesn't support Application Insights, deploy an OpenTelemetry collector and configure your software to send OTLP data to the collector (standard OpenTelemetry configuration).

@@ -7,6 +7,7 @@ description: "Learn how to use Azure Monitor tools like Log Analytics to capture
 <Info>
 Items marked (preview) in this article are currently in public preview. This preview is provided without a service-level agreement, and we don't recommend it for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
 </Info>
+
 This article explains how to use Azure Monitor metrics and logs to track availability, performance, and usage for model deployments in Foundry Models. Azure Monitor automatically collects and aggregates metrics and logs from your Foundry Models deployments, so you can view real-time performance data and set up alerts for issues.
 
 ## Prerequisites
@@ -16,8 +17,8 @@ To use monitoring capabilities for model deployments in Foundry Models, you need
 * A [Microsoft Foundry resource](./quickstart-create-resources.md).
 
 <Tip>
-
-</Tip>    > If you're using serverless API endpoints and you want to take advantage of monitoring capabilities explained in this article, [migrate your serverless API endpoints to Foundry Models](./quickstart-ai-project.md).
+If you're using serverless API endpoints and you want to take advantage of monitoring capabilities explained in this article, [migrate your serverless API endpoints to Foundry Models](./quickstart-ai-project.md).
+</Tip>
 
 * At least one model deployment.
 
@@ -56,11 +57,10 @@ You can view metrics within the Foundry portal. To view them, follow these steps
     Cost data in the Azure portal displays actual post-consumption charges for model consumption, including other AI resources within Foundry. For a full list of AI resources, see [Build with customizable APIs and models](https://azure.microsoft.com/products/ai-services#tabs-pill-bar-oc14f0_tab0). There's approximately a five- hour delay from the billing event to when it can be viewed in Azure portal cost analysis.
 
 <Info>
+The **Azure Cost Management** link provides a direct link within the Azure portal, allowing users to access detailed cost metrics for deployed AI models. This deep link integrates with the Azure Cost Analysis service view, offering transparent and actionable insights into model-level costs.
 
-</Info>    > The **Azure Cost Management** link provides a direct link within the Azure portal, allowing users to access detailed cost metrics for deployed AI models. This deep link integrates with the Azure Cost Analysis service view, offering transparent and actionable insights into model-level costs.
-
-    >
-    > The deep link directs users to the Cost Analysis view in the Azure portal, providing a one-click experience to view deployments per resource, including input/output token cost/consumption. To view cost data, you need at least *read* access for an Azure account. For information about assigning access to Cost Management data, see [Assign access to data](https://learn.microsoft.com/azure/cost-management-billing/costs/assign-access-acm-data). 
+The deep link directs users to the Cost Analysis view in the Azure portal, providing a one-click experience to view deployments per resource, including input/output token cost/consumption. To view cost data, you need at least *read* access for an Azure account. For information about assigning access to Cost Management data, see [Assign access to data](https://learn.microsoft.com/azure/cost-management-billing/costs/assign-access-acm-data).
+</Info>
 
 1. You can view and analyze metrics with Azure Monitor [metrics explorer](#metrics-explorer) to further slice and filter your model deployment metrics.
 
@@ -89,8 +89,8 @@ To use Azure Monitor, follow these steps:
 </Frame>
 
 <Info>
-
-</Info>    > Metrics in the **Azure OpenAI** category contain metrics for Azure OpenAI models in the resource. The **Models** category contains all the models available in the resource, including Azure OpenAI, DeepSeek, and Phi. We recommend switching to this new set of metrics.
+Metrics in the **Azure OpenAI** category contain metrics for Azure OpenAI models in the resource. The **Models** category contains all the models available in the resource, including Azure OpenAI, DeepSeek, and Phi. We recommend switching to this new set of metrics.
+</Info>
 
 1. You can add as many metrics as needed to either the same chart or to a new chart.
 
@@ -190,6 +190,7 @@ To configure diagnostic settings for your Foundry resource:
 <Note>
 There's a cost for collecting data in a Log Analytics workspace, so only collect the categories you require for each service. The data volume for resource logs varies significantly between services.
 </Note>
+
 ## Query logs with KQL
 
 After you [configure diagnostic settings](#configure-diagnostic-settings) to send metrics to Log Analytics, you can query and analyze log data by using the Kusto query language (KQL).
@@ -214,8 +215,8 @@ To query metrics, follow these steps:
 1. Select **Run**
    
 <Note>
-
-</Note>    > When you select **Monitoring** > **Logs** in the menu for your resource, Log Analytics opens with the query scope set to the current resource. The visible log queries include data from that specific resource only. To run a query that includes data from other resources or data from other Azure services, select **Logs** from the **Azure Monitor** menu in the Azure portal. For more information, see [Log query scope and time range in Azure Monitor Log Analytics](https://learn.microsoft.com/azure/azure-monitor/logs/scope).
+When you select **Monitoring** > **Logs** in the menu for your resource, Log Analytics opens with the query scope set to the current resource. The visible log queries include data from that specific resource only. To run a query that includes data from other resources or data from other Azure services, select **Logs** from the **Azure Monitor** menu in the Azure portal. For more information, see [Log query scope and time range in Azure Monitor Log Analytics](https://learn.microsoft.com/azure/azure-monitor/logs/scope).
+</Note>
 
 ## Troubleshooting
 

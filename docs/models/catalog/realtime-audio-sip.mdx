@@ -10,6 +10,7 @@ This document refers to the [Microsoft Foundry (classic)](../what-is-foundry.md#
 
 🔍 [View the Microsoft Foundry (new) documentation](../what-is-foundry.md) to learn about the new portal.
 </Note>
+
 Azure OpenAI GPT Realtime API for speech and audio is part of the GPT-4o model family that supports low-latency, "speech in, speech out" conversational interactions. 
 
 You can use the Realtime API via WebRTC, SIP, or WebSocket to send audio input to the model and receive audio responses in real time. Follow the instructions in this article to get started with the Realtime API via SIP.
@@ -61,6 +62,7 @@ To connect a phone number to the Realtime API, use a SIP trunking provider (for 
 <Note>
 The currently supported regions for SIP are `swedencentral` and `eastus2`.
 </Note>
+
 ## Handling incoming calls
 
 When Azure OpenAI receives SIP traffic associated with your project, your webhook endpoint receives an incoming event message. The event fired for SIP calls is type = `realtime.call.incoming` like the example shown here. 
@@ -98,6 +100,7 @@ Use the Accept call endpoint to approve the inbound call and configure the real-
 <Note>
 For authorization, you can either use the `api-key` header or the Bearer token as shown here. Remember the model name is actually the name of your deployment.
 </Note>
+
 ```bash
 curl -X POST "https://<your azure resource name>.openai.azure.com/openai/v1/realtime/calls/$CALL_ID/accept" \
   -H "Authorization: Bearer $TOKEN" \
@@ -119,6 +122,7 @@ The endpoint returns `200 OK` once the SIP leg is ringing and the real-time sess
 <Tip>
 **Verify**: A successful accept returns HTTP 200. Check your webhook server logs for the response status.
 </Tip>
+
 ### Reject unwanted calls
 
 Use the Reject call endpoint to decline an invite when you don't want to handle the incoming call (for example, from an unsupported country/region code). To control the response sent back to the carrier, supply an optional SIP status code along with the required `call_id` path parameter. The following example shows a request sending `486`, which indicates the system is too busy to take the call.
@@ -191,6 +195,7 @@ ws.on("open", () => {
 <Tip>
 **Verify**: You should receive a `session.created` event on the WebSocket within a few seconds of connecting.
 </Tip>
+
 ### End the session and disconnect
 
 End the session with the Hang up endpoint when your application should disconnect the caller. This endpoint can be used to terminate both SIP and WebRTC real-time sessions.

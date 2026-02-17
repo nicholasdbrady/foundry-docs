@@ -7,7 +7,8 @@ sidebarTitle: "Audio events reference"
 
 <Note>
 This article refers to the [Microsoft Foundry (new)](/overview/what-is-foundry#microsoft-foundry-portals) portal.
-</Note>{/* > 🔄 [Switch to the Microsoft Foundry (classic) documentation]() if you're using the classic portal. */}
+</Note>
+{/* > 🔄 [Switch to the Microsoft Foundry (classic) documentation]() if you're using the classic portal. */}
 
 Realtime events are used to communicate between the client and server in real-time audio applications. The events are sent as JSON objects over various endpoints, such as WebSockets or WebRTC. The events are used to manage the conversation, audio buffers, and responses in real-time.
 
@@ -207,6 +208,7 @@ The client `output_audio_buffer.clear` event is used to clear the audio bytes in
 <Note>
 This event is only applicable for WebRTC.
 </Note>
+
 This event should be preceded by a `response.cancel` client event to stop the generation of the current response.
 
 The server stops generating audio and responds with an `output_audio_buffer.cleared` event.
@@ -256,7 +258,8 @@ The server responds with a [`response.created`](#realtimeservereventresponsecrea
 
 <Note>
 The client `response.create` event includes inference configuration like
-</Note>`instructions`, and `temperature`. These fields can override the session's configuration for this response only.
+</Note>
+`instructions`, and `temperature`. These fields can override the session's configuration for this response only.
 
 #### Event structure
 
@@ -603,6 +606,7 @@ The server `input_audio_buffer.speech_started` event is returned in `server_vad`
 <Note>
 The client might want to use this event to interrupt audio playback or provide visual feedback to the user.
 </Note>
+
 The client should expect to receive a `input_audio_buffer.speech_stopped` event when speech stops. The `item_id` property is the ID of the user message item created when speech stops. The `item_id` is also included in the `input_audio_buffer.speech_stopped` event unless the client manually commits the audio buffer during VAD activation.
 
 #### Event structure
@@ -654,6 +658,7 @@ The server `output_audio_buffer.cleared` event is returned when the output audio
 <Note>
 This event is only applicable for WebRTC.
 </Note>
+
 This happens either in VAD mode when the user has interrupted (`input_audio_buffer.speech_started`), or when the client has emitted the `output_audio_buffer.clear` event to manually cut off the current audio response. 
 
 #### Event structure
@@ -679,6 +684,7 @@ The server `output_audio_buffer.started` event is returned when the server begin
 <Note>
 This event is only applicable for WebRTC.
 </Note>
+
 #### Event structure
 
 ```json
@@ -704,6 +710,7 @@ The server `output_audio_buffer.stopped` event is returned when the output audio
 <Note>
 This event is only applicable for WebRTC.
 </Note>
+
 This event is returned after the full response data has been sent to the client via the `response.done` event.
 
 #### Event structure

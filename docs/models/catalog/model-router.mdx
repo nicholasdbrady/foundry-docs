@@ -6,7 +6,8 @@ description: "Learn how to use the model router in Azure OpenAI to select the be
 
 <Note>
 This article refers to the [Microsoft Foundry (new)](../what-is-foundry.md#microsoft-foundry-portals) portal.
-</Note>{/* > 🔄 [Switch to the Microsoft Foundry (classic) documentation]() if you're using the classic portal. */}
+</Note>
+{/* > 🔄 [Switch to the Microsoft Foundry (classic) documentation]() if you're using the classic portal. */}
 
 Model router for Microsoft Foundry is a deployable AI chat model that selects the best large language model (LLM) to respond to a prompt in real time. It uses different preexisting models to deliver high performance and save on compute costs, all in one model deployment. To learn more about how model router works, its advantages, and limitations, see the [Model router concepts guide](/models/catalog/model-router).
 
@@ -18,6 +19,7 @@ With the `2025-11-18` version, Model Router adds nine new models including Anthr
 <Note>
 You don't need to separately deploy the supported LLMs for use with model router, with the exception of the Claude models. To use model router with your Claude models, first deploy them from the model catalog. The deployments will get invoked by Model router if they're selected for routing.
 </Note>
+
 |Model router version|Underlying models| Underlying model version
 |:---:|:---|:----:|
 |`2025-11-18`| `gpt-4.1` <br /> `gpt-4.1-mini` <br /> `gpt-4.1-nano` <br /> `o4-mini` <br /> `gpt-5-nano` <br /> `gpt-5-mini` <br /> `gpt-5`<sup>1</sup> <br /> `gpt-5-chat` <br /> `Deepseek-v3.1`<sup>2</sup> <br /> `gpt-oss-120b`<sup>2</sup> <br /> `llama4-maverick-instruct`<sup>2</sup> <br /> `grok-4`<sup>2</sup> <br /> `grok-4-fast`<sup>2</sup> <br /> `claude-haiku-4-5`<sup>3</sup> <br /> `claude-opus-4-1`<sup>3</sup> <br /> `claude-sonnet-4-5`<sup>3</sup> | `2025-04-14` <br /> `2025-04-14` <br /> `2025-04-14` <br /> `2025-04-16` <br /> `2025-08-07` <br /> `2025-08-07` <br /> `2025-08-07` <br /> `2025-08-07` <br /> N/A <br /> N/A <br /> N/A <br /> N/A <br /> N/A <br /> `2024-11-20` <br /> `2024-07-18` <br /> `2025-10-01` <br /> `2025-08-05` <br /> `2025-09-29` |
@@ -44,11 +46,13 @@ Your deployment settings apply to all underlying chat models that model router u
 - Select a content filter when you deploy the model router model or apply a filter later. The content filter applies to all content passed to and from the model router; don't set content filters for each underlying chat model.
 - Your tokens-per-minute rate limit setting applies to all activity to and from the model router; don't set rate limits for each underlying chat model.
 </Note>
+
 ### Select a routing mode
 
 <Note>
 Changes to the routing mode can take up to five minutes to take effect.
 </Note>
+
 Use the **Routing mode** dropdown to select a routing profile. This sets the routing logic for your deployment.
 
 <Frame>
@@ -65,6 +69,7 @@ Use the **Routing mode** dropdown to select a routing profile. This sets the rou
 <Note>
 Changes to the model subset can take up to five minutes to take effect.
 </Note>
+
 The latest version of model router supports custom subsets: you can specify which underlying models to include in routing decisions. This gives you more control over cost, compliance, and performance characteristics. 
 
 In the model router deployment pane, select **Route to a subset of models**. Then select the underlying models you want to enable.
@@ -76,9 +81,11 @@ In the model router deployment pane, select **Route to a subset of models**. The
 <Info>
 To include models by Anthropic (Claude) in your model router deployment, you need to deploy them yourself to your Foundry resource. See [Deploy and use Claude models](https://learn.microsoft.com/azure/ai-foundry/foundry-models/how-to/use-foundry-models-claude).
 </Info>
+
 <Note>
 You must select at least one model for routing. If no models are selected, the deployment uses the default model set for your routing mode.
 </Note>
+
 New models introduced later are excluded by default until explicitly added.
 
 ## Test model router with the Completions API
@@ -94,9 +101,11 @@ You can set the `Temperature` and `Top_P` parameters to the values you prefer (s
 
 The parameters `stop`, `presence_penalty`, `frequency_penalty`, `logit_bias`, and `logprobs` are similarly dropped for o-series models but used otherwise.
 </Info>
+
 <Info>
 Starting with the `2025-11-18` version, the `reasoning_effort` parameter (see the [Reasoning models guide](https://learn.microsoft.com/azure/ai-foundry/openai/how-to/reasoning)) is now **supported** in model router. If the model router selects a reasoning model for your prompt, it will use your `reasoning_effort` input value with the underlying model.
 </Info>
+
 ## Connect model router to a Foundry agent
 
 If you've created an AI agent in Foundry, you can connect your model router deployment to be used as the agent's base model. Select it from the **model** dropdown menu in the agent playground. Your agent will have all the tools and instructions you've configured for it, but the underlying model that processes its responses will be selected by model router.

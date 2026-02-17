@@ -8,9 +8,11 @@ sidebarTitle: "Use the Microsoft Fabric data agent with Foundry agents"
 <Info>
 Items marked (preview) in this article are currently in public preview. This preview is provided without a service-level agreement, and we don't recommend it for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
 </Info>
+
 <Note>
 See [best practices](/agents/tools/tool-best-practice) for information on optimizing tool usage.
 </Note>
+
 Use the [**Microsoft Fabric data agent**](https://go.microsoft.com/fwlink/?linkid=2312815) with Foundry Agent Service to analyze enterprise data in chat. The Fabric data agent turns enterprise data into a conversational question and answer experience.
 
 First, build and publish a Fabric data agent. Then, connect your Fabric data agent with the published endpoint. When a user sends a query, the agent determines if it should use the Fabric data agent. If so, it uses the end user's identity to generate queries over data they have access to. Lastly, the agent generates responses based on queries returned from the Fabric data agent. By using identity passthrough (On-Behalf-Of) authorization, this integration simplifies access to enterprise data in Fabric while maintaining robust security, ensuring proper access control and enterprise-grade protection.
@@ -27,6 +29,7 @@ First, build and publish a Fabric data agent. Then, connect your Fabric data age
 - The model you select during agent setup is only used for orchestration and response generation. It doesn't affect which model the Fabric data agent uses for NL2SQL.
 - To help your agent invoke the Fabric tool reliably, include clear tool guidance in your agent instructions (for example, "For customer and product sales data, use the Fabric tool"). You can also force tool use with `tool_choice`.
 </Note>
+
 - Create and publish a [Fabric data agent](https://go.microsoft.com/fwlink/?linkid=2312910).
 - Assign developers and end users at least the `Azure AI User` Azure RBAC role. For more information, see [Azure role-based access control in Foundry](/security/rbac-foundry).
 - Give developers and end users at least `READ` access to the Fabric data agent and the underlying data sources it connects to.
@@ -435,6 +438,7 @@ The following example shows how to call the Foundry Agent REST API by using the 
 <Info>
 `AGENT_TOKEN` is a credential. Keep it secret and avoid checking it into source control.
 </Info>
+
 ```bash
 curl --request POST \
   --url "$AZURE_AI_PROJECT_ENDPOINT/openai/responses?api-version=$API_VERSION" \

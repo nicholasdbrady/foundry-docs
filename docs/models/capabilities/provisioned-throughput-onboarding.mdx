@@ -6,13 +6,15 @@ description: "Learn about provisioned throughput unit (PTU) costs, hourly billin
 
 <Note>
 This article refers to the [Microsoft Foundry (new)](../what-is-foundry.md#microsoft-foundry-portals) portal.
-</Note>{/* > 🔄 [Switch to the Microsoft Foundry (classic) documentation]() if you're using the classic portal. */}
+</Note>
+{/* > 🔄 [Switch to the Microsoft Foundry (classic) documentation]() if you're using the classic portal. */}
 
 Use this article to learn about costs associated with provisioned throughput units (PTUs). For an overview of the provisioned throughput offering, see [What is provisioned throughput?](/models/capabilities/provisioned-throughput). When you're ready to sign up for the provisioned throughput offering, see the [getting started guide](/models/capabilities/provisioned-get-started).
 
 <Note>
 In function calling and agent use cases, token usage can be variable. You should understand your expected Tokens Per Minute (TPM) usage in detail before migrating workloads to PTU.
 </Note>
+
 ## Provisioned throughput units
 
 Provisioned throughput units (PTUs) are generic units of model processing capacity that you can use to size provisioned deployments to achieve the required throughput for processing prompts and generating completions.  Provisioned throughput units are granted to a subscription as quota. Each quota is specific to a region and defines  the maximum number of PTUs that can be assigned to deployments in that subscription and region.
@@ -47,6 +49,7 @@ Quota for provisioned deployments shows up in Foundry as the following deploymen
 <Note>
 Quota doesn't guarantee capacity. Deploy your model in Foundry before purchasing a matching reservation in the Azure portal.
 </Note>
+
 |deployment type  |Quota name  |
 |---------|---------|
 |[Regional Provisioned](/models/capabilities/deployment-types#regional-provisioned)     |  Regional Provisioned Throughput Unit       |
@@ -76,6 +79,7 @@ It's not recommended to scale production deployments according to incoming traff
 * The cost savings achieved by purchasing Azure Reservations for Foundry Provisioned Throughput, Data Zone Provisioned, and Global Provisioned are significant, and it will be less expensive in many cases to maintain a deployment sized for full production volume paid for via a reservation than it would be to scale the deployment with incoming traffic.
 * Having unused provisioned quota (PTUs) doesn't guarantee that capacity will be available to support an increase in the size of the deployment when required. Quota limits the maximum number of PTUs that can be deployed, but it isn't a capacity guarantee. Provisioned capacity for each region and model dynamically changes throughout the day and might not be available when required. As a result, it's recommended to maintain a permanent deployment to cover your traffic needs (paid for via a reservation).
 </Info>
+
 ## Delete PTU deployments
 
 <Info>
@@ -105,6 +109,7 @@ The system allows exceptions to the standard input-to-output token ratio for cer
 <Note>
 gpt-4.1, gpt-4.1-mini and gpt-4.1-nano don't support long context (requests estimated at larger than 128k prompt tokens).
 </Note>
+
 | Topic | **gpt-5.2** | **gpt-5.2-codex** | **gpt-5.1** | **gpt-5.1-codex** | **gpt-5** | **gpt-5-mini** | **gpt-4.1** | **gpt-4.1-mini** | **gpt-4.1-nano** | **o3** | **o4-mini** |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Global & data zone provisioned minimum deployment | 15 | 15 | 15 | 15 | 15 | 15 | 15 | 15 | 15 | 15 | 15 |
@@ -198,6 +203,7 @@ Discounts on top of the hourly usage price can be obtained by purchasing an Azur
 
 * The Azure role and tenant policy requirements to purchase a reservation are different than those required to create a deployment or Foundry resource. Verify authorization to purchase reservations in advance of needing to do so. See [Foundry Provisioned Throughput Reservation](https://aka.ms/oai/docs/ptum-reservations) for more details.
 </Info>
+
 ## Size your Foundry provisioned throughput reservation
 
 The PTU amounts in reservation purchases are independent of PTUs allocated in quota or used in deployments. It's possible to purchase a reservation for more PTUs than you have in quota, or can deploy for the desired region, model, or version. Credits for over-purchasing a reservation are limited, and customers must take steps to ensure they maintain their reservation sizes in line with their deployed PTUs. 

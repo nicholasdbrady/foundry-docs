@@ -162,22 +162,28 @@ def convert_callouts(content: str) -> str:
         "CAUTION": "Danger",
     }
 
+    # Match > [!TYPE]\n> content lines (greedy within blockquote)
+    # Support optional leading whitespace for callouts inside list items
+    pattern = r'^([ \t]*)>\s*\[!(TIP|NOTE|WARNING|IMPORTANT|CAUTION)\]\s*\n((?:\1>.*\n?)*)'
+
     def replace_callout(match):
-        callout_type = match.group(1).upper()
+        indent = match.group(1)
+        callout_type = match.group(2).upper()
         component = callout_map.get(callout_type, "Note")
         # Get the remaining lines of the blockquote
-        block_content = match.group(2)
-        # Remove leading > from each line
+        block_content = match.group(3)
+        # Remove leading indent + > from each line
         lines = []
         for line in block_content.split("\n"):
+            # Strip the same indent level, then the > marker
+            if line.startswith(indent):
+                line = line[len(indent):]
             stripped = re.sub(r"^>\s?", "", line)
             lines.append(stripped)
         inner = "\n".join(lines).strip()
-        return f"<{component}>\n{inner}\n</{component}>"
+        return f"{indent}<{component}>\n{indent}{inner}\n{indent}</{component}>\n"
 
-    # Match > [!TYPE]\n> content lines (greedy within blockquote)
-    pattern = r'>\s*\[!(TIP|NOTE|WARNING|IMPORTANT|CAUTION)\]\s*\n((?:>.*\n?)*)'
-    content = re.sub(pattern, replace_callout, content, flags=re.IGNORECASE)
+    content = re.sub(pattern, replace_callout, content, flags=re.IGNORECASE | re.MULTILINE)
     return content
 
 

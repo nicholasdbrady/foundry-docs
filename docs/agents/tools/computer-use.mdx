@@ -8,9 +8,11 @@ sidebarTitle: "Use the computer use tool for agents"
 <Info>
 Items marked (preview) in this article are currently in public preview. This preview is provided without a service-level agreement, and we don't recommend it for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
 </Info>
+
 <Warning>
 The computer use tool comes with significant security and privacy risks, including prompt injection attacks. For more information about intended uses, capabilities, limitations, risks, and considerations when choosing a use case, see the [Azure OpenAI transparency note](/responsible-ai/transparency-note#risk-and-limitations-of-computer-use-preview).
 </Warning>
+
 Create agents that interpret screenshots and automate UI interactions like clicking, typing, and scrolling. The computer use tool uses the `computer-use-preview` model to propose actions based on visual content, enabling agents to interact with desktop and browser applications through their user interfaces.
 
 This guide shows how to integrate the computer use tool into an application loop (screenshot → action → screenshot) by using the latest SDKs.
@@ -76,6 +78,7 @@ The code snippets in this article focus on the agent and Responses API integrati
 <Tip>
 The SDK samples include helper utilities for screenshot capture, action execution, and image encoding. Clone the repository or copy these files to your project before running the samples.
 </Tip>
+
 ## Request access 
 
 To access the `computer-use-preview` model, you need to register. Microsoft grants access based on eligibility criteria. If you have access to other limited access models, you still need to request access for this model. 
@@ -89,6 +92,7 @@ After Microsoft grants access, you need to create a deployment for the model.
 <Warning>
 Use the computer use tool on virtual machines with no access to sensitive data or critical resources. For more information about the intended uses, capabilities, limitations, risks, and considerations when choosing a use case, see the [Azure OpenAI transparency note](/responsible-ai/transparency-note#risk-and-limitations-of-computer-use-preview).
 </Warning>
+
 To run this code, you need the latest prerelease package. See the [quickstart](/get-started/get-started-code) for details.
 
 ### Screenshot initialization for computer use tool execution
@@ -702,8 +706,8 @@ When working with the computer use tool, integrate it into your application by p
 1. Send a new request with the updated state as a `tool_call_output`, and repeat this loop until the model stops requesting actions or you decide to stop. 
 
 <Note>
-
-</Note>   > Before using the tool, set up an environment that can capture screenshots and execute the recommended actions by the agent. For safety reasons, use a sandboxed environment, such as Playwright.
+Before using the tool, set up an environment that can capture screenshots and execute the recommended actions by the agent. For safety reasons, use a sandboxed environment, such as Playwright.
+</Note>
 
 ## Manage conversation history
 
@@ -718,6 +722,7 @@ Computer use carries substantial security and privacy risks and user responsibil
 
 Use the computer use tool on virtual machines with no access to sensitive data or critical resources. For more information about the intended uses, capabilities, limitations, risks, and considerations when choosing a use case, see the [Azure OpenAI transparency note](/responsible-ai/transparency-note#risk-and-limitations-of-computer-use-preview).
 </Warning>
+
 The API has safety checks to help protect against prompt injection and model mistakes. These checks include: 
 
 **Malicious instruction detection**: The system evaluates the screenshot image and checks if it contains adversarial content that might change the model's behavior. 

@@ -8,6 +8,7 @@ sidebarTitle: "How to configure a private link for Microsoft Foundry projects"
 <Tip>
 An alternate hub-focused version of this article is available: [How to configure a private link for a Microsoft Foundry hub](hub-configure-private-link.md).
 </Tip>
+
 When you use a Foundry project, you can use a private link to secure communication with your project. This article describes how to establish a private connection to your project using a private link. 
 
 <Note>
@@ -23,8 +24,8 @@ End-to-end network isolation isn't supported in the new Foundry portal experienc
     - If you manage private DNS zones: **Private DNS Zone Contributor** (or equivalent) for the private DNS zone that you link to the virtual network.
 
 <Info>
-
-</Info>    > Don't use the 172.17.0.0/16 IP address range for your virtual network. This range is the default subnet range used by the Docker bridge network on-premises.
+Don't use the 172.17.0.0/16 IP address range for your virtual network. This range is the default subnet range used by the Docker bridge network on-premises.
+</Info>
 
 ## Securely connect to Foundry
 
@@ -51,8 +52,8 @@ When creating a new project, use the following steps to create the project.
     - From the **Virtual Network** form, select the virtual network and subnet that you want to connect to.
 
 <Note>
-
-</Note>    > In the portal UI, the target to which you create the private endpoint might be labeled as an "account" or "resource". Select your Foundry project resource when prompted.
+In the portal UI, the target to which you create the private endpoint might be labeled as an "account" or "resource". Select your Foundry project resource when prompted.
+</Note>
 
 1. Continue through the forms to create the project. When you reach the **Review + create** tab, review your settings and select **Create** to create the project.
 
@@ -66,8 +67,8 @@ When creating a new project, use the following steps to create the project.
     - From the **Virtual Network** form, select the virtual network and subnet that you want to connect to.
 
 <Note>
-
-</Note>    > The portal refers to the private endpoint target as an "account" or "resource". Choose your Foundry resource as the target.
+The portal refers to the private endpoint target as an "account" or "resource". Choose your Foundry resource as the target.
+</Note>
 
 1. After you populate the forms with any other network configurations you require, use the **Review + create** tab to review your settings and select **Create** to create the private endpoint.
 
@@ -78,6 +79,7 @@ You can remove one or all private endpoints for a project. Removing a private en
 <Warning>
 Removing the private endpoints for a project **doesn't make it publicly accessible**. To make the project publicly accessible, use the steps in the [Enable public access](#enable-public-access) section.
 </Warning>
+
 To remove a private endpoint, use the following information:
 
 1. From the [Azure portal](https://portal.azure.com), select your project.
@@ -91,6 +93,7 @@ In some situations, you might want to allow someone to connect to your secured p
 <Info>
 Enabling public access doesn't remove any private endpoints that exist. All communications between components behind the virtual network that the private endpoints connect to are still secured. It enables public access only to the project, in addition to the private access through any private endpoints.
 </Info>
+
 1. From the [Azure portal](https://portal.azure.com), select your project.
 1. From the left side of the page, select **Resource Management**, **Networking**, and then select the **Firewalls and virtual networks** tab.
 1. Select **All networks**, and then select **Save**.
@@ -120,6 +123,7 @@ For more information on configuring your own DNS server to support private endpo
 - [Name resolution that uses your own DNS server](https://learn.microsoft.com/azure/virtual-network/virtual-networks-name-resolution-for-vms-and-role-instances#name-resolution-that-uses-your-own-dns-server)
 - [DNS configuration](https://learn.microsoft.com/azure/private-link/private-endpoint-overview#dns-configuration)
 </Tip>
+
 ## Validate the configuration
 
 Use the following steps to validate that your private endpoint is approved and that DNS resolves to the private IP address from inside your virtual network.

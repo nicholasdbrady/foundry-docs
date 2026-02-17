@@ -7,7 +7,8 @@ sidebarTitle: "Cloud Evaluation with the Microsoft Foundry SDK"
 
 <Note>
 This article refers to the [Microsoft Foundry (new)](../what-is-foundry.md#microsoft-foundry-portals) portal.
-</Note>{/* > 🔄 [Switch to the Microsoft Foundry (classic) documentation]() if you're using the classic portal. */}
+</Note>
+{/* > 🔄 [Switch to the Microsoft Foundry (classic) documentation]() if you're using the classic portal. */}
 
 <Info>
 Items marked (preview) in this article are currently in public preview. This preview is provided without a service-level agreement, and we don't recommend it for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
@@ -22,6 +23,7 @@ Cloud evaluation results are stored in your Foundry project. You can review resu
 <Tip>
 For complete runnable examples, see the [Python SDK evaluation samples](https://github.com/Azure/azure-sdk-for-python/blob/main/sdk/ai/azure-ai-projects/samples/evaluations/README.md) on GitHub.
 </Tip>
+
 When you use the Foundry SDK, it logs evaluation results in your Foundry project for better observability. This feature supports all Microsoft-curated [built in evaluators](/observability/built-in-evaluators). and your own [custom evaluators](/observability/custom-evaluators). Your evaluators can be located in the [evaluator library](/observability/evaluate-generative-ai-app#view-and-manage-the-evaluators-in-the-evaluator-library) and have the same project-scope, role-based access control.
 
 ## How cloud evaluation works
@@ -61,6 +63,7 @@ Each scenario requires evaluators that define your testing criteria. For guidanc
 <Note>
 Some evaluation features have regional restrictions. See [supported regions](/observability/risk-safety-evaluators#foundry-project-configuration-and-region-support) for details.
 </Note>
+
 ## Get started
 
 Install the SDK and set up your client:
@@ -160,6 +163,7 @@ Evaluate pre-computed responses in a JSONL file using the `jsonl` data source ty
 <Tip>
 Before you begin, complete [Get started](#get-started) and [Prepare input data](#uploading-evaluation-data).
 </Tip>
+
 ### Define the data schema and evaluators
 
 Specify the schema that matches your JSONL fields, and select the evaluators (testing criteria) to run. Use the `data_mapping` parameter to connect fields from your input data to evaluator parameters with `{{item.field}}` syntax. Always include `data_mapping` with the required input fields for each evaluator. Your field names must match those in your JSONL file — for example, if your data has `"question"` instead of `"query"`, use `"{{item.question}}"` in the mapping. For the required parameters per evaluator, see [built-in evaluators](/observability/observability#what-are-evaluators).
@@ -347,6 +351,7 @@ Send queries to a deployed model at runtime and evaluate the responses using the
 <Tip>
 Before you begin, complete [Get started](#get-started) and [Prepare input data](#uploading-evaluation-data).
 </Tip>
+
 ### Define the message template and target
 
 The `input_messages` template controls how queries are sent to the model. Use `{{item.query}}` to reference fields from your input data. Specify the model to evaluate and optional sampling parameters:
@@ -493,6 +498,7 @@ Send queries to a Foundry agent at runtime and evaluate the responses using the 
 <Tip>
 Before you begin, complete [Get started](#get-started) and [Prepare input data](#uploading-evaluation-data).
 </Tip>
+
 ### Define the message template and target
 
 The `input_messages` template controls how queries are sent to the agent. Use `{{item.query}}` to reference fields from your input data. Specify the agent to evaluate by name:
@@ -540,6 +546,7 @@ When the agent generates responses at runtime, use `{{sample.*}}` variables in `
 <Tip>
 The `query` field can contain structured JSON, including system messages and conversation history. Some agent evaluators such as `task_adherence` use this context for more accurate scoring. For details on query formatting, see [agent evaluators](/observability/agent-evaluators).
 </Tip>
+
 ```python
 data_source_config = DataSourceConfigCustom(
     type="custom",
@@ -670,6 +677,7 @@ Retrieve and evaluate Foundry agent responses by response IDs using the `azure_a
 <Tip>
 Before you begin, complete [Get started](#get-started).
 </Tip>
+
 A **response ID** is a unique identifier returned each time a Foundry agent generates a response. You can collect response IDs from agent interactions by using the [Responses API](https://learn.microsoft.com/rest/api/aifoundry) or from your application's trace logs. Provide the IDs inline as file content, or upload them as a dataset (see [Prepare input data](#uploading-evaluation-data)).
 
 ### Collect response IDs
