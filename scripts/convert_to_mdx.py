@@ -356,13 +356,17 @@ def rewrite_image_paths(content: str) -> str:
 
     Converts relative paths (../media/..., media/..., ./media/...) and
     backslash paths to the flat /images/ directory used by the docs site.
-    Skips HTTP URLs and ~/reusable-content references.
+    Maps ~/reusable-content/.../ai-services/X.svg to /images/ai-services/X.svg.
     """
     def _rewrite_md_img(m):
         alt = m.group(1)
         path = m.group(2)
-        if path.startswith('http') or path.startswith('~/'):
+        if path.startswith('http'):
             return m.group(0)
+        if path.startswith('~/reusable-content/'):
+            # Map to /images/ai-services/filename.svg
+            name = PurePosixPath(path).name
+            return f'![{alt}](/images/ai-services/{name})'
         # Normalize backslashes and extract filename
         path = path.replace('\\', '/')
         name = PurePosixPath(path).name
