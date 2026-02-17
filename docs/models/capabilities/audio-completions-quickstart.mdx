@@ -9,7 +9,61 @@ sidebarTitle: "Quickstart - Get started with Azure OpenAI audio generation"
 This article refers to the [Microsoft Foundry (new)](/overview/what-is-foundry#microsoft-foundry-portals) portal.
 </Note><!-- > 🔄 [Switch to the Microsoft Foundry (classic) documentation]() if you're using the classic portal. -->
 
+Audio-enabled models introduce the audio modality into the existing `/chat/completions` API. The audio model expands the potential for AI applications in text and voice-based interactions and audio analysis. Modalities supported in `gpt-4o-audio-preview` and `gpt-4o-mini-audio-preview` models include: text, audio, and text + audio.
+
+Here's a table of the supported modalities with example use cases:
+
+| Modality input | Modality output | Example use case |
+| --- | --- | --- |
+| Text | Text + audio | Text to speech, audio book generation |
+| Audio | Text + audio | Audio transcription, audio book generation |
+| Audio | Text | Audio transcription |
+| Text + audio | Text + audio | Audio book generation |
+| Text + audio | Text | Audio transcription |
+
+By using audio generation capabilities, you can achieve more dynamic and interactive AI applications. Models that support audio inputs and outputs allow you to generate spoken audio responses to prompts and use audio inputs to prompt the model. 
+
+## Supported models
+
+The following OpenAI models support audio generation:
+
+| Model | Audio generation? | Primary Use |
+| -- | -- | -- |
+|`gpt-4o-audio-preview` | ✔️ | Chat completions with spoken output |
+|`gpt-4o-mini-tts` | ✔️ | Fast, scalable text-to-speech |
+|`gpt-4o-mini-audio-preview` | ✔️ | Asynchronous audio generation |
+|`gpt-realtime` | ✔️ | Real‑time interactive voice |
+|`gpt-realtime-mini` | ✔️ | Low‑latency audio streaming |
+|`tts-1` / `tts-1-hd` | ✔️ | General‑purpose speech synthesis |
+
+For information about region availability, see the [models and versions documentation](../../foundry-models/concepts/models-sold-directly-by-azure.md).
+
+<Note>
+The [Realtime API](../realtime-audio-quickstart.md) uses the same underlying GPT-4o audio model as the completions API, but is optimized for low-latency, real-time audio interactions.
+</Note>
+## Input requirements
+
+The following voices are supported for audio out: Alloy, Ash, Ballad, Coral, Echo, Sage, Shimmer, Verse, Marin, and Cedar.
+
+The following audio output formats are supported: wav, mp3, flac, opus, pcm16, and aac.
+
+The maximum audio file size is 20 MB.
+
+## API support
+
+Support for audio completions was first added in API version `2025-01-01-preview`.
+
 ## Deploy a model for audio generation
+
+To deploy the `gpt-4o-mini-audio-preview` model in the Microsoft Foundry portal:
+1. Go to the [Foundry portal](https://ai.azure.com/?cid=learnDocs) and create or select your project. 
+1. Select **Models + endpoints** from under **My assets** in the left pane.
+1. Select **+ Deploy model** > **Deploy base model** to open the deployment window. 
+1. Search for and select the `gpt-4o-mini-audio-preview` model and then select **Confirm**.
+1. Review the deployment details and select **Deploy**.
+1. Follow the wizard to finish deploying the model.
+
+Now that you have a deployment of the `gpt-4o-mini-audio-preview` model, you can interact with it in the Foundry portal **Chat** playground or chat completions API.
 
 ## Use GPT-4o audio generation
 
@@ -37,6 +91,50 @@ To chat with your deployed `gpt-4o-mini-audio-preview` model in the **Chat** pla
     - Enter text prompts.
 
 [Reference documentation](https://platform.openai.com/docs/api-reference/chat) | [Library source code](https://github.com/openai/openai-node?azure-portal=true) | [Package (npm)](https://www.npmjs.com/package/openai) | [Samples](https://github.com/Azure/azure-sdk-for-js/tree/main/sdk/openai/openai/samples)
+
+Audio-enabled models introduce the audio modality into the existing `/chat/completions` API. The audio model expands the potential for AI applications in text and voice-based interactions and audio analysis. Modalities supported in `gpt-4o-audio-preview` and `gpt-4o-mini-audio-preview` models include: text, audio, and text + audio.
+
+Here's a table of the supported modalities with example use cases:
+
+| Modality input | Modality output | Example use case |
+| --- | --- | --- |
+| Text | Text + audio | Text to speech, audio book generation |
+| Audio | Text + audio | Audio transcription, audio book generation |
+| Audio | Text | Audio transcription |
+| Text + audio | Text + audio | Audio book generation |
+| Text + audio | Text | Audio transcription |
+
+By using audio generation capabilities, you can achieve more dynamic and interactive AI applications. Models that support audio inputs and outputs allow you to generate spoken audio responses to prompts and use audio inputs to prompt the model. 
+
+## Supported models
+
+The following OpenAI models support audio generation:
+
+| Model | Audio generation? | Primary Use |
+| -- | -- | -- |
+|`gpt-4o-audio-preview` | ✔️ | Chat completions with spoken output |
+|`gpt-4o-mini-tts` | ✔️ | Fast, scalable text-to-speech |
+|`gpt-4o-mini-audio-preview` | ✔️ | Asynchronous audio generation |
+|`gpt-realtime` | ✔️ | Real‑time interactive voice |
+|`gpt-realtime-mini` | ✔️ | Low‑latency audio streaming |
+|`tts-1` / `tts-1-hd` | ✔️ | General‑purpose speech synthesis |
+
+For information about region availability, see the [models and versions documentation](../../foundry-models/concepts/models-sold-directly-by-azure.md).
+
+<Note>
+The [Realtime API](../realtime-audio-quickstart.md) uses the same underlying GPT-4o audio model as the completions API, but is optimized for low-latency, real-time audio interactions.
+</Note>
+## Input requirements
+
+The following voices are supported for audio out: Alloy, Ash, Ballad, Coral, Echo, Sage, Shimmer, Verse, Marin, and Cedar.
+
+The following audio output formats are supported: wav, mp3, flac, opus, pcm16, and aac.
+
+The maximum audio file size is 20 MB.
+
+## API support
+
+Support for audio completions was first added in API version `2025-01-01-preview`.
 
 ## Prerequisites
 
@@ -78,6 +176,29 @@ For the recommended keyless authentication with Microsoft Entra ID, you need to:
     ```
 
 ## Retrieve resource information
+
+You need to retrieve the following information to authenticate your application with your Azure OpenAI resource:
+
+#### [Microsoft Entra ID](#tab/keyless)
+
+|Variable name | Value |
+|--------------------------|-------------|
+| `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
+| `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
+
+Learn more about [keyless authentication](https://learn.microsoft.com/azure/ai-services/authentication) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
+
+#### [API key](#tab/api-key)
+
+|Variable name | Value |
+|--------------------------|-------------|
+| `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
+| `AZURE_OPENAI_API_KEY` | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. You can use either `KEY1` or `KEY2`.|
+| `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
+
+Learn more about [finding API keys](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
+
+---
 
 <Danger>
 To use the recommended keyless authentication with the SDK, make sure that the `AZURE_OPENAI_API_KEY` environment variable isn't set.
@@ -619,6 +740,50 @@ The script generates a transcript of the summary of the spoken audio input. Then
 
 [Library source code](https://github.com/openai/openai-python/tree/main/src/openai) | [Package](https://github.com/openai/openai-python) | [Samples](https://github.com/openai/openai-python/tree/main/examples)
 
+Audio-enabled models introduce the audio modality into the existing `/chat/completions` API. The audio model expands the potential for AI applications in text and voice-based interactions and audio analysis. Modalities supported in `gpt-4o-audio-preview` and `gpt-4o-mini-audio-preview` models include: text, audio, and text + audio.
+
+Here's a table of the supported modalities with example use cases:
+
+| Modality input | Modality output | Example use case |
+| --- | --- | --- |
+| Text | Text + audio | Text to speech, audio book generation |
+| Audio | Text + audio | Audio transcription, audio book generation |
+| Audio | Text | Audio transcription |
+| Text + audio | Text + audio | Audio book generation |
+| Text + audio | Text | Audio transcription |
+
+By using audio generation capabilities, you can achieve more dynamic and interactive AI applications. Models that support audio inputs and outputs allow you to generate spoken audio responses to prompts and use audio inputs to prompt the model. 
+
+## Supported models
+
+The following OpenAI models support audio generation:
+
+| Model | Audio generation? | Primary Use |
+| -- | -- | -- |
+|`gpt-4o-audio-preview` | ✔️ | Chat completions with spoken output |
+|`gpt-4o-mini-tts` | ✔️ | Fast, scalable text-to-speech |
+|`gpt-4o-mini-audio-preview` | ✔️ | Asynchronous audio generation |
+|`gpt-realtime` | ✔️ | Real‑time interactive voice |
+|`gpt-realtime-mini` | ✔️ | Low‑latency audio streaming |
+|`tts-1` / `tts-1-hd` | ✔️ | General‑purpose speech synthesis |
+
+For information about region availability, see the [models and versions documentation](../../foundry-models/concepts/models-sold-directly-by-azure.md).
+
+<Note>
+The [Realtime API](../realtime-audio-quickstart.md) uses the same underlying GPT-4o audio model as the completions API, but is optimized for low-latency, real-time audio interactions.
+</Note>
+## Input requirements
+
+The following voices are supported for audio out: Alloy, Ash, Ballad, Coral, Echo, Sage, Shimmer, Verse, Marin, and Cedar.
+
+The following audio output formats are supported: wav, mp3, flac, opus, pcm16, and aac.
+
+The maximum audio file size is 20 MB.
+
+## API support
+
+Support for audio completions was first added in API version `2025-01-01-preview`.
+
 Use this guide to get started generating audio with the Azure OpenAI SDK for Python.
 
 ## Prerequisites
@@ -686,6 +851,29 @@ For the recommended keyless authentication with Microsoft Entra ID, you need to:
     ```
 
 ## Retrieve resource information
+
+You need to retrieve the following information to authenticate your application with your Azure OpenAI resource:
+
+#### [Microsoft Entra ID](#tab/keyless)
+
+|Variable name | Value |
+|--------------------------|-------------|
+| `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
+| `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
+
+Learn more about [keyless authentication](https://learn.microsoft.com/azure/ai-services/authentication) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
+
+#### [API key](#tab/api-key)
+
+|Variable name | Value |
+|--------------------------|-------------|
+| `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
+| `AZURE_OPENAI_API_KEY` | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. You can use either `KEY1` or `KEY2`.|
+| `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
+
+Learn more about [finding API keys](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
+
+---
 
 ## Generate audio from text input
 
@@ -1117,6 +1305,50 @@ Review the console output to see the transcript and verify the multi-turn conver
 </Tip>
 [REST API Spec](https://github.com/Azure/azure-rest-api-specs/blob/main/specification/cognitiveservices/data-plane/AzureOpenAI/inference/stable/2024-10-21/inference.json) |
 
+Audio-enabled models introduce the audio modality into the existing `/chat/completions` API. The audio model expands the potential for AI applications in text and voice-based interactions and audio analysis. Modalities supported in `gpt-4o-audio-preview` and `gpt-4o-mini-audio-preview` models include: text, audio, and text + audio.
+
+Here's a table of the supported modalities with example use cases:
+
+| Modality input | Modality output | Example use case |
+| --- | --- | --- |
+| Text | Text + audio | Text to speech, audio book generation |
+| Audio | Text + audio | Audio transcription, audio book generation |
+| Audio | Text | Audio transcription |
+| Text + audio | Text + audio | Audio book generation |
+| Text + audio | Text | Audio transcription |
+
+By using audio generation capabilities, you can achieve more dynamic and interactive AI applications. Models that support audio inputs and outputs allow you to generate spoken audio responses to prompts and use audio inputs to prompt the model. 
+
+## Supported models
+
+The following OpenAI models support audio generation:
+
+| Model | Audio generation? | Primary Use |
+| -- | -- | -- |
+|`gpt-4o-audio-preview` | ✔️ | Chat completions with spoken output |
+|`gpt-4o-mini-tts` | ✔️ | Fast, scalable text-to-speech |
+|`gpt-4o-mini-audio-preview` | ✔️ | Asynchronous audio generation |
+|`gpt-realtime` | ✔️ | Real‑time interactive voice |
+|`gpt-realtime-mini` | ✔️ | Low‑latency audio streaming |
+|`tts-1` / `tts-1-hd` | ✔️ | General‑purpose speech synthesis |
+
+For information about region availability, see the [models and versions documentation](../../foundry-models/concepts/models-sold-directly-by-azure.md).
+
+<Note>
+The [Realtime API](../realtime-audio-quickstart.md) uses the same underlying GPT-4o audio model as the completions API, but is optimized for low-latency, real-time audio interactions.
+</Note>
+## Input requirements
+
+The following voices are supported for audio out: Alloy, Ash, Ballad, Coral, Echo, Sage, Shimmer, Verse, Marin, and Cedar.
+
+The following audio output formats are supported: wav, mp3, flac, opus, pcm16, and aac.
+
+The maximum audio file size is 20 MB.
+
+## API support
+
+Support for audio completions was first added in API version `2025-01-01-preview`.
+
 ## Prerequisites
 
 - An Azure subscription. [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
@@ -1182,6 +1414,29 @@ For the recommended keyless authentication with Microsoft Entra ID, you need to:
     ```
 
 ## Retrieve resource information
+
+You need to retrieve the following information to authenticate your application with your Azure OpenAI resource:
+
+#### [Microsoft Entra ID](#tab/keyless)
+
+|Variable name | Value |
+|--------------------------|-------------|
+| `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
+| `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
+
+Learn more about [keyless authentication](https://learn.microsoft.com/azure/ai-services/authentication) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
+
+#### [API key](#tab/api-key)
+
+|Variable name | Value |
+|--------------------------|-------------|
+| `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
+| `AZURE_OPENAI_API_KEY` | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. You can use either `KEY1` or `KEY2`.|
+| `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
+
+Learn more about [finding API keys](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
+
+---
 
 ## Generate audio from text input
 
@@ -1642,6 +1897,50 @@ The script generates a transcript of the summary of the spoken audio input. Then
 
 [Reference documentation](https://platform.openai.com/docs/api-reference/chat) | [Library source code](https://github.com/openai/openai-node?azure-portal=true) | [Package (npm)](https://www.npmjs.com/package/openai) | [Samples](https://github.com/Azure/azure-sdk-for-js/tree/main/sdk/openai/openai/samples)
 
+Audio-enabled models introduce the audio modality into the existing `/chat/completions` API. The audio model expands the potential for AI applications in text and voice-based interactions and audio analysis. Modalities supported in `gpt-4o-audio-preview` and `gpt-4o-mini-audio-preview` models include: text, audio, and text + audio.
+
+Here's a table of the supported modalities with example use cases:
+
+| Modality input | Modality output | Example use case |
+| --- | --- | --- |
+| Text | Text + audio | Text to speech, audio book generation |
+| Audio | Text + audio | Audio transcription, audio book generation |
+| Audio | Text | Audio transcription |
+| Text + audio | Text + audio | Audio book generation |
+| Text + audio | Text | Audio transcription |
+
+By using audio generation capabilities, you can achieve more dynamic and interactive AI applications. Models that support audio inputs and outputs allow you to generate spoken audio responses to prompts and use audio inputs to prompt the model. 
+
+## Supported models
+
+The following OpenAI models support audio generation:
+
+| Model | Audio generation? | Primary Use |
+| -- | -- | -- |
+|`gpt-4o-audio-preview` | ✔️ | Chat completions with spoken output |
+|`gpt-4o-mini-tts` | ✔️ | Fast, scalable text-to-speech |
+|`gpt-4o-mini-audio-preview` | ✔️ | Asynchronous audio generation |
+|`gpt-realtime` | ✔️ | Real‑time interactive voice |
+|`gpt-realtime-mini` | ✔️ | Low‑latency audio streaming |
+|`tts-1` / `tts-1-hd` | ✔️ | General‑purpose speech synthesis |
+
+For information about region availability, see the [models and versions documentation](../../foundry-models/concepts/models-sold-directly-by-azure.md).
+
+<Note>
+The [Realtime API](../realtime-audio-quickstart.md) uses the same underlying GPT-4o audio model as the completions API, but is optimized for low-latency, real-time audio interactions.
+</Note>
+## Input requirements
+
+The following voices are supported for audio out: Alloy, Ash, Ballad, Coral, Echo, Sage, Shimmer, Verse, Marin, and Cedar.
+
+The following audio output formats are supported: wav, mp3, flac, opus, pcm16, and aac.
+
+The maximum audio file size is 20 MB.
+
+## API support
+
+Support for audio completions was first added in API version `2025-01-01-preview`.
+
 ## Prerequisites
 
 - An Azure subscription - [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn)
@@ -1691,6 +1990,29 @@ For the recommended keyless authentication with Microsoft Entra ID, you need to:
     ```
 
 ## Retrieve resource information
+
+You need to retrieve the following information to authenticate your application with your Azure OpenAI resource:
+
+#### [Microsoft Entra ID](#tab/keyless)
+
+|Variable name | Value |
+|--------------------------|-------------|
+| `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
+| `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
+
+Learn more about [keyless authentication](https://learn.microsoft.com/azure/ai-services/authentication) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
+
+#### [API key](#tab/api-key)
+
+|Variable name | Value |
+|--------------------------|-------------|
+| `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
+| `AZURE_OPENAI_API_KEY` | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. You can use either `KEY1` or `KEY2`.|
+| `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
+
+Learn more about [finding API keys](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
+
+---
 
 <Danger>
 To use the recommended keyless authentication with the SDK, make sure that the `AZURE_OPENAI_API_KEY` environment variable isn't set.

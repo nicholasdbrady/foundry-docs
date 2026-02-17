@@ -261,6 +261,23 @@ def main():
                 entry['images'] = images
                 all_images.update(images)
 
+    # Recursively scan include files for nested includes
+    scanned_includes = set()
+    to_scan = list(all_includes)
+    while to_scan:
+        inc_path = to_scan.pop()
+        if inc_path in scanned_includes:
+            continue
+        scanned_includes.add(inc_path)
+        nested = scan_doc_for_includes(inc_path)
+        for n in nested:
+            if n not in all_includes:
+                all_includes.add(n)
+                to_scan.append(n)
+
+    if scanned_includes:
+        print(f"  Scanned {len(scanned_includes)} include files, found {len(all_includes)} total (including nested)", file=sys.stderr)
+
     manifest = {
         'repo': f"{REPO_OWNER}/{REPO_NAME}",
         'root_toc': ROOT_TOC_PATH,

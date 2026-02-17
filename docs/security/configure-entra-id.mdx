@@ -437,6 +437,23 @@ After you configure Microsoft Entra ID in your resource, update your code to use
   </Tab>
 </Tabs>
 
+### Options for credential when using Microsoft Entra ID
+
+`DefaultAzureCredential` is an opinionated, ordered sequence of mechanisms for authenticating to Microsoft Entra ID. Each authentication mechanism is a class that's derived from the `TokenCredential` class and is known as a credential. At runtime, `DefaultAzureCredential` attempts to authenticate using the first credential. If that credential fails to acquire an access token, the next credential in the sequence is attempted, and so on, until an access token is obtained. In this way, your app can use different credentials in different environments without writing environment-specific code.
+
+When the preceding code runs on your local development workstation, it looks in the environment variables for an application service principal or at locally installed developer tools, like Visual Studio, for a set of developer credentials. You can use either approach to authenticate the app to Azure resources during local development.
+
+When deployed to Azure, this same code can also authenticate your app to other Azure resources. `DefaultAzureCredential` can retrieve environment settings and managed identity configurations to authenticate to other services automatically.
+
+### Best practices
+
+* Use deterministic credentials in production environments: Strongly consider moving from `DefaultAzureCredential` to one of the following deterministic solutions in production environments:
+
+  * A specific `TokenCredential` implementation, like `ManagedIdentityCredential`. See the [Derived list for options](https://learn.microsoft.com/dotnet/api/azure.core.tokencredential#definition).
+  * A pared-down `ChainedTokenCredential` implementation that's optimized for the Azure environment in which your app runs. `ChainedTokenCredential` essentially creates a specific allowlist of acceptable credential options, like `ManagedIdentity` for production and `VisualStudioCredential` for development.
+
+* Configure system-assigned or user-assigned managed identities to the Azure resources where your code runs, if possible. Configure Microsoft Entra ID access to those specific identities.
+
 Sign in to [Microsoft Foundry](https://ai.azure.com/?cid=learnDocs). Make sure the **New Foundry** toggle is on. These steps refer to **Foundry (new)**.
 
 <img src="/images/new-foundry.png" />
@@ -846,6 +863,23 @@ After you configure Microsoft Entra ID in your resource, update your code to use
   </Tab>
 </Tabs>
 
+### Options for credential when using Microsoft Entra ID
+
+`DefaultAzureCredential` is an opinionated, ordered sequence of mechanisms for authenticating to Microsoft Entra ID. Each authentication mechanism is a class that's derived from the `TokenCredential` class and is known as a credential. At runtime, `DefaultAzureCredential` attempts to authenticate using the first credential. If that credential fails to acquire an access token, the next credential in the sequence is attempted, and so on, until an access token is obtained. In this way, your app can use different credentials in different environments without writing environment-specific code.
+
+When the preceding code runs on your local development workstation, it looks in the environment variables for an application service principal or at locally installed developer tools, like Visual Studio, for a set of developer credentials. You can use either approach to authenticate the app to Azure resources during local development.
+
+When deployed to Azure, this same code can also authenticate your app to other Azure resources. `DefaultAzureCredential` can retrieve environment settings and managed identity configurations to authenticate to other services automatically.
+
+### Best practices
+
+* Use deterministic credentials in production environments: Strongly consider moving from `DefaultAzureCredential` to one of the following deterministic solutions in production environments:
+
+  * A specific `TokenCredential` implementation, like `ManagedIdentityCredential`. See the [Derived list for options](https://learn.microsoft.com/dotnet/api/azure.core.tokencredential#definition).
+  * A pared-down `ChainedTokenCredential` implementation that's optimized for the Azure environment in which your app runs. `ChainedTokenCredential` essentially creates a specific allowlist of acceptable credential options, like `ManagedIdentity` for production and `VisualStudioCredential` for development.
+
+* Configure system-assigned or user-assigned managed identities to the Azure resources where your code runs, if possible. Configure Microsoft Entra ID access to those specific identities.
+
 ## Disable key-based authentication in the resource
 
 Disable key-based authentication when you implement Microsoft Entra ID and fully address compatibility or fallback concerns in all the applications that consume the service. 
@@ -889,7 +923,9 @@ To create these resources, use the following assets:
 
     __modules/ai-services-template.bicep__
 
-    :::code language="bicep" source="~/azureai-model-inference-bicep/infra/modules/ai-services-template.bicep":::
+    ```bicep
+// Source: ai-services-template.bicep (not available)
+```
 
     <Tip>
 
@@ -899,7 +935,9 @@ To create these resources, use the following assets:
 
     __modules/role-assignment-template.bicep__
 
-    :::code language="bicep" source="~/azureai-model-inference-bicep/infra/modules/role-assignment-template.bicep":::
+    ```bicep
+// Source: role-assignment-template.bicep (not available)
+```
 
 ## Create the resources
 
@@ -909,7 +947,9 @@ In your console, follow these steps:
 
     __deploy-entra-id.bicep__
 
-    :::code language="bicep" source="~/azureai-model-inference-bicep/infra/deploy-entra-id.bicep":::
+    ```bicep
+// Source: deploy-entra-id.bicep (not available)
+```
 
 1. Sign in to Azure:
 
@@ -1250,6 +1290,23 @@ After you configure Microsoft Entra ID in your resource, update your code to use
   </Tab>
 </Tabs>
 
+### Options for credential when using Microsoft Entra ID
+
+`DefaultAzureCredential` is an opinionated, ordered sequence of mechanisms for authenticating to Microsoft Entra ID. Each authentication mechanism is a class that's derived from the `TokenCredential` class and is known as a credential. At runtime, `DefaultAzureCredential` attempts to authenticate using the first credential. If that credential fails to acquire an access token, the next credential in the sequence is attempted, and so on, until an access token is obtained. In this way, your app can use different credentials in different environments without writing environment-specific code.
+
+When the preceding code runs on your local development workstation, it looks in the environment variables for an application service principal or at locally installed developer tools, like Visual Studio, for a set of developer credentials. You can use either approach to authenticate the app to Azure resources during local development.
+
+When deployed to Azure, this same code can also authenticate your app to other Azure resources. `DefaultAzureCredential` can retrieve environment settings and managed identity configurations to authenticate to other services automatically.
+
+### Best practices
+
+* Use deterministic credentials in production environments: Strongly consider moving from `DefaultAzureCredential` to one of the following deterministic solutions in production environments:
+
+  * A specific `TokenCredential` implementation, like `ManagedIdentityCredential`. See the [Derived list for options](https://learn.microsoft.com/dotnet/api/azure.core.tokencredential#definition).
+  * A pared-down `ChainedTokenCredential` implementation that's optimized for the Azure environment in which your app runs. `ChainedTokenCredential` essentially creates a specific allowlist of acceptable credential options, like `ManagedIdentity` for production and `VisualStudioCredential` for development.
+
+* Configure system-assigned or user-assigned managed identities to the Azure resources where your code runs, if possible. Configure Microsoft Entra ID access to those specific identities.
+
 ## Disable key-based authentication in the resource
 
 Disable key-based authentication when you implement Microsoft Entra ID and fully address compatibility or fallback concerns in all applications that consume the service. Change the `disableLocalAuth` property to disable key-based authentication.
@@ -1258,7 +1315,9 @@ For more information about how to disable local authentication when you're using
 
 __modules/ai-services-template.bicep__
 
-:::code language="bicep" source="~/azureai-model-inference-bicep/infra/modules/ai-services-template.bicep" highlight="10-11,42":::
+```bicep
+// Source: ai-services-template.bicep (not available)
+```
 ## Understand roles in the context of resource in Azure
 
 Microsoft Entra ID uses role-based access control (RBAC) for authorization, which controls what actions users can perform on Azure resources. Roles are central to managing access to cloud resources. A role is a collection of permissions that define what actions can be performed on specific Azure resources. By assigning roles to users, groups, service principals, or managed identities—collectively known as security principals—you control their access within your Azure environment to specific resources.

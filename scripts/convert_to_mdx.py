@@ -455,6 +455,32 @@ def rewrite_links(content: str, source_path: str) -> str:
     return content
 
 
+CODE_SAMPLES_DIR = RAW_DIR / "code_samples"
+
+
+def resolve_code_includes(content: str) -> str:
+    """Resolve :::code directives by inlining the actual source file content."""
+    def replace_code_directive(match):
+        lang = match.group(1) or ""
+        source = match.group(2)
+        # source starts with ~/ — map to code_samples directory
+        rel_path = source.lstrip("~/")
+        code_file = CODE_SAMPLES_DIR / rel_path
+        if code_file.exists():
+            code = code_file.read_text(encoding="utf-8", errors="replace").strip()
+            return f"```{lang}\n{code}\n```"
+        else:
+            filename = PurePosixPath(rel_path).name
+            return f"```{lang}\n// Source: {filename} (not available)\n```"
+
+    content = re.sub(
+        r':::code\s+language="(\w+)"\s+source="([^"]+)"(?:\s+[^:]*)?:::',
+        replace_code_directive,
+        content
+    )
+    return content
+
+
 def strip_code_includes(content: str) -> str:
     """Replace [!code-*] references with placeholder code blocks."""
     def replace_code_include(match):
@@ -590,7 +616,10 @@ def convert_doc(doc: dict) -> str | None:
     # Step 9: Rewrite links
     body = rewrite_links(body, source_path)
 
-    # Step 10: Strip code includes
+    # Step 10: Resolve :::code includes (inline actual source files)
+    body = resolve_code_includes(body)
+
+    # Step 11: Strip remaining [!code-*] includes
     body = strip_code_includes(body)
 
     # Step 11: Strip table CSS wrappers

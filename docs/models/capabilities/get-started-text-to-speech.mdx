@@ -52,13 +52,86 @@ The following Speech features are available in the Foundry (new) portal:
 1. You can select **View code** to see an SDK code sample in your preferred language for calling the text to speech model.
 
 ---
+[Reference documentation](https://learn.microsoft.com/dotnet/api/microsoft.cognitiveservices.speech) | [Package (NuGet)](https://www.nuget.org/packages/Microsoft.CognitiveServices.Speech) | [Additional samples on GitHub](https://aka.ms/speech/github-csharp)
+
+With Azure Speech in Foundry Tools, you can run an application that synthesizes a human-like voice to read text. You can change the voice, enter text to be spoken, and listen to the output on your computer's speaker.
+
+<Tip>
+You can try text to speech in the [Speech Studio Voice Gallery](https://aka.ms/speechstudio/voicegallery) without signing up or writing any code.
+</Tip>
+<Tip>
+Try out the [Azure Speech Toolkit](https://marketplace.visualstudio.com/items?itemName=ms-azureaispeech.azure-ai-speech-toolkit) to easily build and run samples on Visual Studio Code.
+</Tip>
 ## Prerequisites
 
+<Check>An Azure subscription. You can [create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).</Check>
+<Check>[Create an AI Services resource for Speech](https://portal.azure.com/#create/Microsoft.CognitiveServicesAIFoundry) in the Azure portal.</Check>
+<Check>Get the Speech resource key and endpoint. After your Speech resource is deployed, select **Go to resource** to view and manage keys.</Check>
 ## Set up the environment
 
 The Speech SDK is available as a [NuGet package](https://www.nuget.org/packages/Microsoft.CognitiveServices.Speech) that implements .NET Standard 2.0. Install the Speech SDK later in this guide by using the console. For detailed installation instructions, see [Install the Speech SDK](../../../quickstarts/setup-platform.md).
 
 ### Set environment variables
+
+You need to authenticate your application to access Foundry Tools. This article shows you how to use environment variables to store your credentials. You can then access the environment variables from your code to authenticate your application. For production, use a more secure way to store and access your credentials.
+
+To set the environment variables for your Speech resource key and endpoint, open a console window, and follow the instructions for your operating system and development environment.
+
+- To set the `SPEECH_KEY` environment variable, replace *your-key* with one of the keys for your resource.
+- To set the `ENDPOINT` environment variable, replace *your-endpoint* with one of the endpoints for your resource.
+
+#### [Windows](#tab/windows)
+
+```console
+setx SPEECH_KEY your-key
+setx ENDPOINT your-endpoint
+```
+
+<Note>
+If you only need to access the environment variables in the current console, you can set the environment variable with `set` instead of `setx`.
+</Note>
+After you add the environment variables, you might need to restart any programs that need to read the environment variables, including the console window. For example, if you're using Visual Studio as your editor, restart Visual Studio before you run the example.
+
+#### [Linux](#tab/linux)
+
+##### Bash
+
+Edit your *.bashrc* file, and add the environment variables:
+
+```bash
+export SPEECH_KEY=your-key
+export ENDPOINT=your-endpoint
+```
+
+After you add the environment variables, run `source ~/.bashrc` from your console window to make the changes effective.
+
+#### [macOS](#tab/macos)
+
+##### Bash
+
+Edit your *.bash_profile* file, and add the environment variables:
+
+```bash
+export SPEECH_KEY=your-key
+export ENDPOINT=your-endpoint
+```
+
+After you add the environment variables, run `source ~/.bash_profile` from your console window to make the changes effective.
+
+##### Xcode
+
+For iOS and macOS development, you set the environment variables in Xcode. For example, follow these steps to set the environment variable in Xcode 13.4.1.
+
+1. Select **Product** > **Scheme** > **Edit scheme**.
+1. Select **Arguments** on the **Run** (Debug Run) page.
+1. Under **Environment Variables** select the plus (+) sign to add a new environment variable.
+1. Enter `SPEECH_KEY` for the **Name** and enter your Speech resource key for the **Value**.
+
+To set the environment variable for your Speech resource endpoint, follow the same steps. Set `ENDPOINT` to the endpoint of your resource. For example, `https://YourServiceRegion.api.cognitive.microsoft.com`.
+
+For more configuration options, see [the Xcode documentation](https://help.apple.com/xcode/#/dev745c5c974).
+
+---
 
 ## Create the application
 
@@ -175,13 +248,87 @@ OpenAI text to speech voices are also supported. See [OpenAI text to speech voic
 
 ## Clean up resources
 
+You can use the [Azure portal](~/articles/ai-services/multi-service-resource.md) or [Azure Command Line Interface (CLI)](~/articles/ai-services/multi-service-resource.md) to remove the Speech resource you created.
+[Reference documentation](/cpp/cognitive-services/speech/) | [Package (NuGet)](https://www.nuget.org/packages/Microsoft.CognitiveServices.Speech) | [Additional samples on GitHub](https://aka.ms/speech/github-cpp)
+
+With Azure Speech in Foundry Tools, you can run an application that synthesizes a human-like voice to read text. You can change the voice, enter text to be spoken, and listen to the output on your computer's speaker.
+
+<Tip>
+You can try text to speech in the [Speech Studio Voice Gallery](https://aka.ms/speechstudio/voicegallery) without signing up or writing any code.
+</Tip>
+<Tip>
+Try out the [Azure Speech Toolkit](https://marketplace.visualstudio.com/items?itemName=ms-azureaispeech.azure-ai-speech-toolkit) to easily build and run samples on Visual Studio Code.
+</Tip>
 ## Prerequisites
 
+<Check>An Azure subscription. You can [create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).</Check>
+<Check>[Create an AI Services resource for Speech](https://portal.azure.com/#create/Microsoft.CognitiveServicesAIFoundry) in the Azure portal.</Check>
+<Check>Get the Speech resource key and endpoint. After your Speech resource is deployed, select **Go to resource** to view and manage keys.</Check>
 ## Set up the environment
 
 The Speech SDK is available as a [NuGet package](https://www.nuget.org/packages/Microsoft.CognitiveServices.Speech) that implements .NET Standard 2.0. Install the Speech SDK later in this guide. For detailed installation instructions, see [Install the Speech SDK](../../../quickstarts/setup-platform.md).
 
 ### Set environment variables
+
+You need to authenticate your application to access Foundry Tools. This article shows you how to use environment variables to store your credentials. You can then access the environment variables from your code to authenticate your application. For production, use a more secure way to store and access your credentials.
+
+To set the environment variables for your Speech resource key and endpoint, open a console window, and follow the instructions for your operating system and development environment.
+
+- To set the `SPEECH_KEY` environment variable, replace *your-key* with one of the keys for your resource.
+- To set the `ENDPOINT` environment variable, replace *your-endpoint* with one of the endpoints for your resource.
+
+#### [Windows](#tab/windows)
+
+```console
+setx SPEECH_KEY your-key
+setx ENDPOINT your-endpoint
+```
+
+<Note>
+If you only need to access the environment variables in the current console, you can set the environment variable with `set` instead of `setx`.
+</Note>
+After you add the environment variables, you might need to restart any programs that need to read the environment variables, including the console window. For example, if you're using Visual Studio as your editor, restart Visual Studio before you run the example.
+
+#### [Linux](#tab/linux)
+
+##### Bash
+
+Edit your *.bashrc* file, and add the environment variables:
+
+```bash
+export SPEECH_KEY=your-key
+export ENDPOINT=your-endpoint
+```
+
+After you add the environment variables, run `source ~/.bashrc` from your console window to make the changes effective.
+
+#### [macOS](#tab/macos)
+
+##### Bash
+
+Edit your *.bash_profile* file, and add the environment variables:
+
+```bash
+export SPEECH_KEY=your-key
+export ENDPOINT=your-endpoint
+```
+
+After you add the environment variables, run `source ~/.bash_profile` from your console window to make the changes effective.
+
+##### Xcode
+
+For iOS and macOS development, you set the environment variables in Xcode. For example, follow these steps to set the environment variable in Xcode 13.4.1.
+
+1. Select **Product** > **Scheme** > **Edit scheme**.
+1. Select **Arguments** on the **Run** (Debug Run) page.
+1. Under **Environment Variables** select the plus (+) sign to add a new environment variable.
+1. Enter `SPEECH_KEY` for the **Name** and enter your Speech resource key for the **Value**.
+
+To set the environment variable for your Speech resource endpoint, follow the same steps. Set `ENDPOINT` to the endpoint of your resource. For example, `https://YourServiceRegion.api.cognitive.microsoft.com`.
+
+For more configuration options, see [the Xcode documentation](https://help.apple.com/xcode/#/dev745c5c974).
+
+---
 
 ## Create the application
 
@@ -305,13 +452,91 @@ OpenAI text to speech voices are also supported. See [OpenAI text to speech voic
 
 ## Clean up resources
 
+You can use the [Azure portal](~/articles/ai-services/multi-service-resource.md) or [Azure Command Line Interface (CLI)](~/articles/ai-services/multi-service-resource.md) to remove the Speech resource you created.
+[Reference documentation](https://aka.ms/csspeech/goref) | [Package (Go)](https://pkg.go.dev/github.com/Microsoft/cognitive-services-speech-sdk-go) | [Additional samples on GitHub](https://github.com/microsoft/cognitive-services-speech-sdk-go/tree/master/samples/)
+
+With Azure Speech in Foundry Tools, you can run an application that synthesizes a human-like voice to read text. You can change the voice, enter text to be spoken, and listen to the output on your computer's speaker.
+
+<Tip>
+You can try text to speech in the [Speech Studio Voice Gallery](https://aka.ms/speechstudio/voicegallery) without signing up or writing any code.
+</Tip>
+<Tip>
+Try out the [Azure Speech Toolkit](https://marketplace.visualstudio.com/items?itemName=ms-azureaispeech.azure-ai-speech-toolkit) to easily build and run samples on Visual Studio Code.
+</Tip>
 ## Prerequisites
 
+<Check>An Azure subscription. You can [create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).</Check>
+<Check>[Create a Foundry resource for Speech](https://portal.azure.com/#create/Microsoft.CognitiveServicesAIFoundry) in the Azure portal.</Check>
+<Check>Get the Speech resource key and region. After your Speech resource is deployed, select **Go to resource** to view and manage keys.</Check>
 ## Set up the environment
 
 Install the Speech SDK for the Go language. For detailed installation instructions, see [Install the Speech SDK](../../../quickstarts/setup-platform.md).
 
 ### Set environment variables
+
+You need to authenticate your application to access Foundry Tools. This article shows you how to use environment variables to store your credentials. You can then access the environment variables from your code to authenticate your application. For production, use a more secure way to store and access your credentials. 
+
+To set the environment variables for your Speech resource key and region, open a console window, and follow the instructions for your operating system and development environment.
+
+- To set the `SPEECH_KEY` environment variable, replace *your-key* with one of the keys for your resource.
+- To set the `SPEECH_REGION` environment variable, replace *your-region* with one of the regions for your resource.
+- To set the `ENDPOINT` environment variable, replace `your-endpoint` with the actual endpoint of your Speech resource.
+
+#### [Windows](#tab/windows)
+
+```console
+setx SPEECH_KEY your-key
+setx SPEECH_REGION your-region
+setx ENDPOINT your-endpoint
+```
+
+<Note>
+If you only need to access the environment variables in the current console, you can set the environment variable with `set` instead of `setx`.
+</Note>
+After you add the environment variables, you might need to restart any programs that need to read the environment variables, including the console window. For example, if you're using Visual Studio as your editor, restart Visual Studio before you run the example.
+
+#### [Linux](#tab/linux)
+
+##### Bash
+
+Edit your *.bashrc* file, and add the environment variables:
+
+```bash
+export SPEECH_KEY=your-key
+export SPEECH_REGION=your-region
+export ENDPOINT=your-endpoint
+```
+
+After you add the environment variables, run `source ~/.bashrc` from your console window to make the changes effective.
+
+#### [macOS](#tab/macos)
+
+##### Bash
+
+Edit your *.bash_profile* file, and add the environment variables:
+
+```bash
+export SPEECH_KEY=your-key
+export SPEECH_REGION=your-region
+export ENDPOINT=your-endpoint
+```
+
+After you add the environment variables, run `source ~/.bash_profile` from your console window to make the changes effective.
+
+##### Xcode
+
+For iOS and macOS development, you set the environment variables in Xcode. For example, follow these steps to set the environment variable in Xcode 13.4.1.
+
+1. Select **Product** > **Scheme** > **Edit scheme**.
+1. Select **Arguments** on the **Run** (Debug Run) page.
+1. Under **Environment Variables** select the plus (+) sign to add a new environment variable.
+1. Enter `SPEECH_KEY` for the **Name** and enter your Speech resource key for the **Value**.
+
+To set the environment variable for your Speech resource region, follow the same steps. Set `SPEECH_REGION` to the region of your resource. For example, `westus`. Set `ENDPOINT` to the endpoint of your resource
+
+For more configuration options, see [the Xcode documentation](https://help.apple.com/xcode/#/dev745c5c974).
+
+---
 
 ## Create the application
 
@@ -455,8 +680,22 @@ OpenAI text to speech voices are also supported. See [OpenAI text to speech voic
 
 ## Clean up resources
 
+You can use the [Azure portal](~/articles/ai-services/multi-service-resource.md) or [Azure Command Line Interface (CLI)](~/articles/ai-services/multi-service-resource.md) to remove the Speech resource you created.
+[Reference documentation](https://learn.microsoft.com/java/api/com.microsoft.cognitiveservices.speech) | [Additional samples on GitHub](https://aka.ms/speech/github-java)
+
+With Azure Speech in Foundry Tools, you can run an application that synthesizes a human-like voice to read text. You can change the voice, enter text to be spoken, and listen to the output on your computer's speaker.
+
+<Tip>
+You can try text to speech in the [Speech Studio Voice Gallery](https://aka.ms/speechstudio/voicegallery) without signing up or writing any code.
+</Tip>
+<Tip>
+Try out the [Azure Speech Toolkit](https://marketplace.visualstudio.com/items?itemName=ms-azureaispeech.azure-ai-speech-toolkit) to easily build and run samples on Visual Studio Code.
+</Tip>
 ## Prerequisites
 
+<Check>An Azure subscription. You can [create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).</Check>
+<Check>[Create an AI Services resource for Speech](https://portal.azure.com/#create/Microsoft.CognitiveServicesAIFoundry) in the Azure portal.</Check>
+<Check>Get the Speech resource key and endpoint. After your Speech resource is deployed, select **Go to resource** to view and manage keys.</Check>
 ## Set up the environment
 
 To set up your environment, [install the Speech SDK](~/articles/ai-services/speech-service/quickstarts/setup-platform.md). The sample in this quickstart works with the Java Runtime.
@@ -500,6 +739,66 @@ To set up your environment, [install the Speech SDK](~/articles/ai-services/spee
    ```
 
 ### Set environment variables
+
+You need to authenticate your application to access Foundry Tools. This article shows you how to use environment variables to store your credentials. You can then access the environment variables from your code to authenticate your application. For production, use a more secure way to store and access your credentials.
+
+To set the environment variables for your Speech resource key and endpoint, open a console window, and follow the instructions for your operating system and development environment.
+
+- To set the `SPEECH_KEY` environment variable, replace *your-key* with one of the keys for your resource.
+- To set the `ENDPOINT` environment variable, replace *your-endpoint* with one of the endpoints for your resource.
+
+#### [Windows](#tab/windows)
+
+```console
+setx SPEECH_KEY your-key
+setx ENDPOINT your-endpoint
+```
+
+<Note>
+If you only need to access the environment variables in the current console, you can set the environment variable with `set` instead of `setx`.
+</Note>
+After you add the environment variables, you might need to restart any programs that need to read the environment variables, including the console window. For example, if you're using Visual Studio as your editor, restart Visual Studio before you run the example.
+
+#### [Linux](#tab/linux)
+
+##### Bash
+
+Edit your *.bashrc* file, and add the environment variables:
+
+```bash
+export SPEECH_KEY=your-key
+export ENDPOINT=your-endpoint
+```
+
+After you add the environment variables, run `source ~/.bashrc` from your console window to make the changes effective.
+
+#### [macOS](#tab/macos)
+
+##### Bash
+
+Edit your *.bash_profile* file, and add the environment variables:
+
+```bash
+export SPEECH_KEY=your-key
+export ENDPOINT=your-endpoint
+```
+
+After you add the environment variables, run `source ~/.bash_profile` from your console window to make the changes effective.
+
+##### Xcode
+
+For iOS and macOS development, you set the environment variables in Xcode. For example, follow these steps to set the environment variable in Xcode 13.4.1.
+
+1. Select **Product** > **Scheme** > **Edit scheme**.
+1. Select **Arguments** on the **Run** (Debug Run) page.
+1. Under **Environment Variables** select the plus (+) sign to add a new environment variable.
+1. Enter `SPEECH_KEY` for the **Name** and enter your Speech resource key for the **Value**.
+
+To set the environment variable for your Speech resource endpoint, follow the same steps. Set `ENDPOINT` to the endpoint of your resource. For example, `https://YourServiceRegion.api.cognitive.microsoft.com`.
+
+For more configuration options, see [the Xcode documentation](https://help.apple.com/xcode/#/dev745c5c974).
+
+---
 
 ## Create the application
 
@@ -595,8 +894,22 @@ OpenAI text to speech voices are also supported. See [OpenAI text to speech voic
 
 ## Clean up resources
 
+You can use the [Azure portal](~/articles/ai-services/multi-service-resource.md) or [Azure Command Line Interface (CLI)](~/articles/ai-services/multi-service-resource.md) to remove the Speech resource you created.
+[Reference documentation](https://learn.microsoft.com/javascript/api/microsoft-cognitiveservices-speech-sdk/) | [Package (npm)](https://www.npmjs.com/package/microsoft-cognitiveservices-speech-sdk) | [Additional samples on GitHub](https://aka.ms/speech/github-javascript) | [Library source code](https://github.com/Microsoft/cognitive-services-speech-sdk-js)
+
+With Azure Speech in Foundry Tools, you can run an application that synthesizes a human-like voice to read text. You can change the voice, enter text to be spoken, and listen to the output on your computer's speaker.
+
+<Tip>
+You can try text to speech in the [Speech Studio Voice Gallery](https://aka.ms/speechstudio/voicegallery) without signing up or writing any code.
+</Tip>
+<Tip>
+Try out the [Azure Speech Toolkit](https://marketplace.visualstudio.com/items?itemName=ms-azureaispeech.azure-ai-speech-toolkit) to easily build and run samples on Visual Studio Code.
+</Tip>
 ## Prerequisites
 
+<Check>An Azure subscription. You can [create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).</Check>
+<Check>[Create a Foundry resource for Speech](https://portal.azure.com/#create/Microsoft.CognitiveServicesAIFoundry) in the Azure portal.</Check>
+<Check>Get the Speech resource key and region. After your Speech resource is deployed, select **Go to resource** to view and manage keys.</Check>
 ## Set up
 
 1. Create a new folder `synthesis-quickstart` and go to the quickstart folder with the following command:
@@ -618,6 +931,70 @@ OpenAI text to speech voices are also supported. See [OpenAI text to speech voic
     ```
 
 ### Retrieve resource information
+
+You need to authenticate your application to access Foundry Tools. This article shows you how to use environment variables to store your credentials. You can then access the environment variables from your code to authenticate your application. For production, use a more secure way to store and access your credentials. 
+
+To set the environment variables for your Speech resource key and region, open a console window, and follow the instructions for your operating system and development environment.
+
+- To set the `SPEECH_KEY` environment variable, replace *your-key* with one of the keys for your resource.
+- To set the `SPEECH_REGION` environment variable, replace *your-region* with one of the regions for your resource.
+- To set the `ENDPOINT` environment variable, replace `your-endpoint` with the actual endpoint of your Speech resource.
+
+#### [Windows](#tab/windows)
+
+```console
+setx SPEECH_KEY your-key
+setx SPEECH_REGION your-region
+setx ENDPOINT your-endpoint
+```
+
+<Note>
+If you only need to access the environment variables in the current console, you can set the environment variable with `set` instead of `setx`.
+</Note>
+After you add the environment variables, you might need to restart any programs that need to read the environment variables, including the console window. For example, if you're using Visual Studio as your editor, restart Visual Studio before you run the example.
+
+#### [Linux](#tab/linux)
+
+##### Bash
+
+Edit your *.bashrc* file, and add the environment variables:
+
+```bash
+export SPEECH_KEY=your-key
+export SPEECH_REGION=your-region
+export ENDPOINT=your-endpoint
+```
+
+After you add the environment variables, run `source ~/.bashrc` from your console window to make the changes effective.
+
+#### [macOS](#tab/macos)
+
+##### Bash
+
+Edit your *.bash_profile* file, and add the environment variables:
+
+```bash
+export SPEECH_KEY=your-key
+export SPEECH_REGION=your-region
+export ENDPOINT=your-endpoint
+```
+
+After you add the environment variables, run `source ~/.bash_profile` from your console window to make the changes effective.
+
+##### Xcode
+
+For iOS and macOS development, you set the environment variables in Xcode. For example, follow these steps to set the environment variable in Xcode 13.4.1.
+
+1. Select **Product** > **Scheme** > **Edit scheme**.
+1. Select **Arguments** on the **Run** (Debug Run) page.
+1. Under **Environment Variables** select the plus (+) sign to add a new environment variable.
+1. Enter `SPEECH_KEY` for the **Name** and enter your Speech resource key for the **Value**.
+
+To set the environment variable for your Speech resource region, follow the same steps. Set `SPEECH_REGION` to the region of your resource. For example, `westus`. Set `ENDPOINT` to the endpoint of your resource
+
+For more configuration options, see [the Xcode documentation](https://help.apple.com/xcode/#/dev745c5c974).
+
+---
 
 ## Synthesize speech to a file
 
@@ -701,8 +1078,22 @@ OpenAI text to speech voices are also supported. See [OpenAI text to speech voic
 
 ## Clean up resources
 
+You can use the [Azure portal](~/articles/ai-services/multi-service-resource.md) or [Azure Command Line Interface (CLI)](~/articles/ai-services/multi-service-resource.md) to remove the Speech resource you created.
+[Reference documentation](/objectivec/cognitive-services/speech/) | [Package (download)](https://aka.ms/csspeech/macosbinary) | [Additional samples on GitHub](https://aka.ms/speech/github-objective-c)
+
+With Azure Speech in Foundry Tools, you can run an application that synthesizes a human-like voice to read text. You can change the voice, enter text to be spoken, and listen to the output on your computer's speaker.
+
+<Tip>
+You can try text to speech in the [Speech Studio Voice Gallery](https://aka.ms/speechstudio/voicegallery) without signing up or writing any code.
+</Tip>
+<Tip>
+Try out the [Azure Speech Toolkit](https://marketplace.visualstudio.com/items?itemName=ms-azureaispeech.azure-ai-speech-toolkit) to easily build and run samples on Visual Studio Code.
+</Tip>
 ## Prerequisites
 
+<Check>An Azure subscription. You can [create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).</Check>
+<Check>[Create a Foundry resource for Speech](https://portal.azure.com/#create/Microsoft.CognitiveServicesAIFoundry) in the Azure portal.</Check>
+<Check>Get the Speech resource key and region. After your Speech resource is deployed, select **Go to resource** to view and manage keys.</Check>
 ## Set up the environment
 
 The Speech SDK for Swift is distributed as a framework bundle. The framework supports both Objective-C and Swift on both iOS and macOS.
@@ -710,6 +1101,70 @@ The Speech SDK for Swift is distributed as a framework bundle. The framework sup
 The Speech SDK can be used in Xcode projects as a [CocoaPod](https://cocoapods.org/), or [downloaded directly](https://aka.ms/csspeech/macosbinary) and linked manually. This guide uses a CocoaPod. Install the CocoaPod dependency manager as described in its [installation instructions](https://guides.cocoapods.org/using/getting-started.html).
 
 ### Set environment variables
+
+You need to authenticate your application to access Foundry Tools. This article shows you how to use environment variables to store your credentials. You can then access the environment variables from your code to authenticate your application. For production, use a more secure way to store and access your credentials. 
+
+To set the environment variables for your Speech resource key and region, open a console window, and follow the instructions for your operating system and development environment.
+
+- To set the `SPEECH_KEY` environment variable, replace *your-key* with one of the keys for your resource.
+- To set the `SPEECH_REGION` environment variable, replace *your-region* with one of the regions for your resource.
+- To set the `ENDPOINT` environment variable, replace `your-endpoint` with the actual endpoint of your Speech resource.
+
+#### [Windows](#tab/windows)
+
+```console
+setx SPEECH_KEY your-key
+setx SPEECH_REGION your-region
+setx ENDPOINT your-endpoint
+```
+
+<Note>
+If you only need to access the environment variables in the current console, you can set the environment variable with `set` instead of `setx`.
+</Note>
+After you add the environment variables, you might need to restart any programs that need to read the environment variables, including the console window. For example, if you're using Visual Studio as your editor, restart Visual Studio before you run the example.
+
+#### [Linux](#tab/linux)
+
+##### Bash
+
+Edit your *.bashrc* file, and add the environment variables:
+
+```bash
+export SPEECH_KEY=your-key
+export SPEECH_REGION=your-region
+export ENDPOINT=your-endpoint
+```
+
+After you add the environment variables, run `source ~/.bashrc` from your console window to make the changes effective.
+
+#### [macOS](#tab/macos)
+
+##### Bash
+
+Edit your *.bash_profile* file, and add the environment variables:
+
+```bash
+export SPEECH_KEY=your-key
+export SPEECH_REGION=your-region
+export ENDPOINT=your-endpoint
+```
+
+After you add the environment variables, run `source ~/.bash_profile` from your console window to make the changes effective.
+
+##### Xcode
+
+For iOS and macOS development, you set the environment variables in Xcode. For example, follow these steps to set the environment variable in Xcode 13.4.1.
+
+1. Select **Product** > **Scheme** > **Edit scheme**.
+1. Select **Arguments** on the **Run** (Debug Run) page.
+1. Under **Environment Variables** select the plus (+) sign to add a new environment variable.
+1. Enter `SPEECH_KEY` for the **Name** and enter your Speech resource key for the **Value**.
+
+To set the environment variable for your Speech resource region, follow the same steps. Set `SPEECH_REGION` to the region of your resource. For example, `westus`. Set `ENDPOINT` to the endpoint of your resource
+
+For more configuration options, see [the Xcode documentation](https://help.apple.com/xcode/#/dev745c5c974).
+
+---
 
 ## Create the application
 
@@ -835,8 +1290,22 @@ OpenAI text to speech voices are also supported. See [OpenAI text to speech voic
 
 ## Clean up resources
 
+You can use the [Azure portal](~/articles/ai-services/multi-service-resource.md) or [Azure Command Line Interface (CLI)](~/articles/ai-services/multi-service-resource.md) to remove the Speech resource you created.
+[Reference documentation](https://learn.microsoft.com/python/api/azure-cognitiveservices-speech/) | [Package (PyPi)](https://pypi.org/project/azure-cognitiveservices-speech/) | [Additional samples on GitHub](https://aka.ms/speech/github-python)
+
+With Azure Speech in Foundry Tools, you can run an application that synthesizes a human-like voice to read text. You can change the voice, enter text to be spoken, and listen to the output on your computer's speaker.
+
+<Tip>
+You can try text to speech in the [Speech Studio Voice Gallery](https://aka.ms/speechstudio/voicegallery) without signing up or writing any code.
+</Tip>
+<Tip>
+Try out the [Azure Speech Toolkit](https://marketplace.visualstudio.com/items?itemName=ms-azureaispeech.azure-ai-speech-toolkit) to easily build and run samples on Visual Studio Code.
+</Tip>
 ## Prerequisites
 
+<Check>An Azure subscription. You can [create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).</Check>
+<Check>[Create an AI Services resource for Speech](https://portal.azure.com/#create/Microsoft.CognitiveServicesAIFoundry) in the Azure portal.</Check>
+<Check>Get the Speech resource key and endpoint. After your Speech resource is deployed, select **Go to resource** to view and manage keys.</Check>
 ## Set up the environment
 
 The Speech SDK for Python is available as a [Python Package Index (PyPI) module](https://pypi.org/project/azure-cognitiveservices-speech/). The Speech SDK for Python is compatible with Windows, Linux, and macOS.
@@ -847,6 +1316,66 @@ The Speech SDK for Python is available as a [Python Package Index (PyPI) module]
 Install a version of [Python from 3.7 or later](https://www.python.org/downloads/). For any requirements, see [Install the Speech SDK](../../../quickstarts/setup-platform.md).
 
 ### Set environment variables
+
+You need to authenticate your application to access Foundry Tools. This article shows you how to use environment variables to store your credentials. You can then access the environment variables from your code to authenticate your application. For production, use a more secure way to store and access your credentials.
+
+To set the environment variables for your Speech resource key and endpoint, open a console window, and follow the instructions for your operating system and development environment.
+
+- To set the `SPEECH_KEY` environment variable, replace *your-key* with one of the keys for your resource.
+- To set the `ENDPOINT` environment variable, replace *your-endpoint* with one of the endpoints for your resource.
+
+#### [Windows](#tab/windows)
+
+```console
+setx SPEECH_KEY your-key
+setx ENDPOINT your-endpoint
+```
+
+<Note>
+If you only need to access the environment variables in the current console, you can set the environment variable with `set` instead of `setx`.
+</Note>
+After you add the environment variables, you might need to restart any programs that need to read the environment variables, including the console window. For example, if you're using Visual Studio as your editor, restart Visual Studio before you run the example.
+
+#### [Linux](#tab/linux)
+
+##### Bash
+
+Edit your *.bashrc* file, and add the environment variables:
+
+```bash
+export SPEECH_KEY=your-key
+export ENDPOINT=your-endpoint
+```
+
+After you add the environment variables, run `source ~/.bashrc` from your console window to make the changes effective.
+
+#### [macOS](#tab/macos)
+
+##### Bash
+
+Edit your *.bash_profile* file, and add the environment variables:
+
+```bash
+export SPEECH_KEY=your-key
+export ENDPOINT=your-endpoint
+```
+
+After you add the environment variables, run `source ~/.bash_profile` from your console window to make the changes effective.
+
+##### Xcode
+
+For iOS and macOS development, you set the environment variables in Xcode. For example, follow these steps to set the environment variable in Xcode 13.4.1.
+
+1. Select **Product** > **Scheme** > **Edit scheme**.
+1. Select **Arguments** on the **Run** (Debug Run) page.
+1. Under **Environment Variables** select the plus (+) sign to add a new environment variable.
+1. Enter `SPEECH_KEY` for the **Name** and enter your Speech resource key for the **Value**.
+
+To set the environment variable for your Speech resource endpoint, follow the same steps. Set `ENDPOINT` to the endpoint of your resource. For example, `https://YourServiceRegion.api.cognitive.microsoft.com`.
+
+For more configuration options, see [the Xcode documentation](https://help.apple.com/xcode/#/dev745c5c974).
+
+---
 
 ## Create the application
 
@@ -928,9 +1457,87 @@ OpenAI text to speech voices are also supported. See [OpenAI text to speech voic
 
 ## Clean up resources
 
+You can use the [Azure portal](~/articles/ai-services/multi-service-resource.md) or [Azure Command Line Interface (CLI)](~/articles/ai-services/multi-service-resource.md) to remove the Speech resource you created.
+[Speech to text REST API reference](../../rest-speech-to-text.md) | [Speech to text REST API for short audio reference](../../rest-speech-to-text-short.md) | [Additional samples on GitHub](https://github.com/Azure-Samples/cognitive-services-speech-sdk)
+
+With Azure Speech in Foundry Tools, you can run an application that synthesizes a human-like voice to read text. You can change the voice, enter text to be spoken, and listen to the output on your computer's speaker.
+
+<Tip>
+You can try text to speech in the [Speech Studio Voice Gallery](https://aka.ms/speechstudio/voicegallery) without signing up or writing any code.
+</Tip>
+<Tip>
+Try out the [Azure Speech Toolkit](https://marketplace.visualstudio.com/items?itemName=ms-azureaispeech.azure-ai-speech-toolkit) to easily build and run samples on Visual Studio Code.
+</Tip>
 ## Prerequisites
 
+<Check>An Azure subscription. You can [create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).</Check>
+<Check>[Create a Foundry resource for Speech](https://portal.azure.com/#create/Microsoft.CognitiveServicesAIFoundry) in the Azure portal.</Check>
+<Check>Get the Speech resource key and region. After your Speech resource is deployed, select **Go to resource** to view and manage keys.</Check>
 ### Set environment variables
+
+You need to authenticate your application to access Foundry Tools. This article shows you how to use environment variables to store your credentials. You can then access the environment variables from your code to authenticate your application. For production, use a more secure way to store and access your credentials. 
+
+To set the environment variables for your Speech resource key and region, open a console window, and follow the instructions for your operating system and development environment.
+
+- To set the `SPEECH_KEY` environment variable, replace *your-key* with one of the keys for your resource.
+- To set the `SPEECH_REGION` environment variable, replace *your-region* with one of the regions for your resource.
+- To set the `ENDPOINT` environment variable, replace `your-endpoint` with the actual endpoint of your Speech resource.
+
+#### [Windows](#tab/windows)
+
+```console
+setx SPEECH_KEY your-key
+setx SPEECH_REGION your-region
+setx ENDPOINT your-endpoint
+```
+
+<Note>
+If you only need to access the environment variables in the current console, you can set the environment variable with `set` instead of `setx`.
+</Note>
+After you add the environment variables, you might need to restart any programs that need to read the environment variables, including the console window. For example, if you're using Visual Studio as your editor, restart Visual Studio before you run the example.
+
+#### [Linux](#tab/linux)
+
+##### Bash
+
+Edit your *.bashrc* file, and add the environment variables:
+
+```bash
+export SPEECH_KEY=your-key
+export SPEECH_REGION=your-region
+export ENDPOINT=your-endpoint
+```
+
+After you add the environment variables, run `source ~/.bashrc` from your console window to make the changes effective.
+
+#### [macOS](#tab/macos)
+
+##### Bash
+
+Edit your *.bash_profile* file, and add the environment variables:
+
+```bash
+export SPEECH_KEY=your-key
+export SPEECH_REGION=your-region
+export ENDPOINT=your-endpoint
+```
+
+After you add the environment variables, run `source ~/.bash_profile` from your console window to make the changes effective.
+
+##### Xcode
+
+For iOS and macOS development, you set the environment variables in Xcode. For example, follow these steps to set the environment variable in Xcode 13.4.1.
+
+1. Select **Product** > **Scheme** > **Edit scheme**.
+1. Select **Arguments** on the **Run** (Debug Run) page.
+1. Under **Environment Variables** select the plus (+) sign to add a new environment variable.
+1. Enter `SPEECH_KEY` for the **Name** and enter your Speech resource key for the **Value**.
+
+To set the environment variable for your Speech resource region, follow the same steps. Set `SPEECH_REGION` to the region of your resource. For example, `westus`. Set `ENDPOINT` to the endpoint of your resource
+
+For more configuration options, see [the Xcode documentation](https://help.apple.com/xcode/#/dev745c5c974).
+
+---
 
 ## Synthesize speech to a file
 
@@ -1001,8 +1608,22 @@ At a command prompt, run the following cURL command. Optionally, you can rename 
 
     ## Clean up resources
 
+    You can use the [Azure portal](~/articles/ai-services/multi-service-resource.md) or [Azure Command Line Interface (CLI)](~/articles/ai-services/multi-service-resource.md) to remove the Speech resource you created.
+    [Reference documentation](https://learn.microsoft.com/javascript/api/microsoft-cognitiveservices-speech-sdk/) | [Package (npm)](https://www.npmjs.com/package/microsoft-cognitiveservices-speech-sdk) | [Additional samples on GitHub](https://aka.ms/speech/github-javascript) | [Library source code](https://github.com/Microsoft/cognitive-services-speech-sdk-js)
+
+    With Azure Speech in Foundry Tools, you can run an application that synthesizes a human-like voice to read text. You can change the voice, enter text to be spoken, and listen to the output on your computer's speaker.
+
+    <Tip>
+    You can try text to speech in the [Speech Studio Voice Gallery](https://aka.ms/speechstudio/voicegallery) without signing up or writing any code.
+    </Tip>
+    <Tip>
+    Try out the [Azure Speech Toolkit](https://marketplace.visualstudio.com/items?itemName=ms-azureaispeech.azure-ai-speech-toolkit) to easily build and run samples on Visual Studio Code.
+    </Tip>
     ## Prerequisites
 
+    <Check>An Azure subscription. You can [create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).</Check>
+    <Check>[Create a Foundry resource for Speech](https://portal.azure.com/#create/Microsoft.CognitiveServicesAIFoundry) in the Azure portal.</Check>
+    <Check>Get the Speech resource key and region. After your Speech resource is deployed, select **Go to resource** to view and manage keys.</Check>
     ## Set up
 
     1. Create a new folder `synthesis-quickstart` and go to the quickstart folder with the following command:
@@ -1036,126 +1657,190 @@ At a command prompt, run the following cURL command. Optionally, you can rename 
 
     ### Retrieve resource information
 
-    ## Synthesize speech to a file
+    You need to authenticate your application to access Foundry Tools. This article shows you how to use environment variables to store your credentials. You can then access the environment variables from your code to authenticate your application. For production, use a more secure way to store and access your credentials. 
 
-    To translate speech from a file:
+    To set the environment variables for your Speech resource key and region, open a console window, and follow the instructions for your operating system and development environment.
 
-    1. Create a new file named *synthesis.ts* with the following content:
+    - To set the `SPEECH_KEY` environment variable, replace *your-key* with one of the keys for your resource.
+    - To set the `SPEECH_REGION` environment variable, replace *your-region* with one of the regions for your resource.
+    - To set the `ENDPOINT` environment variable, replace `your-endpoint` with the actual endpoint of your Speech resource.
 
-        ```typescript
-        import { createInterface } from "readline";
-        import { 
-            SpeechConfig, 
-            AudioConfig, 
-            SpeechSynthesizer, 
-            ResultReason,
-            SpeechSynthesisResult 
-        } from "microsoft-cognitiveservices-speech-sdk";
-
-        function synthesizeSpeech(): void {
-            const audioFile = "YourAudioFile.wav";
-            // This example requires environment variables named "ENDPOINT" and "SPEECH_KEY"
-            const speechConfig: SpeechConfig = SpeechConfig.fromEndpoint(new URL(process.env.ENDPOINT!), process.env.SPEECH_KEY!);
-            const audioConfig: AudioConfig = AudioConfig.fromAudioFileOutput(audioFile);
-
-            // The language of the voice that speaks.
-            speechConfig.speechSynthesisVoiceName = "en-US-Ava:DragonHDLatestNeural";
-
-            // Create the speech synthesizer.
-            const synthesizer: SpeechSynthesizer = new SpeechSynthesizer(speechConfig, audioConfig);
-
-            const rl = createInterface({
-                input: process.stdin,
-                output: process.stdout
-            });
-
-            rl.question("Enter some text that you want to speak >\n> ", function (text: string) {
-                rl.close();
-                // Start the synthesizer and wait for a result.
-                synthesizer.speakTextAsync(text,
-                    function (result: SpeechSynthesisResult) {
-                        if (result.reason === ResultReason.SynthesizingAudioCompleted) {
-                            console.log("synthesis finished.");
-                        } else {
-                            console.error("Speech synthesis canceled, " + result.errorDetails +
-                                "\nDid you set the speech resource key and region values?");
-                        }
-                        synthesizer.close();
-                    },
-                    function (err: string) {
-                        console.trace("err - " + err);
-                        synthesizer.close();
-                    });
-                console.log("Now synthesizing to: " + audioFile);
-            });
-        }
-
-        synthesizeSpeech();
-        ```
-
-        In *synthesis.ts*, optionally you can rename *YourAudioFile.wav* to another output file name.
-
-        To change the speech synthesis language, replace `en-US-Ava:DragonHDLatestNeural` with another [supported voice](~/articles/ai-services/speech-service/language-support.md#standard-voices).
-
-        All neural voices are multilingual and fluent in their own language and English. For example, if the input text in English is *I'm excited to try text to speech* and you set `es-ES-Ximena:DragonHDLatestNeural`, the text is spoken in English with a Spanish accent. If the voice doesn't speak the language of the input text, the Speech service doesn't output synthesized audio.
-
-    1. Create the `tsconfig.json` file to transpile the TypeScript code and copy the following code for ECMAScript.
-
-        ```json
-        {
-            "compilerOptions": {
-              "module": "NodeNext",
-              "target": "ES2022", // Supports top-level await
-              "moduleResolution": "NodeNext",
-              "skipLibCheck": true, // Avoid type errors from node_modules
-              "strict": true // Enable strict type-checking options
-            },
-            "include": ["*.ts"]
-        }
-        ```
-
-    1. Transpile from TypeScript to JavaScript.
-
-        ```shell
-        tsc
-        ```
-
-        This command should produce no output if successful.
-
-    1. Run your console application to start speech synthesis to a file:
-
-       ```console
-       node synthesis.js
-       ```
-
-    ## Output
-
-    You should see the following output in the console. Follow the prompt to enter text that you want to synthesize:
+    #### [Windows](#tab/windows)
 
     ```console
-    Enter some text that you want to speak >
-    > I'm excited to try text to speech
-    Now synthesizing to: YourAudioFile.wav
-    synthesis finished.
+    setx SPEECH_KEY your-key
+    setx SPEECH_REGION your-region
+    setx ENDPOINT your-endpoint
     ```
 
-    ## Remarks
+    <Note>
+    If you only need to access the environment variables in the current console, you can set the environment variable with `set` instead of `setx`.
+    </Note>
+    After you add the environment variables, you might need to restart any programs that need to read the environment variables, including the console window. For example, if you're using Visual Studio as your editor, restart Visual Studio before you run the example.
 
-    ### More speech synthesis options
+    #### [Linux](#tab/linux)
 
-    This quickstart uses the `SpeakTextAsync` operation to synthesize a short block of text that you enter. You can also use long-form text from a file and get finer control over voice styles, prosody, and other settings.
+    ##### Bash
 
-    - See [how to synthesize speech](~/articles/ai-services/speech-service/how-to-speech-synthesis.md) and [Speech Synthesis Markup Language (SSML) overview](~/articles/ai-services/speech-service/speech-synthesis-markup.md) for information about speech synthesis from a file and finer control over voice styles, prosody, and other settings.
-    - See [batch synthesis API for text to speech](~/articles/ai-services/speech-service/batch-synthesis.md) for information about synthesizing long-form text to speech.
+    Edit your *.bashrc* file, and add the environment variables:
 
-    ### OpenAI text to speech voices in Azure Speech in Foundry Tools
+    ```bash
+    export SPEECH_KEY=your-key
+    export SPEECH_REGION=your-region
+    export ENDPOINT=your-endpoint
+    ```
 
-    OpenAI text to speech voices are also supported. See [OpenAI text to speech voices in Azure Speech](../../../openai-voices.md) and [multilingual voices](../../../language-support.md). You can replace `en-US-Ava:DragonHDLatestNeural` with a supported OpenAI voice name such as `en-US-FableMultilingualNeural`.
+    After you add the environment variables, run `source ~/.bashrc` from your console window to make the changes effective.
 
-    ## Clean up resources
+    #### [macOS](#tab/macos)
 
-    ## Next step
+    ##### Bash
 
-    <Card title="Learn more about speech synthesis" icon="arrow-right" href="how-to-speech-synthesis.md" />
+    Edit your *.bash_profile* file, and add the environment variables:
+
+    ```bash
+    export SPEECH_KEY=your-key
+    export SPEECH_REGION=your-region
+    export ENDPOINT=your-endpoint
+    ```
+
+    After you add the environment variables, run `source ~/.bash_profile` from your console window to make the changes effective.
+
+    ##### Xcode
+
+    For iOS and macOS development, you set the environment variables in Xcode. For example, follow these steps to set the environment variable in Xcode 13.4.1.
+
+    1. Select **Product** > **Scheme** > **Edit scheme**.
+    1. Select **Arguments** on the **Run** (Debug Run) page.
+    1. Under **Environment Variables** select the plus (+) sign to add a new environment variable.
+    1. Enter `SPEECH_KEY` for the **Name** and enter your Speech resource key for the **Value**.
+
+    To set the environment variable for your Speech resource region, follow the same steps. Set `SPEECH_REGION` to the region of your resource. For example, `westus`. Set `ENDPOINT` to the endpoint of your resource
+
+    For more configuration options, see [the Xcode documentation](https://help.apple.com/xcode/#/dev745c5c974).
+
   </Tab>
 </Tabs>
+
+## Synthesize speech to a file
+
+To translate speech from a file:
+
+1. Create a new file named *synthesis.ts* with the following content:
+
+    ```typescript
+    import { createInterface } from "readline";
+    import { 
+        SpeechConfig, 
+        AudioConfig, 
+        SpeechSynthesizer, 
+        ResultReason,
+        SpeechSynthesisResult 
+    } from "microsoft-cognitiveservices-speech-sdk";
+    
+    function synthesizeSpeech(): void {
+        const audioFile = "YourAudioFile.wav";
+        // This example requires environment variables named "ENDPOINT" and "SPEECH_KEY"
+        const speechConfig: SpeechConfig = SpeechConfig.fromEndpoint(new URL(process.env.ENDPOINT!), process.env.SPEECH_KEY!);
+        const audioConfig: AudioConfig = AudioConfig.fromAudioFileOutput(audioFile);
+        
+        // The language of the voice that speaks.
+        speechConfig.speechSynthesisVoiceName = "en-US-Ava:DragonHDLatestNeural";
+        
+        // Create the speech synthesizer.
+        const synthesizer: SpeechSynthesizer = new SpeechSynthesizer(speechConfig, audioConfig);
+        
+        const rl = createInterface({
+            input: process.stdin,
+            output: process.stdout
+        });
+        
+        rl.question("Enter some text that you want to speak >\n> ", function (text: string) {
+            rl.close();
+            // Start the synthesizer and wait for a result.
+            synthesizer.speakTextAsync(text,
+                function (result: SpeechSynthesisResult) {
+                    if (result.reason === ResultReason.SynthesizingAudioCompleted) {
+                        console.log("synthesis finished.");
+                    } else {
+                        console.error("Speech synthesis canceled, " + result.errorDetails +
+                            "\nDid you set the speech resource key and region values?");
+                    }
+                    synthesizer.close();
+                },
+                function (err: string) {
+                    console.trace("err - " + err);
+                    synthesizer.close();
+                });
+            console.log("Now synthesizing to: " + audioFile);
+        });
+    }
+    
+    synthesizeSpeech();
+    ```
+
+    In *synthesis.ts*, optionally you can rename *YourAudioFile.wav* to another output file name.
+
+    To change the speech synthesis language, replace `en-US-Ava:DragonHDLatestNeural` with another [supported voice](~/articles/ai-services/speech-service/language-support.md#standard-voices).
+
+    All neural voices are multilingual and fluent in their own language and English. For example, if the input text in English is *I'm excited to try text to speech* and you set `es-ES-Ximena:DragonHDLatestNeural`, the text is spoken in English with a Spanish accent. If the voice doesn't speak the language of the input text, the Speech service doesn't output synthesized audio.
+
+1. Create the `tsconfig.json` file to transpile the TypeScript code and copy the following code for ECMAScript.
+
+    ```json
+    {
+        "compilerOptions": {
+          "module": "NodeNext",
+          "target": "ES2022", // Supports top-level await
+          "moduleResolution": "NodeNext",
+          "skipLibCheck": true, // Avoid type errors from node_modules
+          "strict": true // Enable strict type-checking options
+        },
+        "include": ["*.ts"]
+    }
+    ```
+
+1. Transpile from TypeScript to JavaScript.
+
+    ```shell
+    tsc
+    ```
+
+    This command should produce no output if successful.
+
+1. Run your console application to start speech synthesis to a file:
+
+   ```console
+   node synthesis.js
+   ```
+
+## Output
+
+You should see the following output in the console. Follow the prompt to enter text that you want to synthesize:
+
+```console
+Enter some text that you want to speak >
+> I'm excited to try text to speech
+Now synthesizing to: YourAudioFile.wav
+synthesis finished.
+```
+
+## Remarks
+
+### More speech synthesis options
+
+This quickstart uses the `SpeakTextAsync` operation to synthesize a short block of text that you enter. You can also use long-form text from a file and get finer control over voice styles, prosody, and other settings.
+
+- See [how to synthesize speech](~/articles/ai-services/speech-service/how-to-speech-synthesis.md) and [Speech Synthesis Markup Language (SSML) overview](~/articles/ai-services/speech-service/speech-synthesis-markup.md) for information about speech synthesis from a file and finer control over voice styles, prosody, and other settings.
+- See [batch synthesis API for text to speech](~/articles/ai-services/speech-service/batch-synthesis.md) for information about synthesizing long-form text to speech.
+
+### OpenAI text to speech voices in Azure Speech in Foundry Tools
+
+OpenAI text to speech voices are also supported. See [OpenAI text to speech voices in Azure Speech](../../../openai-voices.md) and [multilingual voices](../../../language-support.md). You can replace `en-US-Ava:DragonHDLatestNeural` with a supported OpenAI voice name such as `en-US-FableMultilingualNeural`.
+
+## Clean up resources
+
+You can use the [Azure portal](~/articles/ai-services/multi-service-resource.md) or [Azure Command Line Interface (CLI)](~/articles/ai-services/multi-service-resource.md) to remove the Speech resource you created.
+## Next step
+
+<Card title="Learn more about speech synthesis" icon="arrow-right" href="how-to-speech-synthesis.md" />
