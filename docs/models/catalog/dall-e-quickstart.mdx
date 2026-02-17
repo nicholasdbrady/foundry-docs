@@ -83,145 +83,149 @@ Create and assign persistent environment variables for your key and endpoint.
 
 Create a new Python file named _quickstart.py_. Open the new file in your preferred editor or IDE.
 
-#### [GPT-image-1 series](#tab/gpt-image-1)
+<Tabs>
+  <Tab title="GPT-image-1 series">
 
-1. Replace the contents of _quickstart.py_ with the following code. Change the value of `prompt` to your preferred text. Also set `deployment` to the deployment name you chose when you deployed the GPT-image-1 series model.
-    
-    ```python
-    import os
-    import requests
-    import base64
-    from PIL import Image
-    from io import BytesIO
-    
-    # set environment variables
-    endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
-    subscription_key = os.getenv("AZURE_OPENAI_API_KEY")
-    
-    deployment = "gpt-image-1.5" # the name of your GPT-image-1 series deployment
-    api_version = "2025-04-01-preview" # or later version
-    
-    def decode_and_save_image(b64_data, output_filename):
-      image = Image.open(BytesIO(base64.b64decode(b64_data)))
-      image.show()
-      image.save(output_filename)
-    
-    def save_all_images_from_response(response_data, filename_prefix):
-      for idx, item in enumerate(response_data['data']):
-        b64_img = item['b64_json']
-        filename = f"{filename_prefix}_{idx+1}.png"
-        decode_and_save_image(b64_img, filename)
-        print(f"Image saved to: '{filename}'")
-    
-    base_path = f'openai/deployments/{deployment}/images'
-    params = f'?api-version={api_version}'
-    
-    generation_url = f"{endpoint}{base_path}/generations{params}"
-    generation_body = {
-      "prompt": "girl falling asleep",
-      "n": 1,
-      "size": "1024x1024",
-      "quality": "medium",
-      "output_format": "png"
-    }
-    generation_response = requests.post(
-      generation_url,
-      headers={
-        'Api-Key': subscription_key,
-        'Content-Type': 'application/json',
-      },
-      json=generation_body
-    ).json()
-    save_all_images_from_response(generation_response, "generated_image")
-    
-    # In addition to generating images, you can edit them.
-    edit_url = f"{endpoint}{base_path}/edits{params}"
-    edit_body = {
-      "prompt": "girl falling asleep",
-      "n": 1,
-      "size": "1024x1024",
-      "quality": "medium"
-    }
-    files = {
-      "image": ("generated_image_1.png", open("generated_image_1.png", "rb"), "image/png"),
-      # You can use a mask to specify which parts of the image you want to edit.
-      # The mask must be the same size as the input image.
-      # "mask": ("mask.png", open("mask.png", "rb"), "image/png"),
-    }
-    edit_response = requests.post(
-      edit_url,
-      headers={'Api-Key': subscription_key},
-      data=edit_body,
-      files=files
-    ).json()
-    save_all_images_from_response(edit_response, "edited_image")
-    ```
+    1. Replace the contents of _quickstart.py_ with the following code. Change the value of `prompt` to your preferred text. Also set `deployment` to the deployment name you chose when you deployed the GPT-image-1 series model.
 
-    The script makes a synchronous image generation API call.
+        ```python
+        import os
+        import requests
+        import base64
+        from PIL import Image
+        from io import BytesIO
 
-    <Info>
+        # set environment variables
+        endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+        subscription_key = os.getenv("AZURE_OPENAI_API_KEY")
 
-</Info>    > Remember to remove the key from your code when you're done, and never post your key publicly. For production, use a secure way of storing and accessing your credentials. For more information, see [Azure Key Vault](https://learn.microsoft.com/azure/key-vault/general/overview).
+        deployment = "gpt-image-1.5" # the name of your GPT-image-1 series deployment
+        api_version = "2025-04-01-preview" # or later version
 
-1. Run the application with the `python` command:
+        def decode_and_save_image(b64_data, output_filename):
+          image = Image.open(BytesIO(base64.b64decode(b64_data)))
+          image.show()
+          image.save(output_filename)
 
-    ```console
-    python quickstart.py
-    ```
+        def save_all_images_from_response(response_data, filename_prefix):
+          for idx, item in enumerate(response_data['data']):
+            b64_img = item['b64_json']
+            filename = f"{filename_prefix}_{idx+1}.png"
+            decode_and_save_image(b64_img, filename)
+            print(f"Image saved to: '{filename}'")
 
-    Wait a few moments to get the response.
+        base_path = f'openai/deployments/{deployment}/images'
+        params = f'?api-version={api_version}'
 
-<!--
-#### [Black Forest Labs](#tab/bfl)
-tbd
--->
+        generation_url = f"{endpoint}{base_path}/generations{params}"
+        generation_body = {
+          "prompt": "girl falling asleep",
+          "n": 1,
+          "size": "1024x1024",
+          "quality": "medium",
+          "output_format": "png"
+        }
+        generation_response = requests.post(
+          generation_url,
+          headers={
+            'Api-Key': subscription_key,
+            'Content-Type': 'application/json',
+          },
+          json=generation_body
+        ).json()
+        save_all_images_from_response(generation_response, "generated_image")
 
-#### [DALL-E](#tab/dall-e-3)
+        # In addition to generating images, you can edit them.
+        edit_url = f"{endpoint}{base_path}/edits{params}"
+        edit_body = {
+          "prompt": "girl falling asleep",
+          "n": 1,
+          "size": "1024x1024",
+          "quality": "medium"
+        }
+        files = {
+          "image": ("generated_image_1.png", open("generated_image_1.png", "rb"), "image/png"),
+          # You can use a mask to specify which parts of the image you want to edit.
+          # The mask must be the same size as the input image.
+          # "mask": ("mask.png", open("mask.png", "rb"), "image/png"),
+        }
+        edit_response = requests.post(
+          edit_url,
+          headers={'Api-Key': subscription_key},
+          data=edit_body,
+          files=files
+        ).json()
+        save_all_images_from_response(edit_response, "edited_image")
+        ```
 
-1. Replace the contents of _quickstart.py_ with the following code. Change the value of `prompt` to your preferred text.
+        The script makes a synchronous image generation API call.
 
-    You also need to replace `<dalle3>` in the URL with the deployment name you chose when you deployed the DALL-E 3 model. Entering the model name will result in an error unless you chose a deployment name that is identical to the underlying model name. If you encounter an error, double check to make sure that you don't have a doubling of the `/` at the separation between your endpoint and `/openai/deployments`.
-    
-    ```python
-    import requests
-    import time
-    import os
-    api_base = os.environ['AZURE_OPENAI_ENDPOINT']  # Enter your endpoint here
-    api_key = os.environ['AZURE_OPENAI_API_KEY']         # Enter your API key here
+        <Info>
 
-    api_version = '2024-02-01'
-    url = f"{api_base}/openai/deployments/<dalle3>/images/generations?api-version={api_version}"
-    headers= { "api-key": api_key, "Content-Type": "application/json" }
-    body = {
-        # Enter your prompt text here
-        "prompt": "A multi-colored umbrella on the beach, disposable camera",
-        "size": "1024x1024", # supported values are “1792x1024”, “1024x1024” and “1024x1792” 
-        "n": 1, #The number of images to generate. Only n=1 is supported for DALL-E 3.
-        "quality": "hd", # Options are “hd” and “standard”; defaults to standard 
-        "style": "vivid" # Options are “natural” and “vivid”; defaults to “vivid”
-    }
-    submission = requests.post(url, headers=headers, json=body)
-    
-    image_url = submission.json()['data'][0]['url']
-    
-    print(image_url)
-    ```
+    </Info>    > Remember to remove the key from your code when you're done, and never post your key publicly. For production, use a secure way of storing and accessing your credentials. For more information, see [Azure Key Vault](https://learn.microsoft.com/azure/key-vault/general/overview).
 
-    The script makes a synchronous image generation API call.
+    1. Run the application with the `python` command:
 
-    <Info>
+        ```console
+        python quickstart.py
+        ```
 
-</Info>    > Remember to remove the key from your code when you're done, and never post your key publicly. For production, use a secure way of storing and accessing your credentials. For more information, see [Azure Key Vault](https://learn.microsoft.com/azure/key-vault/general/overview).
+        Wait a few moments to get the response.
 
-1. Run the application with the `python` command:
+    <!--
+  </Tab>
+  <Tab title="Black Forest Labs">
+    tbd
+    -->
 
-    ```console
-    python quickstart.py
-    ```
+  </Tab>
+  <Tab title="DALL-E">
 
-    Wait a few moments to get the response.
+    1. Replace the contents of _quickstart.py_ with the following code. Change the value of `prompt` to your preferred text.
 
----
+        You also need to replace `<dalle3>` in the URL with the deployment name you chose when you deployed the DALL-E 3 model. Entering the model name will result in an error unless you chose a deployment name that is identical to the underlying model name. If you encounter an error, double check to make sure that you don't have a doubling of the `/` at the separation between your endpoint and `/openai/deployments`.
+
+        ```python
+        import requests
+        import time
+        import os
+        api_base = os.environ['AZURE_OPENAI_ENDPOINT']  # Enter your endpoint here
+        api_key = os.environ['AZURE_OPENAI_API_KEY']         # Enter your API key here
+
+        api_version = '2024-02-01'
+        url = f"{api_base}/openai/deployments/<dalle3>/images/generations?api-version={api_version}"
+        headers= { "api-key": api_key, "Content-Type": "application/json" }
+        body = {
+            # Enter your prompt text here
+            "prompt": "A multi-colored umbrella on the beach, disposable camera",
+            "size": "1024x1024", # supported values are “1792x1024”, “1024x1024” and “1024x1792” 
+            "n": 1, #The number of images to generate. Only n=1 is supported for DALL-E 3.
+            "quality": "hd", # Options are “hd” and “standard”; defaults to standard 
+            "style": "vivid" # Options are “natural” and “vivid”; defaults to “vivid”
+        }
+        submission = requests.post(url, headers=headers, json=body)
+
+        image_url = submission.json()['data'][0]['url']
+
+        print(image_url)
+        ```
+
+        The script makes a synchronous image generation API call.
+
+        <Info>
+
+    </Info>    > Remember to remove the key from your code when you're done, and never post your key publicly. For production, use a secure way of storing and accessing your credentials. For more information, see [Azure Key Vault](https://learn.microsoft.com/azure/key-vault/general/overview).
+
+    1. Run the application with the `python` command:
+
+        ```console
+        python quickstart.py
+        ```
+
+        Wait a few moments to get the response.
+
+  </Tab>
+</Tabs>
 
 ## Output
 
@@ -521,43 +525,49 @@ For the recommended keyless authentication with Microsoft Entra ID, you need to:
 
 You need to retrieve the following information to authenticate your application with your Azure OpenAI resource:
 
-#### [Microsoft Entra ID](#tab/keyless)
+<Tabs>
+  <Tab title="Microsoft Entra ID">
 
-|Variable name | Value |
-|--------------------------|-------------|
-| `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
-| `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
+    |Variable name | Value |
+    |--------------------------|-------------|
+    | `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
+    | `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
 
-Learn more about [keyless authentication](https://learn.microsoft.com/azure/ai-services/authentication) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
+    Learn more about [keyless authentication](https://learn.microsoft.com/azure/ai-services/authentication) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
 
-#### [API key](#tab/api-key)
+  </Tab>
+  <Tab title="API key">
 
-|Variable name | Value |
-|--------------------------|-------------|
-| `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
-| `AZURE_OPENAI_API_KEY` | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. You can use either `KEY1` or `KEY2`.|
-| `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
+    |Variable name | Value |
+    |--------------------------|-------------|
+    | `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
+    | `AZURE_OPENAI_API_KEY` | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. You can use either `KEY1` or `KEY2`.|
+    | `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
 
-Learn more about [finding API keys](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
+    Learn more about [finding API keys](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
 
----
+  </Tab>
+</Tabs>
 
 ## Run the quickstart
 
 The sample code in this quickstart uses Microsoft Entra ID for the recommended keyless authentication. If you prefer to use an API key, you can replace the `DefaultAzureCredential` object with an `AzureKeyCredential` object. 
 
-#### [Microsoft Entra ID](#tab/keyless)
+<Tabs>
+  <Tab title="Microsoft Entra ID">
 
-```csharp
-AzureOpenAIClient openAIClient = new AzureOpenAIClient(new Uri(endpoint), new DefaultAzureCredential()); 
-```
+    ```csharp
+    AzureOpenAIClient openAIClient = new AzureOpenAIClient(new Uri(endpoint), new DefaultAzureCredential()); 
+    ```
 
-#### [API key](#tab/api-key)
+  </Tab>
+  <Tab title="API key">
 
-```csharp
-AzureOpenAIClient openAIClient = new AzureOpenAIClient(new Uri(endpoint), new AzureKeyCredential(key));
-```
----
+    ```csharp
+    AzureOpenAIClient openAIClient = new AzureOpenAIClient(new Uri(endpoint), new AzureKeyCredential(key));
+    ```
+  </Tab>
+</Tabs>
 
 To run the quickstart, follow these steps:
 
@@ -707,178 +717,187 @@ For the recommended keyless authentication with Microsoft Entra ID, you need to:
 
 You need to retrieve the following information to authenticate your application with your Azure OpenAI resource:
 
-#### [Microsoft Entra ID](#tab/keyless)
+<Tabs>
+  <Tab title="Microsoft Entra ID">
 
-|Variable name | Value |
-|--------------------------|-------------|
-| `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
-| `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
+    |Variable name | Value |
+    |--------------------------|-------------|
+    | `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
+    | `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
 
-Learn more about [keyless authentication](https://learn.microsoft.com/azure/ai-services/authentication) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
+    Learn more about [keyless authentication](https://learn.microsoft.com/azure/ai-services/authentication) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
 
-#### [API key](#tab/api-key)
+  </Tab>
+  <Tab title="API key">
 
-|Variable name | Value |
-|--------------------------|-------------|
-| `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
-| `AZURE_OPENAI_API_KEY` | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. You can use either `KEY1` or `KEY2`.|
-| `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
+    |Variable name | Value |
+    |--------------------------|-------------|
+    | `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
+    | `AZURE_OPENAI_API_KEY` | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. You can use either `KEY1` or `KEY2`.|
+    | `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
 
-Learn more about [finding API keys](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
+    Learn more about [finding API keys](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
 
----
+  </Tab>
+</Tabs>
 
 ## Run the app
 
 The sample code in this quickstart uses Microsoft Entra ID for the recommended keyless authentication. If you prefer to use an API key, you can replace the `DefaultAzureCredential` object with an `AzureKeyCredential` object. 
 
-#### [Microsoft Entra ID](#tab/keyless)
-
-```java
-OpenAIAsyncClient client = new OpenAIClientBuilder()
-    .endpoint(endpoint)
-    .credential(new DefaultAzureCredentialBuilder().build())
-    .buildAsyncClient();
-```
-
-#### [API key](#tab/api-key)
-
-```java
-OpenAIAsyncClient client = new OpenAIClientBuilder()
-    .endpoint(endpoint)
-    .credential(new AzureKeyCredential(key))
-    .buildAsyncClient();
-```
----
-
-#### [Microsoft Entra ID](#tab/keyless)
-
-Follow these steps to create a console application for image generation.
-
-1. Create a new file named *Quickstart.java* in the same project root directory.
-1. Copy the following code into *Quickstart.java*:
+<Tabs>
+  <Tab title="Microsoft Entra ID">
 
     ```java
-    import com.azure.ai.openai.OpenAIAsyncClient;
-    import com.azure.ai.openai.OpenAIClientBuilder;
-    import com.azure.ai.openai.models.ImageGenerationOptions;
-    import com.azure.ai.openai.models.ImageLocation;
-    import com.azure.core.credential.AzureKeyCredential;
-    import com.azure.core.models.ResponseError;
-    
-    import java.util.concurrent.TimeUnit;
-    
-    public class Quickstart {
-
-        public static void main(String[] args) throws InterruptedException {
-            
-            String endpoint = System.getenv("AZURE_OPENAI_ENDPOINT");
-    
-            // Use the recommended keyless credential instead of the AzureKeyCredential credential.
-    
-            OpenAIAsyncClient client = new OpenAIClientBuilder()
-                .endpoint(endpoint)
-                .credential(new DefaultAzureCredentialBuilder().build())
-                .buildAsyncClient();
-                
-            ImageGenerationOptions imageGenerationOptions = new ImageGenerationOptions(
-                "A drawing of the Seattle skyline in the style of Van Gogh");
-            client.getImages(imageGenerationOptions).subscribe(
-                images -> {
-                    for (ImageLocation imageLocation : images.getData()) {
-                        ResponseError error = imageLocation.getError();
-                        if (error != null) {
-                            System.out.printf("Image generation operation failed. Error code: %s, error message: %s.%n",
-                                error.getCode(), error.getMessage());
-                        } else {
-                            System.out.printf(
-                                "Image location URL that provides temporary access to download the generated image is %s.%n",
-                                imageLocation.getUrl());
-                        }
-                    }
-                },
-                error -> System.err.println("There was an error getting images." + error),
-                () -> System.out.println("Completed getImages."));
-    
-            // The .subscribe() creation and assignment isn't a blocking call.
-            // The thread sleeps so the program does not end before the send operation is complete. 
-            // Use .block() instead of .subscribe() for a synchronous call.
-            TimeUnit.SECONDS.sleep(10);
-        }
-    }
+    OpenAIAsyncClient client = new OpenAIClientBuilder()
+        .endpoint(endpoint)
+        .credential(new DefaultAzureCredentialBuilder().build())
+        .buildAsyncClient();
     ```
 
-1. Run your new console application to generate an image:
-
-    ```console
-    javac Quickstart.java -cp ".;target\dependency\*"
-    java -cp ".;target\dependency\*" Quickstart
-    ```
-
-#### [API key](#tab/api-key)
-
-Follow these steps to create a console application for image generation.
-
-1. Create a new file named *Quickstart.java* in the same project root directory.
-1. Copy the following code into *Quickstart.java*:
+  </Tab>
+  <Tab title="API key">
 
     ```java
-    import com.azure.ai.openai.OpenAIAsyncClient;
-    import com.azure.ai.openai.OpenAIClientBuilder;
-    import com.azure.ai.openai.models.ImageGenerationOptions;
-    import com.azure.ai.openai.models.ImageLocation;
-    import com.azure.identity.DefaultAzureCredentialBuilder;
-    import com.azure.core.models.ResponseError;
-    
-    import java.util.concurrent.TimeUnit;
-    
-    public class Quickstart {
-    
-        public static void main(String[] args) throws InterruptedException {
-            
-            String key = System.getenv("AZURE_OPENAI_API_KEY");
-            String endpoint = System.getenv("AZURE_OPENAI_ENDPOINT");
-    
-            OpenAIAsyncClient client = new OpenAIClientBuilder()
-                .endpoint(endpoint)
-                .credential(new AzureKeyCredential(key))
-                .buildAsyncClient();
-    
-            ImageGenerationOptions imageGenerationOptions = new ImageGenerationOptions(
-                "A drawing of the Seattle skyline in the style of Van Gogh");
-            client.getImages(imageGenerationOptions).subscribe(
-                images -> {
-                    for (ImageLocation imageLocation : images.getData()) {
-                        ResponseError error = imageLocation.getError();
-                        if (error != null) {
-                            System.out.printf("Image generation operation failed. Error code: %s, error message: %s.%n",
-                                error.getCode(), error.getMessage());
-                        } else {
-                            System.out.printf(
-                                "Image location URL that provides temporary access to download the generated image is %s.%n",
-                                imageLocation.getUrl());
+    OpenAIAsyncClient client = new OpenAIClientBuilder()
+        .endpoint(endpoint)
+        .credential(new AzureKeyCredential(key))
+        .buildAsyncClient();
+    ```
+  </Tab>
+</Tabs>
+
+<Tabs>
+  <Tab title="Microsoft Entra ID">
+
+    Follow these steps to create a console application for image generation.
+
+    1. Create a new file named *Quickstart.java* in the same project root directory.
+    1. Copy the following code into *Quickstart.java*:
+
+        ```java
+        import com.azure.ai.openai.OpenAIAsyncClient;
+        import com.azure.ai.openai.OpenAIClientBuilder;
+        import com.azure.ai.openai.models.ImageGenerationOptions;
+        import com.azure.ai.openai.models.ImageLocation;
+        import com.azure.core.credential.AzureKeyCredential;
+        import com.azure.core.models.ResponseError;
+
+        import java.util.concurrent.TimeUnit;
+
+        public class Quickstart {
+
+            public static void main(String[] args) throws InterruptedException {
+
+                String endpoint = System.getenv("AZURE_OPENAI_ENDPOINT");
+
+                // Use the recommended keyless credential instead of the AzureKeyCredential credential.
+
+                OpenAIAsyncClient client = new OpenAIClientBuilder()
+                    .endpoint(endpoint)
+                    .credential(new DefaultAzureCredentialBuilder().build())
+                    .buildAsyncClient();
+
+                ImageGenerationOptions imageGenerationOptions = new ImageGenerationOptions(
+                    "A drawing of the Seattle skyline in the style of Van Gogh");
+                client.getImages(imageGenerationOptions).subscribe(
+                    images -> {
+                        for (ImageLocation imageLocation : images.getData()) {
+                            ResponseError error = imageLocation.getError();
+                            if (error != null) {
+                                System.out.printf("Image generation operation failed. Error code: %s, error message: %s.%n",
+                                    error.getCode(), error.getMessage());
+                            } else {
+                                System.out.printf(
+                                    "Image location URL that provides temporary access to download the generated image is %s.%n",
+                                    imageLocation.getUrl());
+                            }
                         }
-                    }
-                },
-                error -> System.err.println("There was an error getting images." + error),
-                () -> System.out.println("Completed getImages."));
-    
-            // The .subscribe() creation and assignment isn't a blocking call.
-            // The thread sleeps so the program does not end before the send operation is complete. 
-            // Use .block() instead of .subscribe() for a synchronous call.
-            TimeUnit.SECONDS.sleep(10);
+                    },
+                    error -> System.err.println("There was an error getting images." + error),
+                    () -> System.out.println("Completed getImages."));
+
+                // The .subscribe() creation and assignment isn't a blocking call.
+                // The thread sleeps so the program does not end before the send operation is complete. 
+                // Use .block() instead of .subscribe() for a synchronous call.
+                TimeUnit.SECONDS.sleep(10);
+            }
         }
-    }
-    ```
+        ```
 
-1. Run your new console application to generate an image:
+    1. Run your new console application to generate an image:
 
-    ```console
-    javac Quickstart.java -cp ".;target\dependency\*"
-    java -cp ".;target\dependency\*" Quickstart
-    ```
+        ```console
+        javac Quickstart.java -cp ".;target\dependency\*"
+        java -cp ".;target\dependency\*" Quickstart
+        ```
 
----
+  </Tab>
+  <Tab title="API key">
+
+    Follow these steps to create a console application for image generation.
+
+    1. Create a new file named *Quickstart.java* in the same project root directory.
+    1. Copy the following code into *Quickstart.java*:
+
+        ```java
+        import com.azure.ai.openai.OpenAIAsyncClient;
+        import com.azure.ai.openai.OpenAIClientBuilder;
+        import com.azure.ai.openai.models.ImageGenerationOptions;
+        import com.azure.ai.openai.models.ImageLocation;
+        import com.azure.identity.DefaultAzureCredentialBuilder;
+        import com.azure.core.models.ResponseError;
+
+        import java.util.concurrent.TimeUnit;
+
+        public class Quickstart {
+
+            public static void main(String[] args) throws InterruptedException {
+
+                String key = System.getenv("AZURE_OPENAI_API_KEY");
+                String endpoint = System.getenv("AZURE_OPENAI_ENDPOINT");
+
+                OpenAIAsyncClient client = new OpenAIClientBuilder()
+                    .endpoint(endpoint)
+                    .credential(new AzureKeyCredential(key))
+                    .buildAsyncClient();
+
+                ImageGenerationOptions imageGenerationOptions = new ImageGenerationOptions(
+                    "A drawing of the Seattle skyline in the style of Van Gogh");
+                client.getImages(imageGenerationOptions).subscribe(
+                    images -> {
+                        for (ImageLocation imageLocation : images.getData()) {
+                            ResponseError error = imageLocation.getError();
+                            if (error != null) {
+                                System.out.printf("Image generation operation failed. Error code: %s, error message: %s.%n",
+                                    error.getCode(), error.getMessage());
+                            } else {
+                                System.out.printf(
+                                    "Image location URL that provides temporary access to download the generated image is %s.%n",
+                                    imageLocation.getUrl());
+                            }
+                        }
+                    },
+                    error -> System.err.println("There was an error getting images." + error),
+                    () -> System.out.println("Completed getImages."));
+
+                // The .subscribe() creation and assignment isn't a blocking call.
+                // The thread sleeps so the program does not end before the send operation is complete. 
+                // Use .block() instead of .subscribe() for a synchronous call.
+                TimeUnit.SECONDS.sleep(10);
+            }
+        }
+        ```
+
+    1. Run your new console application to generate an image:
+
+        ```console
+        javac Quickstart.java -cp ".;target\dependency\*"
+        java -cp ".;target\dependency\*" Quickstart
+        ```
+
+  </Tab>
+</Tabs>
 
 ## Output
 
@@ -952,159 +971,165 @@ For the recommended keyless authentication with Microsoft Entra ID, you need to:
 
 You need to retrieve the following information to authenticate your application with your Azure OpenAI resource:
 
-#### [Microsoft Entra ID](#tab/keyless)
+<Tabs>
+  <Tab title="Microsoft Entra ID">
 
-|Variable name | Value |
-|--------------------------|-------------|
-| `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
-| `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
+    |Variable name | Value |
+    |--------------------------|-------------|
+    | `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
+    | `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
 
-Learn more about [keyless authentication](https://learn.microsoft.com/azure/ai-services/authentication) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
+    Learn more about [keyless authentication](https://learn.microsoft.com/azure/ai-services/authentication) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
 
-#### [API key](#tab/api-key)
+  </Tab>
+  <Tab title="API key">
 
-|Variable name | Value |
-|--------------------------|-------------|
-| `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
-| `AZURE_OPENAI_API_KEY` | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. You can use either `KEY1` or `KEY2`.|
-| `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
+    |Variable name | Value |
+    |--------------------------|-------------|
+    | `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
+    | `AZURE_OPENAI_API_KEY` | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. You can use either `KEY1` or `KEY2`.|
+    | `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
 
-Learn more about [finding API keys](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
+    Learn more about [finding API keys](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
 
----
+  </Tab>
+</Tabs>
 
 <Danger>
 To use the recommended keyless authentication with the SDK, make sure that the `AZURE_OPENAI_API_KEY` environment variable isn't set.
 </Danger>
 ## Generate images with DALL-E
 
-#### [Microsoft Entra ID](#tab/keyless)
+<Tabs>
+  <Tab title="Microsoft Entra ID">
 
-1. Create the `index.js` file with the following code:
+    1. Create the `index.js` file with the following code:
 
-    ```javascript
-    const { AzureOpenAI } = require("openai");
-    const { 
-        DefaultAzureCredential, 
-        getBearerTokenProvider 
-    } = require("@azure/identity");
-    
-    // You will need to set these environment variables or edit the following values
-    const endpoint = process.env.AZURE_OPENAI_ENDPOINT || "Your endpoint";
-    
-    // Required Azure OpenAI deployment name and API version
-    const apiVersion = process.env.OPENAI_API_VERSION || "2024-07-01";
-    const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "dall-e-3";
-    
-    // The prompt to generate images from
-    const prompt = "a monkey eating a banana";
-    const numberOfImagesToGenerate = 1;
-    
-    // keyless authentication    
-    const credential = new DefaultAzureCredential();
-    const scope = "https://cognitiveservices.azure.com/.default";
-    const azureADTokenProvider = getBearerTokenProvider(credential, scope);
-    
-    function getClient(): AzureOpenAI {
-      return new AzureOpenAI({
-        endpoint,
-        azureADTokenProvider,
-        apiVersion,
-        deployment: deploymentName,
-      });
-    }
-    async function main() {
-      console.log("== Image Generation ==");
-    
-      const client = getClient();
-    
-      const results = await client.images.generate({
-        prompt,
-        size: "1024x1024",
-        n: numberOfImagesToGenerate,
-        model: "",
-        style: "vivid", // or "natural"
-      });
-    
-      for (const image of results.data) {
-        console.log(`Image generation result URL: ${image.url}`);
-      }
-    }
-    
-    main().catch((err) => {
-      console.error("The sample encountered an error:", err);
-    });
-    ```
+        ```javascript
+        const { AzureOpenAI } = require("openai");
+        const { 
+            DefaultAzureCredential, 
+            getBearerTokenProvider 
+        } = require("@azure/identity");
 
-1. Sign in to Azure with the following command:
+        // You will need to set these environment variables or edit the following values
+        const endpoint = process.env.AZURE_OPENAI_ENDPOINT || "Your endpoint";
 
-    ```shell
-    az login
-    ```
+        // Required Azure OpenAI deployment name and API version
+        const apiVersion = process.env.OPENAI_API_VERSION || "2024-07-01";
+        const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "dall-e-3";
 
-1. Run the JavaScript file.
+        // The prompt to generate images from
+        const prompt = "a monkey eating a banana";
+        const numberOfImagesToGenerate = 1;
 
-    ```shell
-    node index.js
-    ```
+        // keyless authentication    
+        const credential = new DefaultAzureCredential();
+        const scope = "https://cognitiveservices.azure.com/.default";
+        const azureADTokenProvider = getBearerTokenProvider(credential, scope);
 
-## [API key](#tab/api-key)
+        function getClient(): AzureOpenAI {
+          return new AzureOpenAI({
+            endpoint,
+            azureADTokenProvider,
+            apiVersion,
+            deployment: deploymentName,
+          });
+        }
+        async function main() {
+          console.log("== Image Generation ==");
 
-1. Create the `index.js` file with the following code:
-    
-    ```javascript
-    const { AzureOpenAI } = require("openai");
-    
-    // You will need to set these environment variables or edit the following values
-    const endpoint = process.env.AZURE_OPENAI_ENDPOINT || "Your endpoint";
-    const apiKey = process.env.AZURE_OPENAI_API_KEY || "Your API key";
-    
-    // Required Azure OpenAI deployment name and API version
-    const apiVersion = process.env.OPENAI_API_VERSION || "2024-07-01";
-    const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "dall-e-3";
-    
-    // The prompt to generate images from
-    const prompt = "a monkey eating a banana";
-    const numberOfImagesToGenerate = 1;
-    
-    function getClient() {
-      return new AzureOpenAI({
-        endpoint,
-        apiKey,
-        apiVersion,
-        deployment: deploymentName,
-      });
-    }
-    async function main() {
-      console.log("== Image Generation ==");
-    
-      const client = getClient();
-    
-      const results = await client.images.generate({
-        prompt,
-        size: "1024x1024",
-        n: numberOfImagesToGenerate,
-        model: "",
-        style: "vivid", // or "natural"
-      });
-    
-      for (const image of results.data) {
-        console.log(`Image generation result URL: ${image.url}`);
-      }
-    }
-    
-    main().catch((err) => {
-      console.error("The sample encountered an error:", err);
-    });
-    ```
-    
-1. Run the JavaScript file.
+          const client = getClient();
 
-    ```shell
-    node index.js
-    ```
+          const results = await client.images.generate({
+            prompt,
+            size: "1024x1024",
+            n: numberOfImagesToGenerate,
+            model: "",
+            style: "vivid", // or "natural"
+          });
 
----
+          for (const image of results.data) {
+            console.log(`Image generation result URL: ${image.url}`);
+          }
+        }
+
+        main().catch((err) => {
+          console.error("The sample encountered an error:", err);
+        });
+        ```
+
+    1. Sign in to Azure with the following command:
+
+        ```shell
+        az login
+        ```
+
+    1. Run the JavaScript file.
+
+        ```shell
+        node index.js
+        ```
+
+  </Tab>
+  <Tab title="API key">
+
+    1. Create the `index.js` file with the following code:
+
+        ```javascript
+        const { AzureOpenAI } = require("openai");
+
+        // You will need to set these environment variables or edit the following values
+        const endpoint = process.env.AZURE_OPENAI_ENDPOINT || "Your endpoint";
+        const apiKey = process.env.AZURE_OPENAI_API_KEY || "Your API key";
+
+        // Required Azure OpenAI deployment name and API version
+        const apiVersion = process.env.OPENAI_API_VERSION || "2024-07-01";
+        const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "dall-e-3";
+
+        // The prompt to generate images from
+        const prompt = "a monkey eating a banana";
+        const numberOfImagesToGenerate = 1;
+
+        function getClient() {
+          return new AzureOpenAI({
+            endpoint,
+            apiKey,
+            apiVersion,
+            deployment: deploymentName,
+          });
+        }
+        async function main() {
+          console.log("== Image Generation ==");
+
+          const client = getClient();
+
+          const results = await client.images.generate({
+            prompt,
+            size: "1024x1024",
+            n: numberOfImagesToGenerate,
+            model: "",
+            style: "vivid", // or "natural"
+          });
+
+          for (const image of results.data) {
+            console.log(`Image generation result URL: ${image.url}`);
+          }
+        }
+
+        main().catch((err) => {
+          console.error("The sample encountered an error:", err);
+        });
+        ```
+
+    1. Run the JavaScript file.
+
+        ```shell
+        node index.js
+        ```
+
+  </Tab>
+</Tabs>
 
 ## Output
 
@@ -1186,197 +1211,203 @@ For the recommended keyless authentication with Microsoft Entra ID, you need to:
 
 You need to retrieve the following information to authenticate your application with your Azure OpenAI resource:
 
-#### [Microsoft Entra ID](#tab/keyless)
+<Tabs>
+  <Tab title="Microsoft Entra ID">
 
-|Variable name | Value |
-|--------------------------|-------------|
-| `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
-| `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
+    |Variable name | Value |
+    |--------------------------|-------------|
+    | `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
+    | `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
 
-Learn more about [keyless authentication](https://learn.microsoft.com/azure/ai-services/authentication) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
+    Learn more about [keyless authentication](https://learn.microsoft.com/azure/ai-services/authentication) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
 
-#### [API key](#tab/api-key)
+  </Tab>
+  <Tab title="API key">
 
-|Variable name | Value |
-|--------------------------|-------------|
-| `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
-| `AZURE_OPENAI_API_KEY` | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. You can use either `KEY1` or `KEY2`.|
-| `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
+    |Variable name | Value |
+    |--------------------------|-------------|
+    | `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
+    | `AZURE_OPENAI_API_KEY` | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. You can use either `KEY1` or `KEY2`.|
+    | `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
 
-Learn more about [finding API keys](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
+    Learn more about [finding API keys](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
 
----
+  </Tab>
+</Tabs>
 
 <Danger>
 To use the recommended keyless authentication with the SDK, make sure that the `AZURE_OPENAI_API_KEY` environment variable isn't set.
 </Danger>
 ## Generate images with DALL-E
 
-#### [Microsoft Entra ID](#tab/typescript-keyless)
+<Tabs>
+  <Tab title="Microsoft Entra ID">
 
-1. Create the `index.ts` file with the following code:
+    1. Create the `index.ts` file with the following code:
 
-    ```typescript
-    import { AzureOpenAI } from "openai";
-    import { 
-        DefaultAzureCredential, 
-        getBearerTokenProvider 
-    } from "@azure/identity";
-    
-    // You will need to set these environment variables or edit the following values
-    const endpoint = process.env.AZURE_OPENAI_ENDPOINT || "Your endpoint";
-    
-    // Required Azure OpenAI deployment name and API version
-    const apiVersion = process.env.OPENAI_API_VERSION || "2024-07-01";
-    const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "dall-e-3";
-    
-    // keyless authentication    
-    const credential = new DefaultAzureCredential();
-    const scope = "https://cognitiveservices.azure.com/.default";
-    const azureADTokenProvider = getBearerTokenProvider(credential, scope);
-    
-    function getClient(): AzureOpenAI {
-      return new AzureOpenAI({
-        endpoint,
-        azureADTokenProvider,
-        apiVersion,
-        deployment: deploymentName,
-      });
-    }
-    async function main() {
-      console.log("== Image Generation ==");
-    
-      const client = getClient();
-    
-      const results = await client.images.generate({
-        prompt,
-        size: "1024x1024",
-        n: numberOfImagesToGenerate,
-        model: "",
-        style: "vivid", // or "natural"
-      });
-    
-      for (const image of results.data) {
-        console.log(`Image generation result URL: ${image.url}`);
-      }
-    }
-    
-    main().catch((err) => {
-      console.error("The sample encountered an error:", err);
-    });
-    ```
+        ```typescript
+        import { AzureOpenAI } from "openai";
+        import { 
+            DefaultAzureCredential, 
+            getBearerTokenProvider 
+        } from "@azure/identity";
 
-1. Create the `tsconfig.json` file to transpile the TypeScript code and copy the following code for ECMAScript.
+        // You will need to set these environment variables or edit the following values
+        const endpoint = process.env.AZURE_OPENAI_ENDPOINT || "Your endpoint";
 
-    ```json
-    {
-        "compilerOptions": {
-          "module": "NodeNext",
-          "target": "ES2022", // Supports top-level await
-          "moduleResolution": "NodeNext",
-          "skipLibCheck": true, // Avoid type errors from node_modules
-          "strict": true // Enable strict type-checking options
-        },
-        "include": ["*.ts"]
-    }
-    ```
+        // Required Azure OpenAI deployment name and API version
+        const apiVersion = process.env.OPENAI_API_VERSION || "2024-07-01";
+        const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "dall-e-3";
 
-1. Transpile from TypeScript to JavaScript.
+        // keyless authentication    
+        const credential = new DefaultAzureCredential();
+        const scope = "https://cognitiveservices.azure.com/.default";
+        const azureADTokenProvider = getBearerTokenProvider(credential, scope);
 
-    ```shell
-    tsc
-    ```
-    
-1. Sign in to Azure with the following command:
+        function getClient(): AzureOpenAI {
+          return new AzureOpenAI({
+            endpoint,
+            azureADTokenProvider,
+            apiVersion,
+            deployment: deploymentName,
+          });
+        }
+        async function main() {
+          console.log("== Image Generation ==");
 
-    ```shell
-    az login
-    ```
+          const client = getClient();
 
-1. Run the code with the following command:
+          const results = await client.images.generate({
+            prompt,
+            size: "1024x1024",
+            n: numberOfImagesToGenerate,
+            model: "",
+            style: "vivid", // or "natural"
+          });
 
-    ```shell
-    node index.js
-    ```
+          for (const image of results.data) {
+            console.log(`Image generation result URL: ${image.url}`);
+          }
+        }
 
-## [API key](#tab/typescript-key)
+        main().catch((err) => {
+          console.error("The sample encountered an error:", err);
+        });
+        ```
 
-1. Create the `index.ts` file with the following code:
+    1. Create the `tsconfig.json` file to transpile the TypeScript code and copy the following code for ECMAScript.
 
-    ```typescript
-    import { AzureOpenAI } from "openai";
-    
-    // You will need to set these environment variables or edit the following values
-    const endpoint = process.env.AZURE_OPENAI_ENDPOINT || "Your endpoint";
-    const apiKey = process.env.AZURE_OPENAI_API_KEY || "Your API key";
-    
-    // Required Azure OpenAI deployment name and API version
-    const apiVersion = process.env.OPENAI_API_VERSION || "2024-07-01";
-    const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "dall-e-3";
-    
-    // The prompt to generate images from
-    const prompt = "a monkey eating a banana";
-    const numberOfImagesToGenerate = 1;
-    
-    function getClient(): AzureOpenAI {
-      return new AzureOpenAI({
-        endpoint,
-        apiKey,
-        apiVersion,
-        deployment: deploymentName,
-      });
-    }
-    async function main() {
-      console.log("== Image Generation ==");
-    
-      const client = getClient();
-    
-      const results = await client.images.generate({
-        prompt,
-        size: "1024x1024",
-        n: numberOfImagesToGenerate,
-        model: "",
-        style: "vivid", // or "natural"
-      });
-    
-      for (const image of results.data) {
-        console.log(`Image generation result URL: ${image.url}`);
-      }
-    }
-    
-    main().catch((err) => {
-      console.error("The sample encountered an error:", err);
-    });
-    ```
+        ```json
+        {
+            "compilerOptions": {
+              "module": "NodeNext",
+              "target": "ES2022", // Supports top-level await
+              "moduleResolution": "NodeNext",
+              "skipLibCheck": true, // Avoid type errors from node_modules
+              "strict": true // Enable strict type-checking options
+            },
+            "include": ["*.ts"]
+        }
+        ```
 
-1. Create the `tsconfig.json` file to transpile the TypeScript code and copy the following code for ECMAScript.
+    1. Transpile from TypeScript to JavaScript.
 
-    ```json
-    {
-        "compilerOptions": {
-          "module": "NodeNext",
-          "target": "ES2022", // Supports top-level await
-          "moduleResolution": "NodeNext",
-          "skipLibCheck": true, // Avoid type errors from node_modules
-          "strict": true // Enable strict type-checking options
-        },
-        "include": ["*.ts"]
-    }
-    ```
+        ```shell
+        tsc
+        ```
 
-1. Transpile from TypeScript to JavaScript.
+    1. Sign in to Azure with the following command:
 
-    ```shell
-    tsc
-    ```
-    
-1. Run the code with the following command:
+        ```shell
+        az login
+        ```
 
-    ```shell
-    node index.js
-    ```
+    1. Run the code with the following command:
 
----
+        ```shell
+        node index.js
+        ```
+
+  </Tab>
+  <Tab title="API key">
+
+    1. Create the `index.ts` file with the following code:
+
+        ```typescript
+        import { AzureOpenAI } from "openai";
+
+        // You will need to set these environment variables or edit the following values
+        const endpoint = process.env.AZURE_OPENAI_ENDPOINT || "Your endpoint";
+        const apiKey = process.env.AZURE_OPENAI_API_KEY || "Your API key";
+
+        // Required Azure OpenAI deployment name and API version
+        const apiVersion = process.env.OPENAI_API_VERSION || "2024-07-01";
+        const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "dall-e-3";
+
+        // The prompt to generate images from
+        const prompt = "a monkey eating a banana";
+        const numberOfImagesToGenerate = 1;
+
+        function getClient(): AzureOpenAI {
+          return new AzureOpenAI({
+            endpoint,
+            apiKey,
+            apiVersion,
+            deployment: deploymentName,
+          });
+        }
+        async function main() {
+          console.log("== Image Generation ==");
+
+          const client = getClient();
+
+          const results = await client.images.generate({
+            prompt,
+            size: "1024x1024",
+            n: numberOfImagesToGenerate,
+            model: "",
+            style: "vivid", // or "natural"
+          });
+
+          for (const image of results.data) {
+            console.log(`Image generation result URL: ${image.url}`);
+          }
+        }
+
+        main().catch((err) => {
+          console.error("The sample encountered an error:", err);
+        });
+        ```
+
+    1. Create the `tsconfig.json` file to transpile the TypeScript code and copy the following code for ECMAScript.
+
+        ```json
+        {
+            "compilerOptions": {
+              "module": "NodeNext",
+              "target": "ES2022", // Supports top-level await
+              "moduleResolution": "NodeNext",
+              "skipLibCheck": true, // Avoid type errors from node_modules
+              "strict": true // Enable strict type-checking options
+            },
+            "include": ["*.ts"]
+        }
+        ```
+
+    1. Transpile from TypeScript to JavaScript.
+
+        ```shell
+        tsc
+        ```
+
+    1. Run the code with the following command:
+
+        ```shell
+        node index.js
+        ```
+
+  </Tab>
+</Tabs>
 
 ## Output
 
@@ -1437,221 +1468,230 @@ For the recommended keyless authentication with Microsoft Entra ID, you need to:
 
 You need to retrieve the following information to authenticate your application with your Azure OpenAI resource:
 
-#### [Microsoft Entra ID](#tab/keyless)
+<Tabs>
+  <Tab title="Microsoft Entra ID">
 
-|Variable name | Value |
-|--------------------------|-------------|
-| `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
-| `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
+    |Variable name | Value |
+    |--------------------------|-------------|
+    | `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
+    | `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
 
-Learn more about [keyless authentication](https://learn.microsoft.com/azure/ai-services/authentication) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
+    Learn more about [keyless authentication](https://learn.microsoft.com/azure/ai-services/authentication) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
 
-#### [API key](#tab/api-key)
+  </Tab>
+  <Tab title="API key">
 
-|Variable name | Value |
-|--------------------------|-------------|
-| `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
-| `AZURE_OPENAI_API_KEY` | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. You can use either `KEY1` or `KEY2`.|
-| `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
+    |Variable name | Value |
+    |--------------------------|-------------|
+    | `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
+    | `AZURE_OPENAI_API_KEY` | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. You can use either `KEY1` or `KEY2`.|
+    | `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
 
-Learn more about [finding API keys](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
+    Learn more about [finding API keys](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
 
----
+  </Tab>
+</Tabs>
 
 ## Run the quickstart
 
 The sample code in this quickstart uses Microsoft Entra ID for the recommended keyless authentication. If you prefer to use an API key, you can replace the `NewDefaultAzureCredential` implementation with `NewKeyCredential`. 
 
-#### [Microsoft Entra ID](#tab/keyless)
-
-```go
-azureOpenAIEndpoint := os.Getenv("AZURE_OPENAI_ENDPOINT")
-credential, err := azidentity.NewDefaultAzureCredential(nil)
-client, err := azopenai.NewClient(azureOpenAIEndpoint, credential, nil)
-```
-
-#### [API key](#tab/api-key)
-
-```go
-azureOpenAIEndpoint := os.Getenv("AZURE_OPENAI_ENDPOINT")
-azureOpenAIKey := os.Getenv("AZURE_OPENAI_API_KEY")
-credential := azcore.NewKeyCredential(azureOpenAIKey)
-client, err := azopenai.NewClientWithKeyCredential(azureOpenAIEndpoint, credential, nil)
-```
----
-
-#### [Microsoft Entra ID](#tab/keyless)
-
-To run the sample:
-
-1. Create a new file named *quickstart.go*. Copy the following code into the *quickstart.go* file.
+<Tabs>
+  <Tab title="Microsoft Entra ID">
 
     ```go
-	package main
-
-    import (
-    	"context"
-    	"fmt"
-    	"net/http"
-    	"os"
-    	"log"
-    
-    	"github.com/Azure/azure-sdk-for-go/sdk/ai/azopenai"
-    	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
-    	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-    )
-    
-    func main() {
-    	azureOpenAIEndpoint := os.Getenv("AZURE_OPENAI_ENDPOINT")
-    	modelDeploymentID := "dall-e-3"
-    
-    	credential, err := azidentity.NewDefaultAzureCredential(nil)
-    	if err != nil {
-    		log.Printf("ERROR: %s", err)
-    		return
-    	}
-    
-    	client, err := azopenai.NewClient(
-    		azureOpenAIEndpoint, credential, nil)
-    	if err != nil {
-    		log.Printf("ERROR: %s", err)
-    		return
-    	}
-    
-    	resp, err := client.GetImageGenerations(context.TODO(), azopenai.ImageGenerationOptions{
-    		Prompt:         to.Ptr("A painting of a cat in the style of Dali."),
-    		ResponseFormat: to.Ptr(azopenai.ImageGenerationResponseFormatURL),
-    		DeploymentName: to.Ptr(modelDeploymentID),
-    	}, nil)
-    
-    	if err != nil {
-    		// Implement application specific error handling logic.
-    		log.Printf("ERROR: %s", err)
-    		return
-    	}
-    
-    	for _, generatedImage := range resp.Data {
-    		// The underlying type for the generatedImage is determined by the value of
-    		// ImageGenerationOptions.ResponseFormat. 
-    		// In this example we use `azopenai.ImageGenerationResponseFormatURL`,
-    		// so the underlying type will be ImageLocation.
-    
-    		resp, err := http.Head(*generatedImage.URL)
-    
-    		if err != nil {
-    			// Implement application specific error handling logic.
-    			log.Printf("ERROR: %s", err)
-    			return
-    		}
-    
-    		fmt.Fprintf(os.Stderr, "Image generated, HEAD request on URL returned %d\nImage URL: %s\n", resp.StatusCode, *generatedImage.URL)
-    	}
-    }
-	```
-
-1. Run the following command to create a new Go module:
-
-	```shell
-	go mod init quickstart.go
-	```
-
-1. Run `go mod tidy` to install the required dependencies:
-
-    ```cmd
-    go mod tidy
+    azureOpenAIEndpoint := os.Getenv("AZURE_OPENAI_ENDPOINT")
+    credential, err := azidentity.NewDefaultAzureCredential(nil)
+    client, err := azopenai.NewClient(azureOpenAIEndpoint, credential, nil)
     ```
 
-1. Run the following command to run the sample:
-
-	```shell
-	go run quickstart.go
-	```
-
-#### [API key](#tab/api-key)
-
-To run the sample:
-
-1. Create a new file named *quickstart.go*. Copy the following code into the *quickstart.go* file.
+  </Tab>
+  <Tab title="API key">
 
     ```go
-    package main
-
-    import (
-    	"context"
-    	"fmt"
-    	"net/http"
-    	"os"
-    	"log"
-    
-    	"github.com/Azure/azure-sdk-for-go/sdk/ai/azopenai"
-    	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
-    	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
-    )
-    
-    func main() {
-    	azureOpenAIEndpoint := os.Getenv("AZURE_OPENAI_ENDPOINT")
-    	modelDeploymentID := "dall-e-3"
-    
-    	azureOpenAIKey := os.Getenv("AZURE_OPENAI_API_KEY")
-    	credential := azcore.NewKeyCredential(azureOpenAIKey)
-    
-    	client, err := azopenai.NewClientWithKeyCredential(
-    		azureOpenAIEndpoint, credential, nil)
-    	if err != nil {
-    		log.Printf("ERROR: %s", err)
-    		return
-    	}
-    
-    	resp, err := client.GetImageGenerations(context.TODO(), azopenai.ImageGenerationOptions{
-    		Prompt:         to.Ptr("A painting of a cat in the style of Dali."),
-    		ResponseFormat: to.Ptr(azopenai.ImageGenerationResponseFormatURL),
-    		DeploymentName: to.Ptr(modelDeploymentID),
-    	}, nil)
-    
-    	if err != nil {
-    		// Implement application specific error handling logic.
-    		log.Printf("ERROR: %s", err)
-    		return
-    	}
-    
-    	for _, generatedImage := range resp.Data {
-    		// The underlying type for the generatedImage is determined by the value of
-    		// ImageGenerationOptions.ResponseFormat. 
-    		// In this example we use `azopenai.ImageGenerationResponseFormatURL`,
-    		// so the underlying type will be ImageLocation.
-    
-    		resp, err := http.Head(*generatedImage.URL)
-    
-    		if err != nil {
-    			// Implement application specific error handling logic.
-    			log.Printf("ERROR: %s", err)
-    			return
-    		}
-    
-    		fmt.Fprintf(os.Stderr, "Image generated, HEAD request on URL returned %d\nImage URL: %s\n", resp.StatusCode, *generatedImage.URL)
-    	}
-    }
+    azureOpenAIEndpoint := os.Getenv("AZURE_OPENAI_ENDPOINT")
+    azureOpenAIKey := os.Getenv("AZURE_OPENAI_API_KEY")
+    credential := azcore.NewKeyCredential(azureOpenAIKey)
+    client, err := azopenai.NewClientWithKeyCredential(azureOpenAIEndpoint, credential, nil)
     ```
+  </Tab>
+</Tabs>
 
-1. Run the following command to create a new Go module:
+<Tabs>
+  <Tab title="Microsoft Entra ID">
 
-	```shell
-	go mod init quickstart.go
-	```
+    To run the sample:
 
-1. Run `go mod tidy` to install the required dependencies:
+    1. Create a new file named *quickstart.go*. Copy the following code into the *quickstart.go* file.
 
-    ```cmd
-    go mod tidy
-    ```
+        ```go
+    	package main
 
-1. Run the following command to run the sample:
+        import (
+        	"context"
+        	"fmt"
+        	"net/http"
+        	"os"
+        	"log"
 
-	```shell
-	go run quickstart.go
-	```
+        	"github.com/Azure/azure-sdk-for-go/sdk/ai/azopenai"
+        	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
+        	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+        )
 
----
+        func main() {
+        	azureOpenAIEndpoint := os.Getenv("AZURE_OPENAI_ENDPOINT")
+        	modelDeploymentID := "dall-e-3"
+
+        	credential, err := azidentity.NewDefaultAzureCredential(nil)
+        	if err != nil {
+        		log.Printf("ERROR: %s", err)
+        		return
+        	}
+
+        	client, err := azopenai.NewClient(
+        		azureOpenAIEndpoint, credential, nil)
+        	if err != nil {
+        		log.Printf("ERROR: %s", err)
+        		return
+        	}
+
+        	resp, err := client.GetImageGenerations(context.TODO(), azopenai.ImageGenerationOptions{
+        		Prompt:         to.Ptr("A painting of a cat in the style of Dali."),
+        		ResponseFormat: to.Ptr(azopenai.ImageGenerationResponseFormatURL),
+        		DeploymentName: to.Ptr(modelDeploymentID),
+        	}, nil)
+
+        	if err != nil {
+        		// Implement application specific error handling logic.
+        		log.Printf("ERROR: %s", err)
+        		return
+        	}
+
+        	for _, generatedImage := range resp.Data {
+        		// The underlying type for the generatedImage is determined by the value of
+        		// ImageGenerationOptions.ResponseFormat. 
+        		// In this example we use `azopenai.ImageGenerationResponseFormatURL`,
+        		// so the underlying type will be ImageLocation.
+
+        		resp, err := http.Head(*generatedImage.URL)
+
+        		if err != nil {
+        			// Implement application specific error handling logic.
+        			log.Printf("ERROR: %s", err)
+        			return
+        		}
+
+        		fmt.Fprintf(os.Stderr, "Image generated, HEAD request on URL returned %d\nImage URL: %s\n", resp.StatusCode, *generatedImage.URL)
+        	}
+        }
+    	```
+
+    1. Run the following command to create a new Go module:
+
+    	```shell
+    	go mod init quickstart.go
+    	```
+
+    1. Run `go mod tidy` to install the required dependencies:
+
+        ```cmd
+        go mod tidy
+        ```
+
+    1. Run the following command to run the sample:
+
+    	```shell
+    	go run quickstart.go
+    	```
+
+  </Tab>
+  <Tab title="API key">
+
+    To run the sample:
+
+    1. Create a new file named *quickstart.go*. Copy the following code into the *quickstart.go* file.
+
+        ```go
+        package main
+
+        import (
+        	"context"
+        	"fmt"
+        	"net/http"
+        	"os"
+        	"log"
+
+        	"github.com/Azure/azure-sdk-for-go/sdk/ai/azopenai"
+        	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+        	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
+        )
+
+        func main() {
+        	azureOpenAIEndpoint := os.Getenv("AZURE_OPENAI_ENDPOINT")
+        	modelDeploymentID := "dall-e-3"
+
+        	azureOpenAIKey := os.Getenv("AZURE_OPENAI_API_KEY")
+        	credential := azcore.NewKeyCredential(azureOpenAIKey)
+
+        	client, err := azopenai.NewClientWithKeyCredential(
+        		azureOpenAIEndpoint, credential, nil)
+        	if err != nil {
+        		log.Printf("ERROR: %s", err)
+        		return
+        	}
+
+        	resp, err := client.GetImageGenerations(context.TODO(), azopenai.ImageGenerationOptions{
+        		Prompt:         to.Ptr("A painting of a cat in the style of Dali."),
+        		ResponseFormat: to.Ptr(azopenai.ImageGenerationResponseFormatURL),
+        		DeploymentName: to.Ptr(modelDeploymentID),
+        	}, nil)
+
+        	if err != nil {
+        		// Implement application specific error handling logic.
+        		log.Printf("ERROR: %s", err)
+        		return
+        	}
+
+        	for _, generatedImage := range resp.Data {
+        		// The underlying type for the generatedImage is determined by the value of
+        		// ImageGenerationOptions.ResponseFormat. 
+        		// In this example we use `azopenai.ImageGenerationResponseFormatURL`,
+        		// so the underlying type will be ImageLocation.
+
+        		resp, err := http.Head(*generatedImage.URL)
+
+        		if err != nil {
+        			// Implement application specific error handling logic.
+        			log.Printf("ERROR: %s", err)
+        			return
+        		}
+
+        		fmt.Fprintf(os.Stderr, "Image generated, HEAD request on URL returned %d\nImage URL: %s\n", resp.StatusCode, *generatedImage.URL)
+        	}
+        }
+        ```
+
+    1. Run the following command to create a new Go module:
+
+    	```shell
+    	go mod init quickstart.go
+    	```
+
+    1. Run `go mod tidy` to install the required dependencies:
+
+        ```cmd
+        go mod tidy
+        ```
+
+    1. Run the following command to run the sample:
+
+    	```shell
+    	go run quickstart.go
+    	```
+
+  </Tab>
+</Tabs>
 
 ## Output
 
@@ -1694,26 +1734,29 @@ For the recommended keyless authentication with Microsoft Entra ID, you need to:
 
 You need to retrieve the following information to authenticate your application with your Azure OpenAI resource:
 
-#### [Microsoft Entra ID](#tab/keyless)
+<Tabs>
+  <Tab title="Microsoft Entra ID">
 
-|Variable name | Value |
-|--------------------------|-------------|
-| `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
-| `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
+    |Variable name | Value |
+    |--------------------------|-------------|
+    | `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
+    | `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
 
-Learn more about [keyless authentication](https://learn.microsoft.com/azure/ai-services/authentication) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
+    Learn more about [keyless authentication](https://learn.microsoft.com/azure/ai-services/authentication) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
 
-#### [API key](#tab/api-key)
+  </Tab>
+  <Tab title="API key">
 
-|Variable name | Value |
-|--------------------------|-------------|
-| `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
-| `AZURE_OPENAI_API_KEY` | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. You can use either `KEY1` or `KEY2`.|
-| `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
+    |Variable name | Value |
+    |--------------------------|-------------|
+    | `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
+    | `AZURE_OPENAI_API_KEY` | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. You can use either `KEY1` or `KEY2`.|
+    | `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
 
-Learn more about [finding API keys](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
+    Learn more about [finding API keys](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
 
----
+  </Tab>
+</Tabs>
 
 ## Generate images
 

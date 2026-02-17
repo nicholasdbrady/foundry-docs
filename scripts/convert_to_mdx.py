@@ -358,7 +358,7 @@ def convert_tabs(content: str) -> str:
         line = lines[i]
 
         # Check for tab header: # [Title](#tab/id)
-        tab_match = re.match(r'^#\s+\[([^\]]+)\]\(#tab/([^)]+)\)\s*$', line)
+        tab_match = re.match(r'^#{1,6}\s+\[([^\]]+)\]\(#tab/([^)]+)\)\s*$', line)
 
         if tab_match:
             tab_title = tab_match.group(1)
@@ -410,12 +410,70 @@ def convert_tabs(content: str) -> str:
 
 
 def convert_zone_pivots(content: str) -> str:
-    """Convert :::zone pivot="..." blocks. Keep content, strip markers."""
-    content = re.sub(r':::zone\s+pivot="[^"]*"\s*\n?', '', content)
-    content = re.sub(r'::: zone\s+pivot="[^"]*"\s*\n?', '', content)
-    content = re.sub(r':::zone-end\s*\n?', '', content)
-    content = re.sub(r'::: zone-end\s*\n?', '', content)
-    return content
+    """Convert :::zone pivot="..." blocks to Mintlify <Tabs>/<Tab> components."""
+    lines = content.split("\n")
+    result = []
+    i = 0
+    zones = []  # stack of (pivot_name, start_index)
+    zone_groups = []  # list of (pivot_name, content_lines) for consecutive zones
+
+    def flush_zone_group():
+        """Convert accumulated consecutive zones into a <Tabs> block."""
+        if not zone_groups:
+            return
+        if len(zone_groups) == 1:
+            # Single zone: just output content without tabs wrapper
+            result.extend(zone_groups[0][1])
+        else:
+            result.append("<Tabs>")
+            for pivot_name, zone_lines in zone_groups:
+                title = pivot_name.replace("-", " ").title()
+                result.append(f'  <Tab title="{title}">')
+                for line in zone_lines:
+                    result.append(f"  {line}" if line.strip() else "")
+                result.append("  </Tab>")
+            result.append("</Tabs>")
+        zone_groups.clear()
+
+    while i < len(lines):
+        line = lines[i]
+
+        # Match zone start: :::zone pivot="python" or ::: zone pivot="python"
+        zone_start = re.match(r':::\s*zone\s+pivot="([^"]+)"\s*$', line)
+        if zone_start:
+            pivot_name = zone_start.group(1)
+            zones.append((pivot_name, []))
+            i += 1
+            continue
+
+        # Match zone end: :::zone-end or ::: zone-end
+        if re.match(r':::\s*zone-end\s*$', line):
+            if zones:
+                pivot_name, zone_content = zones.pop()
+                zone_groups.append((pivot_name, zone_content))
+            i += 1
+            # Peek ahead: if next non-blank line is NOT another zone start, flush
+            j = i
+            while j < len(lines) and not lines[j].strip():
+                j += 1
+            if j >= len(lines) or not re.match(r':::\s*zone\s+pivot="', lines[j]):
+                flush_zone_group()
+            continue
+
+        if zones:
+            zones[-1][1].append(line)
+        else:
+            # If we have pending zone groups and hit non-zone content, flush first
+            if zone_groups:
+                flush_zone_group()
+            result.append(line)
+
+        i += 1
+
+    # Flush any remaining
+    flush_zone_group()
+
+    return "\n".join(result)
 
 
 def rewrite_links(content: str, source_path: str) -> str:

@@ -14,6 +14,7 @@ In this quickstart, you transcribe speech to text using the [Azure OpenAI Whispe
 <Tip>
 This quickstart takes approximately 10-15 minutes to complete.
 </Tip>
+
 ## Prerequisites
 
 - An Azure subscription - [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
@@ -366,43 +367,49 @@ For the recommended keyless authentication with Microsoft Entra ID, you need to:
 
 You need to retrieve the following information to authenticate your application with your Azure OpenAI resource:
 
-#### [Microsoft Entra ID](#tab/keyless)
+<Tabs>
+  <Tab title="Microsoft Entra ID">
 
-|Variable name | Value |
-|--------------------------|-------------|
-| `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
-| `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
+    |Variable name | Value |
+    |--------------------------|-------------|
+    | `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
+    | `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
 
-Learn more about [keyless authentication](https://learn.microsoft.com/azure/ai-services/authentication) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
+    Learn more about [keyless authentication](https://learn.microsoft.com/azure/ai-services/authentication) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
 
-#### [API key](#tab/api-key)
+  </Tab>
+  <Tab title="API key">
 
-|Variable name | Value |
-|--------------------------|-------------|
-| `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
-| `AZURE_OPENAI_API_KEY` | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. You can use either `KEY1` or `KEY2`.|
-| `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
+    |Variable name | Value |
+    |--------------------------|-------------|
+    | `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
+    | `AZURE_OPENAI_API_KEY` | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. You can use either `KEY1` or `KEY2`.|
+    | `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
 
-Learn more about [finding API keys](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
+    Learn more about [finding API keys](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
 
----
+  </Tab>
+</Tabs>
 
 ## Run the quickstart
 
 The sample code in this quickstart uses Microsoft Entra ID for the recommended keyless authentication. If you prefer to use an API key, you can replace the `DefaultAzureCredential` object with an `AzureKeyCredential` object. 
 
-#### [Microsoft Entra ID](#tab/keyless)
+<Tabs>
+  <Tab title="Microsoft Entra ID">
 
-```csharp
-AzureOpenAIClient openAIClient = new AzureOpenAIClient(new Uri(endpoint), new DefaultAzureCredential()); 
-```
+    ```csharp
+    AzureOpenAIClient openAIClient = new AzureOpenAIClient(new Uri(endpoint), new DefaultAzureCredential()); 
+    ```
 
-#### [API key](#tab/api-key)
+  </Tab>
+  <Tab title="API key">
 
-```csharp
-AzureOpenAIClient openAIClient = new AzureOpenAIClient(new Uri(endpoint), new AzureKeyCredential(key));
-```
----
+    ```csharp
+    AzureOpenAIClient openAIClient = new AzureOpenAIClient(new Uri(endpoint), new AzureKeyCredential(key));
+    ```
+  </Tab>
+</Tabs>
 
 <Note>
 You can get sample audio files, such as *wikipediaOcelot.wav*, from the [Azure Speech in Foundry Tools SDK repository at GitHub](https://github.com/Azure-Samples/cognitive-services-speech-sdk/tree/master/sampledata/audiofiles).
@@ -507,148 +514,154 @@ For the recommended keyless authentication with Microsoft Entra ID, you need to:
 
 You need to retrieve the following information to authenticate your application with your Azure OpenAI resource:
 
-#### [Microsoft Entra ID](#tab/keyless)
+<Tabs>
+  <Tab title="Microsoft Entra ID">
 
-|Variable name | Value |
-|--------------------------|-------------|
-| `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
-| `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
+    |Variable name | Value |
+    |--------------------------|-------------|
+    | `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
+    | `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
 
-Learn more about [keyless authentication](https://learn.microsoft.com/azure/ai-services/authentication) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
+    Learn more about [keyless authentication](https://learn.microsoft.com/azure/ai-services/authentication) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
 
-#### [API key](#tab/api-key)
+  </Tab>
+  <Tab title="API key">
 
-|Variable name | Value |
-|--------------------------|-------------|
-| `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
-| `AZURE_OPENAI_API_KEY` | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. You can use either `KEY1` or `KEY2`.|
-| `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
+    |Variable name | Value |
+    |--------------------------|-------------|
+    | `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
+    | `AZURE_OPENAI_API_KEY` | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. You can use either `KEY1` or `KEY2`.|
+    | `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
 
-Learn more about [finding API keys](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
+    Learn more about [finding API keys](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
 
----
+  </Tab>
+</Tabs>
 
 <Danger>
 To use the recommended keyless authentication with the SDK, make sure that the `AZURE_OPENAI_API_KEY` environment variable isn't set.
 </Danger>
 ## Create a sample application
 
-#### [Microsoft Entra ID](#tab/keyless)
+<Tabs>
+  <Tab title="Microsoft Entra ID">
 
-1. Create the `index.js` file with the following code: 
+    1. Create the `index.js` file with the following code: 
 
-    ```javascript
-    const { createReadStream } = require("fs");
-    const { AzureOpenAI } = require("openai");
-    const { DefaultAzureCredential, getBearerTokenProvider } = require("@azure/identity");
-    
-    // You will need to set these environment variables or edit the following values
-    const audioFilePath = "<audio file path>";
-    const endpoint = process.env.AZURE_OPENAI_ENDPOINT || "Your endpoint";
-    
-    // Required Azure OpenAI deployment name and API version
-    const apiVersion = process.env.OPENAI_API_VERSION || "2024-08-01-preview";
-    const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "whisper";
-    
-    // keyless authentication    
-    const credential = new DefaultAzureCredential();
-    const scope = "https://cognitiveservices.azure.com/.default";
-    const azureADTokenProvider = getBearerTokenProvider(credential, scope);
+        ```javascript
+        const { createReadStream } = require("fs");
+        const { AzureOpenAI } = require("openai");
+        const { DefaultAzureCredential, getBearerTokenProvider } = require("@azure/identity");
 
-    function getClient() {
-      return new AzureOpenAI({
-        endpoint,
-        azureADTokenProvider,
-        apiVersion,
-        deployment: deploymentName,
-      });
-    }
-    
-    export async function main() {
-      console.log("== Transcribe Audio Sample ==");
-    
-      const client = getClient();
-      const result = await client.audio.transcriptions.create({
-        model: "",
-        file: createReadStream(audioFilePath),
-      });
-    
-      console.log(`Transcription: ${result.text}`);
-    }
-    
-    main().catch((err) => {
-      console.error("The sample encountered an error:", err);
-    });
-    ```
+        // You will need to set these environment variables or edit the following values
+        const audioFilePath = "<audio file path>";
+        const endpoint = process.env.AZURE_OPENAI_ENDPOINT || "Your endpoint";
 
-1. Sign in to Azure with the following command:
+        // Required Azure OpenAI deployment name and API version
+        const apiVersion = process.env.OPENAI_API_VERSION || "2024-08-01-preview";
+        const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "whisper";
 
-    ```shell
-    az login
-    ```
+        // keyless authentication    
+        const credential = new DefaultAzureCredential();
+        const scope = "https://cognitiveservices.azure.com/.default";
+        const azureADTokenProvider = getBearerTokenProvider(credential, scope);
 
-1. Run the JavaScript file.
+        function getClient() {
+          return new AzureOpenAI({
+            endpoint,
+            azureADTokenProvider,
+            apiVersion,
+            deployment: deploymentName,
+          });
+        }
 
-    ```shell
-    node index.js
-    ```
+        export async function main() {
+          console.log("== Transcribe Audio Sample ==");
 
-## [API key](#tab/api-key)
+          const client = getClient();
+          const result = await client.audio.transcriptions.create({
+            model: "",
+            file: createReadStream(audioFilePath),
+          });
 
-1. Create the `index.js` file with the following code: 
-    
-    ```javascript
-    import { createReadStream } from "fs";
-    import { AzureOpenAI } from "openai";
-    
-    // You will need to set these environment variables or edit the following values
-    const audioFilePath = "<audio file path>";
-    const endpoint = process.env.AZURE_OPENAI_ENDPOINT || "Your endpoint";
-    const apiKey = process.env.AZURE_OPENAI_API_KEY || "Your API key";
-    
-    // Required Azure OpenAI deployment name and API version
-    const apiVersion = "2024-08-01-preview";
-    const deploymentName = "whisper";
-    
-    function getClient(): AzureOpenAI {
-      return new AzureOpenAI({
-        endpoint,
-        apiKey,
-        apiVersion,
-        deployment: deploymentName,
-      });
-    }
-    
-    export async function main() {
-      console.log("== Transcribe Audio Sample ==");
-    
-      const client = getClient();
-      const result = await client.audio.transcriptions.create({
-        model: "",
-        file: createReadStream(audioFilePath),
-      });
-    
-      console.log(`Transcription: ${result.text}`);
-    }
-    
-    main().catch((err) => {
-      console.error("The sample encountered an error:", err);
-    });
-    ```
+          console.log(`Transcription: ${result.text}`);
+        }
 
-1. Sign in to Azure with the following command:
+        main().catch((err) => {
+          console.error("The sample encountered an error:", err);
+        });
+        ```
 
-    ```shell
-    az login
-    ```
+    1. Sign in to Azure with the following command:
 
-1. Run the JavaScript file.
+        ```shell
+        az login
+        ```
 
-    ```shell
-    node index.js
-    ```
+    1. Run the JavaScript file.
 
----
+        ```shell
+        node index.js
+        ```
+
+  </Tab>
+  <Tab title="API key">
+
+    1. Create the `index.js` file with the following code: 
+
+        ```javascript
+        import { createReadStream } from "fs";
+        import { AzureOpenAI } from "openai";
+
+        // You will need to set these environment variables or edit the following values
+        const audioFilePath = "<audio file path>";
+        const endpoint = process.env.AZURE_OPENAI_ENDPOINT || "Your endpoint";
+        const apiKey = process.env.AZURE_OPENAI_API_KEY || "Your API key";
+
+        // Required Azure OpenAI deployment name and API version
+        const apiVersion = "2024-08-01-preview";
+        const deploymentName = "whisper";
+
+        function getClient(): AzureOpenAI {
+          return new AzureOpenAI({
+            endpoint,
+            apiKey,
+            apiVersion,
+            deployment: deploymentName,
+          });
+        }
+
+        export async function main() {
+          console.log("== Transcribe Audio Sample ==");
+
+          const client = getClient();
+          const result = await client.audio.transcriptions.create({
+            model: "",
+            file: createReadStream(audioFilePath),
+          });
+
+          console.log(`Transcription: ${result.text}`);
+        }
+
+        main().catch((err) => {
+          console.error("The sample encountered an error:", err);
+        });
+        ```
+
+    1. Sign in to Azure with the following command:
+
+        ```shell
+        az login
+        ```
+
+    1. Run the JavaScript file.
+
+        ```shell
+        node index.js
+        ```
+
+  </Tab>
+</Tabs>
 
 You can get sample audio files, such as *wikipediaOcelot.wav*, from the [Azure Speech in Foundry Tools SDK repository at GitHub](https://github.com/Azure-Samples/cognitive-services-speech-sdk/tree/master/sampledata/audiofiles).
 
@@ -710,184 +723,190 @@ For the recommended keyless authentication with Microsoft Entra ID, you need to:
 
 You need to retrieve the following information to authenticate your application with your Azure OpenAI resource:
 
-#### [Microsoft Entra ID](#tab/keyless)
+<Tabs>
+  <Tab title="Microsoft Entra ID">
 
-|Variable name | Value |
-|--------------------------|-------------|
-| `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
-| `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
+    |Variable name | Value |
+    |--------------------------|-------------|
+    | `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
+    | `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
 
-Learn more about [keyless authentication](https://learn.microsoft.com/azure/ai-services/authentication) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
+    Learn more about [keyless authentication](https://learn.microsoft.com/azure/ai-services/authentication) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
 
-#### [API key](#tab/api-key)
+  </Tab>
+  <Tab title="API key">
 
-|Variable name | Value |
-|--------------------------|-------------|
-| `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
-| `AZURE_OPENAI_API_KEY` | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. You can use either `KEY1` or `KEY2`.|
-| `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
+    |Variable name | Value |
+    |--------------------------|-------------|
+    | `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
+    | `AZURE_OPENAI_API_KEY` | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. You can use either `KEY1` or `KEY2`.|
+    | `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
 
-Learn more about [finding API keys](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
+    Learn more about [finding API keys](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
 
----
+  </Tab>
+</Tabs>
 
 <Danger>
 To use the recommended keyless authentication with the SDK, make sure that the `AZURE_OPENAI_API_KEY` environment variable isn't set.
 </Danger>
 ## Create a sample application
 
-#### [Microsoft Entra ID](#tab/typescript-keyless)
+<Tabs>
+  <Tab title="Microsoft Entra ID">
 
-1. Create the `index.ts` file with the following code:
-    
-    ```typescript
-    import { createReadStream } from "fs";
-    import { AzureOpenAI } from "openai";
-    import { DefaultAzureCredential, getBearerTokenProvider } from "@azure/identity";
+    1. Create the `index.ts` file with the following code:
 
-    // You will need to set these environment variables or edit the following values
-    const audioFilePath = "<audio file path>";
-    const endpoint = process.env.AZURE_OPENAI_ENDPOINT || "Your endpoint";
-    
-    // Required Azure OpenAI deployment name and API version
-    const apiVersion = process.env.OPENAI_API_VERSION || "2024-08-01-preview";
-    const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "whisper";
+        ```typescript
+        import { createReadStream } from "fs";
+        import { AzureOpenAI } from "openai";
+        import { DefaultAzureCredential, getBearerTokenProvider } from "@azure/identity";
 
-    // keyless authentication    
-    const credential = new DefaultAzureCredential();
-    const scope = "https://cognitiveservices.azure.com/.default";
-    const azureADTokenProvider = getBearerTokenProvider(credential, scope);
-    
-    function getClient(): AzureOpenAI {
-      return new AzureOpenAI({
-        endpoint,
-        azureADTokenProvider,
-        apiVersion,
-        deployment: deploymentName,
-      });
-    }
-    
-    export async function main() {
-      console.log("== Transcribe Audio Sample ==");
-    
-      const client = getClient();
-      const result = await client.audio.transcriptions.create({
-        model: "",
-        file: createReadStream(audioFilePath),
-      });
-    
-      console.log(`Transcription: ${result.text}`);
-    }
-    
-    main().catch((err) => {
-      console.error("The sample encountered an error:", err);
-    });
-    ```
+        // You will need to set these environment variables or edit the following values
+        const audioFilePath = "<audio file path>";
+        const endpoint = process.env.AZURE_OPENAI_ENDPOINT || "Your endpoint";
 
-1. Create the `tsconfig.json` file to transpile the TypeScript code and copy the following code for ECMAScript.
+        // Required Azure OpenAI deployment name and API version
+        const apiVersion = process.env.OPENAI_API_VERSION || "2024-08-01-preview";
+        const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "whisper";
 
-    ```json
-    {
-        "compilerOptions": {
-          "module": "NodeNext",
-          "target": "ES2022", // Supports top-level await
-          "moduleResolution": "NodeNext",
-          "skipLibCheck": true, // Avoid type errors from node_modules
-          "strict": true // Enable strict type-checking options
-        },
-        "include": ["*.ts"]
-    }
-    ```
+        // keyless authentication    
+        const credential = new DefaultAzureCredential();
+        const scope = "https://cognitiveservices.azure.com/.default";
+        const azureADTokenProvider = getBearerTokenProvider(credential, scope);
 
-1. Transpile from TypeScript to JavaScript.
+        function getClient(): AzureOpenAI {
+          return new AzureOpenAI({
+            endpoint,
+            azureADTokenProvider,
+            apiVersion,
+            deployment: deploymentName,
+          });
+        }
 
-    ```shell
-    tsc
-    ```
-    
-1. Sign in to Azure with the following command:
+        export async function main() {
+          console.log("== Transcribe Audio Sample ==");
 
-    ```shell
-    az login
-    ```
+          const client = getClient();
+          const result = await client.audio.transcriptions.create({
+            model: "",
+            file: createReadStream(audioFilePath),
+          });
 
-1. Run the code with the following command:
+          console.log(`Transcription: ${result.text}`);
+        }
 
-    ```shell
-    node index.js
-    ```
+        main().catch((err) => {
+          console.error("The sample encountered an error:", err);
+        });
+        ```
 
-#### [API key](#tab/typescript-key)
+    1. Create the `tsconfig.json` file to transpile the TypeScript code and copy the following code for ECMAScript.
 
-1. Create the `index.ts` file with the following code:
-    
-    ```typescript
-    import { createReadStream } from "fs";
-    import { AzureOpenAI } from "openai";
-    
-    // You will need to set these environment variables or edit the following values
-    const audioFilePath = "<audio file path>";
-    const endpoint = process.env.AZURE_OPENAI_ENDPOINT || "Your endpoint";
-    const apiKey = process.env.AZURE_OPENAI_API_KEY || "Your API key";
-    
-    // Required Azure OpenAI deployment name and API version
-    const apiVersion = process.env.OPENAI_API_VERSION || "2024-08-01-preview";
-    const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "whisper";
-    
-    function getClient(): AzureOpenAI {
-      return new AzureOpenAI({
-        endpoint,
-        apiKey,
-        apiVersion,
-        deployment: deploymentName,
-      });
-    }
-    
-    export async function main() {
-      console.log("== Transcribe Audio Sample ==");
-    
-      const client = getClient();
-      const result = await client.audio.transcriptions.create({
-        model: "",
-        file: createReadStream(audioFilePath),
-      });
-    
-      console.log(`Transcription: ${result.text}`);
-    }
-    
-    main().catch((err) => {
-      console.error("The sample encountered an error:", err);
-    });
-    ```
+        ```json
+        {
+            "compilerOptions": {
+              "module": "NodeNext",
+              "target": "ES2022", // Supports top-level await
+              "moduleResolution": "NodeNext",
+              "skipLibCheck": true, // Avoid type errors from node_modules
+              "strict": true // Enable strict type-checking options
+            },
+            "include": ["*.ts"]
+        }
+        ```
 
-1. Create the `tsconfig.json` file to transpile the TypeScript code and copy the following code for ECMAScript.
+    1. Transpile from TypeScript to JavaScript.
 
-    ```json
-    {
-        "compilerOptions": {
-          "module": "NodeNext",
-          "target": "ES2022", // Supports top-level await
-          "moduleResolution": "NodeNext",
-          "skipLibCheck": true, // Avoid type errors from node_modules
-          "strict": true // Enable strict type-checking options
-        },
-        "include": ["*.ts"]
-    }
-    ```
+        ```shell
+        tsc
+        ```
 
-1. Transpile from TypeScript to JavaScript.
+    1. Sign in to Azure with the following command:
 
-    ```shell
-    tsc
-    ```
-    
-1. Run the code with the following command:
+        ```shell
+        az login
+        ```
 
-    ```shell
-    node index.js
-    ```
+    1. Run the code with the following command:
 
----
+        ```shell
+        node index.js
+        ```
+
+  </Tab>
+  <Tab title="API key">
+
+    1. Create the `index.ts` file with the following code:
+
+        ```typescript
+        import { createReadStream } from "fs";
+        import { AzureOpenAI } from "openai";
+
+        // You will need to set these environment variables or edit the following values
+        const audioFilePath = "<audio file path>";
+        const endpoint = process.env.AZURE_OPENAI_ENDPOINT || "Your endpoint";
+        const apiKey = process.env.AZURE_OPENAI_API_KEY || "Your API key";
+
+        // Required Azure OpenAI deployment name and API version
+        const apiVersion = process.env.OPENAI_API_VERSION || "2024-08-01-preview";
+        const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "whisper";
+
+        function getClient(): AzureOpenAI {
+          return new AzureOpenAI({
+            endpoint,
+            apiKey,
+            apiVersion,
+            deployment: deploymentName,
+          });
+        }
+
+        export async function main() {
+          console.log("== Transcribe Audio Sample ==");
+
+          const client = getClient();
+          const result = await client.audio.transcriptions.create({
+            model: "",
+            file: createReadStream(audioFilePath),
+          });
+
+          console.log(`Transcription: ${result.text}`);
+        }
+
+        main().catch((err) => {
+          console.error("The sample encountered an error:", err);
+        });
+        ```
+
+    1. Create the `tsconfig.json` file to transpile the TypeScript code and copy the following code for ECMAScript.
+
+        ```json
+        {
+            "compilerOptions": {
+              "module": "NodeNext",
+              "target": "ES2022", // Supports top-level await
+              "moduleResolution": "NodeNext",
+              "skipLibCheck": true, // Avoid type errors from node_modules
+              "strict": true // Enable strict type-checking options
+            },
+            "include": ["*.ts"]
+        }
+        ```
+
+    1. Transpile from TypeScript to JavaScript.
+
+        ```shell
+        tsc
+        ```
+
+    1. Run the code with the following command:
+
+        ```shell
+        node index.js
+        ```
+
+  </Tab>
+</Tabs>
 
 You can get sample audio files, such as *wikipediaOcelot.wav*, from the [Azure Speech in Foundry Tools SDK repository at GitHub](https://github.com/Azure-Samples/cognitive-services-speech-sdk/tree/master/sampledata/audiofiles).
 

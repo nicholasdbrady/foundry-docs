@@ -26,102 +26,105 @@ To use vision-enabled models, you call the Chat Completion API on a supported mo
 
 The following command shows the most basic way to use a vision-enabled chat model with code. If this is your first time using these models programmatically, we recommend starting with our [Chat with images quickstart](/models/capabilities/gpt-v-quickstart). 
 
-#### [REST](#tab/rest)
+<Tabs>
+  <Tab title="REST">
 
-Send a POST request to `https://{RESOURCE_NAME}.openai.azure.com/openai/v1/chat/completions` where
+    Send a POST request to `https://{RESOURCE_NAME}.openai.azure.com/openai/v1/chat/completions` where
 
-- RESOURCE_NAME is the name of your Azure OpenAI resource 
+    - RESOURCE_NAME is the name of your Azure OpenAI resource 
 
-**Required headers**: 
-- `Content-Type`: application/json 
-- `api-key`: {API_KEY} 
+    **Required headers**: 
+    - `Content-Type`: application/json 
+    - `api-key`: {API_KEY} 
 
-**Body**: 
-The following is a sample request body. The format is the same as the chat completions API for GPT-4o, except that the message content can be an array containing text and images (either a valid publicly accessible HTTP or HTTPS URL to an image, or a base-64-encoded image).
-
-<Info>
-Remember to set a `"max_tokens"` or `max_completion_tokens` value, or the return output will be cut off. For o-series reasoning models, use `max_completion_tokens` instead of `max_tokens`.
-</Info>
-<Info>
-When uploading images, there is a limit of 10 images per chat request.
-</Info>
-<Note>
-Supported image formats include JPEG, PNG, GIF (first frame only), and WEBP.
-</Note>
-```json
-{
-    "model": "MODEL-DEPLOYMENT-NAME",
-    "messages": [ 
-        {
-            "role": "system", 
-            "content": "You are a helpful assistant." 
-        },
-        {
-            "role": "user", 
-            "content": [
-	            {
-	                "type": "text",
-	                "text": "Describe this picture:"
-	            },
-	            {
-	                "type": "image_url",
-	                "image_url": {
-                        "url": "<image URL>"
-                    }
-                } 
-           ] 
-        }
-    ],
-    "max_tokens": 100, 
-    "stream": false 
-} 
-```
-
-#### [Python](#tab/python)
-
-1. Define your Azure OpenAI `base_url` and `api-key`. 
-1. Create a client object using those values.
-
-    ```python
-    import os
-    from openai import OpenAI
-    
-    client = OpenAI(
-        api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-        base_url="https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/",
-    )
-    ```
-
-1. Then call the client's **create** method. The following code shows a sample request body. The format is the same as the chat completions API for GPT-4o, except that the message content can be an array containing text and images (either a valid HTTP or HTTPS URL to an image, or a base-64-encoded image). 
+    **Body**: 
+    The following is a sample request body. The format is the same as the chat completions API for GPT-4o, except that the message content can be an array containing text and images (either a valid publicly accessible HTTP or HTTPS URL to an image, or a base-64-encoded image).
 
     <Info>
-
-</Info>    > Remember to set a `"max_tokens"` or `max_completion_tokens` value, or the return output will be cut off. For o-series reasoning models, use `max_completion_tokens` instead of `max_tokens`.
-    
-    ```python
-    response = client.chat.completions.create(
-        model="MODEL-DEPLOYMENT-NAME",
-        messages=[
-            { "role": "system", "content": "You are a helpful assistant." },
-            { "role": "user", "content": [  
-                { 
-                    "type": "text", 
-                    "text": "Describe this picture:" 
-                },
-                { 
-                    "type": "image_url",
-                    "image_url": {
-                        "url": "<image URL>"
-                    }
-                }
-            ] } 
+    Remember to set a `"max_tokens"` or `max_completion_tokens` value, or the return output will be cut off. For o-series reasoning models, use `max_completion_tokens` instead of `max_tokens`.
+    </Info>
+    <Info>
+    When uploading images, there is a limit of 10 images per chat request.
+    </Info>
+    <Note>
+    Supported image formats include JPEG, PNG, GIF (first frame only), and WEBP.
+    </Note>
+    ```json
+    {
+        "model": "MODEL-DEPLOYMENT-NAME",
+        "messages": [ 
+            {
+                "role": "system", 
+                "content": "You are a helpful assistant." 
+            },
+            {
+                "role": "user", 
+                "content": [
+    	            {
+    	                "type": "text",
+    	                "text": "Describe this picture:"
+    	            },
+    	            {
+    	                "type": "image_url",
+    	                "image_url": {
+                            "url": "<image URL>"
+                        }
+                    } 
+               ] 
+            }
         ],
-        max_tokens=2000 
-    )
-    print(response)
+        "max_tokens": 100, 
+        "stream": false 
+    } 
     ```
 
----
+  </Tab>
+  <Tab title="Python">
+
+    1. Define your Azure OpenAI `base_url` and `api-key`. 
+    1. Create a client object using those values.
+
+        ```python
+        import os
+        from openai import OpenAI
+
+        client = OpenAI(
+            api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+            base_url="https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/",
+        )
+        ```
+
+    1. Then call the client's **create** method. The following code shows a sample request body. The format is the same as the chat completions API for GPT-4o, except that the message content can be an array containing text and images (either a valid HTTP or HTTPS URL to an image, or a base-64-encoded image). 
+
+        <Info>
+
+    </Info>    > Remember to set a `"max_tokens"` or `max_completion_tokens` value, or the return output will be cut off. For o-series reasoning models, use `max_completion_tokens` instead of `max_tokens`.
+
+        ```python
+        response = client.chat.completions.create(
+            model="MODEL-DEPLOYMENT-NAME",
+            messages=[
+                { "role": "system", "content": "You are a helpful assistant." },
+                { "role": "user", "content": [  
+                    { 
+                        "type": "text", 
+                        "text": "Describe this picture:" 
+                    },
+                    { 
+                        "type": "image_url",
+                        "image_url": {
+                            "url": "<image URL>"
+                        }
+                    }
+                ] } 
+            ],
+            max_tokens=2000 
+        )
+        print(response)
+        ```
+
+  </Tab>
+</Tabs>
 
 <Tip>
 ### Use a local image

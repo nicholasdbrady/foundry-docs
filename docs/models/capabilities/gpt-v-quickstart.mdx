@@ -418,26 +418,29 @@ For the recommended keyless authentication with Microsoft Entra ID, you need to:
 
 You need to retrieve the following information to authenticate your application with your Azure OpenAI resource:
 
-#### [Microsoft Entra ID](#tab/keyless)
+<Tabs>
+  <Tab title="Microsoft Entra ID">
 
-|Variable name | Value |
-|--------------------------|-------------|
-| `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
-| `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
+    |Variable name | Value |
+    |--------------------------|-------------|
+    | `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
+    | `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
 
-Learn more about [keyless authentication](https://learn.microsoft.com/azure/ai-services/authentication) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
+    Learn more about [keyless authentication](https://learn.microsoft.com/azure/ai-services/authentication) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
 
-#### [API key](#tab/api-key)
+  </Tab>
+  <Tab title="API key">
 
-|Variable name | Value |
-|--------------------------|-------------|
-| `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
-| `AZURE_OPENAI_API_KEY` | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. You can use either `KEY1` or `KEY2`.|
-| `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
+    |Variable name | Value |
+    |--------------------------|-------------|
+    | `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
+    | `AZURE_OPENAI_API_KEY` | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. You can use either `KEY1` or `KEY2`.|
+    | `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
 
-Learn more about [finding API keys](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
+    Learn more about [finding API keys](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
 
----
+  </Tab>
+</Tabs>
 
 <Danger>
 To use the recommended keyless authentication with the SDK, make sure that the `AZURE_OPENAI_API_KEY` environment variable isn't set.
@@ -452,167 +455,170 @@ If you use a SAS URL to an image stored in Azure blob storage, you need to enabl
 <Tip>
 You can also use a base 64 encoded image data instead of a URL. For more information, see the [Vision chats how-to guide](../how-to/gpt-with-vision.md#use-a-local-image).
 </Tip>
-## [Microsoft Entra ID](#tab/keyless)
+<Tabs>
+  <Tab title="Microsoft Entra ID">
 
-1. Create the `index.js` file with the following code:
-    
-    ```javascript
-    const AzureOpenAI = require('openai').AzureOpenAI;
-    const { 
-        DefaultAzureCredential, 
-        getBearerTokenProvider 
-    } = require('@azure/identity');
+    1. Create the `index.js` file with the following code:
 
-    // You will need to set these environment variables or edit the following values
-    const endpoint = process.env.AZURE_OPENAI_ENDPOINT || "Your endpoint";
-    const imageUrl = process.env.IMAGE_URL || "<image url>";
-    
-    // Required Azure OpenAI deployment name and API version
-    const apiVersion = process.env.OPENAI_API_VERSION || "2024-07-01-preview";
-    const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "gpt-4-with-turbo";
-    
-    // keyless authentication    
-    const credential = new DefaultAzureCredential();
-    const scope = "https://cognitiveservices.azure.com/.default";
-    const azureADTokenProvider = getBearerTokenProvider(credential, scope);
+        ```javascript
+        const AzureOpenAI = require('openai').AzureOpenAI;
+        const { 
+            DefaultAzureCredential, 
+            getBearerTokenProvider 
+        } = require('@azure/identity');
 
-    function getClient(): AzureOpenAI {
-      return new AzureOpenAI({
-        endpoint,
-        azureADTokenProvider,
-        apiVersion,
-        deployment: deploymentName,
-      });
-    }
-    function createMessages() {
-      return {
-        messages: [
-          { role: "system", content: "You are a helpful assistant." },
-          {
-            role: "user",
-            content: [
+        // You will need to set these environment variables or edit the following values
+        const endpoint = process.env.AZURE_OPENAI_ENDPOINT || "Your endpoint";
+        const imageUrl = process.env.IMAGE_URL || "<image url>";
+
+        // Required Azure OpenAI deployment name and API version
+        const apiVersion = process.env.OPENAI_API_VERSION || "2024-07-01-preview";
+        const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "gpt-4-with-turbo";
+
+        // keyless authentication    
+        const credential = new DefaultAzureCredential();
+        const scope = "https://cognitiveservices.azure.com/.default";
+        const azureADTokenProvider = getBearerTokenProvider(credential, scope);
+
+        function getClient(): AzureOpenAI {
+          return new AzureOpenAI({
+            endpoint,
+            azureADTokenProvider,
+            apiVersion,
+            deployment: deploymentName,
+          });
+        }
+        function createMessages() {
+          return {
+            messages: [
+              { role: "system", content: "You are a helpful assistant." },
               {
-                type: "text",
-                text: "Describe this picture:",
-              },
-              {
-                type: "image_url",
-                image_url: {
-                  url: imageUrl,
-                },
-              },
-            ],
-          },
-        ],
-        model: "",
-        max_tokens: 2000,
-      };
-    }
-    async function printChoices(completion) {
-      for (const choice of completion.choices) {
-        console.log(choice.message);
-      }
-    }
-    export async function main() {
-      console.log("== Get Vision chats Sample ==");
-    
-      const client = getClient();
-      const messages = createMessages();
-      const completion = await client.chat.completions.create(messages);
-      await printChoices(completion);
-    }
-    
-    main().catch((err) => {
-      console.error("Error occurred:", err);
-    });
-    ```
-
-1. Sign in to Azure with the following command:
-
-    ```shell
-    az login
-    ```
-
-1. Run the JavaScript file.
-
-    ```shell
-    node index.js
-    ```
-
-## [API key](#tab/api-key)
-
-1. Create the `index.js` file with the following code: 
-    
-    ```javascript
-    const { AzureOpenAI } = require("openai");
-    
-    // You will need to set these environment variables or edit the following values
-    const endpoint = process.env.AZURE_OPENAI_ENDPOINT || "Your endpoint";
-    const apiKey = process.env.AZURE_OPENAI_API_KEY || "Your API key";
-    const imageUrl = process.env.IMAGE_URL || "<image url>";
-    
-    // Required Azure OpenAI deployment name and API version
-    const apiVersion = process.env.OPENAI_API_VERSION || "2024-07-01-preview";
-    const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "gpt-4-with-turbo";
-    
-    function getClient() {
-      return new AzureOpenAI({
-        endpoint,
-        apiKey,
-        apiVersion,
-        deployment: deploymentName,
-      });
-    }
-    function createMessages() {
-      return {
-        messages: [
-          { role: "system", content: "You are a helpful assistant." },
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: "Describe this picture:",
-              },
-              {
-                type: "image_url",
-                image_url: {
-                  url: imageUrl,
-                },
+                role: "user",
+                content: [
+                  {
+                    type: "text",
+                    text: "Describe this picture:",
+                  },
+                  {
+                    type: "image_url",
+                    image_url: {
+                      url: imageUrl,
+                    },
+                  },
+                ],
               },
             ],
-          },
-        ],
-        model: "",
-        max_tokens: 2000,
-      };
-    }
-    async function printChoices(completion) {
-      for (const choice of completion.choices) {
-        console.log(choice.message);
-      }
-    }
-    export async function main() {
-      console.log("== Get Vision chats Sample ==");
-    
-      const client = getClient();
-      const messages = createMessages();
-      const completion = await client.chat.completions.create(messages);
-      await printChoices(completion);
-    }
-    
-    main().catch((err) => {
-      console.error("Error occurred:", err);
-    });
-    ```
+            model: "",
+            max_tokens: 2000,
+          };
+        }
+        async function printChoices(completion) {
+          for (const choice of completion.choices) {
+            console.log(choice.message);
+          }
+        }
+        export async function main() {
+          console.log("== Get Vision chats Sample ==");
 
-1. Run the JavaScript file.
+          const client = getClient();
+          const messages = createMessages();
+          const completion = await client.chat.completions.create(messages);
+          await printChoices(completion);
+        }
 
-    ```shell
-    node index.js
-    ```
+        main().catch((err) => {
+          console.error("Error occurred:", err);
+        });
+        ```
 
----
+    1. Sign in to Azure with the following command:
+
+        ```shell
+        az login
+        ```
+
+    1. Run the JavaScript file.
+
+        ```shell
+        node index.js
+        ```
+
+  </Tab>
+  <Tab title="API key">
+
+    1. Create the `index.js` file with the following code: 
+
+        ```javascript
+        const { AzureOpenAI } = require("openai");
+
+        // You will need to set these environment variables or edit the following values
+        const endpoint = process.env.AZURE_OPENAI_ENDPOINT || "Your endpoint";
+        const apiKey = process.env.AZURE_OPENAI_API_KEY || "Your API key";
+        const imageUrl = process.env.IMAGE_URL || "<image url>";
+
+        // Required Azure OpenAI deployment name and API version
+        const apiVersion = process.env.OPENAI_API_VERSION || "2024-07-01-preview";
+        const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "gpt-4-with-turbo";
+
+        function getClient() {
+          return new AzureOpenAI({
+            endpoint,
+            apiKey,
+            apiVersion,
+            deployment: deploymentName,
+          });
+        }
+        function createMessages() {
+          return {
+            messages: [
+              { role: "system", content: "You are a helpful assistant." },
+              {
+                role: "user",
+                content: [
+                  {
+                    type: "text",
+                    text: "Describe this picture:",
+                  },
+                  {
+                    type: "image_url",
+                    image_url: {
+                      url: imageUrl,
+                    },
+                  },
+                ],
+              },
+            ],
+            model: "",
+            max_tokens: 2000,
+          };
+        }
+        async function printChoices(completion) {
+          for (const choice of completion.choices) {
+            console.log(choice.message);
+          }
+        }
+        export async function main() {
+          console.log("== Get Vision chats Sample ==");
+
+          const client = getClient();
+          const messages = createMessages();
+          const completion = await client.chat.completions.create(messages);
+          await printChoices(completion);
+        }
+
+        main().catch((err) => {
+          console.error("Error occurred:", err);
+        });
+        ```
+
+    1. Run the JavaScript file.
+
+        ```shell
+        node index.js
+        ```
+
+  </Tab>
+</Tabs>
 
 <!--
 ## Troubleshooting
@@ -694,26 +700,29 @@ For the recommended keyless authentication with Microsoft Entra ID, you need to:
 
 You need to retrieve the following information to authenticate your application with your Azure OpenAI resource:
 
-#### [Microsoft Entra ID](#tab/keyless)
+<Tabs>
+  <Tab title="Microsoft Entra ID">
 
-|Variable name | Value |
-|--------------------------|-------------|
-| `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
-| `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
+    |Variable name | Value |
+    |--------------------------|-------------|
+    | `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
+    | `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
 
-Learn more about [keyless authentication](https://learn.microsoft.com/azure/ai-services/authentication) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
+    Learn more about [keyless authentication](https://learn.microsoft.com/azure/ai-services/authentication) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
 
-#### [API key](#tab/api-key)
+  </Tab>
+  <Tab title="API key">
 
-|Variable name | Value |
-|--------------------------|-------------|
-| `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
-| `AZURE_OPENAI_API_KEY` | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. You can use either `KEY1` or `KEY2`.|
-| `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
+    |Variable name | Value |
+    |--------------------------|-------------|
+    | `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
+    | `AZURE_OPENAI_API_KEY` | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. You can use either `KEY1` or `KEY2`.|
+    | `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
 
-Learn more about [finding API keys](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
+    Learn more about [finding API keys](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
 
----
+  </Tab>
+</Tabs>
 
 <Danger>
 To use the recommended keyless authentication with the SDK, make sure that the `AZURE_OPENAI_API_KEY` environment variable isn't set.
@@ -725,217 +734,220 @@ Select an image from the [azure-samples/cognitive-services-sample-data-files](ht
 <Tip>
 You can also use a base 64 encoded image data instead of a URL. For more information, see the [Vision chats how-to guide](../how-to/gpt-with-vision.md#use-a-local-image).
 </Tip>
-## [Microsoft Entra ID](#tab/typescript-keyless)
+<Tabs>
+  <Tab title="Microsoft Entra ID">
 
-1. Create the `index.ts` file with the following code:
-    
-    ```typescript
-    import { AzureOpenAI } from "openai";
-    import { 
-        DefaultAzureCredential, 
-        getBearerTokenProvider 
-    } from "@azure/identity";
-    import type {
-      ChatCompletion,
-      ChatCompletionCreateParamsNonStreaming,
-    } from "openai/resources/index";
-    
-    // You will need to set these environment variables or edit the following values
-    const endpoint = process.env.AZURE_OPENAI_ENDPOINT || "Your endpoint";
-    const imageUrl = process.env["IMAGE_URL"] || "<image url>";
-    
-    // Required Azure OpenAI deployment name and API version
-    const apiVersion = process.env.OPENAI_API_VERSION || "2024-07-01-preview";
-    const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "gpt-4-with-turbo";
-    
-    // keyless authentication    
-    const credential = new DefaultAzureCredential();
-    const scope = "https://cognitiveservices.azure.com/.default";
-    const azureADTokenProvider = getBearerTokenProvider(credential, scope);
+    1. Create the `index.ts` file with the following code:
 
-    function getClient(): AzureOpenAI {
-      return new AzureOpenAI({
-        endpoint,
-        azureADTokenProvider,
-        apiVersion,
-        deployment: deploymentName,
-      });
-    }
-    function createMessages(): ChatCompletionCreateParamsNonStreaming {
-      return {
-        messages: [
-          { role: "system", content: "You are a helpful assistant." },
-          {
-            role: "user",
-            content: [
+        ```typescript
+        import { AzureOpenAI } from "openai";
+        import { 
+            DefaultAzureCredential, 
+            getBearerTokenProvider 
+        } from "@azure/identity";
+        import type {
+          ChatCompletion,
+          ChatCompletionCreateParamsNonStreaming,
+        } from "openai/resources/index";
+
+        // You will need to set these environment variables or edit the following values
+        const endpoint = process.env.AZURE_OPENAI_ENDPOINT || "Your endpoint";
+        const imageUrl = process.env["IMAGE_URL"] || "<image url>";
+
+        // Required Azure OpenAI deployment name and API version
+        const apiVersion = process.env.OPENAI_API_VERSION || "2024-07-01-preview";
+        const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "gpt-4-with-turbo";
+
+        // keyless authentication    
+        const credential = new DefaultAzureCredential();
+        const scope = "https://cognitiveservices.azure.com/.default";
+        const azureADTokenProvider = getBearerTokenProvider(credential, scope);
+
+        function getClient(): AzureOpenAI {
+          return new AzureOpenAI({
+            endpoint,
+            azureADTokenProvider,
+            apiVersion,
+            deployment: deploymentName,
+          });
+        }
+        function createMessages(): ChatCompletionCreateParamsNonStreaming {
+          return {
+            messages: [
+              { role: "system", content: "You are a helpful assistant." },
               {
-                type: "text",
-                text: "Describe this picture:",
-              },
-              {
-                type: "image_url",
-                image_url: {
-                  url: imageUrl,
-                },
-              },
-            ],
-          },
-        ],
-        model: "",
-        max_tokens: 2000,
-      };
-    }
-    async function printChoices(completion: ChatCompletion): Promise<void> {
-      for (const choice of completion.choices) {
-        console.log(choice.message);
-      }
-    }
-    export async function main() {
-      console.log("== Get Vision chat Sample ==");
-    
-      const client = getClient();
-      const messages = createMessages();
-      const completion = await client.chat.completions.create(messages);
-      await printChoices(completion);
-    }
-    
-    main().catch((err) => {
-      console.error("Error occurred:", err);
-    });
-    ```
-
-1. Create the `tsconfig.json` file to transpile the TypeScript code and copy the following code for ECMAScript.
-
-    ```json
-    {
-        "compilerOptions": {
-          "module": "NodeNext",
-          "target": "ES2022", // Supports top-level await
-          "moduleResolution": "NodeNext",
-          "skipLibCheck": true, // Avoid type errors from node_modules
-          "strict": true // Enable strict type-checking options
-        },
-        "include": ["*.ts"]
-    }
-    ```
-
-1. Transpile from TypeScript to JavaScript.
-
-    ```shell
-    tsc
-    ```
-    
-1. Sign in to Azure with the following command:
-
-    ```shell
-    az login
-    ```
-
-1. Run the code with the following command:
-
-    ```shell
-    node index.js
-    ```
-
-## [API key](#tab/typescript-key)
-
-1. Create the `index.ts` file with the following code:
-    
-    ```typescript
-    import { AzureOpenAI } from "openai";
-    import type {
-      ChatCompletion,
-      ChatCompletionCreateParamsNonStreaming,
-    } from "openai/resources/index";
-    
-    // You will need to set these environment variables or edit the following values
-    const endpoint = process.env.AZURE_OPENAI_ENDPOINT || "Your endpoint";
-    const apiKey = process.env.AZURE_OPENAI_API_KEY || "Your API key";
-    const imageUrl = process.env["IMAGE_URL"] || "<image url>";
-    
-    // Required Azure OpenAI deployment name and API version
-    const apiVersion = process.env.OPENAI_API_VERSION || "2024-07-01-preview";
-    const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "gpt-4-with-turbo";
-    
-    function getClient(): AzureOpenAI {
-      return new AzureOpenAI({
-        endpoint,
-        apiKey,
-        apiVersion,
-        deployment: deploymentName,
-      });
-    }
-    function createMessages(): ChatCompletionCreateParamsNonStreaming {
-      return {
-        messages: [
-          { role: "system", content: "You are a helpful assistant." },
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: "Describe this picture:",
-              },
-              {
-                type: "image_url",
-                image_url: {
-                  url: imageUrl,
-                },
+                role: "user",
+                content: [
+                  {
+                    type: "text",
+                    text: "Describe this picture:",
+                  },
+                  {
+                    type: "image_url",
+                    image_url: {
+                      url: imageUrl,
+                    },
+                  },
+                ],
               },
             ],
-          },
-        ],
-        model: "",
-        max_tokens: 2000,
-      };
-    }
-    async function printChoices(completion: ChatCompletion): Promise<void> {
-      for (const choice of completion.choices) {
-        console.log(choice.message);
-      }
-    }
-    export async function main() {
-      console.log("== Get Vision chat Sample ==");
-    
-      const client = getClient();
-      const messages = createMessages();
-      const completion = await client.chat.completions.create(messages);
-      await printChoices(completion);
-    }
-    
-    main().catch((err) => {
-      console.error("Error occurred:", err);
-    });
-    ```
+            model: "",
+            max_tokens: 2000,
+          };
+        }
+        async function printChoices(completion: ChatCompletion): Promise<void> {
+          for (const choice of completion.choices) {
+            console.log(choice.message);
+          }
+        }
+        export async function main() {
+          console.log("== Get Vision chat Sample ==");
 
-1. Create the `tsconfig.json` file to transpile the TypeScript code and copy the following code for ECMAScript.
+          const client = getClient();
+          const messages = createMessages();
+          const completion = await client.chat.completions.create(messages);
+          await printChoices(completion);
+        }
 
-    ```json
-    {
-        "compilerOptions": {
-          "module": "NodeNext",
-          "target": "ES2022", // Supports top-level await
-          "moduleResolution": "NodeNext",
-          "skipLibCheck": true, // Avoid type errors from node_modules
-          "strict": true // Enable strict type-checking options
-        },
-        "include": ["*.ts"]
-    }
-    ```
+        main().catch((err) => {
+          console.error("Error occurred:", err);
+        });
+        ```
 
-1. Transpile from TypeScript to JavaScript.
+    1. Create the `tsconfig.json` file to transpile the TypeScript code and copy the following code for ECMAScript.
 
-    ```shell
-    tsc
-    ```
-    
-1. Run the code with the following command:
+        ```json
+        {
+            "compilerOptions": {
+              "module": "NodeNext",
+              "target": "ES2022", // Supports top-level await
+              "moduleResolution": "NodeNext",
+              "skipLibCheck": true, // Avoid type errors from node_modules
+              "strict": true // Enable strict type-checking options
+            },
+            "include": ["*.ts"]
+        }
+        ```
 
-    ```shell
-    node index.js
-    ```
+    1. Transpile from TypeScript to JavaScript.
 
----
+        ```shell
+        tsc
+        ```
+
+    1. Sign in to Azure with the following command:
+
+        ```shell
+        az login
+        ```
+
+    1. Run the code with the following command:
+
+        ```shell
+        node index.js
+        ```
+
+  </Tab>
+  <Tab title="API key">
+
+    1. Create the `index.ts` file with the following code:
+
+        ```typescript
+        import { AzureOpenAI } from "openai";
+        import type {
+          ChatCompletion,
+          ChatCompletionCreateParamsNonStreaming,
+        } from "openai/resources/index";
+
+        // You will need to set these environment variables or edit the following values
+        const endpoint = process.env.AZURE_OPENAI_ENDPOINT || "Your endpoint";
+        const apiKey = process.env.AZURE_OPENAI_API_KEY || "Your API key";
+        const imageUrl = process.env["IMAGE_URL"] || "<image url>";
+
+        // Required Azure OpenAI deployment name and API version
+        const apiVersion = process.env.OPENAI_API_VERSION || "2024-07-01-preview";
+        const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "gpt-4-with-turbo";
+
+        function getClient(): AzureOpenAI {
+          return new AzureOpenAI({
+            endpoint,
+            apiKey,
+            apiVersion,
+            deployment: deploymentName,
+          });
+        }
+        function createMessages(): ChatCompletionCreateParamsNonStreaming {
+          return {
+            messages: [
+              { role: "system", content: "You are a helpful assistant." },
+              {
+                role: "user",
+                content: [
+                  {
+                    type: "text",
+                    text: "Describe this picture:",
+                  },
+                  {
+                    type: "image_url",
+                    image_url: {
+                      url: imageUrl,
+                    },
+                  },
+                ],
+              },
+            ],
+            model: "",
+            max_tokens: 2000,
+          };
+        }
+        async function printChoices(completion: ChatCompletion): Promise<void> {
+          for (const choice of completion.choices) {
+            console.log(choice.message);
+          }
+        }
+        export async function main() {
+          console.log("== Get Vision chat Sample ==");
+
+          const client = getClient();
+          const messages = createMessages();
+          const completion = await client.chat.completions.create(messages);
+          await printChoices(completion);
+        }
+
+        main().catch((err) => {
+          console.error("Error occurred:", err);
+        });
+        ```
+
+    1. Create the `tsconfig.json` file to transpile the TypeScript code and copy the following code for ECMAScript.
+
+        ```json
+        {
+            "compilerOptions": {
+              "module": "NodeNext",
+              "target": "ES2022", // Supports top-level await
+              "moduleResolution": "NodeNext",
+              "skipLibCheck": true, // Avoid type errors from node_modules
+              "strict": true // Enable strict type-checking options
+            },
+            "include": ["*.ts"]
+        }
+        ```
+
+    1. Transpile from TypeScript to JavaScript.
+
+        ```shell
+        tsc
+        ```
+
+    1. Run the code with the following command:
+
+        ```shell
+        node index.js
+        ```
+
+  </Tab>
+</Tabs>
 
 ## Clean up resources
 
@@ -994,43 +1006,49 @@ For the recommended keyless authentication with Microsoft Entra ID, you need to:
 
 You need to retrieve the following information to authenticate your application with your Azure OpenAI resource:
 
-#### [Microsoft Entra ID](#tab/keyless)
+<Tabs>
+  <Tab title="Microsoft Entra ID">
 
-|Variable name | Value |
-|--------------------------|-------------|
-| `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
-| `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
+    |Variable name | Value |
+    |--------------------------|-------------|
+    | `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
+    | `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
 
-Learn more about [keyless authentication](https://learn.microsoft.com/azure/ai-services/authentication) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
+    Learn more about [keyless authentication](https://learn.microsoft.com/azure/ai-services/authentication) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
 
-#### [API key](#tab/api-key)
+  </Tab>
+  <Tab title="API key">
 
-|Variable name | Value |
-|--------------------------|-------------|
-| `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
-| `AZURE_OPENAI_API_KEY` | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. You can use either `KEY1` or `KEY2`.|
-| `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
+    |Variable name | Value |
+    |--------------------------|-------------|
+    | `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
+    | `AZURE_OPENAI_API_KEY` | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. You can use either `KEY1` or `KEY2`.|
+    | `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
 
-Learn more about [finding API keys](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
+    Learn more about [finding API keys](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
 
----
+  </Tab>
+</Tabs>
 
 ## Run the quickstart
 
 The sample code in this quickstart uses Microsoft Entra ID for the recommended keyless authentication. If you prefer to use an API key, you can replace the `DefaultAzureCredential` object with an `AzureKeyCredential` object. 
 
-#### [Microsoft Entra ID](#tab/keyless)
+<Tabs>
+  <Tab title="Microsoft Entra ID">
 
-```csharp
-AzureOpenAIClient openAIClient = new AzureOpenAIClient(new Uri(endpoint), new DefaultAzureCredential()); 
-```
+    ```csharp
+    AzureOpenAIClient openAIClient = new AzureOpenAIClient(new Uri(endpoint), new DefaultAzureCredential()); 
+    ```
 
-#### [API key](#tab/api-key)
+  </Tab>
+  <Tab title="API key">
 
-```csharp
-AzureOpenAIClient openAIClient = new AzureOpenAIClient(new Uri(endpoint), new AzureKeyCredential(key));
-```
----
+    ```csharp
+    AzureOpenAIClient openAIClient = new AzureOpenAIClient(new Uri(endpoint), new AzureKeyCredential(key));
+    ```
+  </Tab>
+</Tabs>
 
 To run the quickstart, follow these steps:
 
@@ -1093,6 +1111,6 @@ If you want to clean up and remove an Azure OpenAI resource, you can delete the 
 ## Related content
 
 * [Get started with multimodal vision chat apps using Azure OpenAI AI App template](https://learn.microsoft.com/azure/developer/ai/get-started-app-chat-vision)
-* Learn more about these APIs in the [Vision-enabled models how-to guide](./how-to/gpt-with-vision.md)
+* Learn more about these APIs in the [Vision-enabled models how-to guide](/models/catalog/gpt-with-vision)
 * [GPT-4 Turbo with Vision frequently asked questions](./faq.yml#gpt-4-turbo-with-vision)
 * [GPT-4 Turbo with Vision API reference](https://aka.ms/gpt-v-api-ref)

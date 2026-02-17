@@ -40,35 +40,38 @@ Another way to deal with emerging content incidents is to use [Blocklists](https
 
 ## How it works
 
-### [Custom categories (standard) API](#tab/standard)
+<Tabs>
+  <Tab title="Custom categories (standard) API">
 
-The Azure AI Content Safety custom categories feature uses a multistep process for creating, training, and using custom content classification models. Here's the workflow:
+    The Azure AI Content Safety custom categories feature uses a multistep process for creating, training, and using custom content classification models. Here's the workflow:
 
-### Step 1: Definition and setup
- 
-When you define a custom category, you need to teach the AI what type of content you want to identify. This step involves providing a clear **category name** and a detailed **definition** that encapsulates the content's characteristics.
+    ### Step 1: Definition and setup
 
-Then, you collect a balanced dataset with **positive** and (optionally) **negative** examples to help the AI learn the nuances of your category. This data should represent the variety of content that the model encounters in a real-world scenario.
+    When you define a custom category, you need to teach the AI what type of content you want to identify. This step involves providing a clear **category name** and a detailed **definition** that encapsulates the content's characteristics.
 
-### Step 2: Model training
- 
-After you prepare your dataset and define categories, the Azure AI Content Safety service trains a new machine learning model. This model uses your definitions and uploaded dataset to perform data augmentation by using a large language model. As a result, the training dataset is larger and higher quality. During training, the AI model analyzes the data and learns to differentiate between content that aligns with the specified category and content that doesn't.
+    Then, you collect a balanced dataset with **positive** and (optionally) **negative** examples to help the AI learn the nuances of your category. This data should represent the variety of content that the model encounters in a real-world scenario.
 
-### Step 3: Model evaluation
- 
-After training, evaluate the model to ensure it meets your accuracy requirements. Test the model with new content that it didn't receive during training. The evaluation phase helps you identify any potential adjustments you need to make before deploying the model into a production environment.
+    ### Step 2: Model training
 
-### Step 4: Model usage
+    After you prepare your dataset and define categories, the Azure AI Content Safety service trains a new machine learning model. This model uses your definitions and uploaded dataset to perform data augmentation by using a large language model. As a result, the training dataset is larger and higher quality. During training, the AI model analyzes the data and learns to differentiate between content that aligns with the specified category and content that doesn't.
 
-Use the **analyzeCustomCategory** API to analyze text content and determine whether it matches the custom category you defined. The service returns a Boolean indicating whether the content aligns with the specified category.
+    ### Step 3: Model evaluation
 
-#### [Custom categories (rapid) API](#tab/rapid)
+    After training, evaluate the model to ensure it meets your accuracy requirements. Test the model with new content that it didn't receive during training. The evaluation phase helps you identify any potential adjustments you need to make before deploying the model into a production environment.
 
-To use the custom categories (rapid) API, first create an **incident** object with a text description. Then, upload any number of image or text samples to the incident. The LLM on the backend uses these samples to evaluate future input content. No training step is needed.
+    ### Step 4: Model usage
 
-You can include your defined incident in a regular text analysis or image analysis request. The service indicates whether the submitted content is an instance of your incident. The service can still do other content moderation tasks in the same API call.
+    Use the **analyzeCustomCategory** API to analyze text content and determine whether it matches the custom category you defined. The service returns a Boolean indicating whether the content aligns with the specified category.
 
----
+  </Tab>
+  <Tab title="Custom categories (rapid) API">
+
+    To use the custom categories (rapid) API, first create an **incident** object with a text description. Then, upload any number of image or text samples to the incident. The LLM on the backend uses these samples to evaluate future input content. No training step is needed.
+
+    You can include your defined incident in a regular text analysis or image analysis request. The service indicates whether the submitted content is an instance of your incident. The service can still do other content moderation tasks in the same API call.
+
+  </Tab>
+</Tabs>
 
 ## Limitations
 
@@ -78,37 +81,40 @@ The Custom categories APIs support all languages that Content Safety text modera
 
 ### Input limitations
 
-#### [Custom categories (standard) API](#tab/standard)
+<Tabs>
+  <Tab title="Custom categories (standard) API">
 
-See the following table for the input limitations of the custom categories (standard) API:
+    See the following table for the input limitations of the custom categories (standard) API:
 
-| Object           | Limitation   |
-| ---------------- | ------------ |
-| Supported languages | English only |
-|  Number of categories per user     |         3     |
-|  Number of versions per category   |        3      |
-|  Number of concurrent builds (processes) per category      |       1       |
-|  Inference operations per second           |    5         |
-|  Number of samples in a category version          |        Positive samples(required): minimum 50, maximum 5K<br>In total (both negative and positive samples): 10K<br>No duplicate samples allowed.      |
-| Sample file size       |     maximum 128000 bytes         |
-| Length of a text sample           |          maximum 125K characters   |
-| Length of a category definition          |       maximum 1000 chars     |
-|Length of a category name           |         maximum 128 characters    |
-|Length of a blob url       |          maximum 500 characters    |
+    | Object           | Limitation   |
+    | ---------------- | ------------ |
+    | Supported languages | English only |
+    |  Number of categories per user     |         3     |
+    |  Number of versions per category   |        3      |
+    |  Number of concurrent builds (processes) per category      |       1       |
+    |  Inference operations per second           |    5         |
+    |  Number of samples in a category version          |        Positive samples(required): minimum 50, maximum 5K<br>In total (both negative and positive samples): 10K<br>No duplicate samples allowed.      |
+    | Sample file size       |     maximum 128000 bytes         |
+    | Length of a text sample           |          maximum 125K characters   |
+    | Length of a category definition          |       maximum 1000 chars     |
+    |Length of a category name           |         maximum 128 characters    |
+    |Length of a blob url       |          maximum 500 characters    |
 
-#### [Custom categories (rapid) API](#tab/rapid)
+  </Tab>
+  <Tab title="Custom categories (rapid) API">
 
-See the following table for the input limitations of the custom categories (rapid) API:
+    See the following table for the input limitations of the custom categories (rapid) API:
 
-| Object     | Limitation      |
-| :------------ | :----------- |
-| Maximum length of an incident name | 100 characters | 
-| Maximum number of text/image samples per incident | 1,000 |
-| Maximum size of each sample | Text: 500 characters<br>Image: 4 MB  |
-| Maximum number of text or image incidents per resource| 100 |  
-| Supported Image formats | BMP, GIF, JPEG, PNG, TIF, WEBP |
+    | Object     | Limitation      |
+    | :------------ | :----------- |
+    | Maximum length of an incident name | 100 characters | 
+    | Maximum number of text/image samples per incident | 1,000 |
+    | Maximum size of each sample | Text: 500 characters<br>Image: 4 MB  |
+    | Maximum number of text or image incidents per resource| 100 |  
+    | Supported Image formats | BMP, GIF, JPEG, PNG, TIF, WEBP |
 
----
+  </Tab>
+</Tabs>
 
 ### Region availability
 

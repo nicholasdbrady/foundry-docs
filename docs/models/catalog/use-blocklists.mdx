@@ -28,267 +28,270 @@ In this article, you learn how to:
 
 ## Use block lists
 
-#### [Azure OpenAI API](#tab/api)
+<Tabs>
+  <Tab title="Azure OpenAI API">
 
-You can create block lists with the Azure OpenAI API. The following steps help you get started. 
+    You can create block lists with the Azure OpenAI API. The following steps help you get started. 
 
-### Get your token
+    ### Get your token
 
-First, you need to get a token for accessing the APIs for creating, editing, and deleting block lists. You can get this token using the following Azure CLI command: 
+    First, you need to get a token for accessing the APIs for creating, editing, and deleting block lists. You can get this token using the following Azure CLI command: 
 
-```bash
-az account get-access-token 
-```
+    ```bash
+    az account get-access-token 
+    ```
 
-### Create or modify a blocklist
+    ### Create or modify a blocklist
 
-Copy the cURL command below to a text editor and make the following changes: 
+    Copy the cURL command below to a text editor and make the following changes: 
 
-1. Replace {subscriptionId} with your subscription ID. 
-1. Replace {resourceGroupName} with your resource group name. 
-1. Replace {accountName} with your resource name. 
-1. Replace {raiBlocklistName} (in the URL) with a custom name for your list. Allowed characters: `0-9, A-Z, a-z, - . _ ~`. 
-1. Replace {token} with the token you got from the "Get your token" step above. 
-1. Optionally replace the value of the "description" field with a custom description.
+    1. Replace {subscriptionId} with your subscription ID. 
+    1. Replace {resourceGroupName} with your resource group name. 
+    1. Replace {accountName} with your resource name. 
+    1. Replace {raiBlocklistName} (in the URL) with a custom name for your list. Allowed characters: `0-9, A-Z, a-z, - . _ ~`. 
+    1. Replace {token} with the token you got from the "Get your token" step above. 
+    1. Optionally replace the value of the "description" field with a custom description.
 
-```bash
-curl --location --request PUT 'https://management.azure.com/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CognitiveServices/accounts/{accountName}/raiBlocklists/{raiBlocklistName}?api-version=2024-04-01-preview' \ 
---header 'Authorization: Bearer {token}' \ 
---header 'Content-Type: application/json' \ 
---data-raw '{ 
-    "properties": { 
-        "description": "This is a prompt blocklist"  
+    ```bash
+    curl --location --request PUT 'https://management.azure.com/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CognitiveServices/accounts/{accountName}/raiBlocklists/{raiBlocklistName}?api-version=2024-04-01-preview' \ 
+    --header 'Authorization: Bearer {token}' \ 
+    --header 'Content-Type: application/json' \ 
+    --data-raw '{ 
+        "properties": { 
+            "description": "This is a prompt blocklist"  
+        } 
+    }' 
+    ```
+
+    The response code should be `201` (created a new list) or `200` (updated an existing list). 
+
+    ### Apply a blocklist to a content filter
+
+    If you haven't yet created a content filter, you can do so in [Foundry](https://ai.azure.com/?cid=learnDocs). See [Content filtering](https://learn.microsoft.com/azure/ai-foundry/openai/how-to/content-filters#create-a-content-filter-in-azure-ai-foundry).
+
+    To apply a **completion** blocklist to a content filter, use the following cURL command: 
+
+    1. Replace {subscriptionId} with your sub ID. 
+    1. Replace {resourceGroupName} with your resource group name. 
+    1. Replace {accountName} with your resource name. 
+    1. Replace {raiPolicyName} with the name of your Content Filter 
+    1. Replace {token} with the token you got from the "Get your token" step above. 
+    1. Optionally change the `"completionBlocklists"` title to `"promptBlocklists"` if you want the blocklist to apply to user prompts instead of AI model completions.
+    1. Replace `"raiBlocklistName"` in the body with a custom name for your list. Allowed characters: `0-9, A-Z, a-z, - . _ ~`. 
+
+    ```bash
+    curl --location --request PUT 'https://management.azure.com/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CognitiveServices/accounts/{accountName}/raiPolicies/{raiPolicyName}?api-version=2024-04-01-preview' \ 
+    --header 'Authorization: Bearer {token}' \ 
+    --header 'Content-Type: application/json' \ 
+    --data-raw '{ 
+        "properties": { 
+            "basePolicyName": "Microsoft.Default", 
+            "completionBlocklists": [{ 
+                "blocklistName": "raiBlocklistName", 
+                "blocking": true 
+            }], 
+            "contentFilters": [ ] 
+        } 
+    }' 
+    ```
+
+    ### Add blockItems to the list
+
+    <Note>
+    There's a maximum limit of 10,000 terms allowed in one list.
+    </Note>
+    Copy the cURL command below to a text editor and make the following changes:
+    1. Replace {subscriptionId} with your sub ID. 
+    1. Replace {resourceGroupName} with your resource group name. 
+    1. Replace {accountName} with your resource name. 
+    1. Replace {raiBlocklistName} (in the URL) with a custom name for your list. Allowed characters: `0-9, A-Z, a-z, - . _ ~`. 
+    1. Replace {raiBlocklistItemName} with a custom name for your list item. 
+    1. Replace {token} with the token you got from the "Get your token" step above. 
+    1. Replace the value of the `"pattern"` field with the item you'd like to add to your blocklist. The maximum length of a blockItem is 1,000 characters. Also specify whether the pattern is regex or exact match. 
+
+    ```bash
+    curl --location --request PUT 'https://management.azure.com/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CognitiveServices/accounts/{accountName}/raiBlocklists/{raiBlocklistName}/raiBlocklistItems/{raiBlocklistItemName}?api-version=2024-04-01-preview' \ 
+    --header 'Authorization: Bearer {token}' \ 
+    --header 'Content-Type: application/json' \ 
+    --data-raw '{  
+        "properties": {  
+            "pattern": "blocking pattern",  
+            "isRegex": false  
+        }  
+    }' 
+    ```
+
+    <Note>
+    It can take around 5 minutes for a new term to be added to the blocklist. Test the blocklist after 5 minutes.
+    </Note>
+    The response code should be `200`. 
+
+    ```json
+    { 
+      "name": "raiBlocklistItemName", 
+      "id": "/subscriptions/subscriptionId/resourceGroups/resourceGroupName/providers/Microsoft.CognitiveServices/accounts/accountName/raiBlocklists/raiBlocklistName/raiBlocklistItems/raiBlocklistItemName", 
+      "properties": { 
+        "pattern": "blocking pattern", 
+        "isRegex": false 
+      } 
     } 
-}' 
-```
+    ```
 
-The response code should be `201` (created a new list) or `200` (updated an existing list). 
+    ### Analyze text with a blocklist
 
-### Apply a blocklist to a content filter
+    Now you can test out your deployment that has the blocklist. For instructions on calling the Azure OpenAI endpoints, visit the [Quickstart](https://learn.microsoft.com/azure/ai-foundry/openai/quickstart). 
 
-If you haven't yet created a content filter, you can do so in [Foundry](https://ai.azure.com/?cid=learnDocs). See [Content filtering](https://learn.microsoft.com/azure/ai-foundry/openai/how-to/content-filters#create-a-content-filter-in-azure-ai-foundry).
+    In the below example, a GPT-35-Turbo deployment with a blocklist is blocking the prompt. The response returns a `400` error. 
 
-To apply a **completion** blocklist to a content filter, use the following cURL command: 
-
-1. Replace {subscriptionId} with your sub ID. 
-1. Replace {resourceGroupName} with your resource group name. 
-1. Replace {accountName} with your resource name. 
-1. Replace {raiPolicyName} with the name of your Content Filter 
-1. Replace {token} with the token you got from the "Get your token" step above. 
-1. Optionally change the `"completionBlocklists"` title to `"promptBlocklists"` if you want the blocklist to apply to user prompts instead of AI model completions.
-1. Replace `"raiBlocklistName"` in the body with a custom name for your list. Allowed characters: `0-9, A-Z, a-z, - . _ ~`. 
-
-```bash
-curl --location --request PUT 'https://management.azure.com/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CognitiveServices/accounts/{accountName}/raiPolicies/{raiPolicyName}?api-version=2024-04-01-preview' \ 
---header 'Authorization: Bearer {token}' \ 
---header 'Content-Type: application/json' \ 
---data-raw '{ 
-    "properties": { 
-        "basePolicyName": "Microsoft.Default", 
-        "completionBlocklists": [{ 
-            "blocklistName": "raiBlocklistName", 
-            "blocking": true 
-        }], 
-        "contentFilters": [ ] 
-    } 
-}' 
-```
-
-### Add blockItems to the list
-
-<Note>
-There's a maximum limit of 10,000 terms allowed in one list.
-</Note>
-Copy the cURL command below to a text editor and make the following changes:
-1. Replace {subscriptionId} with your sub ID. 
-1. Replace {resourceGroupName} with your resource group name. 
-1. Replace {accountName} with your resource name. 
-1. Replace {raiBlocklistName} (in the URL) with a custom name for your list. Allowed characters: `0-9, A-Z, a-z, - . _ ~`. 
-1. Replace {raiBlocklistItemName} with a custom name for your list item. 
-1. Replace {token} with the token you got from the "Get your token" step above. 
-1. Replace the value of the `"pattern"` field with the item you'd like to add to your blocklist. The maximum length of a blockItem is 1,000 characters. Also specify whether the pattern is regex or exact match. 
-
-```bash
-curl --location --request PUT 'https://management.azure.com/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CognitiveServices/accounts/{accountName}/raiBlocklists/{raiBlocklistName}/raiBlocklistItems/{raiBlocklistItemName}?api-version=2024-04-01-preview' \ 
---header 'Authorization: Bearer {token}' \ 
---header 'Content-Type: application/json' \ 
---data-raw '{  
-    "properties": {  
-        "pattern": "blocking pattern",  
-        "isRegex": false  
-    }  
-}' 
-```
-
-<Note>
-It can take around 5 minutes for a new term to be added to the blocklist. Test the blocklist after 5 minutes.
-</Note>
-The response code should be `200`. 
-
-```json
-{ 
-  "name": "raiBlocklistItemName", 
-  "id": "/subscriptions/subscriptionId/resourceGroups/resourceGroupName/providers/Microsoft.CognitiveServices/accounts/accountName/raiBlocklists/raiBlocklistName/raiBlocklistItems/raiBlocklistItemName", 
-  "properties": { 
-    "pattern": "blocking pattern", 
-    "isRegex": false 
-  } 
-} 
-```
-
-### Analyze text with a blocklist
-
-Now you can test out your deployment that has the blocklist. For instructions on calling the Azure OpenAI endpoints, visit the [Quickstart](https://learn.microsoft.com/azure/ai-foundry/openai/quickstart). 
-
-In the below example, a GPT-35-Turbo deployment with a blocklist is blocking the prompt. The response returns a `400` error. 
-
-```json
-{
-  "error": {
-    "message": "The response was filtered due to the prompt triggering Azure OpenAI's content management policy. Please modify your prompt and retry. To learn more about our content filtering policies please read our documentation: https://go.microsoft.com/fwlink/?linkid=2198766",
-    "type": null,
-    "param": "prompt",
-    "code": "content_filter",
-    "status": 400,
-    "innererror": {
-      "code": "ResponsibleAIPolicyViolation",
-      "content_filter_result": {
-        "custom_blocklists": {
-          "details": [{ "filtered": true, "id": "pizza" }],
-          "filtered": true
+    ```json
+    {
+      "error": {
+        "message": "The response was filtered due to the prompt triggering Azure OpenAI's content management policy. Please modify your prompt and retry. To learn more about our content filtering policies please read our documentation: https://go.microsoft.com/fwlink/?linkid=2198766",
+        "type": null,
+        "param": "prompt",
+        "code": "content_filter",
+        "status": 400,
+        "innererror": {
+          "code": "ResponsibleAIPolicyViolation",
+          "content_filter_result": {
+            "custom_blocklists": {
+              "details": [{ "filtered": true, "id": "pizza" }],
+              "filtered": true
+            }
+          }
         }
       }
     }
-  }
-}
-```
+    ```
 
-If the completion itself is blocked, the response returns `200`, as the completion only cuts off when the blocklist content is matched. The annotations show that a blocklist item was matched. 
+    If the completion itself is blocked, the response returns `200`, as the completion only cuts off when the blocklist content is matched. The annotations show that a blocklist item was matched. 
 
-```json
-{ 
-    "id": "chatcmpl-85NkyY0AkeBMunOjyxivQSiTaxGAl", 
-    "object": "chat.completion", 
-    "created": 1696293652, 
-    "model": "gpt-35-turbo", 
-    "prompt_filter_results": [ 
-        { 
-            "prompt_index": 0, 
-            "content_filter_results": { 
-                "hate": { 
-                    "filtered": false, 
-                    "severity": "safe" 
-                }, 
-                "self_harm": { 
-                    "filtered": false, 
-                    "severity": "safe" 
-                }, 
-                "sexual": { 
-                    "filtered": false, 
-                    "severity": "safe" 
-                }, 
-                "violence": { 
-                    "filtered": false, 
-                    "severity": "safe" 
-                } 
-            } 
-        } 
-    ], 
-    "choices": [ 
-        { 
-            "index": 0, 
-            "finish_reason": "content_filter", 
-            "message": { 
-                "role": "assistant" 
-            }, 
-            "content_filter_results": { 
-                "custom_blocklists": [ 
-                    { 
-                        "filtered": true, 
-                        "id": "myBlocklistName" 
+    ```json
+    { 
+        "id": "chatcmpl-85NkyY0AkeBMunOjyxivQSiTaxGAl", 
+        "object": "chat.completion", 
+        "created": 1696293652, 
+        "model": "gpt-35-turbo", 
+        "prompt_filter_results": [ 
+            { 
+                "prompt_index": 0, 
+                "content_filter_results": { 
+                    "hate": { 
+                        "filtered": false, 
+                        "severity": "safe" 
+                    }, 
+                    "self_harm": { 
+                        "filtered": false, 
+                        "severity": "safe" 
+                    }, 
+                    "sexual": { 
+                        "filtered": false, 
+                        "severity": "safe" 
+                    }, 
+                    "violence": { 
+                        "filtered": false, 
+                        "severity": "safe" 
                     } 
-                ], 
-                "hate": { 
-                    "filtered": false, 
-                    "severity": "safe" 
-                }, 
-                "self_harm": { 
-                    "filtered": false, 
-                    "severity": "safe" 
-                }, 
-                "sexual": { 
-                    "filtered": false, 
-                    "severity": "safe" 
-                }, 
-                "violence": { 
-                    "filtered": false, 
-                    "severity": "safe" 
                 } 
             } 
+        ], 
+        "choices": [ 
+            { 
+                "index": 0, 
+                "finish_reason": "content_filter", 
+                "message": { 
+                    "role": "assistant" 
+                }, 
+                "content_filter_results": { 
+                    "custom_blocklists": [ 
+                        { 
+                            "filtered": true, 
+                            "id": "myBlocklistName" 
+                        } 
+                    ], 
+                    "hate": { 
+                        "filtered": false, 
+                        "severity": "safe" 
+                    }, 
+                    "self_harm": { 
+                        "filtered": false, 
+                        "severity": "safe" 
+                    }, 
+                    "sexual": { 
+                        "filtered": false, 
+                        "severity": "safe" 
+                    }, 
+                    "violence": { 
+                        "filtered": false, 
+                        "severity": "safe" 
+                    } 
+                } 
+            } 
+        ], 
+        "usage": { 
+            "completion_tokens": 75, 
+            "prompt_tokens": 27, 
+            "total_tokens": 102 
         } 
-    ], 
-    "usage": { 
-        "completion_tokens": 75, 
-        "prompt_tokens": 27, 
-        "total_tokens": 102 
     } 
-} 
-```
+    ```
 
-**Key fields in the response:**
+    **Key fields in the response:**
 
-- `finish_reason: "content_filter"` indicates the completion was stopped by a blocklist match
-- `custom_blocklists[].id` shows which blocklist triggered the filter
-- `custom_blocklists[].filtered: true` confirms the content was blocked
+    - `finish_reason: "content_filter"` indicates the completion was stopped by a blocklist match
+    - `custom_blocklists[].id` shows which blocklist triggered the filter
+    - `custom_blocklists[].filtered: true` confirms the content was blocked
 
-### Delete a blocklist item
+    ### Delete a blocklist item
 
-To delete a blocklist item, use the following cURL command:
+    To delete a blocklist item, use the following cURL command:
 
-1. Replace {subscriptionId} with your subscription ID.
-1. Replace {resourceGroupName} with your resource group name.
-1. Replace {accountName} with your resource name.
-1. Replace {raiBlocklistName} with the name of your blocklist.
-1. Replace {raiBlocklistItemName} with the name of the item to delete.
-1. Replace {token} with the token you got from the "Get your token" step above.
+    1. Replace {subscriptionId} with your subscription ID.
+    1. Replace {resourceGroupName} with your resource group name.
+    1. Replace {accountName} with your resource name.
+    1. Replace {raiBlocklistName} with the name of your blocklist.
+    1. Replace {raiBlocklistItemName} with the name of the item to delete.
+    1. Replace {token} with the token you got from the "Get your token" step above.
 
-```bash
-curl --location --request DELETE 'https://management.azure.com/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CognitiveServices/accounts/{accountName}/raiBlocklists/{raiBlocklistName}/raiBlocklistItems/{raiBlocklistItemName}?api-version=2024-10-01' \
---header 'Authorization: Bearer {token}'
-```
+    ```bash
+    curl --location --request DELETE 'https://management.azure.com/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CognitiveServices/accounts/{accountName}/raiBlocklists/{raiBlocklistName}/raiBlocklistItems/{raiBlocklistItemName}?api-version=2024-10-01' \
+    --header 'Authorization: Bearer {token}'
+    ```
 
-The response code should be `200` (item deleted) or `204` (no content).
+    The response code should be `200` (item deleted) or `204` (no content).
 
-### Delete a blocklist
+    ### Delete a blocklist
 
-To delete an entire blocklist, use the following cURL command:
+    To delete an entire blocklist, use the following cURL command:
 
-1. Replace {subscriptionId} with your subscription ID.
-1. Replace {resourceGroupName} with your resource group name.
-1. Replace {accountName} with your resource name.
-1. Replace {raiBlocklistName} with the name of the blocklist to delete.
-1. Replace {token} with the token you got from the "Get your token" step above.
+    1. Replace {subscriptionId} with your subscription ID.
+    1. Replace {resourceGroupName} with your resource group name.
+    1. Replace {accountName} with your resource name.
+    1. Replace {raiBlocklistName} with the name of the blocklist to delete.
+    1. Replace {token} with the token you got from the "Get your token" step above.
 
-```bash
-curl --location --request DELETE 'https://management.azure.com/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CognitiveServices/accounts/{accountName}/raiBlocklists/{raiBlocklistName}?api-version=2024-10-01' \
---header 'Authorization: Bearer {token}'
-```
+    ```bash
+    curl --location --request DELETE 'https://management.azure.com/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CognitiveServices/accounts/{accountName}/raiBlocklists/{raiBlocklistName}?api-version=2024-10-01' \
+    --header 'Authorization: Bearer {token}'
+    ```
 
-<Warning>
-Deleting a blocklist removes all items in that list and cannot be undone.
-</Warning>
+    <Warning>
+    Deleting a blocklist removes all items in that list and cannot be undone.
+    </Warning>
 
-#### [Foundry](#tab/foundry)
+  </Tab>
+  <Tab title="Foundry">
 
-<Note>
-This article refers to the [Microsoft Foundry (new)](../what-is-foundry.md#microsoft-foundry-portals) portal.
-</Note><!-- > 🔄 [Switch to the Microsoft Foundry (classic) documentation]() if you're using the classic portal. -->
+    <Note>
+    This article refers to the [Microsoft Foundry (new)](../what-is-foundry.md#microsoft-foundry-portals) portal.
+    </Note><!-- > 🔄 [Switch to the Microsoft Foundry (classic) documentation]() if you're using the classic portal. -->
 
-## Create a blocklist
+    ## Create a blocklist
 
-Go to [Foundry](https://ai.azure.com/) and navigate to your project. Then select the **Guardrails + controls** page in the left navigation. Select the **Create a custom blocklist** link, and follow the instructions.
+    Go to [Foundry](https://ai.azure.com/) and navigate to your project. Then select the **Guardrails + controls** page in the left navigation. Select the **Create a custom blocklist** link, and follow the instructions.
 
----
+  </Tab>
+</Tabs>
 
 ## Troubleshooting
 
