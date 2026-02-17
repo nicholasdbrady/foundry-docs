@@ -7,6 +7,7 @@ tool annotations, Context logging, resource templates, and reusable prompts.
 
 import json
 import logging
+import os
 from pathlib import Path
 from typing import Annotated
 
@@ -20,8 +21,39 @@ logger = logging.getLogger(__name__)
 
 PACKAGE_DIR = Path(__file__).parent
 PROJECT_ROOT = PACKAGE_DIR.parent
-DOCS_DIR = PROJECT_ROOT / "docs"
-DOCS_JSON = PROJECT_ROOT / "docs.json"
+
+
+def _resolve_docs_dir() -> Path:
+    """Find the docs directory, checking env var and common locations.
+
+    When pip-installed, ``Path(__file__).parent.parent`` points to
+    site-packages — not the project root — so we fall back to well-known
+    paths (e.g. ``/app/docs`` inside the Docker image).
+    """
+    if env := os.environ.get("FOUNDRY_DOCS_DIR"):
+        return Path(env)
+    candidate = PROJECT_ROOT / "docs"
+    if candidate.is_dir():
+        return candidate
+    # Docker image layout
+    if (fallback := Path("/app/docs")).is_dir():
+        return fallback
+    return candidate  # return default even if missing so errors are clear
+
+
+def _resolve_docs_json() -> Path:
+    if env := os.environ.get("FOUNDRY_DOCS_JSON"):
+        return Path(env)
+    candidate = PROJECT_ROOT / "docs.json"
+    if candidate.exists():
+        return candidate
+    if (fallback := Path("/app/docs.json")).exists():
+        return fallback
+    return candidate
+
+
+DOCS_DIR = _resolve_docs_dir()
+DOCS_JSON = _resolve_docs_json()
 
 
 # ---------------------------------------------------------------------------

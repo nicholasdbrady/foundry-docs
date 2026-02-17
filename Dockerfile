@@ -12,5 +12,10 @@ COPY docs.json .
 
 RUN pip install --no-cache-dir .
 
+# Tell the server where the docs live (pip installs the package to
+# site-packages, so Path(__file__).parent.parent won't find /app/docs).
+ENV FOUNDRY_DOCS_DIR=/app/docs
+ENV FOUNDRY_DOCS_JSON=/app/docs.json
+
 # stdio transport — the MCP client drives stdin/stdout
 ENTRYPOINT ["foundry-docs-mcp"]
