@@ -595,6 +595,8 @@ def fix_void_elements(content: str) -> str:
             part = re.sub(r'<hr\s*/?>', '<hr />', part, flags=re.IGNORECASE)
             # </hr> → <hr />
             part = re.sub(r'</hr\s*>', '<hr />', part, flags=re.IGNORECASE)
+            # <sup/> → </sup> (malformed closing tag)
+            part = re.sub(r'<sup\s*/>', '</sup>', part, flags=re.IGNORECASE)
             parts[i] = part
     return ''.join(parts)
 
@@ -804,7 +806,7 @@ _KNOWN_HTML_TAGS = frozenset({
 })
 
 
-_FENCE_OPEN_RE = re.compile(r'^( {0,9})(`{3,}|~{3,})([^`~]*)$', re.MULTILINE)
+_FENCE_OPEN_RE = re.compile(r'^([ \t]*)(`{3,}|~{3,})([^`~]*)$', re.MULTILINE)
 
 
 def _split_code_and_comments(content: str) -> list[str]:
@@ -823,8 +825,13 @@ def _split_code_and_comments(content: str) -> list[str]:
 
     # Find fenced code blocks
     for m in _FENCE_OPEN_RE.finditer(content):
+        # Skip if this match starts inside an already-found region
+        if regions and m.start() < regions[-1][1]:
+            continue
         fence_char = m.group(2)[0]
         fence_len = len(m.group(2))
+        # Only treat as an opening fence if the line has a language/info string
+        # OR if it's at a position not covered by a prior region's close
         # Build closing-fence pattern: same char, at least as many, on its own line
         close_pat = re.compile(
             r'^[ \t]*' + re.escape(fence_char) + r'{' + str(fence_len) + r',}[ \t]*$',
