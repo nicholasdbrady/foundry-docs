@@ -227,8 +227,8 @@ Once your input file is prepared, you first need to upload the file to then be a
 3. From the left-hand pane select **Models**
 4. Select **Batch Jobs** > **create a batch job**
 
-    <Frame>
-  <img src="/images/batch-create.png" alt="Screenshot of new Foundry batch creation experience." />
+<Frame>
+<img src="/images/batch-create.png" alt="Screenshot of new Foundry batch creation experience." />
 </Frame>
 
 ## Track batch job progress
@@ -365,10 +365,8 @@ For this article we'll create a file named `test.jsonl` and will copy the conten
 
 Once your input file is prepared, you first need to upload the file to then be able to initiate a batch job. File upload can be done both programmatically or via the Microsoft Foundry portal. This example demonstrates uploading a file directly to your Azure OpenAI resource. Alternatively, you can [configure Azure Blob Storage for Azure OpenAI Batch](../../how-to/batch-blob-storage.md). 
 
-<Tabs>
-  <Tab title="Python (Microsoft Entra ID)">
-
-    ```python
+<CodeGroup>
+```python Python (Microsoft Entra ID)
     import os
     from datetime import datetime
     from openai import OpenAI
@@ -397,10 +395,7 @@ Once your input file is prepared, you first need to upload the file to then be a
     file_id = file.id
     ```
 
-  </Tab>
-  <Tab title="Python (API Key)">
-
-    ```python
+```python Python (API Key)
     import os
     from datetime import datetime
     from openai import OpenAI
@@ -423,9 +418,7 @@ Once your input file is prepared, you first need to upload the file to then be a
 
     file_id = file.id
     ```
-
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 By uncommenting and adding `extra_body={"expires_after":{"seconds": 1209600, "anchor": "created_at"}}` you're setting our upload file to expire in 14 days. There's a max limit of 500 input batch files per resource when no expiration is set. By setting a value for expiration the number of input batch files per resource is increased to 10,000 files per resource. To remove batch input file limits use [Batch with Azure Blob Storage](../../how-to/batch-blob-storage.md).
 
@@ -810,10 +803,8 @@ Use the REST API to list all batch jobs with additional sorting/filtering option
 
 In the examples below we're providing the `generate_time_filter` function to make constructing the filter easier. If you don't wish to use this function the format of the filter string would look like `created_at gt 1728860560 and status eq 'Completed'`.
 
-<Tabs>
-  <Tab title="Python (Microsoft Entra ID)">
-
-    ```python
+<CodeGroup>
+```python Python (Microsoft Entra ID)
     import requests
     import json
     from datetime import datetime, timedelta
@@ -874,10 +865,7 @@ In the examples below we're providing the `generate_time_filter` function to mak
         print(response.text)  
     ```
 
-  </Tab>
-  <Tab title="Python (API Key)">
-
-    ```python
+```python Python (API Key)
     import os
     import requests
     import json
@@ -938,9 +926,7 @@ In the examples below we're providing the `generate_time_filter` function to mak
         print(f"Request failed with status code: {response.status_code}")
         print(response.text)  
     ```
-
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 **Output:**
 
@@ -1512,7 +1498,7 @@ B = billion | M = million | K = thousand
 | `expired_at` | integer | A timestamp when this batch expired (in Unix epoch seconds). |
 | `cancelling_at` | integer | A timestamp when this batch started `cancelling` (in Unix epoch seconds). |
 | `cancelled_at` | integer | A timestamp when this batch was `cancelled` (in Unix epoch seconds). |
-| `request_counts` | object | Object structure:<br><br> `total` *integer* <br> The total number of requests in the batch.  <br>`completed`  *integer* <br> The number of requests in the batch that have been completed successfully. <br> `failed` *integer* <br> The number of requests in the batch that have failed. 
+| `request_counts` | object | Object structure:<br /><br /> `total` *integer* <br /> The total number of requests in the batch.  <br />`completed`  *integer* <br /> The number of requests in the batch that have been completed successfully. <br /> `failed` *integer* <br /> The number of requests in the batch that have failed. 
 | `metadata` | map | A set of key-value pairs that can be attached to the batch. This property can be useful for storing additional information about the batch in a structured format. |
 
 ## Frequently asked questions (FAQ)
@@ -1598,14 +1584,14 @@ When a job failure occurs, you'll find details about the failure in the `errors`
 
 |Error code | Definition|
 |---|---|
-|`invalid_json_line`| A line (or multiple) in your input file wasn't able to be parsed as valid json.<br><br> Please ensure no typos, proper opening and closing brackets, and quotes as per JSON standard, and resubmit the request.|
-| `too_many_tasks` |The number of requests in the input file exceeds the maximum allowed value of 100,000.<br><br>Please ensure your total requests are under 100,000 and resubmit the job.|
-| `url_mismatch` | Either a row in your input file has a URL that doesn’t match the rest of the rows, or the URL specified in the input file doesn’t match the expected endpoint URL. <br><br>Please ensure all request URLs are the same, and that they match the endpoint URL associated with your Azure OpenAI deployment.|
-|`model_not_found`|The Azure OpenAI model deployment name that was specified in the `model` property of the input file wasn't found.<br><br> Please ensure this name points to a valid Azure OpenAI model deployment.|
+|`invalid_json_line`| A line (or multiple) in your input file wasn't able to be parsed as valid json.<br /><br /> Please ensure no typos, proper opening and closing brackets, and quotes as per JSON standard, and resubmit the request.|
+| `too_many_tasks` |The number of requests in the input file exceeds the maximum allowed value of 100,000.<br /><br />Please ensure your total requests are under 100,000 and resubmit the job.|
+| `url_mismatch` | Either a row in your input file has a URL that doesn’t match the rest of the rows, or the URL specified in the input file doesn’t match the expected endpoint URL. <br /><br />Please ensure all request URLs are the same, and that they match the endpoint URL associated with your Azure OpenAI deployment.|
+|`model_not_found`|The Azure OpenAI model deployment name that was specified in the `model` property of the input file wasn't found.<br /><br /> Please ensure this name points to a valid Azure OpenAI model deployment.|
 | `duplicate_custom_id` | The custom ID for this request is a duplicate of the custom ID in another request. |
 |`empty_file`| The input file is empty. Please ensure the batch contains at least one request. |
-|`model_mismatch`| The Azure OpenAI model deployment name that was specified in the `model` property of this request in the input file doesn't match the rest of the file.<br><br>Please ensure that all requests in the batch point to the same Azure OpenAI in Foundry Models model deployment in the `model` property of the request.|
-|`invalid_request`| The schema of the input line is invalid or the deployment SKU is invalid. <br><br>Please ensure the properties of the request in your input file match the expected input properties, and that the Azure OpenAI deployment SKU is `globalbatch` for batch API requests.|
+|`model_mismatch`| The Azure OpenAI model deployment name that was specified in the `model` property of this request in the input file doesn't match the rest of the file.<br /><br />Please ensure that all requests in the batch point to the same Azure OpenAI in Foundry Models model deployment in the `model` property of the request.|
+|`invalid_request`| The schema of the input line is invalid or the deployment SKU is invalid. <br /><br />Please ensure the properties of the request in your input file match the expected input properties, and that the Azure OpenAI deployment SKU is `globalbatch` for batch API requests.|
 | `input_modified` |Blob input has been modified after the batch job has been submitted. |
 | `input_no_permissions` | It's not possible to access the input blob. Please check [permissions](https://learn.microsoft.com/azure/ai-foundry/openai/how-to/role-based-access-control) and network access between the Azure OpenAI account and Azure Storage account.  |
 

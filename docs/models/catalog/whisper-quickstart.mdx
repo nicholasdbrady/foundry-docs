@@ -7,7 +7,7 @@ sidebarTitle: "Speech to text with Whisper"
 
 <Note>
 This article refers to the [Microsoft Foundry (new)](/overview/what-is-foundry#microsoft-foundry-portals) portal.
-</Note><!-- > 🔄 [Switch to the Microsoft Foundry (classic) documentation]() if you're using the classic portal. -->
+</Note>{/* > 🔄 [Switch to the Microsoft Foundry (classic) documentation]() if you're using the classic portal. */}
 
 In this quickstart, you transcribe speech to text using the [Azure OpenAI Whisper model](../../ai-services/speech-service/whisper-overview.md). The Whisper model can transcribe human speech in numerous languages and translate other languages into English.
 
@@ -43,40 +43,31 @@ Go to your resource in the Azure portal. The **Endpoint and Keys** can be found 
 
 Create and assign persistent environment variables for your key and endpoint.
 
-<Tabs>
-  <Tab title="Command Line">
-
-    ```CMD
+<CodeGroup>
+```CMD Command Line
     setx AZURE_OPENAI_API_KEY "REPLACE_WITH_YOUR_KEY_VALUE_HERE" 
     ```
 
-    ```CMD
+```CMD Command Line
     setx AZURE_OPENAI_ENDPOINT "REPLACE_WITH_YOUR_ENDPOINT_HERE" 
     ```
 
-  </Tab>
-  <Tab title="PowerShell">
-
-    ```powershell
+```powershell PowerShell
     [System.Environment]::SetEnvironmentVariable('AZURE_OPENAI_API_KEY', 'REPLACE_WITH_YOUR_KEY_VALUE_HERE', 'User')
     ```
 
-    ```powershell
+```powershell PowerShell
     [System.Environment]::SetEnvironmentVariable('AZURE_OPENAI_ENDPOINT', 'REPLACE_WITH_YOUR_ENDPOINT_HERE', 'User')
     ```
 
-  </Tab>
-  <Tab title="Bash">
-
-    ```Bash
+```Bash Bash
     echo export AZURE_OPENAI_API_KEY="REPLACE_WITH_YOUR_KEY_VALUE_HERE" >> /etc/environment && source /etc/environment
     ```
 
-    ```Bash
+```Bash Bash
     echo export AZURE_OPENAI_ENDPOINT="REPLACE_WITH_YOUR_ENDPOINT_HERE" >> /etc/environment && source /etc/environment
     ```
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 ## Create a REST API request and response
 
@@ -140,40 +131,31 @@ Go to your resource in the Azure portal. The **Endpoint and Keys** can be found 
 
 Create and assign persistent environment variables for your key and endpoint.
 
-<Tabs>
-  <Tab title="Command Line">
-
-    ```CMD
+<CodeGroup>
+```CMD Command Line
     setx AZURE_OPENAI_API_KEY "REPLACE_WITH_YOUR_KEY_VALUE_HERE" 
     ```
 
-    ```CMD
+```CMD Command Line
     setx AZURE_OPENAI_ENDPOINT "REPLACE_WITH_YOUR_ENDPOINT_HERE"
     ```
 
-  </Tab>
-  <Tab title="PowerShell">
-
-    ```powershell
+```powershell PowerShell
     [System.Environment]::SetEnvironmentVariable('AZURE_OPENAI_API_KEY', 'REPLACE_WITH_YOUR_KEY_VALUE_HERE', 'User')
     ```
 
-    ```powershell
+```powershell PowerShell
     [System.Environment]::SetEnvironmentVariable('AZURE_OPENAI_ENDPOINT', 'REPLACE_WITH_YOUR_ENDPOINT_HERE', 'User')
     ```
 
-  </Tab>
-  <Tab title="Bash">
-
-    ```Bash
+```Bash Bash
     echo export AZURE_OPENAI_API_KEY="REPLACE_WITH_YOUR_KEY_VALUE_HERE" >> /etc/environment && source /etc/environment
     ```
 
-    ```Bash
+```Bash Bash
     echo export AZURE_OPENAI_ENDPOINT="REPLACE_WITH_YOUR_ENDPOINT_HERE" >> /etc/environment && source /etc/environment
     ```
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 <Info>
 **Passwordless authentication is recommended**
@@ -195,24 +177,17 @@ mkdir whisper-quickstart; cd whisper-quickstart
 
 Create and activate a virtual environment for this project.
 
-<Tabs>
-  <Tab title="Windows">
-
-    ```powershell
+<CodeGroup>
+```powershell Windows
     python -m venv .venv
     .venv\Scripts\activate
     ```
 
-  </Tab>
-  <Tab title="macOS/Linux">
-
-    ```Bash
+```Bash macOS/Linux
     python3 -m venv .venv
     source .venv/bin/activate
     ```
-
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 Install the OpenAI Python client library with:
 
@@ -242,10 +217,8 @@ Install the OpenAI Python client library with:
 
 1. Replace the contents of *quickstart.py* with the following code. Modify the code to add your deployment name:
 
-<Tabs>
-  <Tab title="OpenAI Python 1.x">
-
-    ```python
+<CodeGroup>
+```python OpenAI Python 1.x
         import os
         from openai import AzureOpenAI
 
@@ -266,10 +239,7 @@ Install the OpenAI Python client library with:
         print(result)
     ```
 
-  </Tab>
-  <Tab title="OpenAI Python 0.28.1">
-
-    ```python
+```python OpenAI Python 0.28.1
         import openai
         import time
         import os
@@ -293,9 +263,7 @@ Install the OpenAI Python client library with:
 
         print(result)
     ```
-
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 Run the application using the `python` command on your quickstart file:
 
@@ -395,21 +363,15 @@ You need to retrieve the following information to authenticate your application 
 
 The sample code in this quickstart uses Microsoft Entra ID for the recommended keyless authentication. If you prefer to use an API key, you can replace the `DefaultAzureCredential` object with an `AzureKeyCredential` object. 
 
-<Tabs>
-  <Tab title="Microsoft Entra ID">
-
-    ```csharp
+<CodeGroup>
+```csharp Microsoft Entra ID
     AzureOpenAIClient openAIClient = new AzureOpenAIClient(new Uri(endpoint), new DefaultAzureCredential()); 
     ```
 
-  </Tab>
-  <Tab title="API key">
-
-    ```csharp
+```csharp API key
     AzureOpenAIClient openAIClient = new AzureOpenAIClient(new Uri(endpoint), new AzureKeyCredential(key));
     ```
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 <Note>
 You can get sample audio files, such as *wikipediaOcelot.wav*, from the [Azure Speech in Foundry Tools SDK repository at GitHub](https://github.com/Azure-Samples/cognitive-services-speech-sdk/tree/master/sampledata/audiofiles).
@@ -943,40 +905,31 @@ Go to your resource in the Azure portal. The **Endpoint and Keys** can be found 
 
 Create and assign persistent environment variables for your key and endpoint.
 
-<Tabs>
-  <Tab title="Command Line">
-
-    ```CMD
+<CodeGroup>
+```CMD Command Line
     setx AZURE_OPENAI_API_KEY "REPLACE_WITH_YOUR_KEY_VALUE_HERE" 
     ```
 
-    ```CMD
+```CMD Command Line
     setx AZURE_OPENAI_ENDPOINT "REPLACE_WITH_YOUR_ENDPOINT_HERE" 
     ```
 
-  </Tab>
-  <Tab title="PowerShell">
-
-    ```powershell
+```powershell PowerShell
     [System.Environment]::SetEnvironmentVariable('AZURE_OPENAI_API_KEY', 'REPLACE_WITH_YOUR_KEY_VALUE_HERE', 'User')
     ```
 
-    ```powershell
+```powershell PowerShell
     [System.Environment]::SetEnvironmentVariable('AZURE_OPENAI_ENDPOINT', 'REPLACE_WITH_YOUR_ENDPOINT_HERE', 'User')
     ```
 
-  </Tab>
-  <Tab title="Bash">
-
-    ```Bash
+```Bash Bash
     echo export AZURE_OPENAI_API_KEY="REPLACE_WITH_YOUR_KEY_VALUE_HERE" >> /etc/environment && source /etc/environment
     ```
 
-    ```Bash
+```Bash Bash
     echo export AZURE_OPENAI_ENDPOINT="REPLACE_WITH_YOUR_ENDPOINT_HERE" >> /etc/environment && source /etc/environment
     ```
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 ## Create a PowerShell app
 

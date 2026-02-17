@@ -36,7 +36,7 @@ Code in this article uses packages that are currently in preview. This preview i
 - .NET SDK (for the C# sample)
 - SharePoint connection configured in your project ([SharePoint tool documentation](/agents/tools/sharepoint))
 
-  <Note>
+<Note>
 
 </Note>  > To configure your Foundry project for SharePoint connectivity, see the [SharePoint tool documentation](/agents/tools/sharepoint).
 
@@ -51,31 +51,22 @@ Instead of navigating a large repository tree, use one of these approaches:
 <Tip>
 Code uses **Azure AI Projects 2.x (preview)** and is incompatible with Azure AI Projects 1.x.
 </Tip>
-<Tabs>
-  <Tab title="Python">
-
-    ```bash
+<CodeGroup>
+```bash Python
     git clone --depth 1 https://github.com/microsoft-foundry/foundry-samples.git
     cd foundry-samples/samples/python/enterprise-agent-tutorial/1-idea-to-prototype
     ```
 
-  </Tab>
-  <Tab title="C#">
-
-    ```bash
+```bash C#
     git clone --depth 1 https://github.com/azure-ai-foundry/foundry-samples.git
     cd foundry-samples/samples/csharp/enterprise-agent-tutorial/1-idea-to-prototype
     ```
-
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 #### Option B (sparse checkout only this tutorial - reduced download)
 
-<Tabs>
-  <Tab title="Python">
-
-    ```bash
+<CodeGroup>
+```bash Python
     git clone --no-checkout https://github.com/microsoft-foundry/foundry-samples.git
     cd foundry-samples
     git sparse-checkout init --cone
@@ -84,10 +75,7 @@ Code uses **Azure AI Projects 2.x (preview)** and is incompatible with Azure AI 
     cd samples/python/enterprise-agent-tutorial/1-idea-to-prototype
     ```
 
-  </Tab>
-  <Tab title="C#">
-
-    ```bash
+```bash C#
     git clone --no-checkout https://github.com/azure-ai-foundry/foundry-samples.git
     cd foundry-samples
     git sparse-checkout init --cone
@@ -95,9 +83,7 @@ Code uses **Azure AI Projects 2.x (preview)** and is incompatible with Azure AI 
     git checkout
     cd samples/csharp/enterprise-agent-tutorial/1-idea-to-prototype
     ```
-
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 #### Option C (Download ZIP of repository)
 
@@ -123,10 +109,8 @@ For production adoption, use a standalone repository. This tutorial uses the sha
 
 The minimal structure contains only essential files:
 
-<Tabs>
-  <Tab title="Python">
-
-    ```text
+<CodeGroup>
+```text Python
     enterprise-agent-tutorial/
     └── 1-idea-to-prototype/
        ├── .env                             # Create this file (local environment variables)
@@ -143,10 +127,7 @@ The minimal structure contains only essential files:
           └── security-guidelines.docx
     ```
 
-  </Tab>
-  <Tab title="C#">
-
-    ```text
+```text C#
     enterprise-agent-tutorial/
     └── 1-idea-to-prototype/
        ├── ModernWorkplaceAssistant/        # Modern Workplace Assistant
@@ -160,9 +141,7 @@ The minimal structure contains only essential files:
        ├── questions.jsonl                  # Business test scenarios
        └── README.md                        # Complete setup instructions
     ```
-
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 ## Step 2: Run the sample immediately
 
@@ -222,10 +201,8 @@ Start by running the agent so you see working functionality before diving into i
   </Tab>
 </Tabs>
 
-<Tabs>
-  <Tab title="Python">
-
-    ```dotenv
+<CodeGroup>
+```dotenv Python
     # Foundry configuration
     PROJECT_ENDPOINT=https://<your-project>.aiservices.azure.com
     MODEL_DEPLOYMENT_NAME=gpt-4o-mini
@@ -237,10 +214,7 @@ Start by running the agent so you see working functionality before diving into i
     SHAREPOINT_CONNECTION_NAME=<your-sharepoint-connection-name>
     ```
 
-  </Tab>
-  <Tab title="C#">
-
-    ```dotenv
+```dotenv C#
     # Foundry configuration
     PROJECT_ENDPOINT=https://<your-project>.aiservices.azure.com
     MODEL_DEPLOYMENT_NAME=gpt-4o-mini
@@ -251,9 +225,7 @@ Start by running the agent so you see working functionality before diving into i
     # The Microsoft Learn MCP Server (optional)
     MCP_SERVER_URL=https://learn.microsoft.com/api/mcp
     ```
-
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 <Tip>
 To get your **tenant ID**, run:
@@ -267,18 +239,13 @@ To get your **project endpoint**, open your project in the [Foundry portal](http
 </Tip>
 ### Run agent and evaluation
 
-<Tabs>
-  <Tab title="Python">
-
-    ```bash
+<CodeGroup>
+```bash Python
     python main.py
     python evaluate.py
     ```
 
-  </Tab>
-  <Tab title="C#">
-
-    ```bash
+```bash C#
     cd ModernWorkplaceAssistant
     dotnet restore
     dotnet run
@@ -287,9 +254,7 @@ To get your **project endpoint**, open your project in the [Foundry portal](http
     dotnet restore
     dotnet run
     ```
-
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 ### Expected output (agent first run)
 
@@ -354,10 +319,8 @@ Code in this article uses packages that are currently in preview. This preview i
 
 The code uses several client libraries from the Microsoft Foundry SDK to create a robust enterprise agent.
 
-<Tabs>
-  <Tab title="Python">
-
-    ```python
+<CodeGroup>
+```python Python
 #!/usr/bin/env python3
 """
 Microsoft Foundry Agent Sample - Tutorial 1: Modern Workplace Assistant
@@ -748,10 +711,7 @@ if __name__ == "__main__":
     main()
 ```
 
-  </Tab>
-  <Tab title="C#">
-
-    ```csharp
+```csharp C#
 // <imports_and_includes>
 using System;
 using System.ClientModel;
@@ -1318,18 +1278,14 @@ RESPONSE STRATEGY:
     }
 }
 ```
-
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 ### Configure authentication in Azure
 
 Before you create your agent, set up authentication to the Foundry.
 
-<Tabs>
-  <Tab title="Python">
-
-    ```python
+<CodeGroup>
+```python Python
 #!/usr/bin/env python3
 """
 Microsoft Foundry Agent Sample - Tutorial 1: Modern Workplace Assistant
@@ -1720,10 +1676,7 @@ if __name__ == "__main__":
     main()
 ```
 
-  </Tab>
-  <Tab title="C#">
-
-    ```csharp
+```csharp C#
 // <imports_and_includes>
 using System;
 using System.ClientModel;
@@ -2290,18 +2243,14 @@ RESPONSE STRATEGY:
     }
 }
 ```
-
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 ### Create the SharePoint tool for the agent
 
 The agent uses SharePoint and can access company policy and procedure documents stored there. Set up the connection to SharePoint in your code.
 
-<Tabs>
-  <Tab title="Python">
-
-    ```python
+<CodeGroup>
+```python Python
 #!/usr/bin/env python3
 """
 Microsoft Foundry Agent Sample - Tutorial 1: Modern Workplace Assistant
@@ -2692,10 +2641,7 @@ if __name__ == "__main__":
     main()
 ```
 
-  </Tab>
-  <Tab title="C#">
-
-    ```csharp
+```csharp C#
 // <imports_and_includes>
 using System;
 using System.ClientModel;
@@ -3262,16 +3208,12 @@ RESPONSE STRATEGY:
     }
 }
 ```
-
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 ### Create the MCP tool for the agent
 
-<Tabs>
-  <Tab title="Python">
-
-    ```python
+<CodeGroup>
+```python Python
 #!/usr/bin/env python3
 """
 Microsoft Foundry Agent Sample - Tutorial 1: Modern Workplace Assistant
@@ -3662,10 +3604,7 @@ if __name__ == "__main__":
     main()
 ```
 
-  </Tab>
-  <Tab title="C#">
-
-    ```csharp
+```csharp C#
 // <imports_and_includes>
 using System;
 using System.ClientModel;
@@ -4232,18 +4171,14 @@ RESPONSE STRATEGY:
     }
 }
 ```
-
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 ### Create the agent and connect the tools
 
 Create the agent and connect the SharePoint and MCP tools.
 
-<Tabs>
-  <Tab title="Python">
-
-    ```python
+<CodeGroup>
+```python Python
 #!/usr/bin/env python3
 """
 Microsoft Foundry Agent Sample - Tutorial 1: Modern Workplace Assistant
@@ -4634,10 +4569,7 @@ if __name__ == "__main__":
     main()
 ```
 
-  </Tab>
-  <Tab title="C#">
-
-    ```csharp
+```csharp C#
 // <imports_and_includes>
 using System;
 using System.ClientModel;
@@ -5204,18 +5136,14 @@ RESPONSE STRATEGY:
     }
 }
 ```
-
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 ### Converse with the agent
 
 Finally, implement an interactive loop to converse with the agent.
 
-<Tabs>
-  <Tab title="Python">
-
-    ```python
+<CodeGroup>
+```python Python
 #!/usr/bin/env python3
 """
 Microsoft Foundry Agent Sample - Tutorial 1: Modern Workplace Assistant
@@ -5606,10 +5534,7 @@ if __name__ == "__main__":
     main()
 ```
 
-  </Tab>
-  <Tab title="C#">
-
-    ```csharp
+```csharp C#
 // <imports_and_includes>
 using System;
 using System.ClientModel;
@@ -6176,9 +6101,7 @@ RESPONSE STRATEGY:
     }
 }
 ```
-
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 ### Expected output from agent sample code
 
@@ -6297,10 +6220,8 @@ First, create an evaluation object that defines your data schema and testing cri
 
 In Python, use the OpenAI client directly. In C#, get an `EvaluationClient` from the project client:
 
-<Tabs>
-  <Tab title="Python">
-
-    ```python
+<CodeGroup>
+```python Python
 # ------------------------------------
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
@@ -6472,10 +6393,7 @@ with (
 # </retrieve_evaluation_results>
 ```
 
-  </Tab>
-  <Tab title="C#">
-
-    ```csharp
+```csharp C#
 ﻿// <imports_and_includes>
 using Azure;
 using Azure.AI.Projects;
@@ -6671,9 +6589,7 @@ Answer questions using available tools and provide specific, detailed responses.
     }
 }
 ```
-
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 The `testing_criteria` array specifies which evaluators to run:
 
@@ -6685,10 +6601,8 @@ The `testing_criteria` array specifies which evaluators to run:
 
 Create an evaluation run that targets your agent. The `azure_ai_target_completions` data source sends queries to your agent and captures responses for evaluation:
 
-<Tabs>
-  <Tab title="Python">
-
-    ```python
+<CodeGroup>
+```python Python
 # ------------------------------------
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
@@ -6860,10 +6774,7 @@ with (
 # </retrieve_evaluation_results>
 ```
 
-  </Tab>
-  <Tab title="C#">
-
-    ```csharp
+```csharp C#
 ﻿// <imports_and_includes>
 using Azure;
 using Azure.AI.Projects;
@@ -7059,9 +6970,7 @@ Answer questions using available tools and provide specific, detailed responses.
     }
 }
 ```
-
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 The `data_source` configuration:
 
@@ -7074,10 +6983,8 @@ The `data_source` configuration:
 
 Poll the evaluation run until it completes, then retrieve the detailed output items:
 
-<Tabs>
-  <Tab title="Python">
-
-    ```python
+<CodeGroup>
+```python Python
 # ------------------------------------
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
@@ -7249,10 +7156,7 @@ with (
 # </retrieve_evaluation_results>
 ```
 
-  </Tab>
-  <Tab title="C#">
-
-    ```csharp
+```csharp C#
 ﻿// <imports_and_includes>
 using Azure;
 using Azure.AI.Projects;
@@ -7448,9 +7352,7 @@ Answer questions using available tools and provide specific, detailed responses.
     }
 }
 ```
-
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 Each output item includes:
 

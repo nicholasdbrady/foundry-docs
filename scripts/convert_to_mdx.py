@@ -555,6 +555,282 @@ def strip_code_includes(content: str) -> str:
     return content
 
 
+def replace_html_comments(content: str) -> str:
+    """Replace HTML comments <!-- ... --> with MDX-compatible {/* ... */}.
+
+    Skips content inside code fences to avoid mangling code examples.
+    """
+    parts = re.split(r'(^[ \t]*```[^\n]*\n.*?^[ \t]*```[ \t]*$)', content, flags=re.MULTILINE | re.DOTALL)
+    for i, part in enumerate(parts):
+        if not re.match(r'^[ \t]*```', part):
+            parts[i] = re.sub(
+                r'<!--(.*?)-->',
+                lambda m: '{/*' + m.group(1) + '*/}',
+                part,
+                flags=re.DOTALL,
+            )
+    return ''.join(parts)
+
+
+def fix_void_elements(content: str) -> str:
+    """Replace unclosed HTML void elements with self-closing form for MDX/JSX.
+
+    Handles <br>, </br>, <hr> (case-insensitive) → <br />, <hr />.
+    Skips content inside fenced code blocks.
+    """
+    parts = re.split(r'(```[\s\S]*?```)', content)
+    for i, part in enumerate(parts):
+        if not part.startswith('```'):
+            # <br> or <br/> (without space) → <br /> ; also <BR>, <Br>, etc.
+            part = re.sub(r'<br\s*/?>', '<br />', part, flags=re.IGNORECASE)
+            # </br> → <br />
+            part = re.sub(r'</br\s*>', '<br />', part, flags=re.IGNORECASE)
+            # <hr> or <hr/> → <hr />
+            part = re.sub(r'<hr\s*/?>', '<hr />', part, flags=re.IGNORECASE)
+            # </hr> → <hr />
+            part = re.sub(r'</hr\s*>', '<hr />', part, flags=re.IGNORECASE)
+            parts[i] = part
+    return ''.join(parts)
+
+
+def tabs_to_codegroup(content: str) -> str:
+    """Convert code-only <Tabs>/<Tab> blocks to <CodeGroup>.
+
+    Mintlify uses <CodeGroup> for multi-language code examples and <Tabs> for
+    mixed content. When every <Tab> contains only a code fence (and maybe
+    whitespace), replace the whole block with a <CodeGroup>.
+    """
+    def replace_tabs_block(match):
+        block = match.group(1)
+        tabs = re.findall(r'<Tab\s+title="([^"]+)">(.*?)</Tab>', block, re.DOTALL)
+        if not tabs:
+            return match.group(0)
+
+        code_blocks = []
+        for title, body in tabs:
+            stripped = body.strip()
+            # Extract all code fences
+            fences = re.findall(r'(```\w*[^\n]*\n.*?```)', stripped, re.DOTALL)
+            # Check if body is ONLY code fences (allow whitespace between)
+            no_code = re.sub(r'```[\w]*[^\n]*\n.*?```', '', stripped, flags=re.DOTALL).strip()
+            if no_code and len(no_code) > 20:
+                return match.group(0)  # mixed content, keep as Tabs
+            if not fences:
+                return match.group(0)  # no code at all, keep as Tabs
+
+            for fence in fences:
+                # Inject title into fence if not already titled
+                first_line = fence.split('\n', 1)[0]
+                # e.g. ```python  or ```python title.py
+                lang_match = re.match(r'^```(\w+)(.*)', first_line)
+                if lang_match:
+                    lang = lang_match.group(1)
+                    rest = lang_match.group(2).strip()
+                    if not rest:
+                        # Add title from tab
+                        new_first = f'```{lang} {title}'
+                        fence = new_first + '\n' + fence.split('\n', 1)[1]
+                    code_blocks.append(fence)
+                else:
+                    code_blocks.append(fence)
+
+        return '<CodeGroup>\n' + '\n\n'.join(code_blocks) + '\n</CodeGroup>'
+
+    return re.sub(r'<Tabs>\s*(.*?)\s*</Tabs>', replace_tabs_block, content, flags=re.DOTALL)
+
+
+def fix_components_in_list_items(content: str) -> str:
+    """Break Mintlify components out of markdown list items.
+
+    When component tags like <Frame>, <Note>, etc. appear indented inside
+    list items, MDX fails with 'Expected a closing tag before end of
+    listItem'. Fix by de-indenting component blocks to top level.
+    """
+    components = ('Frame', 'Note', 'Info', 'Tip', 'Warning', 'Check', 'Danger')
+    comp_names = '|'.join(components)
+    open_re = re.compile(rf'^(\s+)<({comp_names})(\s|>|/>)')
+    inline_re = re.compile(rf'^(\s+)<({comp_names})\b[^>]*>.*</\2>')
+    list_start_re = re.compile(r'^\s*(\d+\.\s|[-*]\s)')
+
+    lines = content.split('\n')
+    result = []
+    in_list = False
+
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+
+        if list_start_re.match(line):
+            in_list = True
+            result.append(line)
+            i += 1
+            continue
+
+        # Non-blank, non-indented line ends list context
+        if line.strip() and not line[0:1] in (' ', '\t'):
+            in_list = False
+
+        if in_list:
+            # Single-line component (e.g. <Check>text</Check>)
+            im = inline_re.match(line)
+            if im:
+                indent = im.group(1)
+                if result and result[-1].strip():
+                    result.append('')
+                result.append(line[len(indent):])
+                i += 1
+                if i < len(lines) and lines[i].strip():
+                    result.append('')
+                continue
+
+            # Multi-line component block
+            om = open_re.match(line)
+            if om:
+                indent = om.group(1)
+                tag_name = om.group(2)
+                close_tag = f'</{tag_name}>'
+
+                if result and result[-1].strip():
+                    result.append('')
+
+                # De-indent all lines until the closing tag
+                while i < len(lines):
+                    l = lines[i]
+                    if l.startswith(indent):
+                        result.append(l[len(indent):])
+                    elif l.strip():
+                        result.append(l.lstrip())
+                    else:
+                        result.append('')
+                    i += 1
+                    if close_tag in l:
+                        break
+
+                if i < len(lines) and lines[i].strip():
+                    result.append('')
+                continue
+
+        result.append(line)
+        i += 1
+
+    return '\n'.join(result)
+
+
+_KNOWN_HTML_TAGS = frozenset({
+    'a', 'abbr', 'address', 'area', 'article', 'aside', 'audio',
+    'b', 'base', 'bdi', 'bdo', 'blockquote', 'body', 'br', 'button',
+    'canvas', 'caption', 'cite', 'code', 'col', 'colgroup',
+    'data', 'datalist', 'dd', 'del', 'details', 'dfn', 'dialog', 'div', 'dl', 'dt',
+    'em', 'embed', 'fieldset', 'figcaption', 'figure', 'footer', 'form',
+    'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'head', 'header', 'hgroup', 'hr', 'html',
+    'i', 'iframe', 'img', 'input', 'ins', 'kbd',
+    'label', 'legend', 'li', 'link', 'main', 'map', 'mark', 'math', 'menu', 'meta',
+    'meter', 'nav', 'noscript', 'object', 'ol', 'optgroup', 'option', 'output',
+    'p', 'param', 'picture', 'pre', 'progress', 'q', 'rp', 'rt', 'ruby',
+    's', 'samp', 'script', 'section', 'select', 'slot', 'small', 'source', 'span',
+    'strong', 'style', 'sub', 'summary', 'sup', 'svg',
+    'table', 'tbody', 'td', 'template', 'textarea', 'tfoot', 'th', 'thead',
+    'time', 'title', 'tr', 'track', 'u', 'ul', 'var', 'video', 'wbr',
+})
+
+
+def _is_valid_tag_at(text: str, pos: int) -> bool:
+    """Check if '<' at pos in text starts a valid HTML/JSX tag."""
+    after = text[pos + 1:]
+    if not after:
+        return False
+    # Closing tag </tagname>
+    if after[0] == '/':
+        m = re.match(r'/([a-zA-Z][a-zA-Z0-9]*)\s*>', after)
+        if m:
+            tag = m.group(1)
+            return tag[0].isupper() or tag.lower() in _KNOWN_HTML_TAGS
+        return False
+    # HTML comment <!--
+    if after.startswith('!--'):
+        return True
+    # Opening/self-closing tag
+    m = re.match(r'([a-zA-Z][a-zA-Z0-9]*)', after)
+    if m:
+        tag = m.group(1)
+        rest = after[len(tag):]
+        if not rest:
+            return False
+        first = rest[0]
+        if first in (' ', '\t', '\n', '>'):
+            return tag[0].isupper() or tag.lower() in _KNOWN_HTML_TAGS
+        if first == '/':
+            # Self-closing: must be /> (possibly with whitespace)
+            if re.match(r'/\s*>', rest):
+                return tag[0].isupper() or tag.lower() in _KNOWN_HTML_TAGS
+            return False
+    return False
+
+
+def escape_angle_brackets(content: str) -> str:
+    """Escape '<' in prose that MDX would misinterpret as JSX tags.
+
+    Converts autolinks <URL> to markdown links and escapes remaining
+    bare '<' that aren't valid HTML/JSX tag starts.
+    Skips content inside code fences and inline code spans.
+    """
+    parts = re.split(r'(```[\s\S]*?```)', content)
+    for i, part in enumerate(parts):
+        if part.startswith('```'):
+            continue
+        lines = part.split('\n')
+        for j, line in enumerate(lines):
+            segments = re.split(r'(`[^`]+`)', line)
+            for k, seg in enumerate(segments):
+                if seg.startswith('`'):
+                    continue
+                # Convert autolinks <URL> to markdown links
+                seg = re.sub(r'(?<!\\)<(https?://[^>]+)>', r'[\1](\1)', seg)
+                # Escape bare < that aren't valid HTML/JSX tags
+                result = []
+                pos = 0
+                for m in re.finditer(r'(?<!\\)<', seg):
+                    result.append(seg[pos:m.start()])
+                    if _is_valid_tag_at(seg, m.start()):
+                        result.append('<')
+                    else:
+                        result.append('&lt;')
+                    pos = m.start() + 1
+                result.append(seg[pos:])
+                segments[k] = ''.join(result)
+            lines[j] = ''.join(segments)
+        parts[i] = '\n'.join(lines)
+    return ''.join(parts)
+
+
+def escape_jsx_braces(content: str) -> str:
+    """Escape { and } in prose text to prevent MDX JSX expression errors.
+
+    Skips content inside code fences, inline code spans, JSX component
+    lines (e.g. <Columns cols={3}>), and JSX comments ({/* ... */}).
+    """
+    parts = re.split(r'(```[\s\S]*?```)', content)
+    for i, part in enumerate(parts):
+        if part.startswith('```'):
+            continue
+        lines = part.split('\n')
+        for j, line in enumerate(lines):
+            # Skip lines that are JSX/MDX component tags
+            if re.match(r'\s*</?[A-Z]', line):
+                continue
+            # Split by inline code spans and JSX comments — skip those
+            segments = re.split(r'(`[^`]+`|\{/\*.*?\*/\})', line)
+            for k, seg in enumerate(segments):
+                if seg.startswith('`') or seg.startswith('{/*'):
+                    continue
+                seg = re.sub(r'(?<!\\)\{', r'\\{', seg)
+                seg = re.sub(r'(?<!\\)\}', r'\\}', seg)
+                segments[k] = seg
+            lines[j] = ''.join(segments)
+        parts[i] = '\n'.join(lines)
+    return ''.join(parts)
+
+
 def clean_up(content: str) -> str:
     """Final cleanup pass."""
     # Remove leftover moniker range from front matter comments
@@ -683,7 +959,25 @@ def convert_doc(doc: dict) -> str | None:
     # Step 11: Strip table CSS wrappers
     body = strip_table_wrappers(body)
 
-    # Step 12: Final cleanup
+    # Step 12: Replace HTML comments with MDX-compatible JSX comments
+    body = replace_html_comments(body)
+
+    # Step 13: Fix void HTML elements (<br>, <hr>) for MDX/JSX
+    body = fix_void_elements(body)
+
+    # Step 14: Escape angle brackets that MDX misinterprets as JSX tags
+    body = escape_angle_brackets(body)
+
+    # Step 15: Escape curly braces in prose to prevent JSX expression errors
+    body = escape_jsx_braces(body)
+
+    # Step 16: Fix components inside list items (de-indent to break out of list)
+    body = fix_components_in_list_items(body)
+
+    # Step 17: Convert code-only <Tabs> to <CodeGroup>
+    body = tabs_to_codegroup(body)
+
+    # Step 18: Final cleanup
     body = clean_up(body)
 
     # Build final MDX

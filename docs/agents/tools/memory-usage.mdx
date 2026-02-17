@@ -72,10 +72,8 @@ Alternatively, when you specify `{{$userId}}` as the scope, the system automatic
 
 Create a dedicated memory store for each agent to establish clear boundaries for memory access and optimization. When you create a memory store, specify the chat model and embedding model deployments that process your memory content.
 
-<Tabs>
-  <Tab title="Python">
-
-    ```python
+<CodeGroup>
+```python Python
     import os
     from azure.ai.projects import AIProjectClient
     from azure.ai.projects.models import MemoryStoreDefaultDefinition, MemoryStoreDefaultOptions
@@ -111,10 +109,7 @@ Create a dedicated memory store for each agent to establish clear boundaries for
     print(f"Created memory store: {memory_store.name}")
     ```
 
-  </Tab>
-  <Tab title="REST API">
-
-    ```bash
+```bash REST API
     # Configuration
     ENDPOINT="https://{your-ai-services-account}.services.ai.azure.com/api/projects/{project-name}"
     API_VERSION="2025-11-15-preview"
@@ -140,9 +135,7 @@ Create a dedicated memory store for each agent to establish clear boundaries for
         }
       }'
     ```
-
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 ### Customize memory
 
@@ -156,10 +149,8 @@ You can also use this parameter to exclude certain types of data, keeping memory
 
 Update memory store properties, such as `description` or `metadata`, to better manage memory stores.
 
-<Tabs>
-  <Tab title="Python">
-
-    ```python
+<CodeGroup>
+```python Python
     # Update memory store properties
     updated_store = project_client.memory_stores.update(
         name=memory_store_name,
@@ -169,10 +160,7 @@ Update memory store properties, such as `description` or `metadata`, to better m
     print(f"Updated: {updated_store.description}")
     ```
 
-  </Tab>
-  <Tab title="REST API">
-
-    ```bash
+```bash REST API
     # Configuration
     ENDPOINT="https://{your-ai-services-account}.services.ai.azure.com/api/projects/{project-name}"
     API_VERSION="2025-11-15-preview"
@@ -187,18 +175,14 @@ Update memory store properties, such as `description` or `metadata`, to better m
         "description": "Updated description"
       }'
     ```
-
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 ## List memory stores
 
 Retrieve a list of memory stores in your project to manage and monitor your memory infrastructure.
 
-<Tabs>
-  <Tab title="Python">
-
-    ```python
+<CodeGroup>
+```python Python
     # List all memory stores
     stores_list = project_client.memory_stores.list()
 
@@ -207,10 +191,7 @@ Retrieve a list of memory stores in your project to manage and monitor your memo
         print(f"- {store.name} ({store.description})")
     ```
 
-  </Tab>
-  <Tab title="REST API">
-
-    ```bash
+```bash REST API
     # Configuration
     ENDPOINT="https://{your-ai-services-account}.services.ai.azure.com/api/projects/{project-name}"
     API_VERSION="2025-11-15-preview"
@@ -219,18 +200,14 @@ Retrieve a list of memory stores in your project to manage and monitor your memo
     curl -X GET "${ENDPOINT}/memory_stores?api-version=${API_VERSION}" \
       -H "Authorization: Bearer ${ACCESS_TOKEN}"
     ```
-
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 ## Use memories via an agent tool
 
 After you create a memory store, you can attach the memory search tool to a prompt agent. This tool enables the agent to read from and write to your memory store during conversations. Configure the tool with the appropriate `scope` and `update_delay` to control how and when memories are updated.
 
-<Tabs>
-  <Tab title="Python">
-
-    ```python
+<CodeGroup>
+```python Python
     # Continue from the previous Python snippets.
     from azure.ai.projects.models import MemorySearchTool, PromptAgentDefinition
 
@@ -261,10 +238,7 @@ After you create a memory store, you can attach the memory search tool to a prom
     print(f"Agent created (id: {agent.id}, name: {agent.name}, version: {agent.version})")
     ```
 
-  </Tab>
-  <Tab title="REST API">
-
-    ```bash
+```bash REST API
     # Configuration
     ENDPOINT="https://{your-ai-services-account}.services.ai.azure.com/api/projects/{project-name}"
     API_VERSION="2025-11-15-preview"
@@ -289,9 +263,7 @@ After you create a memory store, you can attach the memory search tool to a prom
         }
     }'
     ```
-
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 ### Create a conversation
 
@@ -299,10 +271,8 @@ You can now create conversations and request agent responses. At the start of ea
 
 After each agent response, the service internally calls `update_memories`. However, actual writes to long‑term memory are debounced by the `update_delay` setting. The update is scheduled and only completes after the configured period of inactivity.
 
-<Tabs>
-  <Tab title="Python">
-
-    ```python
+<CodeGroup>
+```python Python
     import time
 
     # Create a conversation with the agent with memory tool enabled
@@ -336,10 +306,7 @@ After each agent response, the service internally calls `update_memories`. Howev
     print(f"Response output: {new_response.output_text}")
     ```
 
-  </Tab>
-  <Tab title="REST API">
-
-    ```bash
+```bash REST API
     # Configuration
     ENDPOINT="https://{your-ai-services-account}.services.ai.azure.com/api/projects/{project-name}"
     API_VERSION="2025-11-15-preview"
@@ -363,9 +330,7 @@ After each agent response, the service internally calls `update_memories`. Howev
           }
         }'
     ```
-
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 ## Use memories via APIs
 
@@ -379,10 +344,8 @@ Decide how to segment memory across users by specifying the `scope` parameter. Y
 
 You can update a memory store with content from multiple conversation turns, or update after each turn and chain updates using the previous update operation ID.
 
-<Tabs>
-  <Tab title="Python">
-
-    ```python
+<CodeGroup>
+```python Python
     # Continue from the previous Python snippets.
     from azure.ai.projects.models import ResponsesUserMessageItemParam
 
@@ -424,10 +387,7 @@ You can update a memory store with content from multiple conversation turns, or 
         )
     ```
 
-  </Tab>
-  <Tab title="REST API">
-
-    ```bash
+```bash REST API
     # Configuration
     ENDPOINT="https://{your-ai-services-account}.services.ai.azure.com/api/projects/{project-name}"
     API_VERSION="2025-11-15-preview"
@@ -459,18 +419,14 @@ You can update a memory store with content from multiple conversation turns, or 
     curl -X GET "${ENDPOINT}/memory_stores/my_memory_store/updates/${UPDATE_ID}?api-version=${API_VERSION}" \
       -H "Authorization: Bearer ${ACCESS_TOKEN}"
     ```
-
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 ### Search for memories in a memory store
 
 Search memories to retrieve relevant context for agent interactions. Specify the memory store name and scope to narrow the search.
 
-<Tabs>
-  <Tab title="Python">
-
-    ```python
+<CodeGroup>
+```python Python
     # Continue from the previous Python snippets.
     from azure.ai.projects.models import MemorySearchOptions, ResponsesUserMessageItemParam
 
@@ -488,10 +444,7 @@ Search memories to retrieve relevant context for agent interactions. Specify the
         print(f"  - Memory ID: {memory.memory_item.memory_id}, Content: {memory.memory_item.content}")
     ```
 
-  </Tab>
-  <Tab title="REST API">
-
-    ```bash
+```bash REST API
     # Configuration
     ENDPOINT="https://{your-ai-services-account}.services.ai.azure.com/api/projects/{project-name}"
     API_VERSION="2025-11-15-preview"
@@ -519,9 +472,7 @@ Search memories to retrieve relevant context for agent interactions. Specify the
         }
       }'
     ```
-
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 ### Retrieve static or contextual memories
 
@@ -544,10 +495,8 @@ Memories are organized by scope within a memory store. You can delete memories f
 
 Remove all memories associated with a particular user or group scope while preserving the memory store structure. Use this operation to handle user data deletion requests or reset memory for specific users.
 
-<Tabs>
-  <Tab title="Python">
-
-    ```python
+<CodeGroup>
+```python Python
     # Delete memories for a specific scope
     delete_scope_response = project_client.memory_stores.delete_scope(
         name=memory_store_name,
@@ -557,10 +506,7 @@ Remove all memories associated with a particular user or group scope while prese
     print(f"Deleted memories for scope: user_123")
     ```
 
-  </Tab>
-  <Tab title="REST API">
-
-    ```bash
+```bash REST API
     # Configuration
     ENDPOINT="https://{your-ai-services-account}.services.ai.azure.com/api/projects/{project-name}"
     API_VERSION="2025-11-15-preview"
@@ -573,27 +519,20 @@ Remove all memories associated with a particular user or group scope while prese
         "scope": "user_123"
       }'
     ```
-
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 ### Delete a memory store
 
 Remove the entire memory store and all associated memories across all scopes. This operation is irreversible.
 
-<Tabs>
-  <Tab title="Python">
-
-    ```python
+<CodeGroup>
+```python Python
     # Delete the entire memory store
     delete_response = project_client.memory_stores.delete(memory_store_name)
     print(f"Deleted memory store: {delete_response.deleted}")
     ```
 
-  </Tab>
-  <Tab title="REST API">
-
-    ```bash
+```bash REST API
     # Configuration
     ENDPOINT="https://{your-ai-services-account}.services.ai.azure.com/api/projects/{project-name}"
     API_VERSION="2025-11-15-preview"
@@ -602,9 +541,7 @@ Remove the entire memory store and all associated memories across all scopes. Th
     curl -X DELETE "${ENDPOINT}/memory_stores/my_memory_store?api-version=${API_VERSION}" \
       -H "Authorization: Bearer ${ACCESS_TOKEN}"
     ```
-
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 ## Best practices
 

@@ -7,7 +7,7 @@ sidebarTitle: "Quickstart: Generate images with Azure OpenAI in Microsoft Foundr
 
 <Note>
 This article refers to the [Microsoft Foundry (new)](/overview/what-is-foundry#microsoft-foundry-portals) portal.
-</Note><!-- > 🔄 [Switch to the Microsoft Foundry (classic) documentation]() if you're using the classic portal. -->
+</Note>{/* > 🔄 [Switch to the Microsoft Foundry (classic) documentation]() if you're using the classic portal. */}
 
 Azure OpenAI provides multiple image generation models. This quickstart covers both model families:
 
@@ -52,32 +52,22 @@ Go to your resource in the Azure portal. On the navigation pane, select **Keys a
 
 Create and assign persistent environment variables for your key and endpoint.
 
-<Tabs>
-  <Tab title="Command Line">
-
-    ```cmd
+<CodeGroup>
+```cmd Command Line
     setx AZURE_OPENAI_API_KEY "REPLACE_WITH_YOUR_KEY_VALUE_HERE" 
     setx AZURE_OPENAI_ENDPOINT "REPLACE_WITH_YOUR_ENDPOINT_HERE" 
     ```
 
-  </Tab>
-  <Tab title="PowerShell">
-
-    ```powershell
+```powershell PowerShell
     [System.Environment]::SetEnvironmentVariable('AZURE_OPENAI_API_KEY', 'REPLACE_WITH_YOUR_KEY_VALUE_HERE', 'User')
     [System.Environment]::SetEnvironmentVariable('AZURE_OPENAI_ENDPOINT', 'REPLACE_WITH_YOUR_ENDPOINT_HERE', 'User')
     ```
 
-  </Tab>
-  <Tab title="Bash">
-
-    ```bash
+```bash Bash
     export AZURE_OPENAI_API_KEY="REPLACE_WITH_YOUR_KEY_VALUE_HERE"
     export AZURE_OPENAI_ENDPOINT="REPLACE_WITH_YOUR_ENDPOINT_HERE"
     ```
-
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 ## Create a new Python application
 
@@ -160,9 +150,9 @@ Create a new Python file named _quickstart.py_. Open the new file in your prefer
 
         The script makes a synchronous image generation API call.
 
-        <Info>
+<Info>
 
-    </Info>    > Remember to remove the key from your code when you're done, and never post your key publicly. For production, use a secure way of storing and accessing your credentials. For more information, see [Azure Key Vault](https://learn.microsoft.com/azure/key-vault/general/overview).
+</Info>    > Remember to remove the key from your code when you're done, and never post your key publicly. For production, use a secure way of storing and accessing your credentials. For more information, see [Azure Key Vault](https://learn.microsoft.com/azure/key-vault/general/overview).
 
     1. Run the application with the `python` command:
 
@@ -172,11 +162,11 @@ Create a new Python file named _quickstart.py_. Open the new file in your prefer
 
         Wait a few moments to get the response.
 
-    <!--
+    \{/*
   </Tab>
   <Tab title="Black Forest Labs">
     tbd
-    -->
+    */\}
 
   </Tab>
   <Tab title="DALL-E">
@@ -212,9 +202,9 @@ Create a new Python file named _quickstart.py_. Open the new file in your prefer
 
         The script makes a synchronous image generation API call.
 
-        <Info>
+<Info>
 
-    </Info>    > Remember to remove the key from your code when you're done, and never post your key publicly. For production, use a secure way of storing and accessing your credentials. For more information, see [Azure Key Vault](https://learn.microsoft.com/azure/key-vault/general/overview).
+</Info>    > Remember to remove the key from your code when you're done, and never post your key publicly. For production, use a secure way of storing and accessing your credentials. For more information, see [Azure Key Vault](https://learn.microsoft.com/azure/key-vault/general/overview).
 
     1. Run the application with the `python` command:
 
@@ -336,32 +326,22 @@ Go to your resource in the Azure portal. On the navigation pane, select **Keys a
 
 Create and assign persistent environment variables for your key and endpoint.
 
-<Tabs>
-  <Tab title="Command Line">
-
-    ```cmd
+<CodeGroup>
+```cmd Command Line
     setx AZURE_OPENAI_API_KEY "REPLACE_WITH_YOUR_KEY_VALUE_HERE" 
     setx AZURE_OPENAI_ENDPOINT "REPLACE_WITH_YOUR_ENDPOINT_HERE" 
     ```
 
-  </Tab>
-  <Tab title="PowerShell">
-
-    ```powershell
+```powershell PowerShell
     [System.Environment]::SetEnvironmentVariable('AZURE_OPENAI_API_KEY', 'REPLACE_WITH_YOUR_KEY_VALUE_HERE', 'User')
     [System.Environment]::SetEnvironmentVariable('AZURE_OPENAI_ENDPOINT', 'REPLACE_WITH_YOUR_ENDPOINT_HERE', 'User')
     ```
 
-  </Tab>
-  <Tab title="Bash">
-
-    ```bash
+```bash Bash
     export AZURE_OPENAI_API_KEY="REPLACE_WITH_YOUR_KEY_VALUE_HERE"
     export AZURE_OPENAI_ENDPOINT="REPLACE_WITH_YOUR_ENDPOINT_HERE"
     ```
-
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 ## Install the Python SDK
 
@@ -553,21 +533,15 @@ You need to retrieve the following information to authenticate your application 
 
 The sample code in this quickstart uses Microsoft Entra ID for the recommended keyless authentication. If you prefer to use an API key, you can replace the `DefaultAzureCredential` object with an `AzureKeyCredential` object. 
 
-<Tabs>
-  <Tab title="Microsoft Entra ID">
-
-    ```csharp
+<CodeGroup>
+```csharp Microsoft Entra ID
     AzureOpenAIClient openAIClient = new AzureOpenAIClient(new Uri(endpoint), new DefaultAzureCredential()); 
     ```
 
-  </Tab>
-  <Tab title="API key">
-
-    ```csharp
+```csharp API key
     AzureOpenAIClient openAIClient = new AzureOpenAIClient(new Uri(endpoint), new AzureKeyCredential(key));
     ```
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 To run the quickstart, follow these steps:
 
@@ -745,27 +719,21 @@ You need to retrieve the following information to authenticate your application 
 
 The sample code in this quickstart uses Microsoft Entra ID for the recommended keyless authentication. If you prefer to use an API key, you can replace the `DefaultAzureCredential` object with an `AzureKeyCredential` object. 
 
-<Tabs>
-  <Tab title="Microsoft Entra ID">
-
-    ```java
+<CodeGroup>
+```java Microsoft Entra ID
     OpenAIAsyncClient client = new OpenAIClientBuilder()
         .endpoint(endpoint)
         .credential(new DefaultAzureCredentialBuilder().build())
         .buildAsyncClient();
     ```
 
-  </Tab>
-  <Tab title="API key">
-
-    ```java
+```java API key
     OpenAIAsyncClient client = new OpenAIClientBuilder()
         .endpoint(endpoint)
         .credential(new AzureKeyCredential(key))
         .buildAsyncClient();
     ```
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 <Tabs>
   <Tab title="Microsoft Entra ID">
@@ -1496,26 +1464,20 @@ You need to retrieve the following information to authenticate your application 
 
 The sample code in this quickstart uses Microsoft Entra ID for the recommended keyless authentication. If you prefer to use an API key, you can replace the `NewDefaultAzureCredential` implementation with `NewKeyCredential`. 
 
-<Tabs>
-  <Tab title="Microsoft Entra ID">
-
-    ```go
+<CodeGroup>
+```go Microsoft Entra ID
     azureOpenAIEndpoint := os.Getenv("AZURE_OPENAI_ENDPOINT")
     credential, err := azidentity.NewDefaultAzureCredential(nil)
     client, err := azopenai.NewClient(azureOpenAIEndpoint, credential, nil)
     ```
 
-  </Tab>
-  <Tab title="API key">
-
-    ```go
+```go API key
     azureOpenAIEndpoint := os.Getenv("AZURE_OPENAI_ENDPOINT")
     azureOpenAIKey := os.Getenv("AZURE_OPENAI_API_KEY")
     credential := azcore.NewKeyCredential(azureOpenAIKey)
     client, err := azopenai.NewClientWithKeyCredential(azureOpenAIEndpoint, credential, nil)
     ```
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 <Tabs>
   <Tab title="Microsoft Entra ID">
@@ -1831,7 +1793,7 @@ You need to retrieve the following information to authenticate your application 
     return $image_path
    ```
 
-   <Info>
+<Info>
 
 </Info>   > For production, use a secure way of storing and accessing your credentials like [The PowerShell Secret Management with Azure Key Vault](/powershell/utility-modules/secretmanagement/how-to/using-azure-keyvault). For more information about credential security, see this [security](../../../ai-services/security-features.md) article.
 

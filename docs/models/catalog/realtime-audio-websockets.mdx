@@ -7,7 +7,7 @@ sidebarTitle: "Use the GPT Realtime API via WebSockets"
 
 <Note>
 This article refers to the [Microsoft Foundry (new)](../what-is-foundry.md#microsoft-foundry-portals) portal.
-</Note><!-- > 🔄 [Switch to the Microsoft Foundry (classic) documentation]() if you're using the classic portal. -->
+</Note>{/* > 🔄 [Switch to the Microsoft Foundry (classic) documentation]() if you're using the classic portal. */}
 
 Azure OpenAI GPT Realtime API for speech and audio is part of the GPT-4o model family that supports low-latency, "speech in, speech out" conversational interactions. 
 
@@ -65,22 +65,15 @@ You can construct a full request URI by concatenating:
 
 The following example is a well-constructed `/realtime` request URI:
 
-<Tabs>
-  <Tab title="GA version">
-
-    ```http
+<CodeGroup>
+```http GA version
     wss://my-eastus2-openai-resource.openai.azure.com/openai/v1/realtime?model=gpt-realtime-deployment-name
     ```
 
-  </Tab>
-  <Tab title="Preview version">
-
-    ```http
+```http Preview version
     wss://my-eastus2-openai-resource.openai.azure.com/openai/realtime?api-version=2025-04-01-preview&deployment=gpt-4o-mini-realtime-preview-deployment-name
     ```
-
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 <Note>
 The GA API uses `model=` as the query parameter name, while the preview API uses `deployment=`. Both refer to your deployed model name.
@@ -99,7 +92,7 @@ Once the WebSocket connection session to `/realtime` is established and authenti
   <img src="/images/realtime-api-sequence.png" alt="Diagram of the Realtime API authentication and connection sequence." />
 </Frame>
 
-<!--
+{/*
 sequenceDiagram
   actor User as End User
   participant MiddleTier as /realtime host
@@ -120,7 +113,7 @@ sequenceDiagram
   AOAI--)MiddleTier: create/start conversation responses
   AOAI--)MiddleTier: (within responses) create/start/add/finish items
   AOAI--)MiddleTier: (within items) create/stream/finish content parts
--->
+*/\}
 
 Events can be sent and received in parallel and applications should generally handle them both concurrently and asynchronously.
 

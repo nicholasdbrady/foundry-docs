@@ -6,7 +6,7 @@ description: "Recover Foundry Agent Service projects from Azure platform and reg
 
 <Note>
 This article refers to the [Microsoft Foundry (new)](/overview/what-is-foundry#microsoft-foundry-portals) portal.
-</Note><!-- > 🔄 [Switch to the Microsoft Foundry (classic) documentation]() if you're using the classic portal. -->
+</Note>{/* > 🔄 [Switch to the Microsoft Foundry (classic) documentation]() if you're using the classic portal. */}
 
 This article covers recovery from Azure platform incidents that take an entire region or a regional dependency offline. Examples of these incidents include prolonged regional outages or loss of a stateful dependency.
 
@@ -84,7 +84,7 @@ For *each project* you choose to recover, follow these steps:
 
 1. Deploy the project's capability host dependencies (Azure Cosmos DB, Azure AI Search, Azure Storage) in the recovery region by using your infrastructure as code (IaC) assets. Match topology and configuration. If multiple projects share the same dependencies, do this step only once.
 
-      <Tip>
+<Tip>
 
 </Tip>   > Pre-provisioning these resources reduces recovery time but increases cost and operational overhead. A hybrid approach is possible. For example, Azure Storage is already deployed because it's inexpensive when idle; Azure AI Search isn't.
 
@@ -100,7 +100,7 @@ For *each project* you choose to recover, follow these steps:
 
    If an AI gateway pattern is used, then clients continue to use the gateway's FQDN. The gateway configuration instead needs to be updated to route requests to the newly created project on behalf of its clients.
 
-   <Info>
+<Info>
 
 </Info>   > If clients support in-product messaging, notify users they're in a standby environment. Prior conversation history is unavailable, and new conversations *are lost* after failback.
 
@@ -124,7 +124,7 @@ For each failed-over project:
 
 1. If this project is the last one referencing them, delete the three capability host dependencies in the failover region.
 
-      <Info>
+<Info>
 
 </Info>   > This step permanently deletes all state created during the failover period. There's no recovery or merge capability for this data.
 

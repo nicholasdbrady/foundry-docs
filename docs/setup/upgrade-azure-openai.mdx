@@ -7,7 +7,7 @@ sidebarTitle: "Upgrade Azure OpenAI to Microsoft Foundry"
 
 <Note>
 This article refers to the [Microsoft Foundry (new)](/overview/what-is-foundry#microsoft-foundry-portals) portal.
-</Note><!-- > 🔄 [Switch to the Microsoft Foundry (classic) documentation]() if you're using the classic portal. -->
+</Note>{/* > 🔄 [Switch to the Microsoft Foundry (classic) documentation]() if you're using the classic portal. */}
 
 The Microsoft Foundry resource type provides a superset of capabilities compared to the Azure OpenAI resource type. It gives you access to a broader model catalog, agents service, and evaluation capabilities.
 
@@ -87,8 +87,8 @@ You can complete the upgrade through the Foundry (classic) portal, Azure portal,
     1. On the overview page, locate the banner "Want to try the latest industry models and Agents?" and select **Get Started**.
     1. Confirm to start the upgrade.
 
-    <Frame>
-  <img src="/images/azure-portal-upgrade.png" alt="Screenshot shows how to upgrade in Azure portal." />
+<Frame>
+<img src="/images/azure-portal-upgrade.png" alt="Screenshot shows how to upgrade in Azure portal." />
 </Frame>
 
     **Success**: The upgrade completes, and you're returned to your resource overview page. Your resource type is now **Foundry** (previously **Azure OpenAI**). All existing configurations, endpoints, and API keys remain the same.
@@ -137,9 +137,10 @@ You can complete the upgrade through the Foundry (classic) portal, Azure portal,
 
     You can upgrade your Azure OpenAI resource by using either the AzAPI or AzureRM Terraform providers.
 
-    <Info>
-    When using the [AzureRM resource provider](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/cognitive_account.html), make sure you use a version greater than 4.57.0 of your Terraform CLI client for a non-destructive resource update.
-    </Info>
+<Info>
+When using the [AzureRM resource provider](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/cognitive_account.html), make sure you use a version greater than 4.57.0 of your Terraform CLI client for a non-destructive resource update.
+</Info>
+
     Start from your existing Azure OpenAI configuration and update the following properties:
 
     * Update kind from value `OpenAI` to `AIServices`.
@@ -161,7 +162,7 @@ After upgrading from Azure OpenAI to Foundry, you see updates to the portal's na
 
    An *Azure OpenAI section* provides access to features that you exclusively use with Azure OpenAI models.
 
-   <Note>
+<Note>
 
 </Note>   > The portal doesn't show all Foundry tools by default in the left side navigation. The navigation is customizable. Select *... More* to locate them.
 
@@ -207,9 +208,9 @@ Post-upgrade behavior depends on your existing governance setup:
 
 Foundry resource is a superset of Azure OpenAI resource. It exposes its capabilities over three FQDNs:
 
-- {custom-domain}.openai.azure.com
-- {custom-domain}.services.ai.azure.com
-- {custom-domain}.cognitiveservices.azure.com
+- \{custom-domain\}.openai.azure.com
+- \{custom-domain\}.services.ai.azure.com
+- \{custom-domain\}.cognitiveservices.azure.com
 
 Your DNS configuration must resolve each of these FQDNs to use the full set of Foundry capabilities. 
 
@@ -220,7 +221,7 @@ Your DNS configuration must resolve each of these FQDNs to use the full set of F
 After you configure DNS, update or alternatively [delete and re-create a private link endpoint](/security/configure-private-link) on your resource. Your private link endpoint creates an IP address in your Azure Virtual Network to map to each endpoint.
 
 <Info>
-When upgrading to Foundry, you must recreate your private link endpoint for the "services.ai.azure.com" and "{custom-domain}.cognitiveservices.azure.com" IP configurations to be created.
+When upgrading to Foundry, you must recreate your private link endpoint for the "services.ai.azure.com" and "\{custom-domain\}.cognitiveservices.azure.com" IP configurations to be created.
 </Info>
 ## Roll back to Azure OpenAI
 
@@ -242,8 +243,8 @@ Then, use either the Foundry (classic) portal, Azure portal, or an ARM template 
     1. On your resource overview page, find the rollback option.
     1. Select **Rollback**.
 
-    <Frame>
-  <img src="/images/rollback.png" alt="Screenshot shows the rollback option in the Foundry portal." />
+<Frame>
+<img src="/images/rollback.png" alt="Screenshot shows the rollback option in the Foundry portal." />
 </Frame>
 
   </Tab>
@@ -253,8 +254,8 @@ Then, use either the Foundry (classic) portal, Azure portal, or an ARM template 
     1. Select your Foundry resource.
     1. On the overview page, select **rollback upgrade**.
 
-    <Frame>
-  <img src="/images/rollback-azure-portal.png" alt="Screenshot shows how to roll back in Azure portal." />
+<Frame>
+<img src="/images/rollback-azure-portal.png" alt="Screenshot shows how to roll back in Azure portal." />
 </Frame>
 
   </Tab>
@@ -292,9 +293,10 @@ Then, use either the Foundry (classic) portal, Azure portal, or an ARM template 
 
     To roll back to Azure OpenAI, use either the AzAPI or AzureRM Terraform providers.
 
-    <Note>
-    When using the [AzureRM resource provider](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/cognitive_account.html), make sure you use a version greater than 4.57.0 of your Terraform CLI client for a non-destructive resource update.
-    </Note>
+<Note>
+When using the [AzureRM resource provider](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/cognitive_account.html), make sure you use a version greater than 4.57.0 of your Terraform CLI client for a non-destructive resource update.
+</Note>
+
     * Delete any non-OpenAI model deployments.
     * Delete Foundry-specific sub-resources, including projects and connections.
     * In your `azurerm_cognitive_account` resource, update kind from value 'AIServices' to 'OpenAI' and set `allowProjectManagement` to False.

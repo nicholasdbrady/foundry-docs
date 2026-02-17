@@ -54,10 +54,8 @@ The predicted outputs feature is currently unavailable for models in the South E
 
 To demonstrate the basics of predicted outputs, we'll start by asking a model to refactor the code from the common programming `FizzBuzz` problem to replace the instance of `FizzBuzz` with `MSFTBuzz`. We'll pass our example code to the model in two places. First as part of a user message in the `messages` array/list, and a second time as part of the content of the new `prediction` parameter.
 
-<Tabs>
-  <Tab title="Microsoft Entra ID">
-
-    ```python
+<CodeGroup>
+```python Microsoft Entra ID
     from openai import OpenAI
     from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 
@@ -108,10 +106,7 @@ To demonstrate the basics of predicted outputs, we'll start by asking a model to
     print(completion.model_dump_json(indent=2))
     ```
 
-  </Tab>
-  <Tab title="API key">
-
-    ```python
+```python API key
     import os
     from openai import OpenAI
 
@@ -157,9 +152,7 @@ To demonstrate the basics of predicted outputs, we'll start by asking a model to
 
     print(completion.model_dump_json(indent=2))
     ```
-
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 ### Output
 
@@ -283,10 +276,8 @@ Unlike [prompt caching](/models/capabilities/prompt-caching) which only works wh
 
 Predicted outputs performance boost is often most obvious if you're returning your responses with streaming enabled.
 
-<Tabs>
-  <Tab title="Microsoft Entra ID">
-
-    ```python
+<CodeGroup>
+```python Microsoft Entra ID
     from openai import OpenAI
     from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 
@@ -341,10 +332,7 @@ Predicted outputs performance boost is often most obvious if you're returning yo
 
     ```
 
-  </Tab>
-  <Tab title="API key">
-
-    ```python
+```python API key
     import os
     from openai import OpenAI
 
@@ -393,9 +381,7 @@ Predicted outputs performance boost is often most obvious if you're returning yo
         if chunk.choices and chunk.choices[0].delta.content is not None:
             print(chunk.choices[0].delta.content, end='',)
     ```
-
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 ## Troubleshooting
 

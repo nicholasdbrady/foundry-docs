@@ -9,7 +9,7 @@ Azure OpenAI webhooks enable your applications to receive real-time notification
 
 ## Prerequisites
 
-- Azure CLI installed and signed in. For example: `az --version` and `az login`. See <https://learn.microsoft.com/cli/azure/install-azure-cli>.
+- Azure CLI installed and signed in. For example: `az --version` and `az login`. See [https://learn.microsoft.com/cli/azure/install-azure-cli](https://learn.microsoft.com/cli/azure/install-azure-cli).
 - An Azure OpenAI resource endpoint (for example, `https://{resource}.openai.azure.com/`) and an API key available as `AZURE_OPENAI_API_KEY`.
 
 Install the required Python packages:
@@ -107,10 +107,8 @@ Your webhook URL will be: `https://unique-webhook-handler-name.azurewebsites.net
 
 With Azure OpenAI webhook endpoints must be created using the REST API. Register your listener to receive webhook events for specific event types.
 
-<Tabs>
-  <Tab title="Python">
-
-    ```python
+<CodeGroup>
+```python Python
     import requests
     import json
     import os
@@ -137,10 +135,7 @@ With Azure OpenAI webhook endpoints must be created using the REST API. Register
     print(json.dumps(response.json(), indent=2))
     ```
 
-  </Tab>
-  <Tab title="REST">
-
-    ```bash
+```bash REST
     curl -X POST https://<YOUR-RESOURCE-NAME>.openai.azure.com/openai/v1/dashboard/webhook_endpoints \
       -H "api-key: $AZURE_OPENAI_API_KEY" \
       -H "Content-Type: application/json" \
@@ -151,10 +146,7 @@ With Azure OpenAI webhook endpoints must be created using the REST API. Register
       }'
     ```
 
-  </Tab>
-  <Tab title="Output">
-
-    ```json
+```json Output
     {
       "id": "<webhook_id>",
       "object": "webhook.endpoint",
@@ -166,9 +158,7 @@ With Azure OpenAI webhook endpoints must be created using the REST API. Register
       "url": "https://my-webhook-handler.azurewebsites.net/webhook"
     }
     ```
-
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 <Info>
 The signing secret is only shown once during creation. Secrets can be stored securely using [Azure Key Vault](https://learn.microsoft.com/azure/key-vault/general/overview).

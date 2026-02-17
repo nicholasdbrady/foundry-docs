@@ -75,7 +75,7 @@ The following table lists the metrics available for the Microsoft.CognitiveServi
 
 ### Supported resource logs for Microsoft.CognitiveServices/accounts
 
-[!INCLUDE [<ResourceType/namespace>](~/reusable-content/ce-skilling/azure/includes/azure-monitor/reference/logs/microsoft-cognitiveservices-accounts-logs-include.md)]
+[!INCLUDE [ResourceType/namespace](~/reusable-content/ce-skilling/azure/includes/azure-monitor/reference/logs/microsoft-cognitiveservices-accounts-logs-include.md)]
 
 [!INCLUDE [horz-monitor-ref-logs-tables](~/reusable-content/ce-skilling/azure/includes/azure-monitor/horizontals/horz-monitor-ref-logs-tables.md)]
 

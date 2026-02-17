@@ -7,7 +7,7 @@ sidebarTitle: "Cloud Evaluation with the Microsoft Foundry SDK"
 
 <Note>
 This article refers to the [Microsoft Foundry (new)](../what-is-foundry.md#microsoft-foundry-portals) portal.
-</Note><!-- > 🔄 [Switch to the Microsoft Foundry (classic) documentation]() if you're using the classic portal. -->
+</Note>{/* > 🔄 [Switch to the Microsoft Foundry (classic) documentation]() if you're using the classic portal. */}
 
 <Info>
 Items marked (preview) in this article are currently in public preview. This preview is provided without a service-level agreement, and we don't recommend it for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
@@ -164,10 +164,8 @@ Before you begin, complete [Get started](#get-started) and [Prepare input data](
 
 Specify the schema that matches your JSONL fields, and select the evaluators (testing criteria) to run. Use the `data_mapping` parameter to connect fields from your input data to evaluator parameters with `{{item.field}}` syntax. Always include `data_mapping` with the required input fields for each evaluator. Your field names must match those in your JSONL file — for example, if your data has `"question"` instead of `"query"`, use `"{{item.question}}"` in the mapping. For the required parameters per evaluator, see [built-in evaluators](/observability/observability#what-are-evaluators).
 
-<Tabs>
-  <Tab title="Python">
-
-    ```python
+<CodeGroup>
+```python Python
     data_source_config = DataSourceConfigCustom(
         type="custom",
         item_schema={
@@ -218,10 +216,7 @@ Specify the schema that matches your JSONL fields, and select the evaluators (te
     ]
     ```
 
-  </Tab>
-  <Tab title="cURL">
-
-    ```bash
+```bash cURL
     curl --request POST \
       --url "https://${ACCOUNT}.services.ai.azure.com/api/projects/${PROJECT}/openai/evals?api-version=v1" \
       --header "Authorization: Bearer ${TOKEN}" \
@@ -243,18 +238,14 @@ Specify the schema that matches your JSONL fields, and select the evaluators (te
         "testing_criteria": [
       }'
     ```
-
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 ### Create evaluation and run
 
 Create the evaluation, then start a run against your uploaded dataset. The run executes each evaluator on every row in the dataset.
 
-<Tabs>
-  <Tab title="Python">
-
-    ```python
+<CodeGroup>
+```python Python
     # Create the evaluation
     eval_object = client.evals.create(
         name="dataset-evaluation",
@@ -276,10 +267,7 @@ Create the evaluation, then start a run against your uploaded dataset. The run e
     )
     ```
 
-  </Tab>
-  <Tab title="cURL">
-
-    ```bash
+```bash cURL
     # Step 1: Create the evaluation
     EVAL_ID=$(curl --silent --request POST \
       --url "https://${ACCOUNT}.services.ai.azure.com/api/projects/${PROJECT}/openai/evals?api-version=v1" \
@@ -348,9 +336,7 @@ Create the evaluation, then start a run against your uploaded dataset. The run e
         }
       }'
     ```
-
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 For a complete runnable example, see [sample_evaluations_builtin_with_dataset_id.py](https://github.com/Azure/azure-sdk-for-python/blob/main/sdk/ai/azure-ai-projects/samples/evaluations/sample_evaluations_builtin_with_dataset_id.py) on GitHub. To poll for completion and interpret results, see [Get results](#get-results).
 
@@ -434,10 +420,8 @@ testing_criteria = [
 
 ### Create evaluation and run
 
-<Tabs>
-  <Tab title="Python">
-
-    ```python
+<CodeGroup>
+```python Python
     eval_object = client.evals.create(
         name="Model Target Evaluation",
         data_source_config=data_source_config,
@@ -461,10 +445,7 @@ testing_criteria = [
     )
     ```
 
-  </Tab>
-  <Tab title="cURL">
-
-    ```bash
+```bash cURL
     curl --request POST \
       --url "https://${ACCOUNT}.services.ai.azure.com/api/projects/${PROJECT}/openai/evals/${EVAL_ID}/runs?api-version=v1" \
       --header "Authorization: Bearer ${TOKEN}" \
@@ -501,9 +482,7 @@ testing_criteria = [
         }
       }'
     ```
-
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 For a complete runnable example, see [sample_model_evaluation.py](https://github.com/Azure/azure-sdk-for-python/blob/main/sdk/ai/azure-ai-projects/samples/evaluations/sample_model_evaluation.py) on GitHub. To poll for completion and interpret results, see [Get results](#get-results).
 
@@ -613,10 +592,8 @@ testing_criteria = [
 
 ### Create evaluation and run
 
-<Tabs>
-  <Tab title="Python">
-
-    ```python
+<CodeGroup>
+```python Python
     eval_object = client.evals.create(
         name="Agent Target Evaluation",
         data_source_config=data_source_config,
@@ -640,10 +617,7 @@ testing_criteria = [
     )
     ```
 
-  </Tab>
-  <Tab title="cURL">
-
-    ```bash
+```bash cURL
     curl --request POST \
       --url "https://${ACCOUNT}.services.ai.azure.com/api/projects/${PROJECT}/openai/evals/${EVAL_ID}/runs?api-version=v1" \
       --header "Authorization: Bearer ${TOKEN}" \
@@ -685,9 +659,7 @@ testing_criteria = [
         }
       }'
     ```
-
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 For a complete runnable example, see [sample_agent_evaluation.py](https://github.com/Azure/azure-sdk-for-python/blob/main/sdk/ai/azure-ai-projects/samples/evaluations/sample_agent_evaluation.py) on GitHub. To poll for completion and interpret results, see [Get results](#get-results).
 
@@ -717,10 +689,8 @@ You can also collect response IDs from agent interactions in your application's 
 
 ### Create evaluation and run
 
-<Tabs>
-  <Tab title="Python">
-
-    ```python
+<CodeGroup>
+```python Python
     data_source_config = {"type": "azure_ai_source", "scenario": "responses"}
 
     testing_criteria = [
@@ -767,10 +737,7 @@ You can also collect response IDs from agent interactions in your application's 
     )
     ```
 
-  </Tab>
-  <Tab title="cURL">
-
-    ```bash
+```bash cURL
     curl --request POST \
       --url "https://${ACCOUNT}.services.ai.azure.com/api/projects/${PROJECT}/openai/evals/${EVAL_ID}/runs?api-version=v1" \
       --header "Authorization: Bearer ${TOKEN}" \
@@ -793,9 +760,7 @@ You can also collect response IDs from agent interactions in your application's 
         }
       }'
     ```
-
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 For a complete runnable example, see [sample_agent_response_evaluation.py](https://github.com/Azure/azure-sdk-for-python/blob/main/sdk/ai/azure-ai-projects/samples/evaluations/sample_agent_response_evaluation.py) on GitHub. To poll for completion and interpret results, see [Get results](#get-results).
 

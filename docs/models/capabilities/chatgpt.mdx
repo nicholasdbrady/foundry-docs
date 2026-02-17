@@ -24,10 +24,8 @@ The following code snippet shows the most basic way to interact with models that
 <Note>
 The [responses API](/models/capabilities/responses) uses the same chat style of interaction, but supports the latest features which are not supported with the older chat completions API.
 </Note>
-<Tabs>
-  <Tab title="Microsoft Entra ID">
-
-    ```python
+<CodeGroup>
+```python Microsoft Entra ID
     from openai import OpenAI
     from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 
@@ -53,10 +51,7 @@ The [responses API](/models/capabilities/responses) uses the same chat style of 
     print(response.choices[0].message.content)
     ```
 
-  </Tab>
-  <Tab title="API Key">
-
-    ```python
+```python API Key
     import os
     from openai import OpenAI
 
@@ -77,9 +72,7 @@ The [responses API](/models/capabilities/responses) uses the same chat style of 
     print(response.model_dump_json(indent=2))
     print(response.choices[0].message.content)
     ```
-
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 ```output
 {
@@ -277,10 +270,8 @@ The examples so far show the basic mechanics of interacting with the Chat Comple
 
 Every time a new question is asked, a running transcript of the conversation so far is sent along with the latest question. Because the model has no memory, you need to send an updated transcript with each new question or the model will lose the context of the previous questions and answers.
 
-<Tabs>
-  <Tab title="Microsoft Entra ID">
-
-    ```python
+<CodeGroup>
+```python Microsoft Entra ID
     from openai import OpenAI
     from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 
@@ -308,10 +299,7 @@ Every time a new question is asked, a running transcript of the conversation so 
         print("\n" + response.choices[0].message.content + "\n")
     ```
 
-  </Tab>
-  <Tab title="API Key">
-
-    ```python
+```python API Key
     import os
     from openai import OpenAI
 
@@ -334,9 +322,7 @@ Every time a new question is asked, a running transcript of the conversation so 
         conversation.append({"role": "assistant", "content": response.choices[0].message.content})
         print("\n" + response.choices[0].message.content + "\n")
     ```
-
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 When you run the preceding code, you get a blank console window. Enter your first question in the window and then select the `Enter` key. After the response is returned, you can repeat the process and keep asking questions.
 
@@ -350,10 +336,8 @@ The following code sample shows a simple chat loop example with a technique for 
 
 You may need to upgrade your version of tiktoken with `pip install tiktoken --upgrade`.
 
-<Tabs>
-  <Tab title="Microsoft Entra ID">
-
-    ```python
+<CodeGroup>
+```python Microsoft Entra ID
     import tiktoken
     from openai import OpenAI
     from azure.identity import DefaultAzureCredential, get_bearer_token_provider
@@ -440,10 +424,7 @@ You may need to upgrade your version of tiktoken with `pip install tiktoken --up
         print("\n" + response.choices[0].message.content + "\n")
     ```
 
-  </Tab>
-  <Tab title="API Key">
-
-    ```python
+```python API Key
     import tiktoken
     import os
     from openai import OpenAI
@@ -525,9 +506,7 @@ You may need to upgrade your version of tiktoken with `pip install tiktoken --up
         conversation.append({"role": "assistant", "content": response.choices[0].message.content})
         print("\n" + response.choices[0].message.content + "\n")
     ```
-
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 In this example, after the token count is reached, the oldest messages in the conversation transcript are removed. For efficiency, `del` is used instead of `pop()`. We start at index 1 to always preserve the system message and only remove user or assistant messages. Over time, this method of managing the conversation can cause the conversation quality to degrade as the model gradually loses the context of the earlier portions of the conversation.
 
@@ -541,7 +520,7 @@ The token counting portion of the code demonstrated previously is a simplified v
 
 | Error Code | Error Message | Workaround |
 |---|---|---|
-| 500 | 500 - InternalServerError: Error code: 500 - {"error": {"message": "Failed to create completion as the model generated invalid Unicode output"}} | You can minimize the occurrence of these errors by reducing the temperature of your prompts to less than 1 and ensuring you're using a client with retry logic. Reattempting the request often results in a successful response. |
+| 500 | 500 - InternalServerError: Error code: 500 - \{"error": \{"message": "Failed to create completion as the model generated invalid Unicode output"\}\} | You can minimize the occurrence of these errors by reducing the temperature of your prompts to less than 1 and ensuring you're using a client with retry logic. Reattempting the request often results in a successful response. |
 
 ### Common errors
 

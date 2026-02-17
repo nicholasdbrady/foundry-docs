@@ -88,9 +88,10 @@ For the initial v1 Generally Available (GA) API launch, only a subset of the inf
 
     **Microsoft Entra ID**:
 
-    <Info>
-    Handling automatic token refresh was previously handled through use of the `AzureOpenAI()` client. The v1 API removes this dependency, by adding automatic token refresh support to the `OpenAI()` client.
-    </Info>
+<Info>
+Handling automatic token refresh was previously handled through use of the `AzureOpenAI()` client. The v1 API removes this dependency, by adding automatic token refresh support to the `OpenAI()` client.
+</Info>
+
     ```python
     from openai import OpenAI
     from azure.identity import DefaultAzureCredential, get_bearer_token_provider
@@ -295,10 +296,8 @@ For Azure OpenAI models we recommend using the [Responses API](/models/capabilit
 <Note>
 Responses API also works with Foundry Models sold directly by Azure, such as Microsoft AI, DeepSeek, and Grok models. To learn how to use the Responses API with these models, see [How to generate text responses with Microsoft Foundry Models](/models/catalog/generate-responses).
 </Note>
-<Tabs>
-  <Tab title="Python">
-
-    ```python
+<CodeGroup>
+```python Python
     from openai import OpenAI
     from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 
@@ -322,10 +321,7 @@ Responses API also works with Foundry Models sold directly by Azure, such as Mic
     print(completion.model_dump_json(indent=2))
     ```
 
-  </Tab>
-  <Tab title="C#">
-
-    ```csharp
+```csharp C#
     using Azure.Identity;
     using OpenAI;
     using OpenAI.Chat;
@@ -351,10 +347,7 @@ Responses API also works with Foundry Models sold directly by Azure, such as Mic
     Console.WriteLine($"[ASSISTANT]: {completion.Content[0].Text}");
     ```
 
-  </Tab>
-  <Tab title="JavaScript">
-
-    ```javascript
+```javascript JavaScript
     import { DefaultAzureCredential, getBearerTokenProvider } from "@azure/identity";
     import { OpenAI } from "openai";
 
@@ -385,10 +378,7 @@ Responses API also works with Foundry Models sold directly by Azure, such as Mic
     console.log('Response content:', result.choices[0].message.content);
     ```
 
-  </Tab>
-  <Tab title="Go">
-
-    ```go
+```go Go
 
     package main
 
@@ -431,10 +421,7 @@ Responses API also works with Foundry Models sold directly by Azure, such as Mic
     }
     ```
 
-  </Tab>
-  <Tab title="Java">
-
-    ```java
+```java Java
     package com.example;
 
     import com.openai.client.OpenAIClient;
@@ -466,10 +453,7 @@ Responses API also works with Foundry Models sold directly by Azure, such as Mic
     }
     ```
 
-  </Tab>
-  <Tab title="REST">
-
-    ```bash
+```bash REST
     curl -X POST https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/chat/completions \
       -H "Content-Type: application/json" \
       -H "Authorization: Bearer $AZURE_OPENAI_AUTH_TOKEN" \
@@ -487,9 +471,7 @@ Responses API also works with Foundry Models sold directly by Azure, such as Mic
         ]
       }'
     ```
-
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 ## v1 API support
 
