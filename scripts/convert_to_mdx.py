@@ -351,6 +351,46 @@ def convert_images(content: str) -> str:
     return content
 
 
+def rewrite_image_paths(content: str) -> str:
+    """Rewrite markdown and HTML image paths to /images/filename.
+
+    Converts relative paths (../media/..., media/..., ./media/...) and
+    backslash paths to the flat /images/ directory used by the docs site.
+    Skips HTTP URLs and ~/reusable-content references.
+    """
+    def _rewrite_md_img(m):
+        alt = m.group(1)
+        path = m.group(2)
+        if path.startswith('http') or path.startswith('~/'):
+            return m.group(0)
+        # Normalize backslashes and extract filename
+        path = path.replace('\\', '/')
+        name = PurePosixPath(path).name
+        return f'![{alt}](/images/{name})'
+
+    # Rewrite markdown images ![alt](path)
+    content = re.sub(r'!\[([^\]]*)\]\(([^)]+)\)', _rewrite_md_img, content)
+
+    def _rewrite_html_img(m):
+        prefix = m.group(1)
+        path = m.group(2)
+        suffix = m.group(3)
+        if path.startswith('http'):
+            return m.group(0)
+        path = path.replace('\\', '/')
+        name = PurePosixPath(path).name
+        return f'{prefix}/images/{name}{suffix}'
+
+    # Rewrite <img src="path"> with backslashes or relative paths
+    content = re.sub(
+        r'(<img\s[^>]*src=")([^"]+)(")',
+        _rewrite_html_img,
+        content,
+    )
+
+    return content
+
+
 def convert_tabs(content: str) -> str:
     """Convert # [Tab Title](#tab/id) ... --- patterns to <Tabs>/<Tab> components."""
     lines = content.split("\n")
@@ -1104,6 +1144,9 @@ def convert_doc(doc: dict) -> str | None:
 
     # Step 6: Convert images
     body = convert_images(body)
+
+    # Step 6b: Rewrite markdown/HTML image paths to /images/filename
+    body = rewrite_image_paths(body)
 
     # Step 7: Convert zone pivots
     body = convert_zone_pivots(body)
