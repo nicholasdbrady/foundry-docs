@@ -274,7 +274,7 @@ def convert_columns(content: str) -> str:
         cards = []
         for col in columns:
             cards.append(f"  <Card>\n    {col}\n  </Card>")
-        return f'<Columns cols={{{n}}}>\n' + "\n".join(cards) + "\n</Columns>"
+        return f'<Columns cols={{{n}}}>\n' + "\n".join(cards) + "\n</Columns>\n"
 
     content = re.sub(
         r':::row:::\s*\n(.*?):::row-end:::\s*\n?',
@@ -566,9 +566,9 @@ def replace_html_comments(content: str) -> str:
 
     Skips content inside code fences to avoid mangling code examples.
     """
-    parts = re.split(r'(^[ \t]*```[^\n]*\n.*?^[ \t]*```[ \t]*$)', content, flags=re.MULTILINE | re.DOTALL)
+    parts = _split_code_and_comments(content)
     for i, part in enumerate(parts):
-        if not re.match(r'^[ \t]*```', part):
+        if not (part.lstrip().startswith('```') or part.lstrip().startswith('~~~') or part.lstrip().startswith('{/*')):
             parts[i] = re.sub(
                 r'<!--(.*?)-->',
                 lambda m: '{/*' + m.group(1) + '*/}',
@@ -584,9 +584,9 @@ def fix_void_elements(content: str) -> str:
     Handles <br>, </br>, <hr> (case-insensitive) → <br />, <hr />.
     Skips content inside fenced code blocks.
     """
-    parts = re.split(r'(```[\s\S]*?```)', content)
+    parts = _split_code_and_comments(content)
     for i, part in enumerate(parts):
-        if not part.startswith('```'):
+        if not (part.lstrip().startswith('```') or part.lstrip().startswith('~~~') or part.lstrip().startswith('{/*')):
             # <br> or <br/> (without space) → <br /> ; also <BR>, <Br>, etc.
             part = re.sub(r'<br\s*/?>', '<br />', part, flags=re.IGNORECASE)
             # </br> → <br />
@@ -596,6 +596,70 @@ def fix_void_elements(content: str) -> str:
             # </hr> → <hr />
             part = re.sub(r'</hr\s*>', '<hr />', part, flags=re.IGNORECASE)
             parts[i] = part
+    return ''.join(parts)
+
+
+def fix_html_in_tables(content: str) -> str:
+    """Fix HTML elements inside markdown table cells that break MDX parsing.
+
+    1. Convert <ul><li>...</li></ul> in table rows to dash-separated items with <br />.
+    2. Remove <Frame>...</Frame> wrappers in table rows, keeping inner content.
+    """
+    parts = _split_code_and_comments(content)
+    for i, part in enumerate(parts):
+        if part.lstrip().startswith('```') or part.lstrip().startswith('~~~') or part.lstrip().startswith('{/*'):
+            continue
+        lines = part.split('\n')
+        for j, line in enumerate(lines):
+            # Only process markdown table rows
+            if not re.match(r'\s*\|', line):
+                continue
+            # Fix <ul><li>...</li></ul> → dash-separated items with <br />
+            def replace_ul(m):
+                items = re.findall(r'<li>(.*?)</li>', m.group(0), re.DOTALL)
+                return ' '.join(f'- {item.strip()}' if idx == 0
+                               else f'<br /> - {item.strip()}'
+                               for idx, item in enumerate(items))
+            line = re.sub(r'<ul>\s*(?:<li>.*?</li>\s*)+</ul>', replace_ul, line, flags=re.IGNORECASE)
+            # Also strip orphan list tags that weren't part of a complete <ul>...</ul>
+            line = re.sub(r'</?ul>', '', line, flags=re.IGNORECASE)
+            line = re.sub(r'<li>', '- ', line, flags=re.IGNORECASE)
+            line = re.sub(r'</li>', '', line, flags=re.IGNORECASE)
+            # Fix <ol> and list items similarly
+            line = re.sub(r'</?ol>', '', line, flags=re.IGNORECASE)
+            # Fix <Frame>...</Frame> → keep inner content only (in table rows)
+            line = re.sub(r'<Frame[^>]*>\s*', '', line, flags=re.IGNORECASE)
+            line = re.sub(r'\s*</Frame>', '', line, flags=re.IGNORECASE)
+            lines[j] = line
+        # Also strip <Frame>/</Frame> on ANY line between table rows
+        # (multi-line table cells have continuation lines without |)
+        in_table = False
+        for j, line in enumerate(lines):
+            if re.match(r'\s*\|', line):
+                in_table = True
+            elif in_table and line.strip() == '':
+                in_table = False
+            if in_table:
+                lines[j] = re.sub(r'<Frame[^>]*>', '', lines[j], flags=re.IGNORECASE)
+                lines[j] = re.sub(r'</Frame>', '', lines[j], flags=re.IGNORECASE)
+        parts[i] = '\n'.join(lines)
+    return ''.join(parts)
+
+
+def strip_orphan_tags(content: str) -> str:
+    """Remove orphan closing tags (</a>, </span>) that appear outside their opening context."""
+    parts = _split_code_and_comments(content)
+    for i, part in enumerate(parts):
+        if part.lstrip().startswith('```') or part.lstrip().startswith('~~~') or part.lstrip().startswith('{/*'):
+            continue
+        # Remove </a> not preceded by <a on the same line
+        lines = part.split('\n')
+        for j, line in enumerate(lines):
+            if '</a>' in line and '<a ' not in line and '<a>' not in line:
+                lines[j] = line.replace('</a>', '')
+            if '</span>' in line and '<span' not in line:
+                lines[j] = lines[j].replace('</span>', '')
+        parts[i] = '\n'.join(lines)
     return ''.join(parts)
 
 
@@ -740,6 +804,62 @@ _KNOWN_HTML_TAGS = frozenset({
 })
 
 
+_FENCE_OPEN_RE = re.compile(r'^( {0,9})(`{3,}|~{3,})([^`~]*)$', re.MULTILINE)
+
+
+def _split_code_and_comments(content: str) -> list[str]:
+    """Split *content* into alternating [prose, protected, prose, …] parts.
+
+    Protected parts are fenced code blocks (``` or ~~~, possibly indented up
+    to 9 spaces for list-item nesting) and JSX comments ({/* … */}).
+    Code fences are detected line-by-line so that inline triple-backtick
+    spans (e.g. ```value```) are never mistaken for fences.
+    """
+    parts: list[str] = []
+    pos = 0
+
+    # Collect all fence and JSX-comment regions as (start, end) spans
+    regions: list[tuple[int, int]] = []
+
+    # Find fenced code blocks
+    for m in _FENCE_OPEN_RE.finditer(content):
+        fence_char = m.group(2)[0]
+        fence_len = len(m.group(2))
+        # Build closing-fence pattern: same char, at least as many, on its own line
+        close_pat = re.compile(
+            r'^[ \t]*' + re.escape(fence_char) + r'{' + str(fence_len) + r',}[ \t]*$',
+            re.MULTILINE,
+        )
+        search_start = m.end()
+        # Skip past the newline after the opening fence line
+        if search_start < len(content) and content[search_start] == '\n':
+            search_start += 1
+        close_m = close_pat.search(content, search_start)
+        if close_m:
+            regions.append((m.start(), close_m.end()))
+
+    # Find JSX comment blocks {/* ... */}
+    for m in re.finditer(r'\{/\*[\s\S]*?\*/\}', content):
+        regions.append((m.start(), m.end()))
+
+    # Sort by start and remove overlapping regions (keep earliest)
+    regions.sort()
+    merged: list[tuple[int, int]] = []
+    for start, end in regions:
+        if merged and start < merged[-1][1]:
+            continue  # overlaps with previous region, skip
+        merged.append((start, end))
+
+    # Build parts list by slicing around protected regions
+    for start, end in merged:
+        parts.append(content[pos:start])   # prose before region
+        parts.append(content[start:end])   # protected region
+        pos = end
+    parts.append(content[pos:])            # trailing prose
+
+    return parts
+
+
 def _is_valid_tag_at(text: str, pos: int) -> bool:
     """Check if '<' at pos in text starts a valid HTML/JSX tag."""
     after = text[pos + 1:]
@@ -780,9 +900,9 @@ def escape_angle_brackets(content: str) -> str:
     bare '<' that aren't valid HTML/JSX tag starts.
     Skips content inside code fences and inline code spans.
     """
-    parts = re.split(r'(```[\s\S]*?```)', content)
+    parts = _split_code_and_comments(content)
     for i, part in enumerate(parts):
-        if part.startswith('```'):
+        if part.lstrip().startswith('```') or part.lstrip().startswith('~~~') or part.lstrip().startswith('{/*'):
             continue
         lines = part.split('\n')
         for j, line in enumerate(lines):
@@ -815,9 +935,9 @@ def escape_jsx_braces(content: str) -> str:
     Skips content inside code fences, inline code spans, JSX component
     lines (e.g. <Columns cols={3}>), and JSX comments ({/* ... */}).
     """
-    parts = re.split(r'(```[\s\S]*?```)', content)
+    parts = _split_code_and_comments(content)
     for i, part in enumerate(parts):
-        if part.startswith('```'):
+        if part.lstrip().startswith('```') or part.lstrip().startswith('~~~') or part.lstrip().startswith('{/*'):
             continue
         lines = part.split('\n')
         for j, line in enumerate(lines):
@@ -971,19 +1091,25 @@ def convert_doc(doc: dict) -> str | None:
     # Step 13: Fix void HTML elements (<br>, <hr>) for MDX/JSX
     body = fix_void_elements(body)
 
-    # Step 14: Escape angle brackets that MDX misinterprets as JSX tags
+    # Step 14: Fix HTML elements inside table cells (<ul><li>, <Frame>)
+    body = fix_html_in_tables(body)
+
+    # Step 15: Strip orphan closing tags (</a>, </span>)
+    body = strip_orphan_tags(body)
+
+    # Step 16: Escape angle brackets that MDX misinterprets as JSX tags
     body = escape_angle_brackets(body)
 
-    # Step 15: Escape curly braces in prose to prevent JSX expression errors
+    # Step 17: Escape curly braces in prose to prevent JSX expression errors
     body = escape_jsx_braces(body)
 
-    # Step 16: Fix components inside list items (de-indent to break out of list)
+    # Step 18: Fix components inside list items (de-indent to break out of list)
     body = fix_components_in_list_items(body)
 
-    # Step 17: Convert code-only <Tabs> to <CodeGroup>
+    # Step 19: Convert code-only <Tabs> to <CodeGroup>
     body = tabs_to_codegroup(body)
 
-    # Step 18: Final cleanup
+    # Step 20: Final cleanup
     body = clean_up(body)
 
     # Build final MDX
