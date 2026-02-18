@@ -586,7 +586,7 @@ def resolve_code_includes(content: str) -> str:
         return f"{indent}```{lang}\n{indented_code}\n{indent}```"
 
     content = re.sub(
-        r'^([ \t]*):::code\s+language="(\w+)"\s+source="([^"]+)"(?:\s+[^:]*)?:::',
+        r'^([ \t]*):::code\s+language="(\w+)"\s+source="([^"]+)"(?:\s+[^:]*)?(?:::)?',
         replace_code_directive,
         content,
         flags=re.MULTILINE,
