@@ -164,8 +164,8 @@ Interacting with a model is the basic building block of AI applications.  Send a
 
     load_dotenv()
 
-    print(f"Using PROJECT_ENDPOINT: \{os.environ['PROJECT_ENDPOINT']\}")
-    print(f"Using MODEL_DEPLOYMENT_NAME: \{os.environ['MODEL_DEPLOYMENT_NAME']\}")
+    print(f"Using PROJECT_ENDPOINT: {os.environ['PROJECT_ENDPOINT']}")
+    print(f"Using MODEL_DEPLOYMENT_NAME: {os.environ['MODEL_DEPLOYMENT_NAME']}")
 
     project_client = AIProjectClient(
         endpoint=os.environ["PROJECT_ENDPOINT"],
@@ -178,8 +178,8 @@ Interacting with a model is the basic building block of AI applications.  Send a
         model=os.environ["MODEL_DEPLOYMENT_NAME"],
         input="What is the size of France in square miles?",
     )
-    print(f"Response output: \{response.output_text\}")
-    ```:
+    print(f"Response output: {response.output_text}")
+    ```
 
      # [C#](#tab/csharp)
 
@@ -202,31 +202,31 @@ Interacting with a model is the basic building block of AI applications.  Send a
     ResponseResult response = await responseClient.CreateResponseAsync("What is the size of France in square miles?");
 
     Console.WriteLine(response.GetOutputText());
-    ```:
+    ```
 
   </Tab>
   <Tab title="TypeScript">
 
     ```typescript
-    import \{ DefaultAzureCredential \} from "@azure/identity";
-    import \{ AIProjectClient \} from "@azure/ai-projects";
+    import { DefaultAzureCredential } from "@azure/identity";
+    import { AIProjectClient } from "@azure/ai-projects";
     import "dotenv/config";
 
-    const projectEndpoint = process.env["PROJECT_ENDPOINT"] || "&lt;project endpoint>";
-    const deploymentName = process.env["MODEL_DEPLOYMENT_NAME"] || "&lt;model deployment name>";
+    const projectEndpoint = process.env["PROJECT_ENDPOINT"] || "<project endpoint>";
+    const deploymentName = process.env["MODEL_DEPLOYMENT_NAME"] || "<model deployment name>";
 
-    async function main(): Promise&lt;void> \{
+    async function main(): Promise<void> {
         const project = new AIProjectClient(projectEndpoint, new DefaultAzureCredential());
         const openAIClient = await project.getOpenAIClient();
-        const response = await openAIClient.responses.create(\{
+        const response = await openAIClient.responses.create({
             model: deploymentName,
             input: "What is the size of France in square miles?",
-        \});
+        });
         console.log(`Response output: ${response.output_text}`);
-    \}
+    }
 
     main().catch(console.error);
-    ```:
+    ```
 
   </Tab>
   <Tab title="Java">
@@ -239,8 +239,8 @@ Interacting with a model is the basic building block of AI applications.  Send a
     import com.openai.models.responses.Response;
     import com.openai.models.responses.ResponseCreateParams;
 
-    public class CreateResponse \{
-        public static void main(String[] args) \{
+    public class CreateResponse {
+        public static void main(String[] args) {
             String endpoint = Configuration.getGlobalConfiguration().get("PROJECT_ENDPOINT");
             String model = Configuration.getGlobalConfiguration().get("MODEL_DEPLOYMENT_NAME");
             // Code sample for creating a response
@@ -261,9 +261,9 @@ Interacting with a model is the basic building block of AI applications.  Send a
             System.out.println("Response Model: " + response.model());
             System.out.println("Response Created At: " + response.createdAt());
             System.out.println("Response Output: " + response.output());
-        \}
-    \}
-    ```:
+        }
+    }
+    ```
 
   </Tab>
   <Tab title="REST API">
@@ -274,11 +274,11 @@ Interacting with a model is the basic building block of AI applications.  Send a
     curl -X POST https://YOUR-FOUNDRY-RESOURCE-NAME.services.ai.azure.com/api/projects/YOUR-PROJECT-NAME/openai/responses?api-version=2025-11-15-preview \
       -H "Content-Type: application/json" \
       -H "Authorization: Bearer $AZURE_AI_AUTH_TOKEN" \
-    -d '\{
+    -d '{
             "model": "gpt-4.1-mini",
             "input": "What is the size of France in square miles?"
-    \}'
-    ```:
+    }'
+    ```
 
   </Tab>
   <Tab title="Foundry portal">
@@ -324,8 +324,8 @@ An agent defines core behavior. Once created, it ensures consistent responses in
             instructions="You are a helpful assistant that answers general questions",
         ),
     )
-    print(f"Agent created (id: \{agent.id\}, name: \{agent.name\}, version: \{agent.version\})")
-    ```:
+    print(f"Agent created (id: {agent.id}, name: {agent.name}, version: {agent.version})")
+    ```
 
   </Tab>
   <Tab title="C#">
@@ -345,9 +345,9 @@ An agent defines core behavior. Once created, it ensures consistent responses in
     AIProjectClient projectClient = new(new Uri(projectEndpoint), new AzureCliCredential());
 
     AgentDefinition agentDefinition = new PromptAgentDefinition(modelDeploymentName)
-    \{
+    {
         Instructions = "You are a helpful assistant that answers general questions",
-    \};
+    };
 
     AgentVersion newAgentVersion = projectClient.Agents.CreateAgentVersion(
         agentName,
@@ -355,34 +355,34 @@ An agent defines core behavior. Once created, it ensures consistent responses in
 
     List<AgentVersion> agentVersions = [..projectClient.Agents.GetAgentVersions(agentName)];
     foreach (AgentVersion agentVersion in agentVersions)
-    \{
-        Console.WriteLine($"Agent: \{agentVersion.Id\}, Name: \{agentVersion.Name\}, Version: \{agentVersion.Version\}");
-    \}
-    ```:
+    {
+        Console.WriteLine($"Agent: {agentVersion.Id}, Name: {agentVersion.Name}, Version: {agentVersion.Version}");
+    }
+    ```
 
   </Tab>
   <Tab title="TypeScript">
 
     ```typescript
-    import \{ DefaultAzureCredential \} from "@azure/identity";
-    import \{ AIProjectClient \} from "@azure/ai-projects";
+    import { DefaultAzureCredential } from "@azure/identity";
+    import { AIProjectClient } from "@azure/ai-projects";
     import "dotenv/config";
 
-    const projectEndpoint = process.env["PROJECT_ENDPOINT"] || "&lt;project endpoint>";
-    const deploymentName = process.env["MODEL_DEPLOYMENT_NAME"] || "&lt;model deployment name>";
+    const projectEndpoint = process.env["PROJECT_ENDPOINT"] || "<project endpoint>";
+    const deploymentName = process.env["MODEL_DEPLOYMENT_NAME"] || "<model deployment name>";
 
-    async function main(): Promise&lt;void> \{
+    async function main(): Promise<void> {
         const project = new AIProjectClient(projectEndpoint, new DefaultAzureCredential());
-        const agent = await project.agents.createVersion("my-agent-basic", \{
+        const agent = await project.agents.createVersion("my-agent-basic", {
             kind: "prompt",
             model: deploymentName,
             instructions: "You are a helpful assistant that answers general questions",
-      \});
+      });
       console.log(`Agent created (id: ${agent.id}, name: ${agent.name}, version: ${agent.version})`);
-    \}
+    }
 
     main().catch(console.error);
-    ```:
+    ```
 
   </Tab>
   <Tab title="Java">
@@ -395,8 +395,8 @@ An agent defines core behavior. Once created, it ensures consistent responses in
     import com.azure.core.util.Configuration;
     import com.azure.identity.DefaultAzureCredentialBuilder;
 
-    public class CreateAgent \{
-        public static void main(String[] args) \{
+    public class CreateAgent {
+        public static void main(String[] args) {
             String endpoint = Configuration.getGlobalConfiguration().get("PROJECT_ENDPOINT");
             String model = Configuration.getGlobalConfiguration().get("MODEL_DEPLOYMENT_NAME");
             // Code sample for creating an agent
@@ -411,9 +411,9 @@ An agent defines core behavior. Once created, it ensures consistent responses in
             System.out.println("Agent ID: " + agent.getId());
             System.out.println("Agent Name: " + agent.getName());
             System.out.println("Agent Version: " + agent.getVersion());
-        \}
-    \}
-    ```:
+        }
+    }
+    ```
 
   </Tab>
   <Tab title="REST API">
@@ -424,15 +424,15 @@ An agent defines core behavior. Once created, it ensures consistent responses in
     curl -X POST https://YOUR-FOUNDRY-RESOURCE-NAME.services.ai.azure.com/api/projects/YOUR-PROJECT-NAME/agents?api-version=2025-11-15-preview \
       -H "Content-Type: application/json" \
       -H "Authorization: Bearer $AZURE_AI_AUTH_TOKEN" \
-      -d '\{
+      -d '{
             "name": "MyAgent",
-            "definition": \{
+            "definition": {
                 "kind": "prompt",
                 "model": "gpt-4.1-mini", 
                 "instructions": "You are a helpful assistant that answers general questions"
-            \}
-        \}'
-    ```:
+            }
+        }'
+    ```
 
   </Tab>
   <Tab title="Foundry portal">
@@ -473,24 +473,24 @@ Use the previously created agent named "MyAgent" to interact by asking a questio
 
     # Optional Step: Create a conversation to use with the agent
     conversation = openai_client.conversations.create()
-    print(f"Created conversation (id: \{conversation.id\})")
+    print(f"Created conversation (id: {conversation.id})")
 
     # Chat with the agent to answer questions
     response = openai_client.responses.create(
         conversation=conversation.id, #Optional conversation context for multi-turn
-        extra_body=\{"agent": \{"name": agent_name, "type": "agent_reference"\}\},
+        extra_body={"agent": {"name": agent_name, "type": "agent_reference"}},
         input="What is the size of France in square miles?",
     )
-    print(f"Response output: \{response.output_text\}")
+    print(f"Response output: {response.output_text}")
 
     # Optional Step: Ask a follow-up question in the same conversation
     response = openai_client.responses.create(
         conversation=conversation.id,
-        extra_body=\{"agent": \{"name": agent_name, "type": "agent_reference"\}\},
+        extra_body={"agent": {"name": agent_name, "type": "agent_reference"}},
         input="And what is the capital city?",
     )
-    print(f"Response output: \{response.output_text\}")
-    ```:
+    print(f"Response output: {response.output_text}")
+    ```
 
   </Tab>
   <Tab title="C#">
@@ -526,51 +526,51 @@ Use the previously created agent named "MyAgent" to interact by asking a questio
     // Optional Step: Ask a follow-up question in the same conversation
     response = responsesClient.CreateResponse("And what is the capital city?");
     Console.WriteLine(response.GetOutputText());
-    ```:
+    ```
 
   </Tab>
   <Tab title="TypeScript">
 
     ```typescript
-    import \{ DefaultAzureCredential \} from "@azure/identity";
-    import \{ AIProjectClient \} from "@azure/ai-projects";
+    import { DefaultAzureCredential } from "@azure/identity";
+    import { AIProjectClient } from "@azure/ai-projects";
     import "dotenv/config";
 
-    const projectEndpoint = process.env["PROJECT_ENDPOINT"] || "&lt;project endpoint>";
-    const deploymentName = process.env["MODEL_DEPLOYMENT_NAME"] || "&lt;model deployment name>";
+    const projectEndpoint = process.env["PROJECT_ENDPOINT"] || "<project endpoint>";
+    const deploymentName = process.env["MODEL_DEPLOYMENT_NAME"] || "<model deployment name>";
 
-    async function main(): Promise&lt;void> \{
+    async function main(): Promise<void> {
         const project = new AIProjectClient(projectEndpoint, new DefaultAzureCredential());
         const openAIClient = await project.getOpenAIClient();
         
         // Create agent
         console.log("Creating agent...");
-        const agent = await project.agents.createVersion("my-agent-basic", \{
+        const agent = await project.agents.createVersion("my-agent-basic", {
             kind: "prompt",
             model: deploymentName,
             instructions: "You are a helpful assistant that answers general questions",
-        \});
+        });
         console.log(`Agent created (id: ${agent.id}, name: ${agent.name}, version: ${agent.version})`);
         
         // Create conversation with initial user message
         // You can save the conversation ID to database to retrieve later
         console.log("\nCreating conversation with initial user message...");
-        const conversation = await openAIClient.conversations.create(\{
+        const conversation = await openAIClient.conversations.create({
             items: [
-                \{ type: "message", role: "user", content: "What is the size of France in square miles?" \},
+                { type: "message", role: "user", content: "What is the size of France in square miles?" },
             ],
-        \});
+        });
         console.log(`Created conversation with initial user message (id: ${conversation.id})`);
 
         // Generate response using the agent
         console.log("\nGenerating response...");
         const response = await openAIClient.responses.create(
-            \{
+            {
                 conversation: conversation.id,
-            \},
-            \{
-                body: \{ agent: \{ name: agent.name, type: "agent_reference" \} \},
-            \},
+            },
+            {
+                body: { agent: { name: agent.name, type: "agent_reference" } },
+            },
         );
         console.log(`Response output: ${response.output_text}`);
 
@@ -581,10 +581,10 @@ Use the previously created agent named "MyAgent" to interact by asking a questio
 
         await project.agents.deleteVersion(agent.name, agent.version);
         console.log("Agent deleted");
-    \}
+    }
 
     main().catch(console.error);
-    ```:
+    ```
 
   </Tab>
   <Tab title="Java">
@@ -608,8 +608,8 @@ Use the previously created agent named "MyAgent" to interact by asking a questio
     import com.openai.models.responses.Response;
     import com.openai.models.responses.ResponseCreateParams;
 
-    public class ChatWithAgent \{
-        public static void main(String[] args) \{
+    public class ChatWithAgent {
+        public static void main(String[] args) {
             String endpoint = Configuration.getGlobalConfiguration().get("AZURE_AGENTS_ENDPOINT");
             String agentName = "MyAgent";
             
@@ -652,9 +652,9 @@ Use the previously created agent named "MyAgent" to interact by asking a questio
                 .build();
 
             Response result = client.responses().create(responseRequest);
-        \}
-    \}
-    ```:
+        }
+    }
+    ```
 
   </Tab>
   <Tab title="REST API">
@@ -666,29 +666,29 @@ Use the previously created agent named "MyAgent" to interact by asking a questio
     curl -X POST https://YOUR-FOUNDRY-RESOURCE-NAME.services.ai.azure.com/api/projects/YOUR-PROJECT-NAME/openai/conversations?api-version=2025-11-15-preview \
       -H "Content-Type: application/json" \
       -H "Authorization: Bearer $AZURE_AI_AUTH_TOKEN" \
-      -d '\{\}'
+      -d '{}'
     # Lets say Conversation ID created is conv_123456789. Use this in the next step
 
     #Chat with the agent to answer questions
     curl -X POST https://YOUR-FOUNDRY-RESOURCE-NAME.services.ai.azure.com/api/projects/YOUR-PROJECT-NAME/openai/responses?api-version=2025-11-15-preview \
       -H "Content-Type: application/json" \
       -H "Authorization: Bearer $AZURE_AI_AUTH_TOKEN" \
-      -d '\{
-            "agent": \{"type": "agent_reference", "name": "MyAgent"\},
-            "conversation" : "&lt;YOUR_CONVERSATION_ID>",
+      -d '{
+            "agent": {"type": "agent_reference", "name": "MyAgent"},
+            "conversation" : "<YOUR_CONVERSATION_ID>",
             "input" : "What is the size of France in square miles?"
-        \}'
+        }'
 
     #Optional Step: Ask a follow-up question in the same conversation
     curl -X POST https://YOUR-FOUNDRY-RESOURCE-NAME.services.ai.azure.com/api/projects/YOUR-PROJECT-NAME/openai/responses?api-version=2025-11-15-preview \
       -H "Content-Type: application/json" \
       -H "Authorization: Bearer $AZURE_AI_AUTH_TOKEN" \
-      -d '\{
-            "agent": \{"type": "agent_reference", "name": "MyAgent"\},
-            "conversation" : "&lt;YOUR_CONVERSATION_ID>",
+      -d '{
+            "agent": {"type": "agent_reference", "name": "MyAgent"},
+            "conversation" : "<YOUR_CONVERSATION_ID>",
             "input" : "And what is the capital city?"
-        \}'
-    ```:
+        }'
+    ```
 
   </Tab>
   <Tab title="Foundry portal">

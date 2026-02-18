@@ -43,64 +43,64 @@ For more information, see [What is Azure Policy?](https://learn.microsoft.com/az
    - Enter the rule in [JSON format](https://learn.microsoft.com/azure/governance/policy/concepts/definition-structure-policy-rule). For example, to allow only approved connection categories:
 
   ```json
-  \{
-    "properties": \{
+  {
+    "properties": {
       "displayName": "Only selected Foundry connection categories are allowed",
       "policyType": "Custom",
       "mode": "All",
       "description": "Only selected Foundry connection categories are allowed",
       "version": "1.0.0",
-      "parameters": \{
-        "allowedCategories": \{
+      "parameters": {
+        "allowedCategories": {
           "type": "Array",
-          "metadata": \{
+          "metadata": {
             "description": "Categories allowed for Microsoft.CognitiveServices/accounts/connections and Microsoft.CognitiveServices/accounts/projects/connections",
             "displayName": "Allowed connection categories"
-          \},
+          },
           "defaultValue": [
             "BingLLMSearch"
           ]
-        \}
-      \},
-      "policyRule": \{
-        "if": \{
+        }
+      },
+      "policyRule": {
+        "if": {
           "anyOf": [
-            \{
+            {
               "allOf": [
-                \{
+                {
                   "field": "type",
                   "equals": "Microsoft.CognitiveServices/accounts/connections"
-                \},
-                \{
+                },
+                {
                   "field": "Microsoft.CognitiveServices/accounts/connections/category",
                   "notIn": "[parameters('allowedCategories')]"
-                \}
+                }
               ]
-            \},
-            \{
+            },
+            {
               "allOf": [
-                \{
+                {
                   "field": "type",
                   "equals": "Microsoft.CognitiveServices/accounts/projects/connections"
-                \},
-                \{
+                },
+                {
                   "field": "Microsoft.CognitiveServices/accounts/projects/connections/category",
                   "notIn": "[parameters('allowedCategories')]"
-                \}
+                }
               ]
-            \}
+            }
           ]
-        \},
-        "then": \{
+        },
+        "then": {
           "effect": "deny"
-        \}
-      \},
+        }
+      },
       "versions": [
         "1.0.0"
       ]
-    \}
-  \}
-  ```:
+    }
+  }
+  ```
 
   This policy denies creation of Foundry connections when the connection `category` isn't in the `allowedCategories` parameter. It applies to both `Microsoft.CognitiveServices/accounts/connections` and `Microsoft.CognitiveServices/accounts/projects/connections`.
 

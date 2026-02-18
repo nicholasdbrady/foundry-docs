@@ -38,55 +38,55 @@ An Azure account with an active subscription. If you don't have one, create a [f
 
         ```Terraform
         # Setup providers
-        provider "azapi" \{
+        provider "azapi" {
           subscription_id = var.subscription_id
-        \}
-        ```:
+        }
+        ```
 
     1. Create a file named `main.tf` and add the following code.
 
         ```Terraform
         ## Create a random string
         ## 
-        resource "random_string" "unique" \{
+        resource "random_string" "unique" {
           length      = 5
           min_numeric = 5
           numeric     = true
           special     = false
           lower       = true
           upper       = false
-        \}
+        }
 
         ## Create a resource group for the resources to be stored in
         ##
-        resource "azapi_resource" "rg" \{
+        resource "azapi_resource" "rg" {
           type      = "Microsoft.Resources/resourceGroups@2021-04-01"
-          name      = "rg-aifoundry-$\{random_string.unique.result\}"
+          name      = "rg-aifoundry-${random_string.unique.result}"
           location  = var.location
-        \}
+        }
 
         ########## Create AI Foundry resource
         ##########
 
         ## Create the AI Foundry resource
         ##
-        resource "azapi_resource" "ai_foundry" \{
+        resource "azapi_resource" "ai_foundry" {
           type                      = "Microsoft.CognitiveServices/accounts@2025-06-01"
-          name                      = "aifoundry$\{random_string.unique.result\}"
+          name                      = "aifoundry${random_string.unique.result}"
           parent_id                 = azapi_resource.rg.id
           location                  = var.location
           schema_validation_enabled = false
 
-          body = \{
+          body = {
             kind = "AIServices"
-            sku = \{
+            sku = {
               name = "S0"
-            \}
-            identity = \{
+            }
+            identity = {
               type = "SystemAssigned"
-            \}
+            }
 
-            properties = \{
+            properties = {
               # Support both Entra ID and API Key authentication for Cognitive Services account
               disableLocalAuth = false
 
@@ -94,14 +94,14 @@ An Azure account with an active subscription. If you don't have one, create a [f
               allowProjectManagement = true
 
               # Set custom subdomain name for DNS names created for this Foundry resource
-              customSubDomainName = "aifoundry$\{random_string.unique.result\}"
-            \}
-          \}
-        \}
+              customSubDomainName = "aifoundry${random_string.unique.result}"
+            }
+          }
+        }
 
         ## Create a deployment for OpenAI's GPT-4o in the AI Foundry resource
         ##
-        resource "azapi_resource" "aifoundry_deployment_gpt_4o" \{
+        resource "azapi_resource" "aifoundry_deployment_gpt_4o" {
           type      = "Microsoft.CognitiveServices/accounts/deployments@2023-05-01"
           name      = "gpt-4o"
           parent_id = azapi_resource.ai_foundry.id
@@ -109,58 +109,58 @@ An Azure account with an active subscription. If you don't have one, create a [f
             azapi_resource.ai_foundry
           ]
 
-          body = \{
-            sku = \{
+          body = {
+            sku = {
               name     = "GlobalStandard"
               capacity = 1
-            \}
-            properties = \{
-              model = \{
+            }
+            properties = {
+              model = {
                 format  = "OpenAI"
                 name    = "gpt-4o"
                 version = "2024-11-20"
-              \}
-            \}
-          \}
-        \}
+              }
+            }
+          }
+        }
 
         ## Create AI Foundry project
         ##
-        resource "azapi_resource" "ai_foundry_project" \{
+        resource "azapi_resource" "ai_foundry_project" {
           type                      = "Microsoft.CognitiveServices/accounts/projects@2025-06-01"
-          name                      = "project$\{random_string.unique.result\}"
+          name                      = "project${random_string.unique.result}"
           parent_id                 = azapi_resource.ai_foundry.id
           location                  = var.location
           schema_validation_enabled = false
 
-          body = \{
-            sku = \{
+          body = {
+            sku = {
               name = "S0"
-            \}
-            identity = \{
+            }
+            identity = {
               type = "SystemAssigned"
-            \}
+            }
 
-            properties = \{
+            properties = {
               displayName = "project"
               description = "My first project"
-            \}
-          \}
-        \}
-        ```:
+            }
+          }
+        }
+        ```
 
     1. Create a file named `variables.tf` and add the following code.
 
         ```Terraform
-        variable "location" \{
+        variable "location" {
           description = "The name of the location to provision the resources to"
           type        = string
-        \}
+        }
 
-        variable "subscription_id" \{
+        variable "subscription_id" {
           type = string
-        \}
-        ```: 
+        }
+        ``` 
 
   </Tab>
   <Tab title="AzureRM Provider">
@@ -171,72 +171,72 @@ An Azure account with an active subscription. If you don't have one, create a [f
 
         ```Terraform
         # Setup providers
-        provider "azurerm" \{
-          features \{\}
+        provider "azurerm" {
+          features {}
           storage_use_azuread = true
           subscription_id = var.subscription_id
-        \}
-        ```:
+        }
+        ```
 
     1. Create a file named `main.tf` and add the following code.
 
         ```Terraform
         ## Create a random string
         ## 
-        resource "random_string" "unique" \{
+        resource "random_string" "unique" {
           length      = 5
           min_numeric = 5
           numeric     = true
           special     = false
           lower       = true
           upper       = false
-        \}
+        }
 
         ## Create a resource group for the resources to be stored in
         ##
-        resource "azurerm_resource_group" "rg" \{
-          name     = "rg-aifoundry$\{random_string.unique.result\}"
+        resource "azurerm_resource_group" "rg" {
+          name     = "rg-aifoundry${random_string.unique.result}"
           location = var.location
-        \}
+        }
 
         ## Create an AI Foundry resource
         ##
 
-        resource "azurerm_cognitive_account" "ai_foundry" \{
-          name                = "aifoundry$\{random_string.unique.result\}"
+        resource "azurerm_cognitive_account" "ai_foundry" {
+          name                = "aifoundry${random_string.unique.result}"
           location            = var.location
           resource_group_name = azurerm_resource_group.rg.name
           kind                = "AIServices"
 
-          identity \{
+          identity {
             type = "SystemAssigned"
-          \}
+          }
 
           sku_name = "S0"
 
           # required for stateful development in Foundry including agent service
-          custom_subdomain_name = "aifoundry$\{random_string.unique.result\}"
+          custom_subdomain_name = "aifoundry${random_string.unique.result}"
           project_management_enabled = true
 
-          tags = \{
+          tags = {
             Acceptance = "Test"
-          \}
-        \}
+          }
+        }
 
         # Create a Foundry project (folder for organizing stateful work)
-        resource "azurerm_cognitive_account_project" "example" \{
+        resource "azurerm_cognitive_account_project" "example" {
           name                 = "myproject"
           cognitive_account_id = azurerm_cognitive_account.ai_foundry.id
           location             = azurerm_resource_group.rg.location 
 
-          identity \{
+          identity {
             type = "SystemAssigned"
-          \}
-        \}
+          }
+        }
 
         ## Create a deployment for OpenAI's GPT-4o in the AI Foundry resource
         ##
-        resource "azurerm_cognitive_deployment" "aifoundry_deployment_gpt_4o" \{
+        resource "azurerm_cognitive_deployment" "aifoundry_deployment_gpt_4o" {
           depends_on = [
             azurerm_cognitive_account.ai_foundry
           ]
@@ -244,31 +244,31 @@ An Azure account with an active subscription. If you don't have one, create a [f
           name                 = "gpt-4o"
           cognitive_account_id = azurerm_cognitive_account.ai_foundry.id
 
-          sku \{
+          sku {
             name     = "GlobalStandard"
             capacity = 1
-          \}
+          }
 
-          model \{
+          model {
             format  = "OpenAI"
             name    = "gpt-4o"
             version = "2024-11-20"
-          \}
-        \}
-        ```:
+          }
+        }
+        ```
 
     1. Create a file named `variables.tf` and add the following code.
 
         ```Terraform
-        variable "location" \{
+        variable "location" {
           description = "The name of the location to provision the resources to"
           type        = string
-        \}
+        }
 
-        variable "subscription_id" \{
+        variable "subscription_id" {
           type = string
-        \}
-        ```: 
+        }
+        ``` 
 
   </Tab>
 </Tabs>
