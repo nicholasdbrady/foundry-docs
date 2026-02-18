@@ -54,6 +54,7 @@ def gh_get_file(path: str, ref: str = "main") -> str:
 def resolve_path(href: str, toc_dir: str) -> str:
     """Resolve a relative href against a TOC file's directory."""
     href = re.sub(r'\?.*$', '', href)  # strip query params
+    href = href.replace('\\', '/')  # normalize Windows backslashes
     combined = PurePosixPath(toc_dir) / href
     parts = []
     for part in combined.parts:
@@ -162,16 +163,25 @@ def scan_doc_for_images(source_path: str) -> list[str]:
     except subprocess.CalledProcessError:
         return []
 
+    doc_dir = str(PurePosixPath(source_path).parent)
     images = []
     for match in re.finditer(r':::image[^:]*source="([^"]+)"', content):
         img_path = match.group(1)
-        resolved = resolve_path(img_path, str(PurePosixPath(source_path).parent))
-        images.append(resolved)
+        if img_path.startswith('/azure/'):
+            # Absolute MS Learn path — convert to repo-relative articles/ path
+            images.append('articles' + img_path)
+        else:
+            resolved = resolve_path(img_path, doc_dir)
+            images.append(resolved)
     # Also catch standard markdown images
     for match in re.finditer(r'!\[.*?\]\(([^)]+)\)', content):
         img_path = match.group(1)
-        if not img_path.startswith('http'):
-            resolved = resolve_path(img_path, str(PurePosixPath(source_path).parent))
+        if img_path.startswith('http') or img_path.startswith('~/'):
+            continue
+        if img_path.startswith('/azure/'):
+            images.append('articles' + img_path)
+        else:
+            resolved = resolve_path(img_path, doc_dir)
             images.append(resolved)
     return images
 
@@ -261,7 +271,7 @@ def main():
                 entry['images'] = images
                 all_images.update(images)
 
-    # Recursively scan include files for nested includes
+    # Recursively scan include files for nested includes AND images
     scanned_includes = set()
     to_scan = list(all_includes)
     while to_scan:
@@ -274,6 +284,9 @@ def main():
             if n not in all_includes:
                 all_includes.add(n)
                 to_scan.append(n)
+        # Also scan includes for image references
+        inc_images = scan_doc_for_images(inc_path)
+        all_images.update(inc_images)
 
     if scanned_includes:
         print(f"  Scanned {len(scanned_includes)} include files, found {len(all_includes)} total (including nested)", file=sys.stderr)
