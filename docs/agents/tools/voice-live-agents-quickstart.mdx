@@ -1,0 +1,1286 @@
+---
+title: "Quickstart: Voice Agent with Foundry Agent Service (new)"
+description: "Learn how to create a real-time voice agent with Foundry Agent Service and Voice Live."
+sidebarTitle: "Quickstart: Voice Agent with Foundry Agent Service (new)"
+---
+# Quickstart: Voice Agent with Foundry Agent Service (new)
+
+<Note>
+This feature is currently in public preview. This preview is provided without a service-level agreement, and is not recommended for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
+</Note>
+
+Learn how to use Voice Live with [Microsoft Foundry Agent Service](https://learn.microsoft.com/azure/ai-foundry/agents/overview) and [Azure Speech in Foundry Tools](https://learn.microsoft.com/azure/ai-services/speech-service/overview) in the Microsoft Foundry portal.
+
+You can create and run an application to use Voice Live with agents for real-time voice agents.
+
+- Using agents allows leveraging a built-in prompt and configuration managed within the agent itself, rather than specifying instructions in the session code. 
+
+- Agents encapsulate more complex logic and behaviors, making it easier to manage and update conversational flows without changing the client code. 
+
+- The agent approach streamlines integration. The agent ID is used to connect and all necessary settings are handled internally, reducing the need for manual configuration in the code. 
+
+- This separation also supports better maintainability and scalability for scenarios where multiple conversational experiences or business logic variations are needed.
+
+To use the Voice Live API without Foundry agents, see the [Voice Live API quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/voice-live-quickstart).
+
+<Tip>
+To use Voice Live, you don't need to deploy an **audio** model with your Microsoft Foundry resource. Voice Live is fully managed, and the model is automatically deployed for you. For more information about models availability, see the [Voice Live overview documentation](../../../voice-live.md).
+</Tip>
+
+<Tabs>
+  <Tab title="Foundry (new) portal">
+
+    ## Prerequisites
+
+    <Note>
+    This document refers to the [Microsoft Foundry (new)](../../../../../ai-foundry/what-is-foundry.md#microsoft-foundry-portals) portal.
+    </Note>
+
+    - An Azure subscription. [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
+    - A [Microsoft Foundry resource](../../../../multi-service-resource.md) created in one of the supported regions. For more information about region availability, see the [Voice Live overview documentation](../../../voice-live.md).
+    - A Foundry agent created in [Microsoft Foundry](https://ai.azure.com/?cid=learnDocs). For more information about creating an agent, see the [Create an agent quickstart](https://learn.microsoft.com/azure/ai-foundry/agents/quickstart).
+
+    ## Try out Voice Live in the playground
+
+    To try out the Voice Live demo, follow these steps:
+
+    1. Sign in to [Microsoft Foundry](https://ai.azure.com/?cid=learnDocs). Make sure the **New Foundry** toggle is on. These steps refer to **Foundry (new)**.
+
+    <img src="/images/new-foundry.png" />
+
+    1. Select **Build** in the upper right menu, and select **Agents** from the left pane. 
+
+    1. Select the agent you created previously to go to the **Agent playground**.
+
+    1. Switch the **Enable Voice Live for this agent** toggle **On**. Your agent now connects to Voice Live.
+
+    1. Expand the right pane, which contains the Voice Live settings. Optionally choose a voice, adjust the VAD settings, set the voice temperature and speed, and other settings to configure voice behavior.
+
+    1. Select **Start** to start speaking and select **End** to end the chat session.
+
+    {/* #### [Foundry (classic) portal](#tab/foundry-classic)
+
+    ## Prerequisites
+
+<Note>
+This document refers to the [Microsoft Foundry (classic)](../../../../../ai-foundry/what-is-foundry.md#microsoft-foundry-portals) portal.
+
+🔄 [Switch to the Microsoft Foundry (new) documentation]() if you're using the new portal.
+</Note>
+
+    - An Azure subscription. [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
+    - A [Microsoft Foundry resource](../../../../multi-service-resource.md) created in one of the supported regions. For more information about region availability, see the [Voice Live overview documentation](../../../voice-live.md).
+    - A Microsoft Foundry agent created in the [Microsoft Foundry portal](https://ai.azure.com/?cid=learnDocs). For more information about creating an agent, see the [Create an agent quickstart](https://learn.microsoft.com/azure/ai-foundry/agents/quickstart).
+
+    ## Try out Voice Live in the playground
+
+    To try out the Voice Live demo, follow these steps:
+
+    1. Sign in to [Microsoft Foundry](https://ai.azure.com/?cid=learnDocs).  Make sure the **New Foundry** toggle is off.  These steps refer to **Foundry (classic)**.
+
+    <img src="/images/classic-foundry.png" /> 
+    1. Select **Playgrounds** from the left pane.
+    1. In the **Speech playground** tile, select **Try the Speech playground**.
+    1. Select **Speech capabilities by scenario** > **Voice Live**.
+
+<Frame>
+<img src="/images/capabilities-by-scenario.png" alt="Screenshot of filtering Speech service capabilities by scenario." />
+</Frame>
+
+    1. Select an agent that you configured in the **Agents** playground.
+
+<Frame>
+<img src="/images/casual-chat-bring-agent-select.png" alt="Screenshot of the option to bring an agent for Voice Live in the speech playground." />
+</Frame>
+
+    1. Edit other settings as needed, such as the **Voice**, **Speaking rate**, and **Voice activity detection (VAD)**.
+
+    1. Select **Start** to start speaking and select **End** to end the chat session. 
+    */}
+    ::: zone-end
+
+    ::: zone pivot="programming-language-python"
+    Learn how to use Voice Live with [Microsoft Foundry Agent Service](https://learn.microsoft.com/azure/ai-foundry/agents/overview) using the VoiceLive SDK for Python.
+
+    [Reference documentation](https://learn.microsoft.com/python/api/overview/azure/ai-voicelive-readme) | [Package (PyPi)](https://pypi.org/project/azure-ai-voicelive/) | [Additional samples on GitHub](https://aka.ms/voicelive/github-python) 
+
+    You can create and run an application to use Voice Live with agents for real-time voice agents.
+
+    - Using agents allows leveraging a built-in prompt and configuration managed within the agent itself, rather than specifying instructions in the session code. 
+
+    - Agents encapsulate more complex logic and behaviors, making it easier to manage and update conversational flows without changing the client code. 
+
+    - The agent approach streamlines integration. The agent ID is used to connect and all necessary settings are handled internally, reducing the need for manual configuration in the code. 
+
+    - This separation also supports better maintainability and scalability for scenarios where multiple conversational experiences or business logic variations are needed.
+
+    To use the Voice Live API without Foundry agents, see the [Voice Live API quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/voice-live-quickstart).
+
+<Tip>
+To use Voice Live, you don't need to deploy an **audio** model with your Microsoft Foundry resource. Voice Live is fully managed, and the model is automatically deployed for you. For more information about models availability, see the [Voice Live overview documentation](../../../voice-live.md).
+</Tip>
+
+    Follow the quickstart below or get a fully working web app with browser-based voice UI:
+
+    <Card title="Voice Live universal assistant sample" icon="arrow-right" href="https://github.com/microsoft-foundry/voicelive-samples/tree/main/voice-live-universal-assistant" />
+    ## Prerequisites
+
+<Note>
+This document refers to the [Microsoft Foundry (new)](../../../../../ai-foundry/what-is-foundry.md#microsoft-foundry-portals) portal and the latest Foundry Agent Service version.
+</Note>
+
+    - An Azure subscription. [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
+    - <a href="https://www.python.org/" target="_blank">Python 3.10 or later version</a>. If you don't have a suitable version of Python installed, you can follow the instructions in the [VS Code Python Tutorial](https://code.visualstudio.com/docs/python/python-tutorial#_install-a-python-interpreter) for the easiest way of installing Python on your operating system.
+    - The required language runtimes, global tools, and Visual Studio Code extensions as described in [Prepare your development environment](../../../../../ai-foundry/how-to/develop/install-cli-sdk.md).
+    - A [Microsoft Foundry resource](../../../../multi-service-resource.md) created in one of the supported regions. For more information about region availability, see the [Voice Live overview documentation](../../../voice-live.md).
+    - A model deployed in Microsoft Foundry. If you don't have a model, first complete [Quickstart: Set up Microsoft Foundry resources](../../../../../ai-foundry/default/tutorials/quickstart-create-foundry-resources.md).
+
+    {/* - A Microsoft Foundry agent created in the [Microsoft Foundry portal](https://ai.azure.com/?cid=learnDocs). For more information about creating an agent, see the [Create an agent quickstart](../../../../../ai-foundry/quickstarts/get-started-code.md). */}
+    - Assign the `Azure AI User` role to your user account. You can assign roles in the Azure portal under **Access control (IAM)** > **Add role assignment**.
+
+    ## Prepare the environment
+
+    1. Create a new folder `voice-live-quickstart` and go to the quickstart folder with the following command:
+
+        ```shell
+        mkdir voice-live-quickstart && cd voice-live-quickstart
+        ```
+
+    1. Create a virtual environment. If you already have Python 3.10 or higher installed, you can create a virtual environment using the following commands:
+
+        # [Windows](#tab/windows)
+
+        ```bash
+        py -3 -m venv .venv
+        .venv\scripts\activate
+        ```
+
+        # [Linux](#tab/linux)
+
+        ```bash
+        python3 -m venv .venv
+        source .venv/bin/activate
+        ```
+
+        # [macOS](#tab/macos)
+
+        ```bash
+        python3 -m venv .venv
+        source .venv/bin/activate
+        ```
+
+  </Tab>
+</Tabs>
+
+    Activating the Python environment means that when you run ```python``` or ```pip``` from the command line, you then use the Python interpreter contained in the ```.venv``` folder of your application. You can use the ```deactivate``` command to exit the python virtual environment, and can later reactivate it when needed.
+
+    <Tip>
+    We recommend that you create and activate a new Python environment to use to install the packages you need for this tutorial. Don't install packages into your global Python installation. You should always use a virtual or conda environment when installing Python packages, otherwise you can break your global installation of Python.
+    </Tip>
+
+1. Create a file named **requirements.txt**. Add the following packages to the file:
+
+    ```txt
+    // Source: requirements.txt (not available)
+    ```
+
+1. Install the packages:
+
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+## Retrieve resource information
+
+<Note>
+The agent integration requires Entra ID authentication. Key-based authentication isn't supported in Agent mode.
+</Note>
+
+Create a new file named `.env` in the folder where you want to run the code. 
+
+In the `.env` file, add the following environment variables for authentication:
+
+```plaintext
+# Settings for Foundry Agent
+PROJECT_ENDPOINT=<endpoint copied from welcome screen>
+AGENT_NAME="MyVoiceAgent"
+MODEL_DEPLOYMENT_NAME="gpt-4.1-mini"
+# Settings for Voice Live
+AGENT_NAME=<name-used-to-create-agent> # See above
+AGENT_VERSION=<version-of-the-agent>
+CONVERSATION_ID=<specific conversation id to reconnect to>
+PROJECT_NAME=<your_project_name>
+VOICELIVE_ENDPOINT=<your_endpoint>
+VOICELIVE_API_VERSION=2026-01-01-preview
+```
+
+Replace the default values with your actual project name, agent name, and endpoint values.
+
+| Variable name | Value |
+| ------------- | ----- |
+| `PROJECT_ENDPOINT` | The Foundry project endpoint copied from the project welcome screen. |
+| `AGENT_NAME` | The name of the agent to use. |
+| `AGENT_VERSION` | Optional: The version of the agent to use. |
+| `CONVERSATION_ID` | Optional: A specific conversation id to reconnect to. |
+| `PROJECT_NAME` | The name of your Microsoft Foundry project. Project name is the last element of the project endpoint value. |
+| `VOICELIVE_ENDPOINT` | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
+| `FOUNDRY_RESOURCE_OVERRIDE` | Optional: The Foundry resource name hosting the agent project (for example, `my-resource-name`). |
+| `AGENT_AUTHENTICATION_IDENTITY_CLIENT_ID` | Optional: The managed identity client ID of the Voice Live resource. |
+
+Learn more about [keyless authentication](https://learn.microsoft.com/azure/ai-services/authentication) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
+
+## Create an agent with Voice Live settings
+
+1. Create a file **create_agent_with_voicelive.py** with the following code:
+
+    ```python
+    // Source: create_agent_v2_with_voicelive.py (not available)
+    ```
+
+1. Sign in to Azure with the following command:
+
+    ```shell
+    az login
+    ```
+
+1. Run the Python file.
+
+    ```shell
+    python create_agent_with_voicelive.py
+    ```
+
+## Talk with a voice agent
+
+The sample code in this quickstart uses Microsoft Entra ID for authentication as the current integration only supports this authentication method.
+
+The sample connects to Foundry Agent Service by passing `agent_config` in `connect(...)` using these fields:
+
+- `agent_name`: The agent name to invoke.
+- `project_name`: The Foundry project containing the agent.
+- `agent_version`: Optional pinned version for controlled rollouts. If omitted, the latest version is used.
+- `conversation_id`: Optional conversation ID to continue prior conversation context.
+- `foundry_resource_override`: Optional resource name when the agent is hosted on a different Foundry resource.
+- `authentication_identity_client_id`: Optional managed identity client ID used with cross-resource agent connections.
+
+<Note>
+Agent mode in Voice Live doesn't support key-based authentication for agent invocation. Use Microsoft Entra ID (for example, `AzureCliCredential`) for agent access. Voice Live resource configuration might still include API keys for non-agent scenarios.
+</Note>
+
+1. Create the `voice-live-agents-quickstart.py` file with the following code:
+
+    ```python
+    // Source: voice-live-with-agent-v2.py (not available)
+    ```
+
+1. Sign in to Azure with the following command:
+
+    ```shell
+    az login
+    ```
+
+1. Run the Python file.
+
+    ```shell
+    python voice-live-agents-quickstart.py
+    ```
+
+1. You can start speaking with the agent and hear responses. You can interrupt the model by speaking. Enter "Ctrl+C" to quit the conversation.
+
+## Output
+
+The output of the script is printed to the console. You see messages indicating the status of the connection, audio stream, and playback. The audio is played back through your speakers or headphones.
+
+```text
+🎙️  Basic Voice Assistant with Azure VoiceLive SDK
+==================================================
+
+============================================================
+🎤 VOICE ASSISTANT READY
+Start speaking to begin conversation
+Press Ctrl+C to exit
+============================================================
+
+🎤 Listening...
+🤔 Processing...
+👤 You said:  User Input:       Hello.
+🎤 Ready for next input...
+🤖 Agent responded with audio transcript:  Agent Audio Response:        Hello! I'm Tobi the agent. How can I assist you today?
+🎤 Listening...
+🤔 Processing...
+👤 You said:  User Input:       What are the opening hours of the Eiffel Tower?
+🎤 Ready for next input...
+🤖 Agent responded with audio transcript:  Agent Audio Response:        The Eiffel Tower's opening hours can vary depending on the season and any special events or maintenance. Generally, the Eiffel Tower is open every day of the year, with the following typical hours:
+
+- Mid-June to early September: 9:00 AM to 12:45 AM (last elevator ride up at 12:00 AM)
+- Rest of the year: 9:30 AM to 11:45 PM (last elevator ride up at 11:00 PM)
+
+These times can sometimes change, so it's always best to check the official Eiffel Tower website or contact them directly for the most up-to-date information before your visit.
+
+Would you like me to help you find the official website or any other details about visiting the Eiffel Tower?
+
+👋 Voice assistant shut down. Goodbye!
+```
+
+The script that you ran creates a log file named `<timestamp>_voicelive.log` in the `logs` folder.
+
+```python
+logging.basicConfig(
+    filename=f'logs/{timestamp}_voicelive.log',
+    filemode="w",
+    format='%(asctime)s:%(name)s:%(levelname)s:%(message)s',
+    level=logging.INFO
+)
+```
+
+The `voicelive.log` file contains information about the connection to the Voice Live API, including the request and response data. You can view the log file to see the details of the conversation.
+
+```text
+2026-02-10 18:40:19,183:__main__:INFO:Using Azure token credential
+2026-02-10 18:40:19,184:__main__:INFO:Connecting to VoiceLive API with Foundry agent connection MyVoiceAgent for project my-voiceagent-project
+2026-02-10 18:40:20,801:azure.identity.aio._internal.decorators:INFO:AzureCliCredential.get_token succeeded
+2026-02-10 18:40:21,847:__main__:INFO:AudioProcessor initialized with 24kHz PCM16 mono audio
+2026-02-10 18:40:21,847:__main__:INFO:Setting up voice conversation session...
+2026-02-10 18:40:21,848:__main__:INFO:Session configuration sent
+2026-02-10 18:40:22,174:__main__:INFO:Audio playback system ready
+2026-02-10 18:40:22,174:__main__:INFO:Voice assistant ready! Start speaking...
+2026-02-10 18:40:22,384:__main__:INFO:Session ready: sess_1m1zrSLJSPjJpzbEOyQpTL
+2026-02-10 18:40:22,386:__main__:INFO:Sending proactive greeting request
+2026-02-10 18:40:22,419:__main__:INFO:Started audio capture
+2026-02-10 18:40:22,722:__main__:INFO:\U0001f916 Assistant response created
+2026-02-10 18:40:26,054:__main__:INFO:\U0001f916 Assistant finished speaking
+2026-02-10 18:40:26,074:__main__:INFO:\u2705 Response complete
+2026-02-10 18:40:32,015:__main__:INFO:User started speaking - stopping playback
+2026-02-10 18:40:32,866:__main__:INFO:\U0001f3a4 User stopped speaking
+2026-02-10 18:40:32,972:__main__:INFO:\U0001f916 Assistant response created
+2026-02-10 18:40:35,750:__main__:INFO:User started speaking - stopping playback
+2026-02-10 18:40:35,751:__main__:INFO:\U0001f916 Assistant finished speaking
+2026-02-10 18:40:36,171:__main__:INFO:\u2705 Response complete
+2026-02-10 18:40:37,117:__main__:INFO:\U0001f3a4 User stopped speaking
+2026-02-10 18:40:37,207:__main__:INFO:\U0001f916 Assistant response created
+2026-02-10 18:40:41,016:__main__:INFO:\U0001f916 Assistant finished speaking
+2026-02-10 18:40:41,023:__main__:INFO:\u2705 Response complete
+2026-02-10 18:40:44,818:__main__:INFO:Stopped audio capture
+2026-02-10 18:40:44,949:__main__:INFO:Stopped audio playback
+2026-02-10 18:40:44,950:__main__:INFO:Audio processor cleaned up
+```
+
+Further a session log file is created in the `logs` folder with the name `<timestamp>_conversation.log`. This file contains detailed information about the session, including the request and response data.
+
+```text
+SessionID: sess_1m1zrSLJSPjJpzbEOyQpTL
+Agent Name: VoiceAgentQuickstartTest
+Agent Description: 
+Agent ID: None
+Voice Name: en-US-Ava:DragonHDLatestNeural
+Voice Type: azure-standard
+Voice Temperature: 0.8
+
+User Input:	Hello.
+Agent Audio Response:	Hello! I'm Tobi the agent. How can I assist you today?
+User Input:	What are the opening hours of the Eiffel Tower?
+Agent Audio Response:	The Eiffel Tower's opening hours can vary depending on the season and any special events or maintenance. Generally, the Eiffel Tower is open every day of the year, with the following typical hours:
+
+- Mid-June to early September: 9:00 AM to 12:45 AM (last elevator ride up at 12:00 AM)
+- Rest of the year: 9:30 AM to 11:45 PM (last elevator ride up at 11:00 PM)
+
+These times can sometimes change, so it's always best to check the official Eiffel Tower website or contact them directly for the most up-to-date information before your visit.
+
+Would you like me to help you find the official website or any other details about visiting the Eiffel Tower?
+```
+
+Here are the key differences between the [technical log](#technical-log) and the [conversation log](#conversation-log):
+
+| Aspect | Conversation Log | Technical Log |
+|--------|-------------|---------------|
+| **Audience** | Business users, content reviewers | Developers, IT operations |
+| **Content** | What was said in conversations | How the system is working |
+| **Level** | Application/conversation level | System/infrastructure level |
+| **Troubleshooting** | "What did the agent say?" | "Why did the connection fail?" |
+
+**Example**: If your agent wasn't responding, you'd check:
+- **voicelive.log** → "WebSocket connection failed" or "Audio stream error"
+- **conversation.log** → "Did the user actually say anything?"
+
+Both logs are complementary - conversation logs for conversation analysis and testing, technical logs for system diagnostics!
+
+### Technical log
+**Purpose**: Technical debugging and system monitoring
+
+**Contents**:
+- WebSocket connection events
+- Audio stream status
+- Error messages and stack traces
+- System-level events (session.created, response.done, etc.)
+- Network connectivity issues
+- Audio processing diagnostics
+
+**Format**: Structured logging with timestamps, log levels, and technical details
+
+**Use Cases**:
+- Debugging connection problems
+- Monitoring system performance
+- Troubleshooting audio issues
+- Developer/operations analysis
+
+### Conversation log
+**Purpose**: Conversation transcript and user experience tracking
+
+**Contents**:
+- Agent and project identification
+- Session configuration details
+- **User transcripts**: "Tell me a story", "Stop"
+- **Agent responses**: Full story text and follow-up responses
+- Conversation flow and interactions
+
+**Format**: Plain text, human-readable conversation format
+
+**Use Cases**:
+- Analyzing conversation quality
+- Reviewing what was actually said
+- Understanding user interactions and agent responses
+- Business/content analysis
+
+Learn how to use Voice Live with [Microsoft Foundry Agent Service](https://learn.microsoft.com/azure/ai-foundry/agents/overview) using the VoiceLive SDK for C#.
+
+[Reference documentation](https://learn.microsoft.com/dotnet/api/overview/azure/ai.voicelive-readme) | [Package (NuGet)](https://www.nuget.org/packages/Azure.AI.VoiceLive) | [Additional samples on GitHub](https://aka.ms/voicelive/github-csharp) 
+
+You can create and run an application to use Voice Live with agents for real-time voice agents.
+
+- Using agents allows leveraging a built-in prompt and configuration managed within the agent itself, rather than specifying instructions in the session code. 
+
+- Agents encapsulate more complex logic and behaviors, making it easier to manage and update conversational flows without changing the client code. 
+
+- The agent approach streamlines integration. The agent ID is used to connect and all necessary settings are handled internally, reducing the need for manual configuration in the code. 
+
+- This separation also supports better maintainability and scalability for scenarios where multiple conversational experiences or business logic variations are needed.
+
+To use the Voice Live API without Foundry agents, see the [Voice Live API quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/voice-live-quickstart).
+
+<Tip>
+To use Voice Live, you don't need to deploy an **audio** model with your Microsoft Foundry resource. Voice Live is fully managed, and the model is automatically deployed for you. For more information about models availability, see the [Voice Live overview documentation](../../../voice-live.md).
+</Tip>
+
+Follow the quickstart below or get a fully working web app with browser-based voice UI:
+
+<Card title="Voice Live universal assistant sample" icon="arrow-right" href="https://github.com/microsoft-foundry/voicelive-samples/tree/main/voice-live-universal-assistant" />
+## Prerequisites
+
+<Note>
+This document refers to the [Microsoft Foundry (new)](../../../../../ai-foundry/what-is-foundry.md#microsoft-foundry-portals) portal and the latest Foundry Agent Service version.
+</Note>
+
+- An Azure subscription. [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
+- [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) or later.
+- The required language runtimes, global tools, and Visual Studio Code extensions as described in [Prepare your development environment](../../../../../ai-foundry/how-to/develop/install-cli-sdk.md).
+- A [Microsoft Foundry resource](../../../../multi-service-resource.md) created in one of the supported regions. For more information about region availability, see the [Voice Live overview documentation](../../../voice-live.md).
+- A model deployed in Microsoft Foundry. If you don't have a model, first complete [Quickstart: Set up Microsoft Foundry resources](../../../../../ai-foundry/default/tutorials/quickstart-create-foundry-resources.md).
+
+{/* - A Microsoft Foundry agent created in the [Microsoft Foundry portal](https://ai.azure.com/?cid=learnDocs). For more information about creating an agent, see the [Create an agent quickstart](../../../../../ai-foundry/quickstarts/get-started-code.md). */}
+- Assign the `Azure AI User` role to your user account. You can assign roles in the Azure portal under **Access control (IAM)** > **Add role assignment**.
+
+## Prepare the environment
+
+1. Create a new folder `voice-live-quickstart` and go to the quickstart folder with the following command:
+
+    ```shell
+    mkdir voice-live-quickstart && cd voice-live-quickstart
+    ```
+
+1. Create a **.csproj** file with the following project configuration:
+
+    ```xml
+    // Source: VoiceLiveWithAgent.csproj (not available)
+    ```
+
+1. Restore NuGet packages:
+
+    ```shell
+    dotnet restore
+    ```
+
+## Retrieve resource information
+
+<Note>
+The agent integration requires Entra ID authentication. Key-based authentication isn't supported in Agent mode.
+</Note>
+
+Create a new file named `.env` in the folder where you want to run the code. 
+
+In the `.env` file, add the following environment variables for authentication:
+
+```plaintext
+# Settings for Foundry Agent
+PROJECT_ENDPOINT=<endpoint copied from welcome screen>
+AGENT_NAME="MyVoiceAgent"
+MODEL_DEPLOYMENT_NAME="gpt-4.1-mini"
+# Settings for Voice Live
+AGENT_NAME=<name-used-to-create-agent> # See above
+AGENT_VERSION=<version-of-the-agent>
+CONVERSATION_ID=<specific conversation id to reconnect to>
+PROJECT_NAME=<your_project_name>
+VOICELIVE_ENDPOINT=<your_endpoint>
+VOICELIVE_API_VERSION=2026-01-01-preview
+```
+
+Replace the default values with your actual project name, agent name, and endpoint values.
+
+| Variable name | Value |
+| ------------- | ----- |
+| `PROJECT_ENDPOINT` | The Foundry project endpoint copied from the project welcome screen. |
+| `AGENT_NAME` | The name of the agent to use. |
+| `AGENT_VERSION` | Optional: The version of the agent to use. |
+| `CONVERSATION_ID` | Optional: A specific conversation id to reconnect to. |
+| `PROJECT_NAME` | The name of your Microsoft Foundry project. Project name is the last element of the project endpoint value. |
+| `VOICELIVE_ENDPOINT` | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
+| `FOUNDRY_RESOURCE_OVERRIDE` | Optional: The Foundry resource name hosting the agent project (for example, `my-resource-name`). |
+| `AGENT_AUTHENTICATION_IDENTITY_CLIENT_ID` | Optional: The managed identity client ID of the Voice Live resource. |
+
+Learn more about [keyless authentication](https://learn.microsoft.com/azure/ai-services/authentication) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
+
+<Note>
+The C# Foundry Agent SDK (`Azure.AI.Projects`) uses a connection string instead of an endpoint URL. Set `PROJECT_CONNECTION_STRING` to your project connection string (found in the Foundry portal under **Project settings** > **Connected resources**).
+</Note>
+
+## Create an agent with Voice Live settings
+
+The agent creation script is a separate utility. Create a temporary console project to run it:
+
+1. Create a separate folder for the agent creation utility:
+
+    ```shell
+    mkdir create-agent && cd create-agent
+    dotnet new console --framework net8.0
+    ```
+
+1. Add the required NuGet packages:
+
+    ```shell
+    dotnet add package Azure.AI.Projects --prerelease
+    dotnet add package Azure.Identity
+    ```
+
+1. Replace the contents of **Program.cs** with the following code:
+
+    ```csharp
+    // Source: CreateAgentWithVoiceLive.cs (not available)
+    ```
+
+1. Sign in to Azure with the following command:
+
+    ```shell
+    az login
+    ```
+
+1. Build and run the agent creation script:
+
+    ```shell
+    dotnet run
+    ```
+
+1. Return to the quickstart folder:
+
+    ```shell
+    cd ..
+    ```
+
+## Talk with a voice agent
+
+The sample code in this quickstart uses Microsoft Entra ID for authentication as the current integration only supports this authentication method.
+
+The sample connects to Foundry Agent Service by passing `AgentSessionConfig` to `StartSessionAsync(SessionTarget.FromAgent(...))` using these properties:
+
+- `agentName`: The agent name to invoke.
+- `projectName`: The Foundry project containing the agent.
+- `AgentVersion`: Optional pinned version for controlled rollouts. If omitted, the latest version is used.
+- `ConversationId`: Optional conversation ID to continue prior conversation context.
+- `FoundryResourceOverride`: Optional resource name when the agent is hosted on a different Foundry resource.
+- `AuthenticationIdentityClientId`: Optional managed identity client ID used with cross-resource agent connections.
+
+<Note>
+Agent mode in Voice Live doesn't support key-based authentication for agent invocation. Use Microsoft Entra ID (for example, `AzureCliCredential`) for agent access. Voice Live resource configuration might still include API keys for non-agent scenarios.
+</Note>
+
+1. Create the **VoiceLiveWithAgentV2.cs** file with the following code:
+
+    ```csharp
+    // Source: VoiceLiveWithAgentV2.cs (not available)
+    ```
+
+1. Sign in to Azure with the following command:
+
+    ```shell
+    az login
+    ```
+
+1. Build and run the voice assistant:
+
+    ```shell
+    dotnet run
+    ```
+
+1. You can start speaking with the agent and hear responses. You can interrupt the model by speaking. Enter "Ctrl+C" to quit the conversation.
+
+## Output
+
+The output of the script is printed to the console. You see messages indicating the status of the connection, audio stream, and playback. The audio is played back through your speakers or headphones.
+
+```text
+🎙️  Basic Foundry Voice Agent with Azure VoiceLive SDK (Agent Mode)
+=================================================================
+
+=================================================================
+🎤 VOICE ASSISTANT READY
+Start speaking to begin conversation
+Press Ctrl+C to exit
+=================================================================
+
+🎤 Listening...
+🤔 Processing...
+👤 You said:	Hello.
+🎤 Ready for next input...
+🤖 Agent responded:	Hello! I'm Tobi the agent. How can I assist you today?
+🎤 Listening...
+🤔 Processing...
+👤 You said:	What are the opening hours of the Eiffel Tower?
+🎤 Ready for next input...
+🤖 Agent responded:	The Eiffel Tower's opening hours can vary depending on the season and any special events or maintenance. Generally, the Eiffel Tower is open every day of the year, with the following typical hours:
+
+- Mid-June to early September: 9:00 AM to 12:45 AM (last elevator ride up at 12:00 AM)
+- Rest of the year: 9:30 AM to 11:45 PM (last elevator ride up at 11:00 PM)
+
+These times can sometimes change, so it's always best to check the official Eiffel Tower website or contact them directly for the most up-to-date information before your visit.
+
+Would you like me to help you find the official website or any other details about visiting the Eiffel Tower?
+
+👋 Voice assistant shut down. Goodbye!
+```
+
+A conversation log file is created in the `logs` folder with the name `conversation_YYYYMMDD_HHmmss.log`. This file contains session metadata and the conversation transcript, including user inputs and agent responses.
+
+```text
+SessionID: sess_1m1zrSLJSPjJpzbEOyQpTL
+
+User Input:	Hello.
+Agent Audio Response:	Hello! I'm Tobi the agent. How can I assist you today?
+User Input:	What are the opening hours of the Eiffel Tower?
+Agent Audio Response:	The Eiffel Tower's opening hours can vary depending on the season...
+```
+
+Here are the key differences between the [technical log](#technical-log) and the [conversation log](#conversation-log):
+
+| Aspect | Conversation Log | Technical Log |
+|--------|-------------|---------------|
+| **Audience** | Business users, content reviewers | Developers, IT operations |
+| **Content** | What was said in conversations | How the system is working |
+| **Level** | Application/conversation level | System/infrastructure level |
+| **Troubleshooting** | "What did the agent say?" | "Why did the connection fail?" |
+
+**Example**: If your agent wasn't responding, you'd check:
+- **Console log** → "WebSocket connection failed" or "Audio stream error"
+- **conversation log** → "Did the user actually say anything?"
+
+Both logs are complementary - conversation logs for conversation analysis and testing, technical logs for system diagnostics!
+
+### Technical log
+**Purpose**: Technical debugging and system monitoring
+
+**Contents**:
+- WebSocket connection events
+- Audio stream status
+- Error messages and stack traces
+- System-level events (session.created, response.done, etc.)
+- Network connectivity issues
+- Audio processing diagnostics
+
+**Format**: Structured logging with timestamps, log levels, and technical details
+
+**Use Cases**:
+- Debugging connection problems
+- Monitoring system performance
+- Troubleshooting audio issues
+- Developer/operations analysis
+
+### Conversation log
+**Purpose**: Conversation transcript and user experience tracking
+
+**Contents**:
+- Agent and project identification
+- Session configuration details
+- **User transcripts**: "Tell me a story", "Stop"
+- **Agent responses**: Full story text and follow-up responses
+- Conversation flow and interactions
+
+**Format**: Plain text, human-readable conversation format
+
+**Use Cases**:
+- Analyzing conversation quality
+- Reviewing what was actually said
+- Understanding user interactions and agent responses
+- Business/content analysis
+
+Learn how to use Voice Live with [Microsoft Foundry Agent Service](https://learn.microsoft.com/azure/ai-foundry/agents/overview) using the VoiceLive SDK for Java.
+
+[Reference documentation](https://learn.microsoft.com/java/api/overview/azure/ai-voicelive-readme) | [Package (Maven)](https://central.sonatype.com/artifact/com.azure/azure-ai-voicelive/overview) | [Additional samples on GitHub](https://aka.ms/voicelive/github-java) 
+
+You can create and run an application to use Voice Live with agents for real-time voice agents.
+
+- Using agents allows leveraging a built-in prompt and configuration managed within the agent itself, rather than specifying instructions in the session code. 
+
+- Agents encapsulate more complex logic and behaviors, making it easier to manage and update conversational flows without changing the client code. 
+
+- The agent approach streamlines integration. The agent ID is used to connect and all necessary settings are handled internally, reducing the need for manual configuration in the code. 
+
+- This separation also supports better maintainability and scalability for scenarios where multiple conversational experiences or business logic variations are needed.
+
+To use the Voice Live API without Foundry agents, see the [Voice Live API quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/voice-live-quickstart).
+
+<Tip>
+To use Voice Live, you don't need to deploy an **audio** model with your Microsoft Foundry resource. Voice Live is fully managed, and the model is automatically deployed for you. For more information about models availability, see the [Voice Live overview documentation](../../../voice-live.md).
+</Tip>
+
+Follow the quickstart below or get a fully working web app with browser-based voice UI:
+
+<Card title="Voice Live universal assistant sample" icon="arrow-right" href="https://github.com/microsoft-foundry/voicelive-samples/tree/main/voice-live-universal-assistant" />
+## Prerequisites
+
+<Note>
+This document refers to the [Microsoft Foundry (new)](../../../../../ai-foundry/what-is-foundry.md#microsoft-foundry-portals) portal and the latest Foundry Agent Service version.
+</Note>
+
+- An Azure subscription. [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
+- [Java Development Kit (JDK)](https://learn.microsoft.com/java/azure/jdk/) version 11 or later.
+- [Apache Maven](https://maven.apache.org/download.cgi) installed.
+- The required language runtimes, global tools, and Visual Studio Code extensions as described in [Prepare your development environment](../../../../../ai-foundry/how-to/develop/install-cli-sdk.md).
+- A [Microsoft Foundry resource](../../../../multi-service-resource.md) created in one of the supported regions. For more information about region availability, see the [Voice Live overview documentation](../../../voice-live.md).
+- A model deployed in Microsoft Foundry. If you don't have a model, first complete [Quickstart: Set up Microsoft Foundry resources](../../../../../ai-foundry/default/tutorials/quickstart-create-foundry-resources.md).
+
+{/* - A Microsoft Foundry agent created in the [Microsoft Foundry portal](https://ai.azure.com/?cid=learnDocs). For more information about creating an agent, see the [Create an agent quickstart](../../../../../ai-foundry/quickstarts/get-started-code.md). */}
+- Assign the `Azure AI User` role to your user account. You can assign roles in the Azure portal under **Access control (IAM)** > **Add role assignment**.
+
+## Prepare the environment
+
+1. Create a new folder `voice-live-quickstart` and go to the quickstart folder with the following command:
+
+    ```shell
+    mkdir voice-live-quickstart && cd voice-live-quickstart
+    ```
+
+1. Create a file named **pom.xml** with the following Maven configuration:
+
+    ```xml
+    // Source: pom-agent.xml (not available)
+    ```
+
+1. Create the Java source directory structure:
+
+    # [Windows](#tab/windows)
+
+    ```shell
+    mkdir src\main\java
+    ```
+
+    # [Linux](#tab/linux)
+
+    ```bash
+    mkdir -p src/main/java
+    ```
+
+    # [macOS](#tab/macos)
+
+    ```bash
+    mkdir -p src/main/java
+    ```
+
+    ---
+
+1. Download the Maven dependencies:
+
+    ```shell
+    mvn dependency:resolve
+    ```
+
+## Retrieve resource information
+
+<Note>
+The agent integration requires Entra ID authentication. Key-based authentication isn't supported in Agent mode.
+</Note>
+
+Create a new file named `.env` in the folder where you want to run the code. 
+
+In the `.env` file, add the following environment variables for authentication:
+
+```plaintext
+# Settings for Foundry Agent
+PROJECT_ENDPOINT=<endpoint copied from welcome screen>
+AGENT_NAME="MyVoiceAgent"
+MODEL_DEPLOYMENT_NAME="gpt-4.1-mini"
+# Settings for Voice Live
+AGENT_NAME=<name-used-to-create-agent> # See above
+AGENT_VERSION=<version-of-the-agent>
+CONVERSATION_ID=<specific conversation id to reconnect to>
+PROJECT_NAME=<your_project_name>
+VOICELIVE_ENDPOINT=<your_endpoint>
+VOICELIVE_API_VERSION=2026-01-01-preview
+```
+
+Replace the default values with your actual project name, agent name, and endpoint values.
+
+| Variable name | Value |
+| ------------- | ----- |
+| `PROJECT_ENDPOINT` | The Foundry project endpoint copied from the project welcome screen. |
+| `AGENT_NAME` | The name of the agent to use. |
+| `AGENT_VERSION` | Optional: The version of the agent to use. |
+| `CONVERSATION_ID` | Optional: A specific conversation id to reconnect to. |
+| `PROJECT_NAME` | The name of your Microsoft Foundry project. Project name is the last element of the project endpoint value. |
+| `VOICELIVE_ENDPOINT` | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
+| `FOUNDRY_RESOURCE_OVERRIDE` | Optional: The Foundry resource name hosting the agent project (for example, `my-resource-name`). |
+| `AGENT_AUTHENTICATION_IDENTITY_CLIENT_ID` | Optional: The managed identity client ID of the Voice Live resource. |
+
+Learn more about [keyless authentication](https://learn.microsoft.com/azure/ai-services/authentication) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
+
+## Create an agent with Voice Live settings
+
+1. Create a file **src/main/java/CreateAgentWithVoiceLive.java** with the following code:
+
+    ```java
+    // Source: CreateAgentWithVoiceLive.java (not available)
+    ```
+
+1. Sign in to Azure with the following command:
+
+    ```shell
+    az login
+    ```
+
+1. Build and run the agent creation script:
+
+    ```shell
+    mvn compile exec:java -Dexec.mainClass="CreateAgentWithVoiceLive" -q
+    ```
+
+## Talk with a voice agent
+
+The sample code in this quickstart uses Microsoft Entra ID for authentication as the current integration only supports this authentication method.
+
+The sample connects to Foundry Agent Service by passing `AgentSessionConfig` to `startSession(...)` using these fields:
+
+- `agentName`: The agent name to invoke.
+- `projectName`: The Foundry project containing the agent.
+- `agentVersion`: Optional pinned version for controlled rollouts. If omitted, the latest version is used.
+- `conversationId`: Optional conversation ID to continue prior conversation context.
+- `foundryResourceOverride`: Optional resource name when the agent is hosted on a different Foundry resource.
+- `authenticationIdentityClientId`: Optional managed identity client ID used with cross-resource agent connections.
+
+<Note>
+Agent mode in Voice Live doesn't support key-based authentication for agent invocation. Use Microsoft Entra ID (for example, `AzureCliCredential`) for agent access. Voice Live resource configuration might still include API keys for non-agent scenarios.
+</Note>
+
+1. Create the **src/main/java/VoiceLiveWithAgent.java** file with the following code:
+
+    ```java
+    // Source: VoiceLiveWithAgentV2.java (not available)
+    ```
+
+1. Sign in to Azure with the following command:
+
+    ```shell
+    az login
+    ```
+
+1. Build and run the voice assistant:
+
+    ```shell
+    mvn compile exec:java -Dexec.mainClass="VoiceLiveWithAgent" -q
+    ```
+
+1. You can start speaking with the agent and hear responses. You can interrupt the model by speaking. Enter "Ctrl+C" to quit the conversation.
+
+## Output
+
+The output of the script is printed to the console. You see messages indicating the status of the connection, audio stream, and playback. The audio is played back through your speakers or headphones.
+
+```text
+🎙️  Basic Foundry Voice Agent with Azure VoiceLive SDK (Agent Mode)
+=================================================================
+
+============================================================
+🎤 VOICE ASSISTANT READY
+Start speaking to begin conversation
+Press Ctrl+C to exit
+============================================================
+
+🎤 Listening...
+🤔 Processing...
+👤 You said:	Hello.
+🎤 Ready for next input...
+🤖 Agent responded:	Hello! I'm Tobi the agent. How can I assist you today?
+🎤 Listening...
+🤔 Processing...
+👤 You said:	What are the opening hours of the Eiffel Tower?
+🎤 Ready for next input...
+🤖 Agent responded:	The Eiffel Tower's opening hours can vary depending on the season and any special events or maintenance. Generally, the Eiffel Tower is open every day of the year, with the following typical hours:
+
+- Mid-June to early September: 9:00 AM to 12:45 AM (last elevator ride up at 12:00 AM)
+- Rest of the year: 9:30 AM to 11:45 PM (last elevator ride up at 11:00 PM)
+
+These times can sometimes change, so it's always best to check the official Eiffel Tower website or contact them directly for the most up-to-date information before your visit.
+
+Would you like me to help you find the official website or any other details about visiting the Eiffel Tower?
+
+👋 Voice assistant shut down. Goodbye!
+```
+
+The program uses Java's `java.util.logging` framework for technical logs, which are written to the console (stderr) by default. You can configure a logging properties file to redirect output to a file if needed.
+
+```java
+Logger logger = Logger.getLogger(VoiceLiveWithAgentV2.class.getName());
+```
+
+The console output includes technical information about the connection to the Voice Live API, audio processing, and session events:
+
+```text
+2026-02-10 18:40:19,183 INFO Using Azure token credential
+2026-02-10 18:40:19,184 INFO Connecting to VoiceLive API with agent config...
+2026-02-10 18:40:21,847 INFO AudioProcessor initialized with 24kHz PCM16 mono audio
+2026-02-10 18:40:21,847 INFO Setting up voice conversation session...
+2026-02-10 18:40:21,848 INFO Session configuration sent
+2026-02-10 18:40:22,174 INFO Audio playback system ready
+2026-02-10 18:40:22,174 INFO Voice assistant ready! Start speaking...
+2026-02-10 18:40:22,384 INFO Session ready
+2026-02-10 18:40:22,386 INFO Sending proactive greeting request
+2026-02-10 18:40:22,419 INFO Started audio capture
+2026-02-10 18:40:22,722 INFO 🤖 Assistant response created
+2026-02-10 18:40:26,054 INFO 🤖 Assistant finished speaking
+2026-02-10 18:40:26,074 INFO ✅ Response complete
+```
+
+Further, a conversation log file is created in the `logs` folder with the name `conversation_YYYYMMDD_HHmmss.log`. This file contains session metadata and the conversation transcript, including user inputs and agent responses.
+
+```text
+SessionID: sess_1m1zrSLJSPjJpzbEOyQpTL
+
+User Input:	Hello.
+Agent Audio Response:	Hello! I'm Tobi the agent. How can I assist you today?
+User Input:	What are the opening hours of the Eiffel Tower?
+Agent Audio Response:	The Eiffel Tower's opening hours can vary depending on the season...
+```
+
+Here are the key differences between the [technical log](#technical-log) and the [conversation log](#conversation-log):
+
+| Aspect | Conversation Log | Technical Log |
+|--------|-------------|---------------|
+| **Audience** | Business users, content reviewers | Developers, IT operations |
+| **Content** | What was said in conversations | How the system is working |
+| **Level** | Application/conversation level | System/infrastructure level |
+| **Troubleshooting** | "What did the agent say?" | "Why did the connection fail?" |
+
+**Example**: If your agent wasn't responding, you'd check:
+- **Console log** → "WebSocket connection failed" or "Audio stream error"
+- **conversation log** → "Did the user actually say anything?"
+
+Both logs are complementary - conversation logs for conversation analysis and testing, technical logs for system diagnostics!
+
+### Technical log
+**Purpose**: Technical debugging and system monitoring
+
+**Contents**:
+- WebSocket connection events
+- Audio stream status
+- Error messages and stack traces
+- System-level events (session.created, response.done, etc.)
+- Network connectivity issues
+- Audio processing diagnostics
+
+**Format**: Structured logging with timestamps, log levels, and technical details
+
+**Use Cases**:
+- Debugging connection problems
+- Monitoring system performance
+- Troubleshooting audio issues
+- Developer/operations analysis
+
+### Conversation log
+**Purpose**: Conversation transcript and user experience tracking
+
+**Contents**:
+- Agent and project identification
+- Session configuration details
+- **User transcripts**: "Tell me a story", "Stop"
+- **Agent responses**: Full story text and follow-up responses
+- Conversation flow and interactions
+
+**Format**: Plain text, human-readable conversation format
+
+**Use Cases**:
+- Analyzing conversation quality
+- Reviewing what was actually said
+- Understanding user interactions and agent responses
+- Business/content analysis
+
+Learn how to use Voice Live with [Microsoft Foundry Agent Service](https://learn.microsoft.com/azure/ai-foundry/agents/overview) using the VoiceLive SDK for JavaScript.
+
+[Reference documentation](https://learn.microsoft.com/javascript/api/overview/azure/ai-voicelive-readme) | [Package (npm)](https://www.npmjs.com/package/@azure/ai-voicelive) | [Additional samples on GitHub](https://aka.ms/voicelive/github-javascript) 
+
+You can create and run an application to use Voice Live with agents for real-time voice agents.
+
+- Using agents allows leveraging a built-in prompt and configuration managed within the agent itself, rather than specifying instructions in the session code. 
+
+- Agents encapsulate more complex logic and behaviors, making it easier to manage and update conversational flows without changing the client code. 
+
+- The agent approach streamlines integration. The agent ID is used to connect and all necessary settings are handled internally, reducing the need for manual configuration in the code. 
+
+- This separation also supports better maintainability and scalability for scenarios where multiple conversational experiences or business logic variations are needed.
+
+To use the Voice Live API without Foundry agents, see the [Voice Live API quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/voice-live-quickstart).
+
+<Tip>
+To use Voice Live, you don't need to deploy an **audio** model with your Microsoft Foundry resource. Voice Live is fully managed, and the model is automatically deployed for you. For more information about models availability, see the [Voice Live overview documentation](../../../voice-live.md).
+</Tip>
+
+Follow the quickstart below or get a fully working web app with browser-based voice UI:
+
+<Card title="Voice Live universal assistant sample" icon="arrow-right" href="https://github.com/microsoft-foundry/voicelive-samples/tree/main/voice-live-universal-assistant" />
+<Note>
+The JavaScript Voice Live SDK is designed for browser-based applications with built-in WebSocket and Web Audio support. This quickstart uses Node.js with `node-record-lpcm16` and `speaker` for a console experience.
+</Note>
+
+## Prerequisites
+
+<Note>
+This document refers to the [Microsoft Foundry (new)](../../../../../ai-foundry/what-is-foundry.md#microsoft-foundry-portals) portal and the latest Foundry Agent Service version.
+</Note>
+
+- An Azure subscription. [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
+- [Node.js](https://nodejs.org/) version 18 or later.
+- [SoX](https://sox.sourceforge.io/) installed on your system (required by `node-record-lpcm16` for microphone capture).
+- The required language runtimes, global tools, and Visual Studio Code extensions as described in [Prepare your development environment](../../../../../ai-foundry/how-to/develop/install-cli-sdk.md).
+- A [Microsoft Foundry resource](../../../../multi-service-resource.md) created in one of the supported regions. For more information about region availability, see the [Voice Live overview documentation](../../../voice-live.md).
+- A model deployed in Microsoft Foundry. If you don't have a model, first complete [Quickstart: Set up Microsoft Foundry resources](../../../../../ai-foundry/default/tutorials/quickstart-create-foundry-resources.md).
+
+{/* - A Microsoft Foundry agent created in the [Microsoft Foundry portal](https://ai.azure.com/?cid=learnDocs). For more information about creating an agent, see the [Create an agent quickstart](../../../../../ai-foundry/quickstarts/get-started-code.md). */}
+- Assign the `Azure AI User` role to your user account. You can assign roles in the Azure portal under **Access control (IAM)** > **Add role assignment**.
+
+## Prepare the environment
+
+1. Create a new folder `voice-live-quickstart` and go to the quickstart folder with the following command:
+
+    ```shell
+    mkdir voice-live-quickstart && cd voice-live-quickstart
+    ```
+
+1. Create a **package.json** file with the following content:
+
+    ```json
+    // Source: package.json (not available)
+    ```
+
+1. Install the dependencies:
+
+    ```shell
+    npm install
+    ```
+
+## Retrieve resource information
+
+<Note>
+The agent integration requires Entra ID authentication. Key-based authentication isn't supported in Agent mode.
+</Note>
+
+Create a new file named `.env` in the folder where you want to run the code. 
+
+In the `.env` file, add the following environment variables for authentication:
+
+```plaintext
+# Settings for Foundry Agent
+PROJECT_ENDPOINT=<endpoint copied from welcome screen>
+AGENT_NAME="MyVoiceAgent"
+MODEL_DEPLOYMENT_NAME="gpt-4.1-mini"
+# Settings for Voice Live
+AGENT_NAME=<name-used-to-create-agent> # See above
+AGENT_VERSION=<version-of-the-agent>
+CONVERSATION_ID=<specific conversation id to reconnect to>
+PROJECT_NAME=<your_project_name>
+VOICELIVE_ENDPOINT=<your_endpoint>
+VOICELIVE_API_VERSION=2026-01-01-preview
+```
+
+Replace the default values with your actual project name, agent name, and endpoint values.
+
+| Variable name | Value |
+| ------------- | ----- |
+| `PROJECT_ENDPOINT` | The Foundry project endpoint copied from the project welcome screen. |
+| `AGENT_NAME` | The name of the agent to use. |
+| `AGENT_VERSION` | Optional: The version of the agent to use. |
+| `CONVERSATION_ID` | Optional: A specific conversation id to reconnect to. |
+| `PROJECT_NAME` | The name of your Microsoft Foundry project. Project name is the last element of the project endpoint value. |
+| `VOICELIVE_ENDPOINT` | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
+| `FOUNDRY_RESOURCE_OVERRIDE` | Optional: The Foundry resource name hosting the agent project (for example, `my-resource-name`). |
+| `AGENT_AUTHENTICATION_IDENTITY_CLIENT_ID` | Optional: The managed identity client ID of the Voice Live resource. |
+
+Learn more about [keyless authentication](https://learn.microsoft.com/azure/ai-services/authentication) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
+
+## Create an agent with Voice Live settings
+
+1. Create a file **create-agent-with-voicelive.js** with the following code:
+
+    ```javascript
+    // Source: create-agent-with-voicelive.js (not available)
+    ```
+
+1. Sign in to Azure with the following command:
+
+    ```shell
+    az login
+    ```
+
+1. Run the agent creation script:
+
+    ```shell
+    node create-agent-with-voicelive.js
+    ```
+
+## Talk with a voice agent
+
+The sample code in this quickstart uses Microsoft Entra ID for authentication as the current integration only supports this authentication method.
+
+The sample connects to Foundry Agent Service by passing an `agent` config object to `client.createSession(...)` using these fields:
+
+- `agentName`: The agent name to invoke.
+- `projectName`: The Foundry project containing the agent.
+- `agentVersion`: Optional pinned version for controlled rollouts. If omitted, the latest version is used.
+- `conversationId`: Optional conversation ID to continue prior conversation context.
+- `foundryResourceOverride`: Optional resource name when the agent is hosted on a different Foundry resource.
+- `authenticationIdentityClientId`: Optional managed identity client ID used with cross-resource agent connections.
+
+<Note>
+Agent mode in Voice Live doesn't support key-based authentication for agent invocation. Use Microsoft Entra ID (for example, `DefaultAzureCredential`) for agent access. Voice Live resource configuration might still include API keys for non-agent scenarios.
+</Note>
+
+1. Create the **voice-live-with-agent.js** file with the following code:
+
+    ```javascript
+    // Source: voice-live-with-agent-v2.js (not available)
+    ```
+
+1. Sign in to Azure with the following command:
+
+    ```shell
+    az login
+    ```
+
+1. Run the voice assistant:
+
+    ```shell
+    node voice-live-with-agent.js
+    ```
+
+1. You can start speaking with the agent and hear responses. You can interrupt the model by speaking. Enter "Ctrl+C" to quit the conversation.
+
+## Output
+
+The output of the script is printed to the console. You see messages indicating the status of the connection, audio stream, and playback. The audio is played back through your speakers or headphones.
+
+```text
+🎙️  Basic Foundry Voice Agent with Azure VoiceLive SDK (Agent Mode)
+=================================================================
+
+=================================================================
+🎤 VOICE ASSISTANT READY
+Start speaking to begin conversation
+Press Ctrl+C to exit
+=================================================================
+
+🎤 Listening...
+🤔 Processing...
+👤 You said:	Hello.
+🎤 Ready for next input...
+🤖 Agent responded with audio transcript:	Hello! I'm Tobi the agent. How can I assist you today?
+🎤 Listening...
+🤔 Processing...
+👤 You said:	What are the opening hours of the Eiffel Tower?
+🎤 Ready for next input...
+🤖 Agent responded with audio transcript:	The Eiffel Tower's opening hours can vary depending on the season and any special events or maintenance. Generally, the Eiffel Tower is open every day of the year, with the following typical hours:
+
+- Mid-June to early September: 9:00 AM to 12:45 AM (last elevator ride up at 12:00 AM)
+- Rest of the year: 9:30 AM to 11:45 PM (last elevator ride up at 11:00 PM)
+
+These times can sometimes change, so it's always best to check the official Eiffel Tower website or contact them directly for the most up-to-date information before your visit.
+
+Would you like me to help you find the official website or any other details about visiting the Eiffel Tower?
+
+👋 Voice assistant shut down. Goodbye!
+```
+
+A conversation log file is created in the `logs` folder with the name `conversation_YYYYMMDD_HHmmss.log`. This file contains session metadata and the conversation transcript, including user inputs and agent responses.
+
+```text
+SessionID: sess_1m1zrSLJSPjJpzbEOyQpTL
+Agent Name: VoiceAgentQuickstartTest
+Agent Description:
+Agent ID:
+Voice Name: en-US-Ava:DragonHDLatestNeural
+Voice Type: azure-standard
+
+User Input:	Hello.
+Agent Audio Response:	Hello! I'm Tobi the agent. How can I assist you today?
+User Input:	What are the opening hours of the Eiffel Tower?
+Agent Audio Response:	The Eiffel Tower's opening hours can vary depending on the season...
+```
+
+Here are the key differences between the [technical log](#technical-log) and the [conversation log](#conversation-log):
+
+| Aspect | Conversation Log | Technical Log |
+|--------|-------------|---------------|
+| **Audience** | Business users, content reviewers | Developers, IT operations |
+| **Content** | What was said in conversations | How the system is working |
+| **Level** | Application/conversation level | System/infrastructure level |
+| **Troubleshooting** | "What did the agent say?" | "Why did the connection fail?" |
+
+**Example**: If your agent wasn't responding, you'd check:
+- **Console log** → "WebSocket connection failed" or "Audio stream error"
+- **conversation log** → "Did the user actually say anything?"
+
+Both logs are complementary - conversation logs for conversation analysis and testing, technical logs for system diagnostics!
+
+### Technical log
+**Purpose**: Technical debugging and system monitoring
+
+**Contents**:
+- WebSocket connection events
+- Audio stream status
+- Error messages and stack traces
+- System-level events (session.created, response.done, etc.)
+- Network connectivity issues
+- Audio processing diagnostics
+
+**Format**: Console output with bracketed prefixes (for example, `[session]`, `[audio]`, `[init]`)
+
+**Use Cases**:
+- Debugging connection problems
+- Monitoring system performance
+- Troubleshooting audio issues
+- Developer/operations analysis
+
+### Conversation log
+**Purpose**: Conversation transcript and user experience tracking
+
+**Contents**:
+- Agent and project identification
+- Session configuration details
+- **User transcripts**: "Tell me a story", "Stop"
+- **Agent responses**: Full story text and follow-up responses
+- Conversation flow and interactions
+
+**Format**: Plain text, human-readable conversation format
+
+**Use Cases**:
+- Analyzing conversation quality
+- Reviewing what was actually said
+- Understanding user interactions and agent responses
+- Business/content analysis
+
+## Related content
+
+- Learn more about [How to build voice agents](/agents/tools/how-to-voice-agent-integration)
+- Learn more about [How to use the Voice Live API](./voice-live-how-to.md)
+- See the [Voice Live API reference](./voice-live-api-reference-2025-10-01.md)
