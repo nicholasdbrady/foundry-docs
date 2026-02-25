@@ -18,4 +18,4 @@ ENV FOUNDRY_DOCS_DIR=/app/docs
 ENV FOUNDRY_DOCS_JSON=/app/docs.json
 
 # stdio transport — the MCP client drives stdin/stdout
-ENTRYPOINT ["foundry-docs-mcp"]
+ENTRYPOINT ["foundry-docs"]

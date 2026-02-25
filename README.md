@@ -1,10 +1,10 @@
-# foundry-docs-mcp
+# foundry-docs
 
 A FastMCP server that provides searchable Microsoft Foundry documentation for AI assistants.
 
 ## Overview
 
-This project extracts ~268 Microsoft Foundry docs from [MicrosoftDocs/azure-ai-docs](https://github.com/MicrosoftDocs/azure-ai-docs), converts them from Microsoft Learn markdown to Mintlify MDX format, and serves them via a [FastMCP](https://github.com/jlowin/fastmcp) server.
+This project extracts ~250 Microsoft Foundry docs from [MicrosoftDocs/azure-ai-docs](https://github.com/MicrosoftDocs/azure-ai-docs), converts them from Microsoft Learn markdown to Mintlify MDX format, and serves them via a [FastMCP](https://github.com/jlowin/fastmcp) server.
 
 ## Quick Start
 
@@ -13,7 +13,7 @@ This project extracts ~268 Microsoft Foundry docs from [MicrosoftDocs/azure-ai-d
 pip install -e .
 
 # Run the MCP server
-foundry-docs-mcp
+foundry-docs
 ```
 
 ## MCP Tools
