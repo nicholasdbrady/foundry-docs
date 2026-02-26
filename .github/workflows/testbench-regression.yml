@@ -1,0 +1,62 @@
+name: Testbench Regression Gate
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 17 * * *" # Daily 17:30 UTC
+  push:
+    branches: [ main ]
+    paths:
+      - tests/search_testbench.json
+      - scripts/run_testbench.py
+      - scripts/build_testbench.py
+      - foundry_docs_mcp/indexer.py
+      - foundry_docs_mcp/foundry_client.py
+      - foundry_docs_mcp/chunker.py
+      - foundry_docs_mcp/server.py
+
+permissions:
+  contents: read
+
+env:
+  AZURE_SEARCH_ENDPOINT: ${{ secrets.AZURE_SEARCH_ENDPOINT }}
+  AZURE_SEARCH_API_KEY: ${{ secrets.AZURE_SEARCH_API_KEY }}
+  AZURE_SEARCH_INDEX_NAME: ${{ secrets.AZURE_SEARCH_INDEX_NAME }}
+  AZURE_AI_PROJECT_ENDPOINT: ${{ secrets.AZURE_AI_PROJECT_ENDPOINT }}
+  AZURE_AI_PROJECT_API_KEY: ${{ secrets.AZURE_AI_PROJECT_API_KEY }}
+  AZURE_OPENAI_EMBEDDING_DEPLOYMENT: ${{ secrets.AZURE_OPENAI_EMBEDDING_DEPLOYMENT }}
+
+jobs:
+  regression-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -e ".[scripts]"
+
+      - name: Validate required settings
+        run: |
+          test -n "$AZURE_SEARCH_ENDPOINT" || { echo "Missing AZURE_SEARCH_ENDPOINT"; exit 1; }
+          test -n "$AZURE_SEARCH_API_KEY" || { echo "Missing AZURE_SEARCH_API_KEY"; exit 1; }
+          test -n "$AZURE_AI_PROJECT_ENDPOINT" || { echo "Missing AZURE_AI_PROJECT_ENDPOINT"; exit 1; }
+          test -n "$AZURE_OPENAI_EMBEDDING_DEPLOYMENT" || { echo "Missing AZURE_OPENAI_EMBEDDING_DEPLOYMENT"; exit 1; }
+
+      - name: Optionally rebuild testbench from telemetry JSONL
+        run: |
+          if [ -f telemetry/feedback.jsonl ]; then
+            python scripts/build_testbench.py
+          else
+            echo "No telemetry/feedback.jsonl present in repo; using checked-in tests/search_testbench.json"
+          fi
+
+      - name: Ensure testbench exists
+        run: test -f tests/search_testbench.json || { echo "Missing tests/search_testbench.json"; exit 1; }
+
+      - name: Run regression gate
+        run: python scripts/run_testbench.py --test-file tests/search_testbench.json --top-k 10 --min-pass-rate 0.90 --min-tests 1

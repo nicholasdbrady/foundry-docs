@@ -131,8 +131,14 @@ def emit_feedback(
 
     _append_feedback_jsonl(project_root, payload)
 
-    if telemetry.enabled and telemetry.log_emitter is not None:
+    if telemetry.enabled and telemetry.tracer is not None:
         try:
-            telemetry.log_emitter.emit(payload)
+            with telemetry.tracer.start_as_current_span("foundry_docs.feedback") as span:
+                span.set_attribute("feedback.event", payload["event"])
+                span.set_attribute("feedback.user_request", payload["user_request"])
+                span.set_attribute("feedback.query", payload["query"])
+                span.set_attribute("feedback.expected_result", payload["expected_result"])
+                span.set_attribute("feedback.proposed_solution", payload["proposed_solution"])
+                span.set_attribute("feedback.result_paths", ",".join(result_paths))
         except Exception as exc:
             logger.warning("Failed to emit feedback telemetry: %s", exc)

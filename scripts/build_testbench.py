@@ -11,6 +11,15 @@ FEEDBACK_FILE = PROJECT_ROOT / "telemetry" / "feedback.jsonl"
 OUTPUT_FILE = PROJECT_ROOT / "tests" / "search_testbench.json"
 
 
+def _normalize_expected_path(value: str) -> str:
+    path = value.strip().lstrip("/")
+    if path.startswith("docs/"):
+        path = path[len("docs/"):]
+    if path.endswith(".mdx"):
+        path = path[:-4]
+    return path
+
+
 def main():
     if not FEEDBACK_FILE.exists():
         raise FileNotFoundError(f"Feedback file not found: {FEEDBACK_FILE}")
@@ -26,6 +35,7 @@ def main():
             expected = event.get("expected_result", "").strip()
             if not query or not expected:
                 continue
+            expected = _normalize_expected_path(expected)
             key = (query, expected)
             if key not in cases:
                 cases[key] = {

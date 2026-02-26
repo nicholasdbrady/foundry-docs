@@ -95,6 +95,8 @@ python scripts/ingest_to_azure_search.py --recreate
 
 GitHub Actions workflow [.github/workflows/index-sync.yml](.github/workflows/index-sync.yml) runs incremental index sync on docs/code changes and supports manual full rebuild.
 
+GitHub Actions workflow [.github/workflows/testbench-regression.yml](.github/workflows/testbench-regression.yml) runs relevance regression checks against `tests/search_testbench.json` and enforces a pass-rate gate.
+
 Required repository secrets:
 
 - `AZURE_SEARCH_ENDPOINT`
@@ -103,6 +105,14 @@ Required repository secrets:
 - `AZURE_AI_PROJECT_ENDPOINT`
 - `AZURE_AI_PROJECT_API_KEY`
 - `AZURE_OPENAI_EMBEDDING_DEPLOYMENT`
+
+For testbench regression workflow, use the same secrets above.
+
+Default regression gate:
+
+- `top-k`: 10
+- `min-pass-rate`: 0.90
+- `min-tests`: 1
 
 ## Attribution
 
