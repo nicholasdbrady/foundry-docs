@@ -1,0 +1,61 @@
+name: Incremental Index Sync
+
+on:
+  workflow_dispatch:
+    inputs:
+      recreate:
+        description: Recreate index from scratch
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+  push:
+    branches: [ main ]
+    paths:
+      - docs/**
+      - docs.json
+      - foundry_docs_mcp/chunker.py
+      - foundry_docs_mcp/indexer.py
+      - foundry_docs_mcp/foundry_client.py
+      - scripts/ingest_to_azure_search.py
+
+permissions:
+  contents: read
+
+jobs:
+  sync-index:
+    runs-on: ubuntu-latest
+    env:
+      AZURE_SEARCH_ENDPOINT: ${{ secrets.AZURE_SEARCH_ENDPOINT }}
+      AZURE_SEARCH_API_KEY: ${{ secrets.AZURE_SEARCH_API_KEY }}
+      AZURE_SEARCH_INDEX_NAME: ${{ secrets.AZURE_SEARCH_INDEX_NAME }}
+      AZURE_AI_PROJECT_ENDPOINT: ${{ secrets.AZURE_AI_PROJECT_ENDPOINT }}
+      AZURE_AI_PROJECT_API_KEY: ${{ secrets.AZURE_AI_PROJECT_API_KEY }}
+      AZURE_OPENAI_EMBEDDING_DEPLOYMENT: ${{ secrets.AZURE_OPENAI_EMBEDDING_DEPLOYMENT }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -e ".[scripts]"
+
+      - name: Validate required settings
+        run: |
+          test -n "$AZURE_SEARCH_ENDPOINT" || { echo "Missing AZURE_SEARCH_ENDPOINT"; exit 1; }
+          test -n "$AZURE_SEARCH_API_KEY" || { echo "Missing AZURE_SEARCH_API_KEY"; exit 1; }
+          test -n "$AZURE_AI_PROJECT_ENDPOINT" || { echo "Missing AZURE_AI_PROJECT_ENDPOINT"; exit 1; }
+          test -n "$AZURE_OPENAI_EMBEDDING_DEPLOYMENT" || { echo "Missing AZURE_OPENAI_EMBEDDING_DEPLOYMENT"; exit 1; }
+
+      - name: Incremental sync
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.recreate != 'true' }}
+        run: python scripts/ingest_to_azure_search.py
+
+      - name: Full rebuild sync
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.recreate == 'true' }}
+        run: python scripts/ingest_to_azure_search.py --recreate

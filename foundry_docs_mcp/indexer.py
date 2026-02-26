@@ -6,7 +6,29 @@ Builds a TF-IDF-like search index from MDX docs for fast full-text search.
 import math
 import re
 from collections import Counter, defaultdict
+from collections.abc import Callable
 from pathlib import Path
+
+from azure.core.credentials import AzureKeyCredential
+from azure.identity import DefaultAzureCredential
+from azure.search.documents import SearchClient
+from azure.search.documents.indexes import SearchIndexClient
+from azure.search.documents.indexes.models import (
+    HnswAlgorithmConfiguration,
+    HnswParameters,
+    SearchField,
+    SearchFieldDataType,
+    SearchIndex as AzureSearchSchema,
+    SearchableField,
+    SemanticConfiguration,
+    SemanticField,
+    SemanticPrioritizedFields,
+    SemanticSearch,
+    SimpleField,
+    VectorSearch,
+    VectorSearchProfile,
+)
+from azure.search.documents.models import QueryCaptionType, QueryType, VectorizedQuery
 
 
 def tokenize(text: str) -> list[str]:
@@ -121,3 +143,173 @@ class SearchIndex:
             content = mdx_file.read_text(encoding="utf-8", errors="replace")
             self.add_doc(path, content)
         self.build()
+
+
+class AzureSearchIndex:
+    """Azure AI Search hybrid index for chunk-level semantic retrieval."""
+
+    def __init__(
+        self,
+        endpoint: str,
+        index_name: str = "foundry-docs",
+        api_key: str | None = None,
+    ):
+        credential = AzureKeyCredential(api_key) if api_key else DefaultAzureCredential()
+        self.endpoint = endpoint
+        self.index_name = index_name
+        self.index_client = SearchIndexClient(endpoint=endpoint, credential=credential)
+        self.search_client = SearchClient(endpoint=endpoint, index_name=index_name, credential=credential)
+
+    def _schema(self) -> AzureSearchSchema:
+        return AzureSearchSchema(
+            name=self.index_name,
+            fields=[
+                SimpleField(name="chunk_id", type=SearchFieldDataType.String, key=True),
+                SimpleField(name="doc_path", type=SearchFieldDataType.String, filterable=True),
+                SimpleField(name="content_hash", type=SearchFieldDataType.String, filterable=True),
+                SearchableField(name="title", type=SearchFieldDataType.String, analyzer_name="en.lucene"),
+                SearchableField(name="section_heading", type=SearchFieldDataType.String, analyzer_name="en.lucene"),
+                SearchableField(name="description", type=SearchFieldDataType.String, analyzer_name="en.lucene"),
+                SearchableField(name="content", type=SearchFieldDataType.String, analyzer_name="en.lucene"),
+                SearchField(
+                    name="content_vector",
+                    type=SearchFieldDataType.Collection(SearchFieldDataType.Single),
+                    searchable=True,
+                    vector_search_dimensions=1536,
+                    vector_search_profile_name="hnsw-profile",
+                ),
+            ],
+            vector_search=VectorSearch(
+                algorithms=[
+                    HnswAlgorithmConfiguration(
+                        name="hnsw-algorithm",
+                        parameters=HnswParameters(metric="cosine"),
+                    )
+                ],
+                profiles=[
+                    VectorSearchProfile(name="hnsw-profile", algorithm_configuration_name="hnsw-algorithm")
+                ],
+            ),
+            semantic_search=SemanticSearch(
+                configurations=[
+                    SemanticConfiguration(
+                        name="foundry-semantic",
+                        prioritized_fields=SemanticPrioritizedFields(
+                            title_field=SemanticField(field_name="title"),
+                            content_fields=[
+                                SemanticField(field_name="section_heading"),
+                                SemanticField(field_name="content"),
+                            ],
+                            keywords_fields=[SemanticField(field_name="description")],
+                        ),
+                    )
+                ]
+            ),
+        )
+
+    def create_index(self, recreate: bool = False):
+        if recreate:
+            try:
+                self.index_client.delete_index(self.index_name)
+            except Exception:
+                pass
+        self.index_client.create_or_update_index(self._schema())
+
+    def upload_chunks(self, chunks: list[dict], embedding_fn: Callable[[list[str]], list[list[float]]], batch_size: int = 100):
+        for start in range(0, len(chunks), batch_size):
+            batch = chunks[start: start + batch_size]
+            vectors = embedding_fn([item["content"] for item in batch])
+            docs = []
+            for item, vector in zip(batch, vectors):
+                docs.append(
+                    {
+                        "chunk_id": item["chunk_id"],
+                        "doc_path": item["doc_path"],
+                        "content_hash": item.get("content_hash", ""),
+                        "title": item.get("title", ""),
+                        "section_heading": item.get("section_heading", ""),
+                        "description": item.get("description", ""),
+                        "content": item["content"],
+                        "content_vector": vector,
+                    }
+                )
+            self.search_client.upload_documents(docs)
+
+    def get_existing_chunk_metadata(self) -> dict[str, dict]:
+        """Return existing chunk metadata keyed by chunk_id."""
+        rows: dict[str, dict] = {}
+        page_size = 1000
+        skip = 0
+        while True:
+            page = list(
+                self.search_client.search(
+                    search_text="*",
+                    select=["chunk_id", "doc_path", "content_hash"],
+                    top=page_size,
+                    skip=skip,
+                )
+            )
+            if not page:
+                break
+
+            for item in page:
+                chunk_id = item.get("chunk_id")
+                if not chunk_id:
+                    continue
+                rows[chunk_id] = {
+                    "doc_path": item.get("doc_path", ""),
+                    "content_hash": item.get("content_hash", ""),
+                }
+
+            if len(page) < page_size:
+                break
+            skip += page_size
+        return rows
+
+    def delete_chunks(self, chunk_ids: list[str], batch_size: int = 500):
+        """Delete chunks by key from the index."""
+        if not chunk_ids:
+            return
+        for start in range(0, len(chunk_ids), batch_size):
+            batch = chunk_ids[start: start + batch_size]
+            self.search_client.delete_documents([{"chunk_id": chunk_id} for chunk_id in batch])
+
+    def search(
+        self,
+        query: str,
+        limit: int,
+        embedding_fn: Callable[[str], list[float]],
+    ) -> list[dict]:
+        query_vector = embedding_fn(query)
+        vector_query = VectorizedQuery(vector=query_vector, fields="content_vector", k_nearest_neighbors=50)
+        results = self.search_client.search(
+            search_text=query,
+            vector_queries=[vector_query],
+            query_type=QueryType.SEMANTIC,
+            semantic_configuration_name="foundry-semantic",
+            query_caption=QueryCaptionType.EXTRACTIVE,
+            top=max(limit * 5, 20),
+            select=["doc_path", "title", "description", "section_heading", "content"],
+        )
+
+        best_by_doc: dict[str, dict] = {}
+        for item in results:
+            doc_path = item.get("doc_path", "")
+            score = float(item.get("@search.score", 0.0))
+            caption = ""
+            captions = item.get("@search.captions")
+            if captions:
+                caption = captions[0].text
+            record = {
+                "path": doc_path,
+                "title": item.get("title", doc_path),
+                "description": item.get("description", ""),
+                "section_heading": item.get("section_heading", ""),
+                "excerpt": caption,
+                "score": round(score, 4),
+            }
+            if doc_path not in best_by_doc or score > best_by_doc[doc_path]["score"]:
+                best_by_doc[doc_path] = record
+
+        ranked = sorted(best_by_doc.values(), key=lambda x: x["score"], reverse=True)
+        return ranked[:limit]

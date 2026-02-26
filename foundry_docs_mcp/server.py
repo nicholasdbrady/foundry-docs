@@ -8,6 +8,7 @@ tool annotations, Context logging, resource templates, and reusable prompts.
 import json
 import logging
 import os
+import time
 from pathlib import Path
 from typing import Annotated
 
@@ -15,7 +16,9 @@ from fastmcp import Context, FastMCP
 from fastmcp.prompts import Message
 from fastmcp.server.lifespan import lifespan
 
-from .indexer import SearchIndex
+from .foundry_client import FoundryProjectOpenAI
+from .indexer import AzureSearchIndex, SearchIndex
+from .telemetry import Telemetry, emit_feedback, instrument_search, setup_telemetry
 
 logger = logging.getLogger(__name__)
 
@@ -66,11 +69,51 @@ async def load_docs(server):
     index = SearchIndex()
     index.load_from_directory(DOCS_DIR)
 
+    azure_index = None
+    embed_query = None
+    rewrite_query = None
+    foundry_client = None
+
+    if os.environ.get("AZURE_SEARCH_ENDPOINT"):
+        try:
+            azure_index = AzureSearchIndex(
+                endpoint=os.environ["AZURE_SEARCH_ENDPOINT"],
+                index_name=os.environ.get("AZURE_SEARCH_INDEX_NAME", "foundry-docs"),
+                api_key=os.environ.get("AZURE_SEARCH_API_KEY"),
+            )
+
+            project_endpoint = os.environ["AZURE_AI_PROJECT_ENDPOINT"]
+            foundry_client = FoundryProjectOpenAI(
+                project_endpoint=project_endpoint,
+                embedding_model=os.environ.get("AZURE_OPENAI_EMBEDDING_DEPLOYMENT", "text-embedding-3-small"),
+                chat_model=os.environ.get("AZURE_AI_MODEL_DEPLOYMENT_NAME"),
+                api_key=os.environ.get("AZURE_AI_PROJECT_API_KEY") or os.environ.get("AZURE_OPENAI_API_KEY"),
+            )
+
+            embed_query = foundry_client.embed_query
+            rewrite_query = foundry_client.rewrite_query_for_search
+            logger.info("Azure AI Search hybrid mode enabled via Azure AI Foundry project endpoint")
+        except Exception as exc:
+            logger.warning("Failed to initialize Azure hybrid mode; using local search fallback: %s", exc)
+
+    telemetry = setup_telemetry("foundry-docs")
+
     navigation = {}
     if DOCS_JSON.exists():
         navigation = json.loads(DOCS_JSON.read_text())
 
-    yield {"index": index, "navigation": navigation}
+    try:
+        yield {
+            "index": index,
+            "navigation": navigation,
+            "azure_index": azure_index,
+            "embed_query": embed_query,
+            "rewrite_query": rewrite_query,
+            "telemetry": telemetry,
+        }
+    finally:
+        if foundry_client is not None:
+            foundry_client.close()
 
 
 mcp = FastMCP(
@@ -129,6 +172,22 @@ def _get_nav(ctx: Context) -> dict:
     return _fallback_nav
 
 
+def _get_azure_index(ctx: Context) -> AzureSearchIndex | None:
+    return ctx.lifespan_context.get("azure_index")
+
+
+def _get_embed_query(ctx: Context):
+    return ctx.lifespan_context.get("embed_query")
+
+
+def _get_rewrite_query(ctx: Context):
+    return ctx.lifespan_context.get("rewrite_query")
+
+
+def _get_telemetry(ctx: Context) -> Telemetry:
+    return ctx.lifespan_context.get("telemetry") or Telemetry(enabled=False)
+
+
 # ---------------------------------------------------------------------------
 # Tools
 # ---------------------------------------------------------------------------
@@ -153,15 +212,83 @@ async def search_docs(
     Use the returned paths with get_doc to read the full page content.
     """
     await _log(ctx, "info", f"Searching docs for: {query}")
-    index: SearchIndex = _get_index(ctx)
-    results = index.search(query, limit=limit)
+    started = time.perf_counter()
+    telemetry = _get_telemetry(ctx)
+    backend = "local"
+
+    azure_index = _get_azure_index(ctx)
+    embed_query = _get_embed_query(ctx)
+    rewrite_query = _get_rewrite_query(ctx)
+    effective_query = rewrite_query(query) if callable(rewrite_query) else query
+
+    if azure_index and embed_query:
+        try:
+            results = azure_index.search(query=effective_query, limit=limit, embedding_fn=embed_query)
+            backend = "azure-hybrid"
+        except Exception as exc:
+            await _log(ctx, "warning", f"Azure search failed, falling back to local index: {exc}")
+            index: SearchIndex = _get_index(ctx)
+            results = index.search(query, limit=limit)
+    else:
+        index = _get_index(ctx)
+        results = index.search(query, limit=limit)
+
+    latency_ms = (time.perf_counter() - started) * 1000
+    instrument_search(
+        telemetry=telemetry,
+        query=effective_query,
+        result_count=len(results),
+        backend=backend,
+        latency_ms=latency_ms,
+        top_paths=[r.get("path", "") for r in results[:5]],
+    )
 
     if not results:
         await _log(ctx, "warning", f"No results for query: {query}")
-        return json.dumps({"message": "No results found", "query": query})
+        return json.dumps({"message": "No results found", "query": query, "backend": backend})
 
-    await _log(ctx, "info", f"Found {len(results)} results")
+    await _log(ctx, "info", f"Found {len(results)} results ({backend}, {latency_ms:.1f}ms)")
     return json.dumps(results, indent=2)
+
+
+@mcp.tool(
+    tags={"feedback", "evaluation"},
+    annotations={
+        "title": "Submit Search Feedback",
+        "readOnlyHint": False,
+        "openWorldHint": False,
+    },
+)
+async def submit_search_feedback(
+    user_request: Annotated[str, "Original user request"],
+    query: Annotated[str, "The query attempted in search_docs"],
+    result_paths: Annotated[list[str], "Paths returned by search_docs (empty if no results)"],
+    expected_result: Annotated[str, "Expected result path or expected doc description"],
+    proposed_solution: Annotated[str, "How the agent resolved or plans to resolve the failure"],
+    *,
+    ctx: Context,
+) -> str:
+    """Record failed/weak search cases for testbench generation and relevance tuning."""
+    telemetry = _get_telemetry(ctx)
+    emit_feedback(
+        telemetry=telemetry,
+        project_root=PROJECT_ROOT,
+        user_request=user_request,
+        query=query,
+        result_paths=result_paths,
+        expected_result=expected_result,
+        proposed_solution=proposed_solution,
+    )
+
+    await _log(ctx, "info", "Recorded search feedback event")
+    return json.dumps(
+        {
+            "message": "Feedback recorded",
+            "query": query,
+            "hint": "Run scripts/build_testbench.py to convert feedback into evaluation cases",
+        },
+        indent=2,
+    )
 
 
 @mcp.tool(
