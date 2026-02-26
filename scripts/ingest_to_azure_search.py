@@ -33,6 +33,12 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--recreate", action="store_true", help="Drop and recreate the index before ingest")
     parser.add_argument("--dry-run", action="store_true", help="Compute diff only, do not upload/delete")
     parser.add_argument("--batch-size", type=int, default=100, help="Embedding/upload batch size")
+    parser.add_argument(
+        "--max-concurrency",
+        type=int,
+        default=int(os.environ.get("FOUNDRY_INGEST_MAX_CONCURRENCY", "1")),
+        help="Number of concurrent embedding/upload workers",
+    )
     return parser.parse_args()
 
 
@@ -126,7 +132,12 @@ def main():
 
     try:
         if to_upsert:
-            azure_index.upload_chunks(to_upsert, embedding_fn=embed_batch, batch_size=max(args.batch_size, 1))
+            azure_index.upload_chunks(
+                to_upsert,
+                embedding_fn=embed_batch,
+                batch_size=max(args.batch_size, 1),
+                max_concurrency=max(args.max_concurrency, 1),
+            )
         if to_delete:
             azure_index.delete_chunks(to_delete)
     finally:

@@ -5,6 +5,7 @@ Builds a TF-IDF-like search index from MDX docs for fast full-text search.
 
 import math
 import re
+from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 from collections import Counter, defaultdict
 from collections.abc import Callable
 from pathlib import Path
@@ -29,6 +30,8 @@ from azure.search.documents.indexes.models import (
     VectorSearchProfile,
 )
 from azure.search.documents.models import QueryCaptionType, QueryType, VectorizedQuery
+
+from .retry import AdaptiveThrottle, with_retry
 
 
 def tokenize(text: str) -> list[str]:
@@ -210,30 +213,91 @@ class AzureSearchIndex:
     def create_index(self, recreate: bool = False):
         if recreate:
             try:
-                self.index_client.delete_index(self.index_name)
+                with_retry(
+                    lambda: self.index_client.delete_index(self.index_name),
+                    operation="search_delete_index",
+                )
             except Exception:
                 pass
-        self.index_client.create_or_update_index(self._schema())
+        with_retry(
+            lambda: self.index_client.create_or_update_index(self._schema()),
+            operation="search_create_or_update_index",
+        )
 
-    def upload_chunks(self, chunks: list[dict], embedding_fn: Callable[[list[str]], list[list[float]]], batch_size: int = 100):
+    def _process_upload_batch(
+        self,
+        batch: list[dict],
+        embedding_fn: Callable[[list[str]], list[list[float]]],
+        throttle: AdaptiveThrottle,
+    ):
+        vectors = with_retry(
+            lambda: embedding_fn([item["content"] for item in batch]),
+            operation="search_embed_batch",
+            throttle=throttle,
+        )
+
+        docs = []
+        for item, vector in zip(batch, vectors):
+            docs.append(
+                {
+                    "chunk_id": item["chunk_id"],
+                    "doc_path": item["doc_path"],
+                    "content_hash": item.get("content_hash", ""),
+                    "title": item.get("title", ""),
+                    "section_heading": item.get("section_heading", ""),
+                    "description": item.get("description", ""),
+                    "content": item["content"],
+                    "content_vector": vector,
+                }
+            )
+
+        with_retry(
+            lambda: self.search_client.upload_documents(docs),
+            operation="search_upload_documents",
+            throttle=throttle,
+        )
+
+    def upload_chunks(
+        self,
+        chunks: list[dict],
+        embedding_fn: Callable[[list[str]], list[list[float]]],
+        batch_size: int = 100,
+        max_concurrency: int = 1,
+    ):
+        if not chunks:
+            return
+
+        batches: list[list[dict]] = []
         for start in range(0, len(chunks), batch_size):
-            batch = chunks[start: start + batch_size]
-            vectors = embedding_fn([item["content"] for item in batch])
-            docs = []
-            for item, vector in zip(batch, vectors):
-                docs.append(
-                    {
-                        "chunk_id": item["chunk_id"],
-                        "doc_path": item["doc_path"],
-                        "content_hash": item.get("content_hash", ""),
-                        "title": item.get("title", ""),
-                        "section_heading": item.get("section_heading", ""),
-                        "description": item.get("description", ""),
-                        "content": item["content"],
-                        "content_vector": vector,
-                    }
+            batches.append(chunks[start: start + batch_size])
+
+        throttle = AdaptiveThrottle()
+        worker_count = max(1, max_concurrency)
+        if worker_count == 1:
+            for batch in batches:
+                self._process_upload_batch(batch, embedding_fn=embedding_fn, throttle=throttle)
+            return
+
+        in_flight_limit = worker_count * 2
+        pending: set[Future] = set()
+
+        with ThreadPoolExecutor(max_workers=worker_count) as executor:
+            for batch in batches:
+                pending.add(
+                    executor.submit(
+                        self._process_upload_batch,
+                        batch,
+                        embedding_fn,
+                        throttle,
+                    )
                 )
-            self.search_client.upload_documents(docs)
+                if len(pending) >= in_flight_limit:
+                    done, pending = wait(pending, return_when=FIRST_COMPLETED)
+                    for future in done:
+                        future.result()
+
+            for future in pending:
+                future.result()
 
     def get_existing_chunk_metadata(self) -> dict[str, dict]:
         """Return existing chunk metadata keyed by chunk_id."""
@@ -241,13 +305,16 @@ class AzureSearchIndex:
         page_size = 1000
         skip = 0
         while True:
-            page = list(
-                self.search_client.search(
-                    search_text="*",
-                    select=["chunk_id", "doc_path", "content_hash"],
-                    top=page_size,
-                    skip=skip,
-                )
+            page = with_retry(
+                lambda: list(
+                    self.search_client.search(
+                        search_text="*",
+                        select=["chunk_id", "doc_path", "content_hash"],
+                        top=page_size,
+                        skip=skip,
+                    )
+                ),
+                operation="search_list_chunk_metadata",
             )
             if not page:
                 break
@@ -272,7 +339,10 @@ class AzureSearchIndex:
             return
         for start in range(0, len(chunk_ids), batch_size):
             batch = chunk_ids[start: start + batch_size]
-            self.search_client.delete_documents([{"chunk_id": chunk_id} for chunk_id in batch])
+            with_retry(
+                lambda: self.search_client.delete_documents([{"chunk_id": chunk_id} for chunk_id in batch]),
+                operation="search_delete_documents",
+            )
 
     def search(
         self,
@@ -282,14 +352,17 @@ class AzureSearchIndex:
     ) -> list[dict]:
         query_vector = embedding_fn(query)
         vector_query = VectorizedQuery(vector=query_vector, fields="content_vector", k_nearest_neighbors=50)
-        results = self.search_client.search(
-            search_text=query,
-            vector_queries=[vector_query],
-            query_type=QueryType.SEMANTIC,
-            semantic_configuration_name="foundry-semantic",
-            query_caption=QueryCaptionType.EXTRACTIVE,
-            top=max(limit * 5, 20),
-            select=["doc_path", "title", "description", "section_heading", "content"],
+        results = with_retry(
+            lambda: self.search_client.search(
+                search_text=query,
+                vector_queries=[vector_query],
+                query_type=QueryType.SEMANTIC,
+                semantic_configuration_name="foundry-semantic",
+                query_caption=QueryCaptionType.EXTRACTIVE,
+                top=max(limit * 5, 20),
+                select=["doc_path", "title", "description", "section_heading", "content"],
+            ),
+            operation="search_query",
         )
 
         best_by_doc: dict[str, dict] = {}

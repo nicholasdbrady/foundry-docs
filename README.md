@@ -43,6 +43,16 @@ Set these environment variables before running ingestion/search in Azure mode:
 - `AZURE_AI_PROJECT_API_KEY` (optional; if omitted, `DefaultAzureCredential` is used)
 - `AZURE_OPENAI_EMBEDDING_DEPLOYMENT` (optional, default `text-embedding-3-small`)
 - `AZURE_AI_MODEL_DEPLOYMENT_NAME` (optional, enables query rewrite via Responses API)
+- `FOUNDRY_RETRY_MAX_ATTEMPTS` (optional, default `5`)
+- `FOUNDRY_RETRY_BASE_DELAY_S` (optional, default `0.5`)
+- `FOUNDRY_RETRY_MAX_DELAY_S` (optional, default `8.0`)
+- `FOUNDRY_RETRY_JITTER_RATIO` (optional, default `0.2`)
+- `FOUNDRY_INGEST_MAX_CONCURRENCY` (optional, default `4`)
+- `FOUNDRY_ADAPTIVE_THROTTLE_ENABLED` (optional, default `1`)
+- `FOUNDRY_ADAPTIVE_THROTTLE_MAX_PAUSE_S` (optional, default `60`)
+
+Transient OpenAI/Foundry/Azure Search calls now use exponential backoff with jitter and Retry-After support.
+Ingestion also supports bounded parallel batching with shared adaptive throttling for 429-style pressure.
 
 ## Pipeline Scripts
 
@@ -87,6 +97,9 @@ python scripts/ingest_to_azure_search.py
 # Preview changes only (no writes)
 python scripts/ingest_to_azure_search.py --dry-run
 
+# Bounded concurrent sync (use with service quotas in mind)
+python scripts/ingest_to_azure_search.py --max-concurrency 4 --batch-size 100
+
 # Full rebuild when schema/chunking changes
 python scripts/ingest_to_azure_search.py --recreate
 ```
@@ -94,6 +107,7 @@ python scripts/ingest_to_azure_search.py --recreate
 ### Ongoing automation
 
 GitHub Actions workflow [.github/workflows/index-sync.yml](.github/workflows/index-sync.yml) runs incremental index sync on docs/code changes and supports manual full rebuild.
+The workflow defaults ingestion concurrency to `4` based on measured throughput in this repository.
 
 GitHub Actions workflow [.github/workflows/testbench-regression.yml](.github/workflows/testbench-regression.yml) runs relevance regression checks against `tests/search_testbench.json` and enforces a pass-rate gate.
 

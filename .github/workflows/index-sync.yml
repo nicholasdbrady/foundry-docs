@@ -34,6 +34,7 @@ jobs:
       AZURE_AI_PROJECT_ENDPOINT: ${{ secrets.AZURE_AI_PROJECT_ENDPOINT }}
       AZURE_AI_PROJECT_API_KEY: ${{ secrets.AZURE_AI_PROJECT_API_KEY }}
       AZURE_OPENAI_EMBEDDING_DEPLOYMENT: ${{ secrets.AZURE_OPENAI_EMBEDDING_DEPLOYMENT }}
+      FOUNDRY_INGEST_MAX_CONCURRENCY: "4"
     steps:
       - uses: actions/checkout@v4
 
@@ -51,6 +52,7 @@ jobs:
           test -n "$AZURE_SEARCH_API_KEY" || { echo "Missing AZURE_SEARCH_API_KEY"; exit 1; }
           test -n "$AZURE_AI_PROJECT_ENDPOINT" || { echo "Missing AZURE_AI_PROJECT_ENDPOINT"; exit 1; }
           test -n "$AZURE_OPENAI_EMBEDDING_DEPLOYMENT" || { echo "Missing AZURE_OPENAI_EMBEDDING_DEPLOYMENT"; exit 1; }
+          test -n "$FOUNDRY_INGEST_MAX_CONCURRENCY" || { echo "Missing FOUNDRY_INGEST_MAX_CONCURRENCY"; exit 1; }
 
       - name: Incremental sync
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.recreate != 'true' }}

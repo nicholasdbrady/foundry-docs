@@ -15,6 +15,8 @@ from azure.ai.projects import AIProjectClient
 from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 from openai import OpenAI
 
+from .retry import with_retry
+
 logger = logging.getLogger(__name__)
 
 
@@ -83,12 +85,18 @@ class FoundryProjectOpenAI:
 
     def embed_texts(self, texts: list[str]) -> list[list[float]]:
         self._ensure_clients()
-        response = self._embedding_openai_client.embeddings.create(model=self.embedding_model, input=texts)
+        response = with_retry(
+            lambda: self._embedding_openai_client.embeddings.create(model=self.embedding_model, input=texts),
+            operation="embed_texts",
+        )
         return [row.embedding for row in response.data]
 
     def embed_query(self, query: str) -> list[float]:
         self._ensure_clients()
-        response = self._embedding_openai_client.embeddings.create(model=self.embedding_model, input=query)
+        response = with_retry(
+            lambda: self._embedding_openai_client.embeddings.create(model=self.embedding_model, input=query),
+            operation="embed_query",
+        )
         return response.data[0].embedding
 
     def rewrite_query_for_search(self, query: str) -> str:
@@ -99,14 +107,17 @@ class FoundryProjectOpenAI:
         self._ensure_clients()
 
         try:
-            response = self._project_openai_client.responses.create(
-                model=self.chat_model,
-                instructions=(
-                    "Rewrite the user search query for enterprise documentation retrieval. "
-                    "Keep intent, expand key technical terms and synonyms, return one concise line only."
+            response = with_retry(
+                lambda: self._project_openai_client.responses.create(
+                    model=self.chat_model,
+                    instructions=(
+                        "Rewrite the user search query for enterprise documentation retrieval. "
+                        "Keep intent, expand key technical terms and synonyms, return one concise line only."
+                    ),
+                    input=query,
+                    max_output_tokens=80,
                 ),
-                input=query,
-                max_output_tokens=80,
+                operation="rewrite_query_for_search",
             )
             rewritten = (getattr(response, "output_text", "") or "").strip()
             return rewritten or query
