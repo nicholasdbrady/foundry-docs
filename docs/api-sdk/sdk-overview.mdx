@@ -1,15 +1,8 @@
 ---
 title: "Get started with Microsoft Foundry SDKs and Endpoints"
 description: "This article provides an overview of the Microsoft Foundry SDKs and endpoints and how to get started using them."
-sidebarTitle: "Get started with Microsoft Foundry SDKs and Endpoints"
 ---
 # Microsoft Foundry SDKs and Endpoints
-
-<Note>
-This article refers to the [Microsoft Foundry (new)](../what-is-foundry.md#microsoft-foundry-portals) portal.
-</Note>
-{/* > 🔄 [Switch to the Microsoft Foundry (classic) documentation]() if you're using the classic portal. */}
-
 A Foundry resource provides unified access to models, agents, and tools. This article explains which SDK and endpoint to use for your scenario.
 
 | SDK | What it's for | Endpoint |
@@ -152,7 +145,6 @@ The SDK exposes two client types because Foundry and OpenAI have different API s
 Most apps use both clients. Use the project client for setup and configuration, then use the OpenAI-compatible client for running agents, evaluations, and calling models (including Foundry direct models).
 
 **Create a project client:**
-
 ```python
 from azure.identity import DefaultAzureCredential
 from azure.ai.projects import AIProjectClient
@@ -179,7 +171,6 @@ Response output: France has an area of approximately 213,011 square miles (551,6
 ```
 
 **Create a project client:**
-
 ```java
 import com.azure.ai.projects.ProjectsClient;
 import com.azure.ai.projects.ProjectsClientBuilder;
@@ -191,10 +182,7 @@ ProjectsClient projectClient = new ProjectsClientBuilder()
     .credential(new DefaultAzureCredentialBuilder().build())
     .endpoint(endpoint)
     .buildClient();
-```
-
-**Create and use an OpenAI-compatible client from your project:**
-
+```**Create and use an OpenAI-compatible client from your project:**
 ```java
 OpenAIClient openAIClient = projectClient.getOpenAIClient();
 ```
@@ -210,9 +198,7 @@ const projectEndpoint = "https://<resource-name>.services.ai.azure.com/api/proje
 const deploymentName = "gpt-5.2";
 const project = new AIProjectClient(projectEndpoint, new DefaultAzureCredential());
 ```
-
 **Create an OpenAI-compatible client from your project:**
-
 ```javascript
 const openAIClient = await project.getOpenAIClient();
 const response = await openAIClient.responses.create({
@@ -235,7 +221,6 @@ AIProjectClient projectClient = new(
     endpoint: new Uri(endpoint), 
     tokenProvider: new DefaultAzureCredential());
 ```
-
 **Create an OpenAI-compatible client from your project:**
 
 ```csharp
@@ -251,7 +236,7 @@ Console.WriteLine(response.GetOutputText());
 - [Access Foundry Models](/get-started/get-started-code), including Azure OpenAI
 - [Use the Foundry Agent Service](../../../ai-services/agents/quickstart.md)
 - [Run cloud evaluations](/observability/cloud-evaluation)
-- [Enable app tracing](./trace-application.md)
+- [Enable app tracing](../../../foundry-classic/how-to/develop/trace-application.md)
 - [Fine-tune a model](https://learn.microsoft.com/azure/ai-foundry/openai/how-to/fine-tuning)
 - Get endpoints and keys for Foundry Tools, local orchestration, and more
 
@@ -387,13 +372,10 @@ console.log(`Response output: ${response.output_text}`);
 For more information on using the OpenAI SDK, see [Azure OpenAI supported programming languages](https://learn.microsoft.com/azure/ai-foundry/openai/supported-languages)
 
 1. Install the OpenAI package:
-
    Run this command to add the OpenAI client library to your .NET project.
    ```bash
    dotnet add package OpenAI
-   ```
-
-When it succeeds, the .NET CLI confirms that it installed the `OpenAI` package.
+   ```When it succeeds, the .NET CLI confirms that it installed the `OpenAI` package.
 
    This snippet configures `DefaultAzureCredential`, builds `OpenAIClientOptions`, and creates a `ResponseClient` for the Azure OpenAI v1 endpoint.
    ```csharp
@@ -434,7 +416,6 @@ When it succeeds, the .NET CLI confirms that it installed the `OpenAI` package.
    #pragma warning restore OPENAI001
    // The ResponseClient lets you interact with models and services in your project.
    ```
-
 For more information on using the OpenAI SDK, see [Azure OpenAI supported programming languages](https://learn.microsoft.com/azure/ai-foundry/openai/supported-languages)
 
 ## Using the Agent Framework for local orchestration

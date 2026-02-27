@@ -1,18 +1,8 @@
 ---
-title: "Connect to MCP Server Endpoints for agents (Preview)"
+title: "Connect to MCP Server Endpoints for agents"
 description: "Connect your Foundry agents to Model Context Protocol (MCP) servers using the MCP tool. Extend capabilities with external tools and data."
-sidebarTitle: "Connect to MCP Server Endpoints for agents (Preview)"
 ---
-# Connect agents to Model Context Protocol servers (preview)
-
-<Info>
-Items marked (preview) in this article are currently in public preview. This preview is provided without a service-level agreement, and we don't recommend it for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
-</Info>
-
-<Note>
-When you use a [Network Secured Microsoft Foundry](/setup/virtual-networks), you can't use private MCP servers deployed in the same virtual network. You can only use publicly accessible MCP servers.
-</Note>
-
+# Connect agents to Model Context Protocol servers
 Connect your Foundry agents to [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) servers by using the MCP tool. This extends agent capabilities with external tools and data sources. By connecting to remote MCP server endpoints, your agents can access tools hosted by developers and organizations that MCP-compatible clients like Foundry Agent Service can use.
 
 MCP is an open standard that defines how applications provide tools and contextual data to large language models (LLMs). It enables consistent, scalable integration of external tools into model workflows.
@@ -28,11 +18,15 @@ For conceptual details about how MCP integration works, see [How it works](#how-
 
 ### Usage support
 
-The following table shows SDK and setup support for MCP connections.
+The following table shows SDK and setup support for MCP connections. ✔️ (GA) indicates general availability, ✔️ (Preview) indicates public preview, and a dash (-) indicates the feature isn't available.
 
 | Microsoft Foundry support | Python SDK | C# SDK | JavaScript SDK | Java SDK | REST API | Basic agent setup | Standard agent setup |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| ✔️ | ✔️ | ✔️ | ✔️ | - | ✔️ | ✔️ | ✔️ |
+| ✔️ | ✔️ (Preview) | ✔️ (Preview) | ✔️ (Preview) | - | ✔️ (GA) | ✔️ | ✔️ |
+
+<Note>
+The Java SDK does not currently support MCP tools with the new agent APIs (`azure-ai-projects` package). MCP integration is available through Python, C#, TypeScript, and REST API only.
+</Note>
 
 ## Prerequisites
 
@@ -43,8 +37,8 @@ Before you begin, ensure you have:
 - The latest prerelease SDK package for your language. See the [quickstart](/get-started/get-started-code) for installation details.
 - Azure credentials configured for authentication (such as `DefaultAzureCredential`).
 - Environment variables configured:
-  - `AZURE_AI_PROJECT_ENDPOINT` or `FOUNDRY_PROJECT_ENDPOINT`: Your project endpoint URL.
-  - `AZURE_AI_MODEL_DEPLOYMENT_NAME` or `MODEL_DEPLOYMENT_NAME`: Your model deployment name.
+  - `FOUNDRY_PROJECT_ENDPOINT`: Your project endpoint URL.
+  - `FOUNDRY_MODEL_DEPLOYMENT_NAME`: Your model deployment name.
   - `MCP_PROJECT_CONNECTION_NAME`: Your MCP project connection name.
 - Access to a remote MCP server endpoint (such as GitHub's MCP server at `https://api.githubcopilot.com/mcp`).
 
@@ -101,7 +95,7 @@ load_dotenv()
 
 with (
     DefaultAzureCredential() as credential,
-    AIProjectClient(endpoint=os.environ["AZURE_AI_PROJECT_ENDPOINT"], credential=credential) as project_client,
+    AIProjectClient(endpoint=os.environ["FOUNDRY_PROJECT_ENDPOINT"], credential=credential) as project_client,
 ):
     print("Connected to project.")
     
@@ -137,7 +131,7 @@ from openai.types.responses.response_input_param import McpApprovalResponse, Res
 
 load_dotenv()
 
-endpoint = os.environ["AZURE_AI_PROJECT_ENDPOINT"]
+endpoint = os.environ["FOUNDRY_PROJECT_ENDPOINT"]
 
 with (
     DefaultAzureCredential() as credential,
@@ -158,7 +152,7 @@ with (
     agent = project_client.agents.create_version(
         agent_name="MyAgent7",
         definition=PromptAgentDefinition(
-            model=os.environ["AZURE_AI_MODEL_DEPLOYMENT_NAME"],
+            model=os.environ["FOUNDRY_MODEL_DEPLOYMENT_NAME"],
             instructions="Use MCP tools as needed",
             tools=[tool],
         ),
@@ -173,7 +167,7 @@ with (
     response = openai_client.responses.create(
         conversation=conversation.id,
         input="What is my username in my GitHub profile?",
-        extra_body={"agent": {"name": agent.name, "type": "agent_reference"}},
+        extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
     )
 
     # Process any MCP approval requests that were generated
@@ -208,7 +202,7 @@ with (
     response = openai_client.responses.create(
         input=input_list,
         previous_response_id=response.id,
-        extra_body={"agent": {"name": agent.name, "type": "agent_reference"}},
+        extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
     )
 
     print(f"Response: {response.output_text}")
@@ -239,7 +233,7 @@ The following example shows how to use the GitHub MCP server as a tool for an ag
 ```csharp
 // Create project client and read the environment variables that are used in the next steps.
 var projectEndpoint = System.Environment.GetEnvironmentVariable("FOUNDRY_PROJECT_ENDPOINT");
-var modelDeploymentName = System.Environment.GetEnvironmentVariable("MODEL_DEPLOYMENT_NAME");
+var modelDeploymentName = System.Environment.GetEnvironmentVariable("FOUNDRY_MODEL_DEPLOYMENT_NAME");
 AIProjectClient projectClient = new(endpoint: new Uri(projectEndpoint), tokenProvider: new DefaultAzureCredential());
 
 // Create Agent with the `MCPTool`. Note that in this scenario 
@@ -383,7 +377,7 @@ Before running the sample:
 ```csharp
 // Create project client and read the environment variables to be used in the next steps.
 var projectEndpoint = System.Environment.GetEnvironmentVariable("FOUNDRY_PROJECT_ENDPOINT");
-var modelDeploymentName = System.Environment.GetEnvironmentVariable("MODEL_DEPLOYMENT_NAME");
+var modelDeploymentName = System.Environment.GetEnvironmentVariable("FOUNDRY_MODEL_DEPLOYMENT_NAME");
 var mcpConnectionName = System.Environment.GetEnvironmentVariable("MCP_PROJECT_CONNECTION_NAME");
 AIProjectClient projectClient = new(endpoint: new Uri(projectEndpoint), tokenProvider: new DefaultAzureCredential());
 
@@ -471,14 +465,11 @@ The following TypeScript sample demonstrates how to create an agent with MCP too
 import { DefaultAzureCredential } from "@azure/identity";
 import { AIProjectClient } from "@azure/ai-projects";
 import OpenAI from "openai";
+import * as readline from "readline";
 import "dotenv/config";
 
-import * as readline from "readline";
-
-import * as readline from "readline";
-
 const projectEndpoint = process.env["FOUNDRY_PROJECT_ENDPOINT"] || "<project endpoint>";
-const deploymentName = process.env["MODEL_DEPLOYMENT_NAME"] || "<model deployment name>";
+const deploymentName = process.env["FOUNDRY_MODEL_DEPLOYMENT_NAME"] || "<model deployment name>";
 
 export async function main(): Promise<void> {
   // Create AI Project client
@@ -673,10 +664,11 @@ The following TypeScript sample demonstrates how to create an agent with MCP too
 import { DefaultAzureCredential } from "@azure/identity";
 import { AIProjectClient } from "@azure/ai-projects";
 import OpenAI from "openai";
+import * as readline from "readline";
 import "dotenv/config";
 
 const projectEndpoint = process.env["FOUNDRY_PROJECT_ENDPOINT"] || "<project endpoint>";
-const deploymentName = process.env["MODEL_DEPLOYMENT_NAME"] || "<model deployment name>";
+const deploymentName = process.env["FOUNDRY_MODEL_DEPLOYMENT_NAME"] || "<model deployment name>";
 const mcpConnectionName = process.env["MCP_PROJECT_CONNECTION_NAME"] || "";
 
 export async function main(): Promise<void> {
@@ -815,19 +807,23 @@ Agent deleted
 MCP with project connection sample completed!
 ```
 
-## Create a response that uses the MCP tool (REST API)
+## Use the MCP tool with the REST API
 
-The following example shows how to call an MCP tool by using the Responses API. If the response includes an output item with `type` set to `mcp_approval_request`, send a follow-up request that includes a `mcp_approval_response` item.
+The following examples show how to create an agent with the MCP tool and call it by using the Responses API. If the response includes an output item with `type` set to `mcp_approval_request`, send a follow-up request that includes a `mcp_approval_response` item.
 
 ### Prerequisites
 
 Set these environment variables:
 
-- `PROJECT_ENDPOINT`: Your project endpoint URL.
-- `API_VERSION`: The API version (for example, `2025-11-15-preview`).
+- `FOUNDRY_PROJECT_ENDPOINT`: Your project endpoint URL.
 - `AGENT_TOKEN`: A bearer token for Foundry.
-- `MODEL_DEPLOYMENT_NAME`: Your model deployment name.
 - `MCP_PROJECT_CONNECTION_NAME` (optional): Your MCP project connection name.
+
+Get an access token:
+
+```bash
+export AGENT_TOKEN=$(az account get-access-token --scope "https://ai.azure.com/.default" --query accessToken -o tsv)
+```
 
 If your MCP server doesn't require authentication, omit `project_connection_id` from the request body.
 
@@ -839,44 +835,74 @@ For REST API, you need to first retrieve the connection ID from the connection n
 For details on the MCP tool schema and approval items, see [OpenAI.MCPTool](/api-sdk/foundry-project-rest-preview#openaimcptool) and the MCP approval item types in the REST reference.
 </Tip>
 
+### 1. Create an MCP agent
+
 ```bash
-curl --request POST \
-  --url "$PROJECT_ENDPOINT/openai/responses?api-version=$API_VERSION" \
-  -H "Authorization: Bearer $AGENT_TOKEN" \
+curl -X POST "$FOUNDRY_PROJECT_ENDPOINT/agents?api-version=v1" \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $AGENT_TOKEN" \
   -d '{
-  "model": "'$MODEL_DEPLOYMENT_NAME'",
-  "input": "What is my username in my GitHub profile?",
-  "tools": [
-    {
-      "type": "mcp",
-      "server_label": "github",
-      "server_url": "https://api.githubcopilot.com/mcp",
-      "project_connection_id": "'$MCP_PROJECT_CONNECTION_NAME'"
+    "name": "<AGENT_NAME>-mcp",
+    "description": "MCP agent",
+    "definition": {
+      "kind": "prompt",
+      "model": "<MODEL_DEPLOYMENT>",
+      "instructions": "You are a helpful agent that can use MCP tools to assist users. Use the available MCP tools to answer questions and perform tasks.",
+      "tools": [
+        {
+          "type": "mcp",
+          "server_label": "api-specs",
+          "server_url": "https://gitmcp.io/Azure/azure-rest-api-specs",
+          "require_approval": "never"
+        }
+      ]
     }
-  ]
-}'
+  }'
+```
+
+To use an authenticated MCP server with a project connection, add `"project_connection_id": "'$MCP_PROJECT_CONNECTION_NAME'"` to the tool definition and change `server_url` to the authenticated server endpoint (for example, `https://api.githubcopilot.com/mcp`).
+
+### 2. Create a response
+
+```bash
+curl -X POST "$FOUNDRY_PROJECT_ENDPOINT/openai/v1/responses" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $AGENT_TOKEN" \
+  -d '{
+    "agent": {"type": "agent_reference", "name": "<AGENT_NAME>-mcp"},
+    "input": "Please summarize the Azure REST API specifications Readme"
+  }'
 ```
 
 If the response includes an output item with `type` set to `mcp_approval_request`, copy the approval request item `id` as `APPROVAL_REQUEST_ID`. Also copy the top-level response `id` as `PREVIOUS_RESPONSE_ID`.
 
-### 2. Send an approval response
+### 3. Send an approval response
+
+If the MCP tool requires approval, send a follow-up request:
 
 ```bash
-curl --request POST \
-  --url "$PROJECT_ENDPOINT/openai/responses?api-version=$API_VERSION" \
-  -H "Authorization: Bearer $AGENT_TOKEN" \
+curl -X POST "$FOUNDRY_PROJECT_ENDPOINT/openai/v1/responses" \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $AGENT_TOKEN" \
   -d '{
-  "previous_response_id": "'$PREVIOUS_RESPONSE_ID'",
-  "input": [
-    {
-      "type": "mcp_approval_response",
-      "approval_request_id": "'$APPROVAL_REQUEST_ID'",
-      "approve": true
-    }
-  ]
-}'
+    "previous_response_id": "'$PREVIOUS_RESPONSE_ID'",
+    "input": [
+      {
+        "type": "mcp_approval_response",
+        "approval_request_id": "'$APPROVAL_REQUEST_ID'",
+        "approve": true
+      }
+    ]
+  }'
+```
+
+### 4. Clean up resources
+
+Delete the agent:
+
+```bash
+curl -X DELETE "$FOUNDRY_PROJECT_ENDPOINT/agents/<AGENT_NAME>-mcp?api-version=v1" \
+  -H "Authorization: Bearer $AGENT_TOKEN"
 ```
 
 ## How it works
@@ -907,7 +933,8 @@ The following steps outline how to connect to a remote MCP server from Foundry A
 
 ## Known limitations
 
-- **Non-streaming MCP tool call timeout**: Non-streaming MCP tool calls have a timeout of 120 seconds. If your MCP server takes longer than 120 seconds to respond, the call fails. To avoid timeouts, ensure that your MCP server responds within this limit. If your use case requires longer processing times, consider optimizing the server-side logic or breaking the operation into smaller steps.
+- **Non-streaming MCP tool call timeout**: Non-streaming MCP tool calls have a timeout of 100 seconds. If your MCP server takes longer than 100 seconds to respond, the call fails. To avoid timeouts, ensure that your MCP server responds within this limit. If your use case requires longer processing times, consider optimizing the server-side logic or breaking the operation into smaller steps.
+- **Identity passthrough not supported in Teams**: MCP tools that use OAuth identity passthrough don't work when the agent is published to Microsoft Teams. Agents published to Teams use project managed identity for authentication, which isn't compatible with identity passthrough (On-Behalf-Of).
 
 ## Common questions and errors
 

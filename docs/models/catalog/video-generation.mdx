@@ -3,47 +3,24 @@ title: "Sora video generation overview (preview)"
 description: "Learn about Sora, an AI model for generating realistic and imaginative video scenes from text instructions, including safety, limitations, and supported features."
 ---
 # Video generation with Sora (preview)
-
-<Note>
-This article refers to the [Microsoft Foundry (new)](../what-is-foundry.md#microsoft-foundry-portals) portal.
-</Note>
-{/* > 🔄 [Switch to the Microsoft Foundry (classic) documentation]() if you're using the classic portal. */}
-
 Sora is an AI model from OpenAI that creates realistic and imaginative video scenes from text instructions and/or input images or video. The model can generate a wide range of video content, including realistic scenes, animations, and special effects. It supports several video resolutions and durations.
-
-Azure OpenAI supports two versions of Sora:
-- Sora (or Sora 1): Azure OpenAI–specific implementation released as an API in early preview.
-- Sora 2: The latest OpenAI-based API, now available with the Azure OpenAI [v1 API](/api-sdk/api-version-lifecycle).
 
 ## Capabilities
 
-- Modalities: text → video, image → video, video (generated) → video
-- Audio: Sora 2 supports audio generation in output videos (similar to the Sora app).
-- Remix: Sora 2 introduces the ability to remix existing videos by making targeted adjustments instead of regenerating from scratch.
-- Responsible AI and video generation: Azure OpenAI's video generation models include built-in Responsible AI (RAI) protections to help ensure safe and compliant use. Sora 2 blocks all IP and photorealistic content.
+- **Modalities**: text → video, image → video, video (generated) → video
+- **Audio**: Sora 2 supports audio generation in output videos (similar to the Sora app).
+- **Remix**: Sora 2 introduces the ability to remix existing videos by making targeted adjustments instead of regenerating from scratch.
+- **Responsible AI and video generation**: Azure OpenAI's video generation models include built-in Responsible AI (RAI) protections to help ensure safe and compliant use. Sora 2 blocks all IP and photorealistic content.
+    
     In addition, Azure provides input and output moderation across all image generation models, along with Azure-specific safeguards such as content filtering and abuse monitoring. These systems help detect and prevent the generation or misuse of harmful, unsafe, or policy-violating content.
 
     Customers can learn more about these safeguards and how to customize them on the [Content filtering](https://learn.microsoft.com/azure/ai-foundry/openai/concepts/content-filter) page.
 
-## Responsible AI and video generation
+## Model comparison
 
-Azure OpenAI's image generation models include built-in Responsible AI (RAI) protections to help ensure safe and compliant use.
-
-In addition, Azure provides input and output moderation across all image generation models, along with Azure-specific safeguards such as content filtering and abuse monitoring. These systems help detect and prevent the generation or misuse of harmful, unsafe, or policy-violating content.
-
-Currently the Sora 2 API enforces several content restrictions:
-- Only content suitable for audiences under 18 (a setting to bypass this restriction will be available in the future).
-- Copyrighted characters and copyrighted music will be rejected.
-- Real people—including public figures—cannot be generated.
-- Input images with faces of humans are currently rejected. Apply for permission using [this form](https://customervoice.microsoft.com/Pages/ResponsePage.aspx?id=v4j5cvGGr0GRqy180BHbR7en2Ais5pxKtso_Pz4b1_xUOUxNWjBVTjRRSDZVMjVEWUdNRzFEVVFOUCQlQCN0PWcu).
-
-Make sure prompts, reference images, and transcripts respect these rules to avoid failed generations.
-
-<Note>
-We are allowing face uploads on a case-by-case basis for Enterprise Agreement customers. See [Request Access to the Sora Human Uploads in the Azure OpenAI Models](https://customervoice.microsoft.com/Pages/ResponsePage.aspx?id=v4j5cvGGr0GRqy180BHbR7en2Ais5pxKtso_Pz4b1_xUOUxNWjBVTjRRSDZVMjVEWUdNRzFEVVFOUCQlQCN0PWcu).
-</Note>
-
-## Sora 1 vs. Sora 2
+Azure OpenAI supports two versions of Sora:
+- Sora (or Sora 1): Azure OpenAI–specific implementation released as an API in early preview.
+- Sora 2: The latest OpenAI-based API, now available with the Azure OpenAI [v1 API](/api-sdk/api-version-lifecycle).
 
 | Aspect | **Sora 1 (Azure OpenAI)** | **Sora 2 (OpenAI-based API)** |
 |--------|-----------------------------|-------------------------------|
@@ -57,14 +34,505 @@ We are allowing face uploads on a case-by-case basis for Enterprise Agreement cu
 | **Intended use** | Enterprise preview deployments | Broader developer availability with improved API parity |
 | **Billing** | Billed differently across duration and resolutions | [Per second billing information](https://azure.microsoft.com/pricing/details/cognitive-services/openai-service/) 
 
-## Sora 2 API 
-Provides 5 endpoints, each with distinct capabilities. 
-- Create Video: Start a new render job from a prompt, with optional reference inputs or a remix ID.
-- Get Video Status: Retrieve the current state of a render job and monitor its progress
-- Download Video: Fetch the finished MP4 once the job is completed.
-- List Videos: Enumerate your videos with pagination for history, dashboards, or housekeeping. 
-- Delete Videos: Delete an individual video ID from Azure OpenAI’s storage
+## Quickstart
 
+Generate video clips using the Azure OpenAI service. Video generation is an asynchronous process. You create a job request with your text prompt and video format specifications, and the model processes the request in the background. You check the status of the video generation job and, once it finishes, retrieve the generated video through a download URL. The example uses the Sora model.
+
+### Prerequisites
+
+- An Azure subscription. [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
+- <a href="https://www.python.org/" target="_blank">Python 3.8 or later version</a>. We recommend using Python 3.10 or later, but having at least Python 3.8 is required. If you don't have a suitable version of Python installed, you can follow the instructions in the [VS Code Python Tutorial](https://code.visualstudio.com/docs/python/python-tutorial#_install-a-python-interpreter) for the easiest way of installing Python on your operating system.
+- An Azure OpenAI resource created in one of the supported regions. For more information about region availability, see the [models and versions documentation](https://learn.microsoft.com/azure/ai-foundry/openai/concepts/models#video-generation-models).
+- Then, you need to deploy a `sora` model with your Azure OpenAI resource. For more information, see [Create a resource and deploy a model with Azure OpenAI](../../../foundry-classic/openai/how-to/create-resource.md).
+
+## Microsoft Entra ID prerequisites
+
+For the recommended keyless authentication with Microsoft Entra ID, you need to:
+- Install the [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) used for keyless authentication with Microsoft Entra ID.
+- Assign the `Cognitive Services User` role to your user account. You can assign roles in the Azure portal under **Access control (IAM)** > **Add role assignment**.
+
+### Setup
+
+1. Create a new folder `video-generation-quickstart` and go to the quickstart folder with the following command:
+
+    ```shell
+    mkdir video-generation-quickstart && cd video-generation-quickstart
+    ```
+    
+1. Create a virtual environment. If you already have Python 3.10 or higher installed, you can create a virtual environment using the following commands:
+
+    **Windows**
+
+    ```bash
+    py -3 -m venv .venv
+    .venv\scripts\activate
+    ```
+
+    **Linux**
+
+    ```bash
+    python3 -m venv .venv
+    source .venv/bin/activate
+    ```
+
+    **macOS**
+
+    ```bash
+    python3 -m venv .venv
+    source .venv/bin/activate
+    ```
+
+    Activating the Python environment means that when you run ```python``` or ```pip``` from the command line, you then use the Python interpreter contained in the ```.venv``` folder of your application. You can use the ```deactivate``` command to exit the python virtual environment, and can later reactivate it when needed.
+
+<Tip>
+We recommend that you create and activate a new Python environment to use to install the packages you need for this tutorial. Don't install packages into your global python installation. You should always use a virtual or conda environment when installing python packages, otherwise you can break your global installation of Python.
+</Tip>
+
+1. Install the required packages.
+
+    **Microsoft Entra ID**
+
+    ```console
+    pip install requests azure-identity
+    ```
+
+    The [azure-identity](https://learn.microsoft.com/python/api/overview/azure/identity-readme) package provides `DefaultAzureCredential` for secure, keyless authentication.
+
+    **API key**
+
+    ```console
+    pip install requests
+    ```
+
+    The [requests](https://requests.readthedocs.io/) library handles HTTP calls to the REST API.
+
+### Retrieve resource information
+
+You need to retrieve the following information to authenticate your application with your Azure OpenAI resource:
+
+<Tabs>
+  <Tab title="Microsoft Entra ID">
+
+    |Variable name | Value |
+    |--------------------------|-------------|
+    | `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
+    | `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
+
+    Learn more about [keyless authentication](https://learn.microsoft.com/azure/ai-services/authentication) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
+
+  </Tab>
+  <Tab title="API key">
+
+    |Variable name | Value |
+    |--------------------------|-------------|
+    | `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
+    | `AZURE_OPENAI_API_KEY` | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. You can use either `KEY1` or `KEY2`.|
+    | `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
+
+    Learn more about [finding API keys](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
+
+  </Tab>
+</Tabs>
+
+### Generate video with Sora
+
+You can generate a video with the Sora model by creating a video generation job, polling for its status, and retrieving the generated video. The following code shows how to do this via the REST API using Python.
+
+### Choose your input type
+
+Sora supports three input modes:
+
+| Input type | Best for | Example use case |
+|------------|----------|------------------|
+| **Text prompt only** | Creating entirely new scenes from descriptions | "A cat playing piano in a jazz bar" |
+| **Image + text prompt** | Animating a still image or using it as a starting frame | Bring a product photo to life |
+| **Video + text prompt** | Extending or modifying existing video footage | Add visual effects to existing clips |
+
+### Set up authentication
+
+1. Create the `sora-quickstart.py` file and add the following code to authenticate your resource:
+
+    **Microsoft Entra ID**
+
+    ```python
+    import json
+    import requests
+    import time
+    import os
+    from azure.identity import DefaultAzureCredential
+    
+    # Set environment variables or edit the corresponding values here.
+    endpoint = os.environ.get('AZURE_OPENAI_ENDPOINT')
+    deployment_name = os.environ.get('AZURE_OPENAI_DEPLOYMENT_NAME')
+    if not endpoint or not deployment_name:
+        raise ValueError("Set AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_DEPLOYMENT_NAME.")
+    
+    # Keyless authentication
+    credential = DefaultAzureCredential()
+    token = credential.get_token("https://cognitiveservices.azure.com/.default")
+
+    # Video generation uses 'preview' as the API version during the preview period
+    api_version = 'preview'
+    headers= { "Authorization": f"Bearer {token.token}", "Content-Type": "application/json" }
+    ```
+
+    **API key**
+
+    ```python
+    import json
+    import requests
+    import time
+    import os
+    
+    # Set environment variables or edit the corresponding values here.
+    endpoint = os.environ.get('AZURE_OPENAI_ENDPOINT')
+    deployment_name = os.environ.get('AZURE_OPENAI_DEPLOYMENT_NAME')
+    api_key = os.environ.get('AZURE_OPENAI_API_KEY')
+    if not endpoint or not deployment_name or not api_key:
+        raise ValueError(
+            "Set AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_DEPLOYMENT_NAME, and AZURE_OPENAI_API_KEY."
+        )
+
+    # Video generation uses 'preview' as the API version during the preview period
+    api_version = 'preview'
+    headers= { "api-key": api_key, "Content-Type": "application/json" }
+    ```
+### Create the video generation job
+
+1. Add the code to create and monitor the video generation job. Choose the input type that matches your use case.
+
+    **Text prompt**
+
+    ```python
+    # 1. Create a video generation job
+    create_url = f"{endpoint}/openai/v1/video/generations/jobs?api-version={api_version}"
+    body = {
+        "prompt": "A cat playing piano in a jazz bar.",
+        "width": 480,
+        "height": 480,
+        "n_seconds": 5,
+        "model": deployment_name
+    }
+    response = requests.post(create_url, headers=headers, json=body)
+    response.raise_for_status()
+    print("Full response JSON:", response.json())
+    job_id = response.json()["id"]
+    print(f"Job created: {job_id}")
+    
+    # 2. Poll for job status
+    status_url = f"{endpoint}/openai/v1/video/generations/jobs/{job_id}?api-version={api_version}"
+    status=None
+    while status not in ("succeeded", "failed", "cancelled"):
+        time.sleep(5)  # Wait before polling again
+        status_response = requests.get(status_url, headers=headers).json()
+        status = status_response.get("status")
+        print(f"Job status: {status}")
+        
+    # 3. Retrieve generated video 
+    if status == "succeeded":
+        generations = status_response.get("generations", [])
+        if generations:
+            print(f"✅ Video generation succeeded.")
+            generation_id = generations[0].get("id")
+            video_url = f"{endpoint}/openai/v1/video/generations/{generation_id}/content/video?api-version={api_version}"
+            video_response = requests.get(video_url, headers=headers)
+            if video_response.ok:
+                output_filename = "output.mp4"
+                with open(output_filename, "wb") as file:
+                    file.write(video_response.content)
+                    print(f'Generated video saved as "{output_filename}"')
+        else:
+            raise Exception("No generations found in job result.")
+    else:
+        raise Exception(f"Job didn't succeed. Status: {status}")
+    ```
+
+    **Image prompt**
+
+    Replace the `"file_name"` field in `"inpaint_items"` with the name of your input image file. Also replace the construction of the `files` array, which associates the path to the actual file with the filename that the API uses.
+
+    Use the `"crop_bounds"` data (image crop distances, from each direction, as a fraction of the total image dimensions) to specify which part of the image should be used in video generation.
+
+    You can optionally set the `"frame_index"` to the frame in the generated video where your image should appear (the default is 0, the start of the video).
+
+    The `"n_variants"` parameter specifies how many different video variations to generate from the same prompt (1 to 4). Each variant provides a unique interpretation of your input.
+
+    ```python
+    # 1. Create a video generation job with image inpainting (multipart upload)
+    create_url = f"{endpoint}/openai/v1/video/generations/jobs?api-version={api_version}"
+    
+    # Flatten the body for multipart/form-data
+    data = {
+        "prompt": "A serene forest scene transitioning into autumn",
+        "height": str(1080),
+        "width": str(1920),
+        "n_seconds": str(10),
+        "n_variants": str(1),
+        "model": deployment_name,
+        # inpaint_items must be JSON string
+        "inpaint_items": json.dumps([
+            {
+                "frame_index": 0,
+                "type": "image",
+                "file_name": "dog_swimming.jpg",
+                "crop_bounds": {
+                    "left_fraction": 0.1,
+                    "top_fraction": 0.1,
+                    "right_fraction": 0.9,
+                    "bottom_fraction": 0.9
+                }
+            }
+        ])
+    }
+    
+    # Replace with your own image file path
+    with open("dog_swimming.jpg", "rb") as image_file:
+        files = [
+            ("files", ("dog_swimming.jpg", image_file, "image/jpeg"))
+        ]
+        multipart_headers = {k: v for k, v in headers.items() if k.lower() != "content-type"}
+        response = requests.post(
+            create_url,
+            headers=multipart_headers,
+            data=data,
+            files=files
+        )
+    
+    if not response.ok:
+        print("Error response:", response.status_code, response.text)
+        response.raise_for_status()
+    print("Full response JSON:", response.json())
+    job_id = response.json()["id"]
+    print(f"Job created: {job_id}")
+    
+    # 2. Poll for job status
+    status_url = f"{endpoint}/openai/v1/video/generations/jobs/{job_id}?api-version={api_version}"
+    status = None
+    while status not in ("succeeded", "failed", "cancelled"):
+        time.sleep(5)
+        status_response = requests.get(status_url, headers=headers).json()
+        status = status_response.get("status")
+        print(f"Job status: {status}")
+    
+    # 3. Retrieve generated video
+    if status == "succeeded":
+        generations = status_response.get("generations", [])
+        if generations:
+            generation_id = generations[0].get("id")
+            video_url = f"{endpoint}/openai/v1/video/generations/{generation_id}/content/video?api-version={api_version}"
+            video_response = requests.get(video_url, headers=headers)
+            if video_response.ok:
+                output_filename = "output.mp4"
+                with open(output_filename, "wb") as file:
+                    file.write(video_response.content)
+                    print(f'✅ Generated video saved as "{output_filename}"')
+        else:
+            raise Exception("No generations found in job result.")
+    else:
+        raise Exception(f"Job didn't succeed. Status: {status}")
+    ```
+
+    **Video prompt**
+
+    Replace the `"file_name"` field in `"inpaint_items"` with the name of your input video file. Also replace the construction of the `files` array, which associates the path to the actual file with the filename that the API uses.
+
+    Use the `"crop_bounds"` data (image crop distances, from each direction, as a fraction of the total frame dimensions) to specify which part of the video frame should be used in video generation.
+
+    You can optionally set the `"frame_index"` to the frame in the generated video where your input video should start (the default is 0, the beginning).
+
+    ```python
+    # 1. Create a video generation job with video inpainting (multipart upload)
+    create_url = f"{endpoint}/openai/v1/video/generations/jobs?api-version={api_version}"
+    
+    # Flatten the body for multipart/form-data
+    data = {
+        "prompt": "A serene forest scene transitioning into autumn",
+        "height": str(1080),
+        "width": str(1920),
+        "n_seconds": str(10),
+        "n_variants": str(1),
+        "model": deployment_name,
+        # inpaint_items must be JSON string
+        "inpaint_items": json.dumps([
+            {
+                "frame_index": 0,
+                "type": "video",
+                "file_name": "dog_swimming.mp4",
+                "crop_bounds": {
+                    "left_fraction": 0.1,
+                    "top_fraction": 0.1,
+                    "right_fraction": 0.9,
+                    "bottom_fraction": 0.9
+                }
+            }
+        ])
+    }
+    
+    # Replace with your own video file path
+    with open("dog_swimming.mp4", "rb") as video_file:
+        files = [
+            ("files", ("dog_swimming.mp4", video_file, "video/mp4"))
+        ]
+        multipart_headers = {k: v for k, v in headers.items() if k.lower() != "content-type"}
+        response = requests.post(
+            create_url,
+            headers=multipart_headers,
+            data=data,
+            files=files
+        )
+    
+    if not response.ok:
+        print("Error response:", response.status_code, response.text)
+        response.raise_for_status()
+    print("Full response JSON:", response.json())
+    job_id = response.json()["id"]
+    print(f"Job created: {job_id}")
+    
+    # 2. Poll for job status
+    status_url = f"{endpoint}/openai/v1/video/generations/jobs/{job_id}?api-version={api_version}"
+    status = None
+    while status not in ("succeeded", "failed", "cancelled"):
+        time.sleep(5)
+        status_response = requests.get(status_url, headers=headers).json()
+        status = status_response.get("status")
+        print(f"Job status: {status}")
+    
+    # 3. Retrieve generated video
+    if status == "succeeded":
+        generations = status_response.get("generations", [])
+        if generations:
+            generation_id = generations[0].get("id")
+            video_url = f"{endpoint}/openai/v1/video/generations/{generation_id}/content/video?api-version={api_version}"
+            video_response = requests.get(video_url, headers=headers)
+            if video_response.ok:
+                output_filename = "output.mp4"
+                with open(output_filename, "wb") as file:
+                    file.write(video_response.content)
+                    print(f'✅ Generated video saved as "{output_filename}"')
+        else:
+            raise Exception("No generations found in job result.")
+    else:
+        raise Exception(f"Job didn't succeed. Status: {status}")
+    ```
+1. Run the Python file.
+
+    ```shell
+    python sora-quickstart.py
+    ```
+
+    Video generation typically takes **1 to 5 minutes** depending on the resolution and duration. You should see status updates in your terminal as the job progresses through `queued`, `preprocessing`, `running`, `processing`, and finally `succeeded`.
+
+### Output
+
+The output will show the full response JSON from the video generation job creation request, including the job ID and status. 
+
+```json
+{
+    "object": "video.generation.job",
+    "id": "task_01jwcet0eje35tc5jy54yjax5q",
+    "status": "queued",
+    "created_at": 1748469875,
+    "finished_at": null,
+    "expires_at": null,
+    "generations": [],
+    "prompt": "A cat playing piano in a jazz bar.",
+    "model": "<your-deployment-name>",
+    "n_variants": 1,
+    "n_seconds": 5,
+    "height": 480,
+    "width": 480,
+    "failure_reason": null
+}
+```
+
+The generated video will be saved as `output.mp4` in the current directory.
+
+```text
+Job created: task_01jwcet0eje35tc5jy54yjax5q
+Job status: preprocessing
+Job status: running
+Job status: processing
+Job status: succeeded
+✅ Video generation succeeded.
+Generated video saved as "output.mp4"
+```
+
+## Troubleshooting
+
+If you encounter issues, check the following common problems and solutions:
+
+| Error | Cause | Solution |
+|-------|-------|----------|
+| `401 Unauthorized` | Invalid or expired credentials | For Microsoft Entra ID, run `az login` to refresh your token. For API key, verify `AZURE_OPENAI_API_KEY` is correct. |
+| `403 Forbidden` | Missing role assignment | Assign the **Cognitive Services User** role to your account in the Azure portal. |
+| `404 Not Found` | Incorrect endpoint or deployment name | Verify `AZURE_OPENAI_ENDPOINT` includes your resource name and `AZURE_OPENAI_DEPLOYMENT_NAME` matches your Sora deployment. |
+| `429 Too Many Requests` | Rate limit exceeded | Wait and retry, or request a quota increase in the Azure portal. |
+| `400 Bad Request` with dimension error | Unsupported resolution | Use a supported resolution: 480×480, 720×720, 1080×1080, 1280×720, or 1920×1080. |
+| Job status `failed` | Content policy violation or internal error | Check `failure_reason` in the response. Modify your prompt if it triggered content filtering. |
+| Timeout during polling | Long generation time | Videos can take up to 5 minutes. Increase your polling timeout or check job status manually. |
+
+<Tip>
+To debug authentication issues, test your credentials with a simple API call first:
+```python
+# Test endpoint connectivity
+test_url = f"{endpoint}/openai/deployments?api-version=2024-02-01"
+response = requests.get(test_url, headers=headers)
+print(response.status_code, response.text)
+```
+</Tip>
+
+### Prerequisites
+
+- An Azure subscription. [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
+- An Azure OpenAI resource created in a supported region. See [Region availability](https://learn.microsoft.com/azure/ai-foundry/openai/concepts/models#model-summary-table-and-region-availability). For more information, see [Create a resource and deploy a model with Azure OpenAI](../../../foundry-classic/openai/how-to/create-resource.md).
+
+### Go to Microsoft Foundry portal
+
+Browse to the [Foundry portal](https://ai.azure.com/?cid=learnDocs) and sign in with the credentials associated with your Azure OpenAI resource. During or after the sign-in workflow, select the appropriate directory, Azure subscription, and Azure OpenAI resource.
+
+From the Foundry landing page, create or select a new project. Navigate to the **Models + endpoints** page on the left nav. Select **Deploy model** and then choose the Sora video generation model from the list. Complete the deployment process.
+
+On the model's page, select **Open in playground**.
+
+### Try out video generation
+
+Start exploring Sora video generation with a no-code approach through the **Video playground**. Enter your prompt into the text box and select **Generate**. Video generation typically takes **1 to 5 minutes** depending on your settings. When the AI-generated video is ready, it appears on the page.
+
+<Note>
+The content generation APIs come with a content moderation filter. If Azure OpenAI recognizes your prompt as harmful content, it doesn't return a generated video. For more information, see [Content filtering](../../../foundry-classic/foundry-models/concepts/content-filter.md).
+</Note>
+
+In the **Video playground**, you can also view Python and cURL code samples, which are prefilled according to your settings. Select the code button at the top of your video playback pane. You can use this code to write an application that completes the same task.
+
+### Clean up resources
+
+If you want to clean up and remove an Azure OpenAI resource, you can delete the resource. Before deleting the resource, you must first delete any deployed models.
+
+- [Azure portal](/setup/multi-service-resource)
+- [Azure CLI](/setup/multi-service-resource)
+
+## Responsible AI and video generation
+
+Azure OpenAI's image generation models include built-in Responsible AI (RAI) protections to help ensure safe and compliant use.
+
+In addition, Azure provides input and output moderation across all image generation models, along with Azure-specific safeguards such as content filtering and abuse monitoring. These systems help detect and prevent the generation or misuse of harmful, unsafe, or policy-violating content.
+
+Currently the Sora 2 API enforces several content restrictions:
+- Only content suitable for audiences under 18 (a setting to bypass this restriction will be available in the future).
+- Copyrighted characters and copyrighted music will be rejected.
+- Real people—including public figures—cannot be generated.
+- Input images with faces of humans are currently rejected.
+
+Make sure prompts, reference images, and transcripts respect these rules to avoid failed generations.
+
+## Sora 2 API reference
+
+The Sora 2 API provides 5 endpoints, each with distinct capabilities.
+- **Create Video**: Start a new render job from a prompt, with optional reference inputs or a remix ID.
+- **Get Video Status**: Retrieve the current state of a render job and monitor its progress
+- **Download Video**: Fetch the finished MP4 once the job is completed.
+- **List Videos**: Enumerate your videos with pagination for history, dashboards, or housekeeping. 
+- **Delete Videos**: Delete an individual video ID from Azure OpenAI’s storage
 ### API parameters
 
 | Parameter | Type | **Sora 2** | 
@@ -775,10 +1243,6 @@ The remix feature allows you to modify specific aspects of an existing video whi
   </Tab>
 </Tabs>
 
-## How it works
-
-Video generation is an asynchronous process. You create a job request with your text prompt and video format specifications, and the model processes the request in the background. You can check the status of the video generation job and, once it finishes, retrieve the generated video through a download URL.
-
 ## Best practices for prompts
 
 Write text prompts in English or other Latin script languages for the best video generation performance.  
@@ -789,23 +1253,33 @@ Write text prompts in English or other Latin script languages for the best video
 
 Sora might have difficulty with complex physics, causal relationships (for example, bite marks on a cookie), spatial reasoning (for example, knowing left from right), and precise time-based event sequencing such as camera movement.
 
-### Sora 2 Technical Limitations 
+### Technical Limitations
 
-- Please see Sora 2 API details above 
-- Jobs are available for up to 24 hours after they're created. After that, you must create a new job to generate the video again.
-- You can create two video job requests per minute. The Sora 2 quota only counts video job requests: other types of requests are not rate-limited.
+Sora video generation is currently in preview. Keep the following limitations in mind:
 
-### Sora 1 Technical limitations
+<Tabs>
+  <Tab title="Sora 1">
 
-- Sora supports the following output resolution dimensions: 
-480x480, 480x854, 854x480, 720x720, 720x1280, 1280x720, 1080x1080, 1080x1920, 1920x1080.
-- Sora can produce videos between 1 and 20 seconds long.
-- You can request multiple video variants in a single job: for 1080p resolutions, this feature is disabled; for 720p, the maximum is two variants; for other resolutions, the maximum is four variants.
-- You can have two video creation jobs running at the same time. You must wait for one of the jobs to finish before you can create another.
-- Jobs are available for up to 24 hours after they're created. After that, you must create a new job to generate the video again.
-- You can use up to two images as input (the generated video interpolates content between them).
-- You can use one video up to five seconds as input.
+    - Please see Sora 2 API details above 
+    - Jobs are available for up to 24 hours after they're created. After that, you must create a new job to generate the video again.
+    - You can create two video job requests per minute. The Sora 2 quota only counts video job requests: other types of requests are not rate-limited.
+
+  </Tab>
+  <Tab title="Sora 2">
+
+    - Sora supports the following output resolution dimensions: 
+    480x480, 480x854, 854x480, 720x720, 720x1280, 1280x720, 1080x1080, 1080x1920, 1920x1080.
+    - Sora can produce videos between 1 and 20 seconds long.
+    - You can request multiple video variants in a single job: for 1080p resolutions, this feature is disabled; for 720p, the maximum is two variants; for other resolutions, the maximum is four variants.
+    - You can have two video creation jobs running at the same time. You must wait for one of the jobs to finish before you can create another.
+    - Jobs are available for up to 24 hours after they're created. After that, you must create a new job to generate the video again.
+    - You can use up to two images as input (the generated video interpolates content between them).
+    - You can use one video up to five seconds as input.
+
+  </Tab>
+</Tabs>
 
 ## Related content
-- [Video generation quickstart](../video-generation-quickstart.md)
-- [Image generation quickstart](../dall-e-quickstart.md)
+- [Image generation quickstart](/models/catalog/dall-e)
+* Learn more about Azure OpenAI [deployment types](/models/capabilities/deployment-types).
+* Learn more about Azure OpenAI [quotas and limits](/setup/quotas-limits).

@@ -1,15 +1,8 @@
 ---
 title: "Connect to your own storage"
 description: "Learn how to bring your own storage to Microsoft Foundry for agents, evaluations, datasets, and other capabilities."
-sidebarTitle: "Connect to your own storage"
 ---
 # Connect to your own storage
-
-<Note>
-This article refers to the [Microsoft Foundry (new)](/overview/what-is-foundry#microsoft-foundry-portals) portal.
-</Note>
-{/* > 🔄 [Switch to the Microsoft Foundry (classic) documentation]() if you're using the classic portal. */}
-
 <Info>
 Items marked (preview) in this article are currently in public preview. This preview is provided without a service-level agreement, and we don't recommend it for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
 </Info>
@@ -28,7 +21,11 @@ Before connecting your storage, ensure you have:
 
 An Azure account with an active subscription. If you don't have one, create a [free Azure account, which includes a free trial subscription](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
 
-1. An [Azure Storage account](https://learn.microsoft.com/azure/storage/common/storage-account-create) in the same subscription (Blob Storage supported).
+1. An [Azure Storage account](https://learn.microsoft.com/azure/storage/common/storage-account-create) in the same subscription (Blob Storage supported) with the following configuration:
+   - `allowSharedKeyAccess` set to `true`
+   - `minimumTlsVersion` set to `TLS1_2`
+   - `allowBlobPublicAccess` set to `false`
+   - `allowCrossTenantReplication` set to `false`
 1. Contributor or Owner permissions on both the Foundry resource and the storage account.
 1. Clarity on which features you plan to use (Agents, Evaluations, Datasets, Content Understanding, Speech, Language).
 1. (Optional) A plan for customer-managed keys (CMK) encryption on the storage account.
@@ -69,38 +66,13 @@ If you delete or move (change resource ID of) the storage account bound by `user
 
 ## Create a storage connection
 
-Sign in to [Microsoft Foundry](https://ai.azure.com/?cid=learnDocs). Make sure the **New Foundry** toggle is on. These steps refer to **Foundry (new)**.
+1. Sign in to [Microsoft Foundry](https://ai.azure.com/?cid=learnDocs). Make sure the **New Foundry** toggle is on. These steps refer to **Foundry (new)**.
 
 <img src="/images/new-foundry.png" />
-
-1. Select your project.
-1. In the left pane, select **Connections** (or **Connected resources**).
-1. Select **+ New connection**.
-1. Choose **Azure Blob Storage**.
-1. Provide:
-   - Name
-   - Subscription
-   - Storage account
-   - Authentication method (system-assigned managed identity recommended)
-1. Select **Create**.
-
-The connection is now available to Agents (when not overridden), Evaluations, Datasets, Content Understanding, Speech, and Language.
-
-::: moniker-end
-
-1. 
-
-::: moniker range="foundry"
-Sign in to [Microsoft Foundry](https://ai.azure.com/?cid=learnDocs). Make sure the **New Foundry** toggle is on. These steps refer to **Foundry (new)**.
-
-<img src="/images/new-foundry.png" />
-
 1. In the upper right, select **Build**.
 1. In the left pane, select **Tools** and then **Connect a tool** in the upper right of the pane.
 1. In the **Select a tool** dialog, select the **Catalog** tab and find **Azure Blob Storage**.
 1. Select **Create**.
-
-::: moniker-end
 
 <Note>
 Azure portal (portal.azure.com) steps are version-agnostic and intentionally not wrapped in moniker blocks.
@@ -121,22 +93,30 @@ As described in the previous section, select the **Catalog** tab and look for **
 1. Create a project-level capability host referencing the resource-level capability host.
 1. Verify Agents data now writes to the bound storage account.
 
-### Example (Azure CLI) *(illustrative)*
-```bash
-# Placeholder example; adjust for actual CLI verbs when published
-az ai-foundry capability-host create \
-  --resource-name MyFoundryResource \
-  --name agents-host \
-  --feature agents \
-  --connection-id /subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.CognitiveServices/accounts/MyFoundryResource/connections/myblobconnection
+### Example (REST API)
+
+Use the [Capability Hosts - Create Or Update](https://learn.microsoft.com/rest/api/azureml/capability-hosts/create-or-update) REST API to create a capability host:
+
+```http
+PUT https://management.azure.com/subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.CognitiveServices/accounts/<foundry-resource>/capabilityHosts/agents-host?api-version=2025-05-01-preview
+
+{
+  "properties": {
+    "capabilityHostKind": "Agents",
+    "storageConnections": [
+      "<connection-arm-resource-id>"
+    ]
+  }
+}
 ```
 
-### Example (PowerShell) *(illustrative)*
-```powershell
-New-AIFCapabilityHost -ResourceName MyFoundryResource -Name agents-host -Feature agents -ConnectionId "/subscriptions/<sub>/resourceGroups/<rg>/.../connections/myblobconnection"
-```
+Replace `<connection-arm-resource-id>` with the full ARM resource ID of your blob storage connection.
 
-### ARM template snippet *(illustrative)*
+<Note>
+For Azure CLI and PowerShell, use the REST API through `az rest` or `Invoke-AzRestMethod` until dedicated cmdlets are available.
+</Note>
+
+### ARM template snippet
 ```json
 {
   "type": "Microsoft.CognitiveServices/accounts/capabilityHosts",
@@ -172,6 +152,23 @@ After creating your Foundry project:
 1. Verify the capability host is properly linked to your storage connection as demonstrated in this [code sample for Standard agent setup](https://github.com/azure-ai-foundry/foundry-samples/tree/main/infrastructure/infrastructure-setup-bicep/41-standard-agent-setup).
 
 Your agents standard setup now uses your own storage account instead of Microsoft-managed storage.
+
+## Verify your storage configuration
+
+After you configure storage connections and capability hosts, confirm that data routes to your storage account:
+
+1. Sign in to the [Azure portal](https://portal.azure.com) and open your storage account.
+1. Navigate to **Containers** under **Data storage**.
+1. Create a test agent in your Foundry project and run a simple interaction.
+1. Return to the storage account and refresh the **Containers** view.
+1. Verify that new containers or blobs appear in your storage account.
+
+If data doesn't appear in your storage account, check the following:
+
+- Both resource-level and project-level capability hosts exist and reference the correct connection.
+- The project managed identity has the `Storage Blob Data Contributor` role on the storage account.
+- The storage account has `allowSharedKeyAccess` set to `true`.
+- Network settings on the storage account allow access from Microsoft Foundry.
 
 ## Set userOwnedStorage for Speech and Language
 
@@ -210,20 +207,14 @@ resource "azurerm_cognitive_account" "foundry" {
 
 ### Role assignment
 
-Create the role assignment on the Azure Storage account for the Foundry resource managed identity, not the project managed identity. Assign `Storage Blob Data Contributor`.
+Create the role assignment on the Azure Storage account for the Foundry project managed identity. Assign the `Storage Blob Data Contributor` role so the project identity can read and write blobs in your storage account.
 
-Sign in to [Microsoft Foundry](https://ai.azure.com/?cid=learnDocs). Make sure the **New Foundry** toggle is on. These steps refer to **Foundry (new)**.
-
-<img src="/images/new-foundry.png" />
-
-1. Open the resource.
-1. In the left pane, select **Content Understanding**.
-1. Choose the existing storage connection.
-
-<Note>
-Programmatic configuration options for Content Understanding are under evaluation.
-</Note>
-::: moniker-end
+```azurecli
+az role assignment create \
+  --assignee <project-managed-identity-principal-id> \
+  --role "Storage Blob Data Contributor" \
+  --scope /subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Storage/storageAccounts/<storage-account-name>
+```
 
 ## End-to-end customer-managed storage checklist
 
@@ -234,6 +225,33 @@ Programmatic configuration options for Content Understanding are under evaluatio
 5. Bind Content Understanding to the storage connection.
 
 After these steps all features (Agents, Evaluations, Datasets, Content Understanding, Speech, Language) route to customer-managed storage.
+
+## Troubleshooting
+
+### Agents still use Microsoft-managed storage
+
+If agents continue to write data to Microsoft-managed storage instead of your storage account:
+
+- Verify that both resource-level and project-level capability hosts exist. Both levels are required for the binding chain to work.
+- Check that each capability host references the correct connection ID.
+- Confirm the storage connection points to the expected storage account.
+- Review role assignments on the storage account to ensure the project managed identity has `Storage Blob Data Contributor`.
+
+### Permission errors when accessing storage
+
+If you get authorization or permission errors:
+
+- Confirm that the project managed identity (not the resource identity) has the `Storage Blob Data Contributor` role on the storage account.
+- Verify the storage account has `allowSharedKeyAccess` set to `true`.
+- Check that network rules on the storage account allow traffic from Microsoft Foundry. If the storage account uses a firewall, add the appropriate exceptions.
+
+### Speech or Language stops working after storage changes
+
+If Speech or Language capabilities stop functioning after changes to your storage account:
+
+- Don't delete or move (change the resource ID of) the storage account bound by `userOwnedStorage`.
+- If the storage account was deleted, attempt recovery first: [Recover a storage account](https://learn.microsoft.com/azure/storage/common/storage-account-recover).
+- If recovery isn't possible, recreate the Foundry resource with a new storage account. The `userOwnedStorage` field can't be changed after resource creation.
 
 ## Related content
 

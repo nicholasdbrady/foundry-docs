@@ -1,10 +1,8 @@
 ---
 title: "Azure OpenAI reasoning models - GPT-5 series, o3-mini, o1, o1-mini"
 description: "Learn how to use Azure OpenAI's advanced GPT-5 series, o3-mini, o1, & o1-mini reasoning models"
-sidebarTitle: "Azure OpenAI reasoning models - GPT-5 series, o3-mini, o1, o1-mini"
 ---
 # Azure OpenAI reasoning models
-
 Azure OpenAI reasoning models are designed to tackle reasoning and problem-solving tasks with increased focus and capability. These models spend more time processing and understanding the user's request, making them exceptionally strong in areas like science, coding, and math compared to previous iterations.
 
 **Key capabilities of reasoning models:**
@@ -76,7 +74,7 @@ These models [don't currently support the same set of parameters](#api--feature-
 
     **Microsoft Entra ID:**
 
-    If you're new to using Microsoft Entra ID for authentication see [How to configure Azure OpenAI in Microsoft Foundry Models with Microsoft Entra ID authentication](../how-to/managed-identity.md).
+    If you're new to using Microsoft Entra ID for authentication see [How to configure Azure OpenAI in Microsoft Foundry Models with Microsoft Entra ID authentication](../../../foundry-classic/openai/how-to/managed-identity.md).
 
     ```python
     from openai import OpenAI
@@ -303,7 +301,7 @@ Adding a developer message to the previous code example would look as follows:
 
     **Microsoft Entra ID:**
 
-    If you're new to using Microsoft Entra ID for authentication see [How to configure Azure OpenAI with Microsoft Entra ID authentication](../how-to/managed-identity.md).
+    If you're new to using Microsoft Entra ID for authentication see [How to configure Azure OpenAI with Microsoft Entra ID authentication](../../../foundry-classic/openai/how-to/managed-identity.md).
 
     ```python
     from openai import OpenAI
@@ -924,6 +922,7 @@ print(response.model_dump_json(indent=2))
 
 | Model | Region | Limited access |
 |---|---|---|
+| `gpt-5.3-codex` | East US2 & Sweden Central (Global Standard) | Request access: [Limited access model application](https://aka.ms/OAI/gpt53codexaccess). If you already have access to a limited access model no request is required. |
 | `gpt-5.2-codex`| East US2 & Sweden Central (Global Standard) | Request access: [Limited access model application](https://aka.ms/oai/gpt5access). If you already have access to a limited access model no request is required. |
 | `gpt-5.2`| [Model availability](/models/catalog/models-sold-directly-by-azure#global-standard-model-availability)   | Request access: [Limited access model application](https://aka.ms/oai/gpt5access). If you already have access to a limited access model no request is required. |
 `gpt-5.1-codex-max` | [Model availability](/models/catalog/models-sold-directly-by-azure#global-standard-model-availability) |  Request access: [Limited access model application](https://aka.ms/oai/gpt5access). If you already have access to a limited access model no request is required.|
@@ -948,22 +947,21 @@ print(response.model_dump_json(indent=2))
 <Tabs>
   <Tab title="GPT-5 Reasoning Models">
 
-    | **Feature**  | **gpt-5.2-codex** | **gpt-5.2** | **gpt-5.1-codex-max** | **gpt-5.1**, **2025-11-13** | **gpt-5.1-chat**, **2025-11-13** | **gpt-5.1-codex**, **2025-11-13** | **gpt-5.1-codex-mini**, **2025-11-13** | **gpt-5-pro**, **2025-10-06** | **gpt-5-codex**, **2025-09-011**  | **gpt-5**, **2025-08-07**  | **gpt-5-mini**, **2025-08-07**   | **gpt-5-nano**, **2025-08-07**  |
-    |:-------------------|:---:|:---:|:---:|:---:|:---:|:---:|:--------------------------:|:--------------------------:|:------:|:--------:|:--------:|
-    | **API Version** | [v1](/api-sdk/api-version-lifecycle#api-evolution) | [v1](/api-sdk/api-version-lifecycle#api-evolution) | [v1](/api-sdk/api-version-lifecycle#api-evolution) | [v1](/api-sdk/api-version-lifecycle#api-evolution) | [v1](/api-sdk/api-version-lifecycle#api-evolution) | [v1](/api-sdk/api-version-lifecycle#api-evolution) | [v1](/api-sdk/api-version-lifecycle#api-evolution) | [v1](/api-sdk/api-version-lifecycle#api-evolution) | [v1](/api-sdk/api-version-lifecycle#api-evolution) | [v1](/api-sdk/api-version-lifecycle#api-evolution) | [v1](/api-sdk/api-version-lifecycle#api-evolution) | [v1](/api-sdk/api-version-lifecycle#api-evolution) |
-    | **[Developer Messages](#developer-messages)** | ✅  | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |✅ |
-    | **[Structured Outputs](/models/capabilities/structured-outputs)** | ✅ | ✅ | ✅| ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-    | **[Context Window](/models/catalog/models-sold-directly-by-azure#o-series-models)** | 400,000 <br /><br />Input: 272,000 <br /> Output: 128,000 | 400,000 <br /><br />Input: 272,000 <br /> Output: 128,000 | 400,000 <br /><br />Input: 272,000 <br /> Output: 128,000 | 400,000 <br /><br />Input: 272,000 <br /> Output: 128,000 | 128,000 <br /><br />Input: 111,616 <br /> Output: 16,384 | 400,000 <br /><br />Input: 272,000 <br /> Output: 128,000 | 400,000 <br /><br />Input: 272,000 <br /> Output: 128,000 | 400,000 <br /><br />Input: 272,000 <br /> Output: 128,000 | 400,000 <br /><br />Input: 272,000 <br /> Output: 128,000 | 400,000 <br /><br />Input: 272,000 <br /> Output: 128,000 | 400,000 <br /><br /> Input: 272,000 <br /> Output: 128,000 |  400,000 <br /><br /> Input: 272,000 <br /> Output: 128,000 |
-    | **[Reasoning effort](#reasoning-effort)**<sup>7</sup> | ✅ | ✅| ✅<sup>6</sup> | ✅<sup>4</sup> | ✅  | ✅  | ✅  | ✅<sup>5</sup>| ✅| ✅| ✅|✅|
-    | **[Image input](/models/catalog/gpt-with-vision)** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-    | Chat Completions API | | ✅ | - | ✅| ✅ | - | - | - | - | ✅ | ✅ | ✅ |
-    | Responses API | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅| ✅|  ✅  | ✅  | ✅ |
-    | Functions/Tools | ✅ | ✅ | ✅  | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |✅ |
-    | Parallel Tool Calls<sup>1</sup> | ✅| ✅ | ✅  | ✅ | ✅ | ✅ | ✅ |- | ✅ | ✅ | ✅ | ✅ |
-    | `max_completion_tokens` <sup>2</sup> | - | ✅ | - | ✅ | ✅ | - | - | -  | - |  ✅ | ✅ | ✅ |
-    | System Messages <sup>3</sup> |✅ | ✅ | ✅  | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅| ✅ |
-    | [Reasoning summary](#reasoning-summary) |✅ | ✅ | ✅  | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-    | Streaming | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |- | ✅ | ✅ | ✅ | ✅|
+    | **Feature**  | **gpt-5.3-codex**, **2026-02-24** | **gpt-5.2-codex**, **2026-01-14**  | **gpt-5.2**, **2025-12-11** | **gpt-5.1-codex-max**, **2025-12-04** | **gpt-5.1**, **2025-11-13** | **gpt-5.1-chat**, **2025-11-13** | **gpt-5.1-codex**, **2025-11-13** | **gpt-5.1-codex-mini**, **2025-11-13** | **gpt-5-pro**, **2025-10-06** | **gpt-5-codex**, **2025-09-011**  | **gpt-5**, **2025-08-07**  | **gpt-5-mini**, **2025-08-07**   | **gpt-5-nano**, **2025-08-07**  |
+    |:-------------------|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:--------------------------:|:--------------------------:|:------:|:--------:|:--------:|
+    | **[Developer Messages](#developer-messages)** | ✅ | ✅  | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |✅ |
+    | **[Structured Outputs](/models/capabilities/structured-outputs)** | ✅ | ✅ | ✅ | ✅| ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+    | **[Context Window](/models/catalog/models-sold-directly-by-azure#o-series-models)** | 400,000 <br /><br />Input: 272,000 <br /> Output: 128,000  | 400,000 <br /><br />Input: 272,000 <br /> Output: 128,000 | 400,000 <br /><br />Input: 272,000 <br /> Output: 128,000 | 400,000 <br /><br />Input: 272,000 <br /> Output: 128,000 | 400,000 <br /><br />Input: 272,000 <br /> Output: 128,000 | 128,000 <br /><br />Input: 111,616 <br /> Output: 16,384 | 400,000 <br /><br />Input: 272,000 <br /> Output: 128,000 | 400,000 <br /><br />Input: 272,000 <br /> Output: 128,000 | 400,000 <br /><br />Input: 272,000 <br /> Output: 128,000 | 400,000 <br /><br />Input: 272,000 <br /> Output: 128,000 | 400,000 <br /><br />Input: 272,000 <br /> Output: 128,000 | 400,000 <br /><br /> Input: 272,000 <br /> Output: 128,000 |  400,000 <br /><br /> Input: 272,000 <br /> Output: 128,000 |
+    | **[Reasoning effort](#reasoning-effort)**<sup>7</sup> | ✅ | ✅ | ✅| ✅<sup>6</sup> | ✅<sup>4</sup> | ✅  | ✅  | ✅  | ✅<sup>5</sup>| ✅| ✅| ✅|✅|
+    | **[Image input](/models/catalog/gpt-with-vision)** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+    | Chat Completions API | - | - | ✅ | - | ✅| ✅ | - | - | - | - | ✅ | ✅ | ✅ |
+    | Responses API | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅| ✅|  ✅  | ✅  | ✅ |
+    | Functions/Tools | ✅ | ✅ | ✅ | ✅  | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |✅ |
+    | Parallel Tool Calls<sup>1</sup> |✅| ✅| ✅ | ✅  | ✅ | ✅ | ✅ | ✅ |- | ✅ | ✅ | ✅ | ✅ |
+    | `max_completion_tokens` <sup>2</sup>| -| - | ✅ | - | ✅ | ✅ | - | - | -  | - |  ✅ | ✅ | ✅ |
+    | System Messages <sup>3</sup> |✅ | ✅ | ✅ | ✅  | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅| ✅ |
+    | [Reasoning summary](#reasoning-summary) |✅ |✅ | ✅ | ✅  | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+    | Streaming | ✅ | ✅  | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |- | ✅ | ✅ | ✅ | ✅|
 
     <sup>1</sup> Parallel tool calls are not supported when `reasoning_effort` is set to `minimal`<br /><br />
     <sup>2</sup> Reasoning models will only work with the `max_completion_tokens` parameter when using the Chat Completions API. Use `max_output_tokens` with the Responses API. <br /><br />
@@ -993,7 +991,6 @@ print(response.model_dump_json(indent=2))
 
     | **Feature**  | **codex-mini**, **2025-05-16**  | **o3-pro**, **2025-06-10**   | **o4-mini**, **2025-04-16**  | **o3**, **2025-04-16** | **o3-mini**, **2025-01-31**  |**o1**, **2024-12-17**   |  
     |:-------------------|:--------------------------:|:------:|:--------|:-----:|:-------:|:--------------------------:|
-    | **API Version** | `2025-04-01-preview` & [v1](/api-sdk/api-version-lifecycle#api-evolution)   | `2025-04-01-preview`  & [v1](/api-sdk/api-version-lifecycle#api-evolution)  | `2025-04-01-preview` & [v1](/api-sdk/api-version-lifecycle#api-evolution)   |  `2025-04-01-preview` & [v1](/api-sdk/api-version-lifecycle#api-evolution)   |  `2025-04-01-preview` & [v1 preview](/api-sdk/api-version-lifecycle#api-evolution)   | `2025-04-01-preview` & [v1 preview](/api-sdk/api-version-lifecycle#api-evolution) |
     | **[Developer Messages](#developer-messages)** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
     | **[Structured Outputs](/models/capabilities/structured-outputs)** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
     | **[Context Window](/models/catalog/models-sold-directly-by-azure#o-series-models)** |  Input: 200,000 <br /> Output: 100,000 | Input: 200,000 <br /> Output: 100,000 | Input: 200,000 <br /> Output: 100,000 | Input: 200,000 <br /> Output: 100,000 | Input: 200,000 <br /> Output: 100,000 | Input: 200,000 <br /> Output: 100,000  | 

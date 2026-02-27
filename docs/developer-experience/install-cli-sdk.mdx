@@ -1,25 +1,24 @@
 ---
-title: "Set up your development environment"
-description: "Instructions for installing the Microsoft Foundry SDK and the Azure CLI"
-sidebarTitle: "Set up your development environment"
+title: "Prepare your development environment"
+description: "Set up your development environment with language runtimes, Azure CLI, and tools for Microsoft Foundry development."
 ---
 # Prepare your development environment
-
 Set up your development environment to use the Microsoft Foundry SDK. You also need Azure CLI for authentication so that your code can access your user credentials.
+
+In this article, you install language runtimes, Azure CLI, Azure Developer CLI, the Foundry VS Code extension, and Git.
 
 <Info>
 This article covers **general prerequisites** only, such as language runtimes, global tools, and VS Code and extension setup.  
 It doesn't cover scenario-specific steps like SDK installation or authentication.  
 When your environment is ready, continue to the [quickstart](/get-started/quickstart-create-foundry-resources) for those instructions.
 </Info>
-
 ## Prerequisites
 
 - An Azure account with an active subscription. If you don't have one, create a [free Azure account, which includes a free trial subscription](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
 - Download, install, and configure Visual Studio Code, or the IDE of your choice. For more information, see [Download Visual Studio Code](https://code.visualstudio.com/Download).
 - To create and manage Foundry resources, one of the following Azure RBAC roles 
   - **Azure AI Project Manager** (for managing Foundry projects)
-  - **Contributor** or **Owner** (for subscription-level permissions)
+  - **Owner** (for subscription-level permissions). Owner is necessary for additional role assignments required for other scenarios in Foundry. To ensure you are unblocked for all scenarios in Foundry, Owner is the role assignment required.
 - To use project but not create new resources, you need at least:
   - **Azure AI User** on the projects you use (least-privilege role for development)
 
@@ -79,7 +78,7 @@ The Extension Pack for Java is a collection of popular extensions that can help 
 
 [Install the Visual Studio Code Extension Pack for Java](https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-pack).
 
-Install [Node.js](https://nodejs.org/).
+Install [Node.js](https://nodejs.org/) (version 18 or later is recommended).
 
 Ensure you have the necessary tools installed for .NET development.
 
@@ -168,15 +167,22 @@ The Azure Developer CLI (azd) is an open-source tool that helps you set up and d
 
 Many of the [AI solution templates](/developer-experience/ai-template-get-started) include a deployment option using `azd`.
 
-## Install The Foundry VS Code Extension
+## Install the Foundry VS Code extension
 
-The Foundry extension for Visual Studio Code lets you deploy models, build AI apps, and work with Agents directly from the VS Code interface. [Install The Foundry VS Code Extension](https://marketplace.visualstudio.com/items?itemName=TeamsDevApp.vscode-ai-foundry).
+The Foundry extension for Visual Studio Code lets you deploy models, build AI apps, and work with Agents directly from the VS Code interface. [Install the Foundry VS Code extension](https://marketplace.visualstudio.com/items?itemName=TeamsDevApp.vscode-ai-foundry).
 
 ## Install Git
 
 Git is required to clone Foundry SDK samples. If you don't have Git installed, [follow the instructions for your platform](https://git-scm.com/downloads) and select your operating system.
 
-References: [Git](https://git-scm.com/downloads)
+## Troubleshooting
+
+| Issue | Resolution |
+| ----- | ---------- |
+| Command not found after install | Close and reopen your terminal, or restart VS Code, so PATH changes take effect. |
+| `az login` fails with a browser error | Run `az login --use-device-code` to authenticate using a device code flow instead. |
+| Python not found | Use `python3` instead of `python` on macOS/Linux, or install a supported version (3.9 or later). |
+| Permission denied during install | On macOS/Linux, avoid `sudo pip install`. Use a [virtual environment](#create-a-virtual-environment) instead. |
 
 ## Related content
 

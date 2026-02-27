@@ -1,15 +1,8 @@
 ---
 title: "Cloud Evaluation with the Microsoft Foundry SDK"
 description: "Run scalable evaluations for generative AI applications using the Microsoft Foundry SDK. Learn how to integrate evaluations into your development pipeline."
-sidebarTitle: "Cloud Evaluation with the Microsoft Foundry SDK"
 ---
 # Run evaluations in the cloud by using the Microsoft Foundry SDK
-
-<Note>
-This article refers to the [Microsoft Foundry (new)](../what-is-foundry.md#microsoft-foundry-portals) portal.
-</Note>
-{/* > 🔄 [Switch to the Microsoft Foundry (classic) documentation]() if you're using the classic portal. */}
-
 <Info>
 Items marked (preview) in this article are currently in public preview. This preview is provided without a service-level agreement, and we don't recommend it for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
 </Info>
@@ -18,14 +11,13 @@ In this article, you learn how to run evaluations in the cloud (preview) for pre
 
 Use cloud evaluations for most scenarios—especially when testing at scale, integrating evaluations into continuous integration and continuous delivery (CI/CD) pipelines, or performing predeployment testing. Running evaluations in the cloud eliminates the need to manage local compute infrastructure and supports large-scale, automated testing workflows. You can also [schedule evaluations](/agents/development/how-to-monitor-agents-dashboard) to run on a recurring basis, or set up [continuous evaluation](/agents/development/how-to-monitor-agents-dashboard#set-up-continuous-evaluation-python-sdk) to automatically evaluate sampled agent responses in production.
 
-Cloud evaluation results are stored in your Foundry project. You can review results in the portal, retrieve them through the SDK, or route them to Application Insights if connected. Cloud evaluation supports all Microsoft-curated [built-in evaluators](/observability/observability#what-are-evaluators) and your own [custom evaluators](/observability/custom-evaluators). Evaluators are managed in the [evaluator catalog](/observability/evaluate-generative-ai-app#view-and-manage-the-evaluators-in-the-evaluator-library) with the same project-scope, role-based access control.
+Cloud evaluation results are stored in your Foundry project. You can review results in the portal, retrieve them through the SDK, or route them to Application Insights if connected. Cloud evaluation supports all Microsoft-curated [built-in evaluators](/observability/observability#what-are-evaluators) and your own [custom evaluators](/observability/custom-evaluators). Evaluators are managed in the [evaluator catalog](/observability/evaluate-generative-ai-app) with the same project-scope, role-based access control.
 
 <Tip>
 For complete runnable examples, see the [Python SDK evaluation samples](https://github.com/Azure/azure-sdk-for-python/blob/main/sdk/ai/azure-ai-projects/samples/evaluations/README.md) on GitHub.
 </Tip>
 
-When you use the Foundry SDK, it logs evaluation results in your Foundry project for better observability. This feature supports all Microsoft-curated [built in evaluators](/observability/built-in-evaluators). and your own [custom evaluators](/observability/custom-evaluators). Your evaluators can be located in the [evaluator library](/observability/evaluate-generative-ai-app#view-and-manage-the-evaluators-in-the-evaluator-library) and have the same project-scope, role-based access control.
-
+When you use the Foundry SDK, it logs evaluation results in your Foundry project for better observability. This feature supports all Microsoft-curated [built in evaluators](/observability/built-in-evaluators). and your own [custom evaluators](/observability/custom-evaluators). Your evaluators can be located in the [evaluator library](/observability/evaluate-generative-ai-app) and have the same project-scope, role-based access control.
 ## How cloud evaluation works
 
 To run a cloud evaluation, you create an evaluation definition with your data schema and testing criteria (evaluators), then create an evaluation run. The run executes each evaluator against your data and returns scored results that you can poll for completion.
@@ -59,6 +51,7 @@ Each scenario requires evaluators that define your testing criteria. For guidanc
 - A [Foundry project](/setup/create-projects).
 - An Azure OpenAI deployment with a GPT model that supports chat completion (for example, `gpt-5-mini`).
 - **Azure AI User** role on the Foundry project.
+- Optionally, you can [use your own storage account](/observability/evaluation-regions-limits-virtual-network#bring-your-own-storage) to run evaluations.
 
 <Note>
 Some evaluation features have regional restrictions. See [supported regions](/observability/risk-safety-evaluators#foundry-project-configuration-and-region-support) for details.
@@ -491,6 +484,10 @@ testing_criteria = [
 
 For a complete runnable example, see [sample_model_evaluation.py](https://github.com/Azure/azure-sdk-for-python/blob/main/sdk/ai/azure-ai-projects/samples/evaluations/sample_model_evaluation.py) on GitHub. To poll for completion and interpret results, see [Get results](#get-results).
 
+<Tip>
+To add another evaluation run,  you can use the same code.
+</Tip>
+
 ## Agent target evaluation
 
 Send queries to a Foundry agent at runtime and evaluate the responses using the `azure_ai_target_completions` data source type with an `azure_ai_agent` target.
@@ -910,7 +907,7 @@ If an agent evaluator returns an error for unsupported tools:
 ## Related content
 
 - [Complete working samples](https://github.com/Azure/azure-sdk-for-python/tree/main/sdk/ai/azure-ai-projects/samples/evaluations)
-- [Evaluate your AI agents continuously](../continuous-evaluation-agents.md)
+- [Evaluate your AI agents continuously](../../../foundry-classic/how-to/continuous-evaluation-agents.md)
 - [See evaluation results in the Foundry portal](/observability/evaluate-results)
 - [Get started with Foundry](/get-started/get-started-code)
 - [REST API reference](/api-sdk/foundry-project-rest-preview#openai-evals---list-evals)

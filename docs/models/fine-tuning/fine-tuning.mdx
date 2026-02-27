@@ -1,10 +1,8 @@
 ---
 title: "Customize a model with fine-tuning"
 description: "Learn how to fine-tune and customize Foundry models by using Python, REST APIs, or the Microsoft Foundry portal. Improve model performance with LoRA adaptation and custom datasets."
-sidebarTitle: "Customize a model with fine-tuning"
 ---
 # Customize a model with fine-tuning
-
 Learn how to fine-tune models in Microsoft Foundry for your datasets and use cases. Fine-tuning enables:
 
 - Higher-quality results than what you can get just from [prompt engineering](/best-practices/prompt-engineering).
@@ -29,7 +27,7 @@ In this article, you learn how to:
 - You need an Azure subscription. [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
 - You need a Foundry project resource. To create one, sign in to the [Foundry portal](https://ai.azure.com).
 - Fine-tuning requires the **Azure AI Owner** role. While Azure AI Users may train (fine-tune) models, only AI Owners may deploy them.
-- If you don't already have access to view quotas and deploy models in the Foundry portal, you need [more permissions](../openai/how-to/role-based-access-control.md).
+- If you don't already have access to view quotas and deploy models in the Foundry portal, you need [more permissions](../../foundry-classic/openai/how-to/role-based-access-control.md).
 
 ### Supported models
 
@@ -47,7 +45,7 @@ In addition to the JSONL format, training and validation data files must be enco
 
 We recommend that you use the instructions and prompts that you found worked best in every training example. This approach helps you get the best results, especially if you have fewer than a hundred examples.
 
-If you don't have an existing dataset prepared, you can use the [data generation](../default/fine-tuning/data-generation.md) capabilities to create a new one.
+If you don't have an existing dataset prepared, you can use the [data generation](../fine-tuning/data-generation.md) capabilities to create a new one.
 
 ### Example file format
 
@@ -254,11 +252,11 @@ You can't delete a fine-tuned model if it has an existing deployment. You must [
 
     - Read the [guide on when to use Azure OpenAI fine-tuning](/models/fine-tuning/fine-tuning-considerations).
     - You need an Azure subscription. [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
-    - You need an Azure OpenAI resource. For more information, see [Create a resource and deploy a model with Azure OpenAI](../how-to/create-resource.md).
+    - You need an Azure OpenAI resource. For more information, see [Create a resource and deploy a model with Azure OpenAI](../../../foundry-classic/openai/how-to/create-resource.md).
     - You need the following Python libraries: `os`, `json`, `requests`, `openai`.
     - You need the OpenAI Python library.
     - Fine-tuning requires the **Azure AI Owner** role. While Azure AI Users may train (fine-tune) models, only AI Owners may deploy them.
-    - If you don't already have access to view quotas and deploy models in the Foundry portal, you need [more permissions](../how-to/role-based-access-control.md).  
+    - If you don't already have access to view quotas and deploy models in the Foundry portal, you need [more permissions](../../../foundry-classic/openai/how-to/role-based-access-control.md).  
 
     ### Supported models
 
@@ -287,7 +285,7 @@ You can't delete a fine-tuned model if it has an existing deployment. You must [
 
     In addition to the JSONL format, training and validation data files must be encoded in UTF-8 and include a byte-order mark (BOM). Each file must be less than 512 MB in size.
 
-    If you want a step-by-step walkthrough of fine-tuning `gpt-4o-mini-2024-07-18`, see the [Azure OpenAI fine-tuning tutorial](../tutorials/fine-tune.md).
+    If you want a step-by-step walkthrough of fine-tuning `gpt-4o-mini-2024-07-18`, see the [Azure OpenAI fine-tuning tutorial](../../../foundry-classic/openai/tutorials/fine-tune.md).
 
     ### Example file format
 
@@ -542,7 +540,7 @@ Look for your loss to decrease over time, and your accuracy to increase. If your
 
 When you're satisfied with the metrics from your fine-tuning job, or you just want to move on to inference, you must deploy the model.
 
-If you're deploying for further validation, consider deploying for [testing](../how-to/fine-tune-test.md) by using a Developer deployment.
+If you're deploying for further validation, consider deploying for [testing](../../../foundry-classic/openai/how-to/fine-tune-test.md) by using a Developer deployment.
 
 Unlike with the previous SDK commands, you must use the control plane API for the deployment. This task requires separate authorization, a different API path, and a different API version.
 
@@ -692,11 +690,11 @@ for id in results:
     - You need a Foundry project resource. To create one, sign in to the [Foundry portal](https://ai.azure.com).
     - You need the following Python libraries: `os`, `json`, `requests`, `azure-ai-projects`, `azure-identity`.
     - Fine-tuning requires the **Azure AI Owner** role. While Azure AI Users may train (fine-tune) models, only AI Owners may deploy them.
-    - If you don't already have access to view quotas and deploy models in the Foundry portal, you need [more permissions](../how-to/role-based-access-control.md).
+    - If you don't already have access to view quotas and deploy models in the Foundry portal, you need [more permissions](../../../foundry-classic/openai/how-to/role-based-access-control.md).
 
     ### Supported models
 
-    To check which regions currently support fine-tuning, consult the [article about models](../concepts/models.md).
+    To check which regions currently support fine-tuning, consult the [article about models](/models/catalog/models-sold-directly-by-azure).
 
     Or you can fine-tune a previously fine-tuned model, formatted as `base-model.ft-{jobid}`.
 
@@ -721,7 +719,7 @@ for id in results:
 
     In addition to the JSONL format, training and validation data files must be encoded in UTF-8 and include a byte-order mark (BOM). Each file must be less than 512 MB in size.
 
-    If you want a step-by-step walkthrough of fine-tuning `gpt-4o-mini-2024-07-18`, see the [Microsoft Foundry fine-tuning tutorial](../tutorials/fine-tune.md).
+    If you want a step-by-step walkthrough of fine-tuning `gpt-4o-mini-2024-07-18`, see the [Microsoft Foundry fine-tuning tutorial](../../../foundry-classic/openai/tutorials/fine-tune.md).
 
     ### Example file format
 
@@ -821,7 +819,7 @@ for id in results:
     ```
 
 <Note>
-We recommend using the Global Standard tier for the training type, because it offers [cost savings](https://azure.microsoft.com/pricing/details/cognitive-services/openai-service/) and uses global capacity for faster queuing times. However, it does copy data and weights outside the current resource region. If [data residency](https://azure.microsoft.com/explore/global-infrastructure/data-residency/) is a requirement, use a [model](../concepts/models.md) that supports Standard-tier training.
+We recommend using the Global Standard tier for the training type, because it offers [cost savings](https://azure.microsoft.com/pricing/details/cognitive-services/openai-service/) and uses global capacity for faster queuing times. However, it does copy data and weights outside the current resource region. If [data residency](https://azure.microsoft.com/explore/global-infrastructure/data-residency/) is a requirement, use a [model](/models/catalog/models-sold-directly-by-azure) that supports Standard-tier training.
 </Note>
 
     You can also pass additional optional parameters, like hyperparameters, to take greater control of the fine-tuning process. For initial training, we recommend using the automatic defaults that are present without specifying these parameters.
@@ -937,7 +935,7 @@ Look for your loss to decrease over time, and your accuracy to increase. If your
 
 When you're satisfied with the metrics from your fine-tuning job, or you just want to move on to inference, you must deploy the model.
 
-If you're deploying for further validation, consider deploying for [testing](../how-to/fine-tune-test.md) by using a Developer deployment.
+If you're deploying for further validation, consider deploying for [testing](../../../foundry-classic/openai/how-to/fine-tune-test.md) by using a Developer deployment.
 
 Unlike with the previous SDK commands, you must use the control plane API for the deployment. This task requires separate authorization, a different API path, and a different API version.
 
@@ -1022,9 +1020,9 @@ If you're unsure of the ID of your existing fine-tuned model, you can find this 
 
 - Read the [guide on when to use Azure OpenAI fine-tuning](/models/fine-tuning/fine-tuning-considerations).
 - You need an Azure subscription. [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
-- You need an Azure OpenAI resource. For more information, see [Create a resource and deploy a model with Azure OpenAI](../how-to/create-resource.md).
+- You need an Azure OpenAI resource. For more information, see [Create a resource and deploy a model with Azure OpenAI](../../../foundry-classic/openai/how-to/create-resource.md).
 - Fine-tuning requires the **Azure AI Owner** role. While Azure AI Users may train (fine-tune) models, only AI Owners may deploy them.
-- If you don't already have access to view quotas and deploy models in the Foundry portal, you need [more permissions](../how-to/role-based-access-control.md).  
+- If you don't already have access to view quotas and deploy models in the Foundry portal, you need [more permissions](../../../foundry-classic/openai/how-to/role-based-access-control.md).  
 
 ### Supported models
 
@@ -1053,7 +1051,7 @@ The training and validation data that you use *must* be formatted as a JSON Line
 
 In addition to the JSONL format, training and validation data files must be encoded in UTF-8 and include a byte-order mark (BOM). Each file must be less than 512 MB in size.
 
-If you want a step-by-step walkthrough of fine-tuning `gpt-4o-mini-2024-07-18`, see the [Azure OpenAI fine-tuning tutorial](../tutorials/fine-tune.md).
+If you want a step-by-step walkthrough of fine-tuning `gpt-4o-mini-2024-07-18`, see the [Azure OpenAI fine-tuning tutorial](../../../foundry-classic/openai/tutorials/fine-tune.md).
 
 ### Example file format
 
@@ -1328,7 +1326,7 @@ Look for your loss to decrease over time, and your accuracy to increase. If your
 
 When you're satisfied with the metrics from your fine-tuning job, or you just want to move on to inference, you must deploy the model.
 
-If you're deploying for further validation, consider deploying for [testing](../how-to/fine-tune-test.md) by using a Developer deployment.
+If you're deploying for further validation, consider deploying for [testing](../../../foundry-classic/openai/how-to/fine-tune-test.md) by using a Developer deployment.
 
 If you're ready to deploy for production or you have particular data-residency needs, follow the [deployment guide](/models/fine-tuning/fine-tuning-deploy).
 
@@ -1406,8 +1404,8 @@ You can optionally delete training and validation files that you uploaded for tr
 
 ## Related content
 
-- [Fine-tuning tutorial (step-by-step)](../tutorials/fine-tune.md)
+- [Fine-tuning tutorial (step-by-step)](../../../foundry-classic/openai/tutorials/fine-tune.md)
 - [Model catalog and regional availability](/models/catalog/models-sold-directly-by-azure)
 - [Quotas and limits](/setup/quotas-limits)
 - [View and interpret evaluation results](/observability/evaluate-results)
-- [Trace AI application usage (OpenAI SDK)](../../how-to/develop/trace-application.md)
+- [Trace AI application usage (OpenAI SDK)](../../../foundry-classic/how-to/develop/trace-application.md)

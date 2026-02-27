@@ -1,10 +1,8 @@
 ---
 title: "Deploy a hosted agent"
 description: "Deploy your containerized agent code to Foundry Agent Service using the Azure Developer CLI or Python SDK."
-sidebarTitle: "Deploy a hosted agent"
 ---
 # Deploy a hosted agent
-
 This article shows you how to deploy a containerized agent to Foundry Agent Service. Use hosted agents when you need to run custom agent code built with frameworks like LangGraph, Microsoft Agent Framework, or your own implementation.
 
 ## Prerequisites
@@ -156,10 +154,10 @@ Use the SDK for programmatic deployments or CI/CD integration.
 
 * A container image in [Azure Container Registry](https://learn.microsoft.com/azure/container-registry/container-registry-get-started-portal)
 * User Access Administrator or Owner permissions on the container registry
-* Azure AI Projects SDK version 2.0.0b3 or later
+* Azure AI Projects SDK version 2.0.0b4 or later
 
     ```bash
-    pip install --pre "azure-ai-projects>=2.0.0b3" azure-identity
+    pip install --pre "azure-ai-projects>=2.0.0b4" azure-identity
     ```
 
 ### Build and push your container image
@@ -229,7 +227,7 @@ Updating capability hosts isn't supported. If you have an existing capability ho
 ```python
 import os
 from azure.ai.projects import AIProjectClient
-from azure.ai.projects.models import ImageBasedHostedAgentDefinition, ProtocolVersionRecord, AgentProtocol
+from azure.ai.projects.models import HostedAgentDefinition, ProtocolVersionRecord, AgentProtocol
 from azure.identity import DefaultAzureCredential
 
 endpoint = os.environ["AZURE_AI_PROJECT_ENDPOINT"]
@@ -241,7 +239,7 @@ client = AIProjectClient(
 
 agent = client.agents.create_version(
     agent_name="my-agent",
-    definition=ImageBasedHostedAgentDefinition(
+    definition=HostedAgentDefinition(
         container_protocol_versions=[ProtocolVersionRecord(protocol=AgentProtocol.RESPONSES, version="v1")],
         cpu="1",
         memory="2Gi",
@@ -272,7 +270,7 @@ Include tools when creating the agent:
 ```python
 agent = client.agents.create_version(
     agent_name="my-agent",
-    definition=ImageBasedHostedAgentDefinition(
+    definition=HostedAgentDefinition(
         container_protocol_versions=[ProtocolVersionRecord(protocol=AgentProtocol.RESPONSES, version="v1")],
         cpu="1",
         memory="2Gi",

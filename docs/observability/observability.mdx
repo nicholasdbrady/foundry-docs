@@ -1,16 +1,8 @@
 ---
 title: "Observability in Generative AI"
 description: "Learn how Microsoft Foundry enables safe, high-quality generative AI through systematic evaluation and observability tools."
-sidebarTitle: "Observability in Generative AI"
 ---
 # Observability in generative AI
-
-<Note>
-This article refers to the [Microsoft Foundry (new)](/overview/what-is-foundry#microsoft-foundry-portals) portal.
-</Note>
-{/* > 🔄 [Switch to the Microsoft Foundry (classic) documentation]() if you're using the classic portal. */}
-  
-
 <Info>
 Items marked (preview) in this article are currently in public preview. This preview is provided without a service-level agreement, and we don't recommend it for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
 </Info>
@@ -39,13 +31,13 @@ For a complete list of built-in evaluators, see [Built-in evaluators reference](
 
 Production monitoring ensures your deployed AI applications maintain quality and performance in real-world conditions. Integrated with Azure Monitor Application Insights, Microsoft Foundry delivers real-time dashboards tracking operational metrics, token consumption, latency, error rates, and quality scores. Teams can set up alerts when outputs fail quality thresholds or produce harmful content, enabling rapid issue resolution.
 
-For details on setting up production monitoring, see [Monitor agents dashboard](../default/agents/how-to/how-to-monitor-agents-dashboard.md).
+For details on setting up production monitoring, see [Monitor agents dashboard](/agents/development/how-to-monitor-agents-dashboard).
 
 ### Tracing
 
 Distributed tracing captures the execution flow of AI applications, providing visibility into LLM calls, tool invocations, agent decisions, and inter-service dependencies. Built on OpenTelemetry standards and integrated with Application Insights, tracing enables debugging complex agent behaviors, identifying performance bottlenecks, and understanding multi-step reasoning chains. Microsoft Foundry supports tracing for popular frameworks including LangChain, Semantic Kernel, and the OpenAI Agents SDK.
 
-For guidance on implementing tracing, see [Trace your application](../how-to/develop/trace-application.md) and [Trace with Agents SDK](../how-to/develop/trace-agents-sdk.md).
+For guidance on implementing tracing, see [Trace your application](../../foundry-classic/how-to/develop/trace-application.md) and [Trace with Agents SDK](../../foundry-classic/how-to/develop/trace-agents-sdk.md).
 
 ## What are evaluators?
 
@@ -77,15 +69,13 @@ Before deployment, thorough testing ensures your AI agent or application is prod
 
 **Evaluation tools and approaches:**
 
-- **Bring your own data**: Evaluate AI applications using your own data with quality, safety, or [custom evaluators](/observability/custom-evaluators). Use Foundry's evaluation wizard or [Foundry SDK](/observability/cloud-evaluation) and [view results in the Foundry portal](/observability/evaluate-results).
+- **Bring your own data**: Evaluate AI applications using your own data with quality, safety, or [custom evaluators](/observability/custom-evaluators). Use the [Foundry portal](/observability/evaluate-generative-ai-app) evaluation wizard or [Foundry SDK](/observability/cloud-evaluation) and [view results in the Foundry portal](/observability/evaluate-results).
 
 - **AI red teaming agent**: The [AI red teaming agent](/observability/run-ai-red-teaming-cloud) simulates complex attacks using Microsoft's PyRIT framework to identify safety and security vulnerabilities before deployment. Best used with human-in-the-loop processes.
 
-You can also use [the Foundry portal](/observability/evaluate-generative-ai-app) for testing generative AI applications.
-
 ### Post-production monitoring
 
-After deployment, [continuous monitoring](../default/agents/how-to/how-to-monitor-agents-dashboard.md) ensures your AI application maintains quality in real-world conditions:
+After deployment, [continuous monitoring](/agents/development/how-to-monitor-agents-dashboard) ensures your AI application maintains quality in real-world conditions:
 
 - **Operational metrics**: Regular measurement of key AI agent operational metrics
 - **Continuous evaluation**: Quality and safety evaluation of production traffic at a sampled rate
@@ -103,22 +93,22 @@ Integrated with Azure Monitor Application Insights, the Foundry Observability da
 | What are you evaluating for? | Identify or build relevant evaluators | [Built-in evaluators](/observability/built-in-evaluators) <br /><br /> [Custom evaluators](/observability/custom-evaluators) <br /><br /> [Python SDK samples](https://github.com/Azure/azure-sdk-for-python/blob/main/sdk/ai/azure-ai-projects/samples/evaluations/README.md) <br /><br /> [C# SDK samples](https://github.com/Azure/azure-sdk-for-net/tree/main/sdk/ai/Azure.AI.Projects/tests/Samples/Evaluation) |
 | What data should you use? | Upload or generate relevant dataset | [Select or create a dataset](/observability/evaluate-generative-ai-app#select-or-create-a-dataset) |
 | How to run evaluations? | Run evaluation | [Agent evaluation runs](/observability/evaluate-agent) <br /><br /> [Remote cloud run](/observability/cloud-evaluation) |
-| How did my model/AI applicable perform? | Analyze results | [View evaluation results](/observability/evaluate-results) <br /><br /> [Cluster analysis](/observability/cluster-analysis) |
-| How can I improve? | Analyze clustered evaluation failures and optimize agents | [Cluster analysis](/observability/cluster-analysis) <br /><br /> [Monitoring dashboard analysis](/get-started/ask-ai)  <br /><br /> Agent optimization playbook: update agent instructions, look into tool success rate, apply targeted mitigation, upgrade underlying model. <br /><br />. Save as new version and re-evaluate, see [Evaluate generative AI models and applications in the portal](/observability/evaluate-generative-ai-app), <br /><br /> Evaluation comparison, see [See evaluation results](/observability/evaluate-results)  |
+| How did my model/AI application perform? | Analyze results | [View evaluation results](/observability/evaluate-results) <br /><br /> [Cluster analysis](/observability/cluster-analysis) |
+| How can I improve? | Analyze results and optimize agents | Analyze evaluation failures with [cluster analysis](/observability/cluster-analysis). <br /><br /> Optimize agents and [re-evaluate](/observability/evaluate-agent). <br /><br /> Review [evaluation results](/observability/evaluate-results). |
 
 ## Region support, rate limits, and virtual network support
 
-To learn which regions support AI-assisted evaluators, the rate limits that apply to evaluation runs, and how to configure virtual network support for network isolation see [region support, rate limits, and virtual network support for evaluation](/observability/evaluation-regions-limits-virtual-network).
+To learn which regions support AI-assisted evaluators, the rate limits that apply to evaluation runs, and how to configure virtual network support for network isolation, see [region support, rate limits, and virtual network support for evaluation](/observability/evaluation-regions-limits-virtual-network).
 
 ## Pricing
 
 Observability features such as risk and safety evaluations and evaluations in the agent playground are billed based on consumption as listed in [our Azure pricing page](https://azure.microsoft.com/pricing/details/ai-foundry/).
 
 <Info>
-Evaluations in the agent playground are enabled by default for all Foundry projects and are included in consumption-based billing. To turn off playground evaluations, select metrics in the upper right of the agents playground and unselect all evaluators.
+Evaluations in the agents playground are enabled by default for all Foundry projects and are included in consumption-based billing. To turn off playground evaluations, select metrics in the upper right of the agents playground and unselect all evaluators.
 
 <Frame>
-  <img src="/images/agent-playground-evaluation-metrics.png" alt="Screenshot of the Foundry portal showing agent playground with the metrics selected." />
+  <img src="/images/agent-playground-evaluation-metrics.png" alt="Screenshot of the Foundry portal showing agents playground with the metrics selected." />
 </Frame>
 </Info>
 

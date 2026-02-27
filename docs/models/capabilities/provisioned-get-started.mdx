@@ -1,15 +1,8 @@
 ---
 title: "Get started with provisioned deployments in Microsoft Foundry"
 description: "Learn how to create and configure provisioned throughput deployments, verify quota, handle high utilization, and run benchmarks in Microsoft Foundry."
-sidebarTitle: "Get started with provisioned deployments in Microsoft Foundry"
 ---
 # Get started with provisioned deployments in Microsoft Foundry
-
-<Note>
-This article refers to the [Microsoft Foundry (new)](../what-is-foundry.md#microsoft-foundry-portals) portal.
-</Note>
-{/* > 🔄 [Switch to the Microsoft Foundry (classic) documentation]() if you're using the classic portal. */}
-
 The following guide walks you through key steps in creating a provisioned deployment with your Microsoft Foundry resource. For more details on the concepts discussed here, see:
 * [Foundry Provisioned Throughput Onboarding Guide](/models/capabilities/provisioned-throughput-onboarding)
 * [Foundry Provisioned Throughput Concepts](/models/capabilities/provisioned-throughput) 
@@ -18,7 +11,7 @@ The following guide walks you through key steps in creating a provisioned deploy
 
 - An Azure subscription - [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn)
 - Azure Contributor or Cognitive Services Contributor role
-- A [Foundry resource](./create-resource.md) in a region with available PTU quota
+- A [Foundry resource](../../../foundry-classic/openai/how-to/create-resource.md) in a region with available PTU quota
 - Azure CLI - [Install the Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) (required only for CLI-based deployment)
 
 ## Verify PTU quota availability
@@ -62,8 +55,6 @@ Once you have verified your quota, you can create a deployment. Navigate to Foun
 1. Select **Deploy** > **Custom settings** to customize your deployment. 
 1. Select the **Deployment type** drop down menu to  see if provisioned deployment is available for the model.
 
- 
-
 ## Create your provisioned deployment - capacity is available
 
 You can create your deployment programmatically, using the following Azure CLI command. To specify the deployment type, modify the `sku-name` to `GlobalProvisionedManaged`, `DataZoneProvisionedManaged`, or `ProvisionedManaged` based on the intended deployment type. Update the `sku-capacity` with the desired number of provisioned throughput units.
@@ -80,7 +71,7 @@ az cognitiveservices account deployment create \
 --sku-name ProvisionedManaged
 ```
 
-REST, ARM template, Bicep, and Terraform can also be used to create deployments. See the section on automating deployments in the [Managing Quota](quota.md) how-to guide and replace the `sku.name` with `GlobalProvisionedManaged`, `DataZoneProvisionedManaged`, or `ProvisionedManaged` rather than `Standard`.
+REST, ARM template, Bicep, and Terraform can also be used to create deployments. See the section on automating deployments in the [Managing Quota](../../../foundry-classic/openai/how-to/quota.md) how-to guide and replace the `sku.name` with `GlobalProvisionedManaged`, `DataZoneProvisionedManaged`, or `ProvisionedManaged` rather than `Standard`.
 
 ## Optionally purchase a reservation 
 

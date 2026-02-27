@@ -1,10 +1,8 @@
 ---
 title: "Connect Agents to Foundry IQ Knowledge Bases"
 description: "Connect Foundry Agent Service to a Foundry IQ knowledge base (Azure AI Search) for grounded retrieval and citation-backed responses."
-sidebarTitle: "Connect Agents to Foundry IQ Knowledge Bases"
 ---
 # Connect a Foundry IQ knowledge base to Foundry Agent Service
-
 <Info>
 Items marked (preview) in this article are currently in public preview. This preview is provided without a service-level agreement, and we don't recommend it for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
 </Info>
@@ -31,10 +29,10 @@ For an end-to-end example of integrating Azure AI Search and Foundry Agent Servi
 - An [Azure AI Search service](https://learn.microsoft.com/azure/search/search-create-service-portal) with a [knowledge base](https://learn.microsoft.com/azure/search/agentic-retrieval-how-to-create-knowledge-base) containing one or more [knowledge sources](https://learn.microsoft.com/azure/search/agentic-knowledge-source-overview).
 - A [Microsoft Foundry project](/setup/create-projects) with an [LLM deployment](/models/capabilities/create-model-deployments), such as `gpt-4.1-mini`.
 - [Authentication and permissions](#authentication-and-permissions) on your search service and project.
-- The latest preview Python SDK or the 2025-11-01-preview REST API version.
+- The latest preview Python SDK (version 2.0.0b4 or later) or the 2025-11-01-preview REST API version.
 
   ```bash
-  pip install azure-ai-projects azure-identity requests
+  pip install "azure-ai-projects>=2.0.0b4" requests
   ```
 
 ### Authentication and permissions
@@ -258,11 +256,12 @@ Azure AI Search knowledge bases expose the `knowledge_base_retrieve` MCP tool fo
     Create the agent by sending a `POST` request to Foundry Agent Service:
 
     ```HTTP
-    POST {project_endpoint}/agents/{agent_name}/versions?api-version=2025-11-15-preview
+    POST {project_endpoint}/agents?api-version=v1
     Authorization: Bearer {foundry_access_token}
     Content-Type: application/json
 
     {
+      "name": "{agent_name}",
       "definition": {
         "model": "{deployed_llm}",
         "instructions": "\nYou are a helpful assistant that must use the knowledge base to answer all the questions from user. You must never answer from your own knowledge under any circumstances.\nEvery answer must always provide annotations for using the MCP knowledge base tool and render them as: `【message_idx:search_idx†source_name】`\nIf you cannot find the answer in the provided knowledge base you must respond with \"I don't know\".\n",
@@ -368,7 +367,7 @@ Create a conversation session and send a user query to the agent. When appropria
             Why do suburban belts display larger December brightening than urban cores even though absolute light levels are higher downtown?
             Why is the Phoenix nighttime street grid is so sharply visible from space, whereas large stretches of the interstate between midwestern cities remain comparatively dim?
         """,
-        extra_body = {"agent": {"name": agent.name, "type": "agent_reference"}},
+        extra_body = {"agent_reference": {"name": agent.name, "type": "agent_reference"}},
     )
 
     print(f"Response: {response.output_text}")
@@ -397,7 +396,7 @@ Create a conversation session and send a user query to the agent. When appropria
 
     ```HTTP
     ### Create conversation
-    POST {project_endpoint}/openai/conversations?api-version=2025-11-15-preview
+    POST {project_endpoint}/openai/v1/conversations
     Authorization: Bearer {foundry_access_token}
     Content-Type: application/json
 
@@ -408,16 +407,16 @@ Create a conversation session and send a user query to the agent. When appropria
 
     ```HTTP
     ### Send request to trigger the MCP tool
-    POST {project_endpoint}/openai/responses?api-version=2025-11-15-preview
+    POST {project_endpoint}/openai/v1/responses
     Authorization: Bearer {foundry_access_token}
     Content-Type: application/json
 
     {
         "conversation": "{conversation_id}",
         "input": "\nWhy do suburban belts display larger December brightening than urban cores even though absolute light levels are higher downtown?\nWhy is the Phoenix nighttime street grid is so sharply visible from space, whereas large stretches of the interstate between midwestern cities remain comparatively dim?\n",
-        "agent": {
-            "name": "{agent_name}",
-            "type": "agent_reference"
+        "agent_reference": {
+            "type": "agent_reference",
+            "name": "{agent_name}"
         }
     }
     ```
@@ -446,7 +445,7 @@ Create a conversation session and send a user query to the agent. When appropria
 <CodeGroup>
 ```python Python
     # Delete the agent
-    project_client.agents.delete_version(agent.name, agent.version)
+    project_client.agents.delete_version(agent_name=agent.name, agent_version=agent.version)
     print(f"Agent '{agent.name}' version '{agent.version}' deleted successfully.")
 
     # Delete the project connection (Azure Resource Manager)
@@ -470,7 +469,7 @@ Create a conversation session and send a user query to the agent. When appropria
 
 ```HTTP REST
     ### Delete the agent
-    DELETE {project_endpoint}/agents/{agent_name}?api-version=2025-11-15-preview
+    DELETE {project_endpoint}/agents/{agent_name}?api-version=v1
     Authorization: Bearer {foundry_access_token}
 
     ### Delete the project connection

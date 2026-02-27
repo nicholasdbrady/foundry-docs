@@ -1,10 +1,8 @@
 ---
 title: "Use the computer use tool for agents"
 description: "Create agents that interpret screenshots and automate UI actions like clicking and typing. Includes Python, C#, and TypeScript SDK samples for Foundry Agent Service."
-sidebarTitle: "Use the computer use tool for agents"
 ---
 # Use the computer use tool for agents (Preview)
-
 <Info>
 Items marked (preview) in this article are currently in public preview. This preview is provided without a service-level agreement, and we don't recommend it for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
 </Info>
@@ -19,16 +17,22 @@ This guide shows how to integrate the computer use tool into an application loop
 
 ### Usage support
 
+✔️ (GA) indicates general availability, ✔️ (Preview) indicates public preview, and a dash (-) indicates the feature isn't available.
+
 | Microsoft Foundry support | Python SDK | C# SDK | JavaScript SDK | Java SDK | REST API | Basic agent setup | Standard agent setup |
-|---------|---------|---------|---------|---------|---------|---------|---------|
-| ✔️ | ✔️ | ✔️ | ✔️ | - | - | ✔️ | ✔️ |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| ✔️ | ✔️ (Preview) | ✔️ (Preview) | ✔️ (Preview) | - | - | ✔️ | ✔️ |
+
+<Note>
+The Java SDK and REST API do not currently support the Computer Use tool. Use the Python, C#, or TypeScript/JavaScript SDKs.
+</Note>
 
 ## Prerequisites
 
 - An Azure subscription. [Create one for free](https://azure.microsoft.com/free/).
 - A [basic or standard agent environment](/setup/environment-setup).
 - The latest prerelease SDK package:
-  - **Python**: `azure-ai-projects>=2.0.0b1`, `azure-identity`, `python-dotenv`
+  - **Python**: `azure-ai-projects>=2.0.0b4`, `python-dotenv`
   - **C#/.NET**: `Azure.AI.Agents.Persistent` (prerelease)
   - **TypeScript**: `@azure/ai-projects` v2-beta, `@azure/identity`
 - Access to the `computer-use-preview` model. See [Request access](#request-access) below.
@@ -93,7 +97,7 @@ After Microsoft grants access, you need to create a deployment for the model.
 Use the computer use tool on virtual machines with no access to sensitive data or critical resources. For more information about the intended uses, capabilities, limitations, risks, and considerations when choosing a use case, see the [Azure OpenAI transparency note](/responsible-ai/transparency-note#risk-and-limitations-of-computer-use-preview).
 </Warning>
 
-To run this code, you need the latest prerelease package. See the [quickstart](/get-started/get-started-code) for details.
+To run this code, you need the latest prerelease package. See the [quickstart](/get-started/get-started-code#install-and-authenticate) for details.
 
 ### Screenshot initialization for computer use tool execution
 
@@ -104,7 +108,7 @@ import os
 from dotenv import load_dotenv
 from azure.identity import DefaultAzureCredential
 from azure.ai.projects import AIProjectClient
-from azure.ai.projects.models import AgentReference, PromptAgentDefinition, ComputerUsePreviewTool
+from azure.ai.projects.models import PromptAgentDefinition, ComputerUsePreviewTool
 
 # Import shared helper functions
 from computer_use_util import (
@@ -180,7 +184,7 @@ with project_client:
                 ],
             }
         ],
-        extra_body={"agent": AgentReference(name=agent.name).as_dict()},
+        extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
         truncation="auto",
     )
 
@@ -189,7 +193,7 @@ with project_client:
 
 ### Perform multiple iterations
 
-Make sure you review each iteration and action. The following code sample shows a basic API request. After you send the initial API request, perform a loop where your application code carries out the specified action. Send a screenshot with each turn so the model can evaluate the updated state of the environment. For an example integration for a similar API, see the [Azure OpenAI documentation](../../../../openai/how-to/computer-use.md#playwright-integration).
+Make sure you review each iteration and action. The following code sample shows a basic API request. After you send the initial API request, perform a loop where your application code carries out the specified action. Send a screenshot with each turn so the model can evaluate the updated state of the environment. For an example integration for a similar API, see the [Azure OpenAI documentation](../../../../foundry-classic/openai/how-to/computer-use.md#playwright-integration).
 
 ```python
 
@@ -236,7 +240,7 @@ while True:
                 },
             }
         ],
-        extra_body={"agent": AgentReference(name=agent.name).as_dict()},
+        extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
         truncation="auto",
     )
 
@@ -659,7 +663,7 @@ The tool doesn't directly control a device. Your application executes each reque
 
 ## Differences between browser automation and computer use
 
-The following table lists some of the differences between the computer use tool and [browser automation](../../../../agents/how-to/tools/browser-automation.md) tool.
+The following table lists some of the differences between the computer use tool and [browser automation](/agents/tools/browser-automation) tool.
 
 | Feature                        | Browser Automation          | Computer use tool          |
 |--------------------------------|-----------------------------|----------------------------|

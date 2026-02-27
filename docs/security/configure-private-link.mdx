@@ -1,21 +1,19 @@
 ---
 title: "How to configure a private link for Microsoft Foundry projects"
 description: "Learn how to configure a private link for Microsoft Foundry projects. A private link is used to secure communication with the Microsoft Foundry."
-sidebarTitle: "How to configure a private link for Microsoft Foundry projects"
 ---
 # How to configure a private link for Microsoft Foundry (Foundry projects)
-
 <Tip>
-An alternate hub-focused version of this article is available: [How to configure a private link for a Microsoft Foundry hub](hub-configure-private-link.md).
+An alternate hub-focused version of this article is available: [How to configure a private link for a Microsoft Foundry hub](../../foundry-classic/how-to/hub-configure-private-link.md).
 </Tip>
 
 When you use a Foundry project, you can use a private link to secure communication with your project. This article describes how to establish a private connection to your project using a private link. 
 
-<Note>
-End-to-end network isolation isn't supported in the new Foundry portal experience. Use the classic Foundry portal experience or the SDK or CLI to securely access your Foundry projects when network isolation is enabled. For more on limitations with private networking in Foundry, see [limitations](#limitations).
-</Note>
-
 ## Prerequisites
+
+<Info>
+End-to-end network isolation isn't supported in the new Foundry portal experience. Use the classic Foundry portal experience or the SDK or CLI to securely access your Foundry projects when network isolation is enabled. For more on limitations with private networking in Foundry, see [limitations](#limitations).
+</Info>
 
 - An existing Azure virtual network and subnet to create the private endpoint in.
 - Azure permissions to create and approve private endpoint connections:
@@ -27,7 +25,7 @@ End-to-end network isolation isn't supported in the new Foundry portal experienc
 Don't use the 172.17.0.0/16 IP address range for your virtual network. This range is the default subnet range used by the Docker bridge network on-premises.
 </Info>
 
-## Securely connect to Foundry
+## Choose a secure connection method
 
 To connect to Foundry secured by a virtual network, use one of these methods:
 
@@ -65,10 +63,6 @@ In the portal UI, the target to which you create the private endpoint might be l
 
     - From **Basics**, select the same **Region** as your virtual network.
     - From the **Virtual Network** form, select the virtual network and subnet that you want to connect to.
-
-<Note>
-The portal refers to the private endpoint target as an "account" or "resource". Choose your Foundry resource as the target.
-</Note>
 
 1. After you populate the forms with any other network configurations you require, use the **Review + create** tab to review your settings and select **Create** to create the private endpoint.
 
@@ -161,9 +155,8 @@ Grant networking access to trusted Azure services by creating a network rule exc
 
 - You must deploy the private endpoint in the same region and subscription as the virtual network.
 - Only private endpoints in an **Approved** state can send traffic to a private-link resource.
-- End-to-end network isolation in Foundry is not support in the new Foundry portal experience. End-to-end network isolation in Foundry is not supported for the new version of the Agent service. Use the classic Foundry portal experience with the current version of Agent service to securely access your Foundry projects when network isolation is enabled.
-- When you use a network isolated Foundry, you cannot use private MCP servers deployed in the same virtual network. You can only use publicly accessible MCP servers.
-- Hosted Agents in Microsoft Foundry are not supported with end-to-end network isolation. 
+- End-to-end network isolation in Foundry is not supported in the new Foundry portal experience. End-to-end network isolation in Foundry is not supported for the new version of the Agent service. Use the classic Foundry portal experience with the current version of Agent service to securely access your Foundry projects when network isolation is enabled.
+- Hosted Agents in Microsoft Foundry are not supported with end-to-end network isolation.
 
 For Agent Service network isolation scenarios (including network injection, end-to-end isolation, and limitations), see [How to use a virtual network with the Azure AI Agent Service](https://learn.microsoft.com/azure/ai-services/agents/how-to/virtual-networks). 
 
@@ -184,8 +177,17 @@ Network-secured Standard Agents and evaluations support full network isolation a
 To secure egress (outbound) traffic through network injection, configure an Azure Firewall or another firewall. This configuration helps inspect and control outbound traffic before it leaves your virtual network.
 
 <Frame>
-  <img src="/images/hub-spoke-network.png" alt="Diagram of the hub and spoke network isolation for Foundry projects and agents." />
+  <img src="/images/network-diagram-agents.png" alt="Diagram of the firewall configuration for egress traffic from Foundry projects and agents." />
 </Frame>
+
+## Troubleshoot private link issues
+
+If you experience connectivity problems after setting up a private endpoint, try these steps:
+
+- **Private endpoint stuck in Pending state**: Verify that you have **Contributor** or **Owner** permissions on the Foundry project resource. If you don't, ask the resource owner to approve the connection from the **Networking** > **Private endpoint connections** tab.
+- **DNS resolution returns a public IP address**: Confirm that a private DNS zone exists for the `privatelink` subdomain and is linked to your virtual network. Run `nslookup <your-foundry-endpoint-hostname>` from inside the virtual network to verify it resolves to the private IP.
+- **Connection times out on port 443**: Check that your network security group (NSG) rules allow outbound traffic to the private endpoint IP on port 443. Also verify that no firewall is blocking the connection.
+- **Custom DNS server not resolving**: If you use a custom DNS server, ensure it forwards queries for the `privatelink` subdomain to the Azure private DNS zone. See [DNS configuration](#dns-configuration) for details.
 
 ## Next steps
 
