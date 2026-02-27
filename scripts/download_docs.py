@@ -14,7 +14,7 @@ from pathlib import Path, PurePosixPath
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 REPO_OWNER = "MicrosoftDocs"
-REPO_NAME = "azure-ai-docs"
+REPO_NAME = "azure-ai-docs-pr"
 RAW_BASE = f"https://raw.githubusercontent.com/{REPO_OWNER}/{REPO_NAME}/main"
 DOCS_DIR = Path("docs")
 RAW_DIR = Path("raw_docs")  # raw downloaded files before conversion
@@ -30,8 +30,12 @@ def download_file(source_path: str, dest_path: Path) -> bool:
     dest_path.parent.mkdir(parents=True, exist_ok=True)
 
     try:
+        cmd = ["curl", "-sL", "-o", str(dest_path), "-w", "%{http_code}", url]
+        gh_token = os.environ.get("GH_TOKEN")
+        if gh_token:
+            cmd[1:1] = ["-H", f"Authorization: token {gh_token}"]
         result = subprocess.run(
-            ["curl", "-sL", "-o", str(dest_path), "-w", "%{http_code}", url],
+            cmd,
             capture_output=True, text=True, timeout=30
         )
         http_code = result.stdout.strip()

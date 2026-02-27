@@ -101,7 +101,7 @@ def main():
             ]
         },
         "footerSocials": {
-            "github": "https://github.com/MicrosoftDocs/azure-ai-docs"
+            "github": "https://github.com/MicrosoftDocs/azure-ai-docs-pr"
         }
     }
 
