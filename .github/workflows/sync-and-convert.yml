@@ -100,7 +100,8 @@ jobs:
       - name: Check for changes
         id: changes
         run: |
-          git add docs/ docs.json manifest.json path_map.json raw_docs/code_samples/
+          git add docs/ docs.json manifest.json path_map.json
+          git add -f raw_docs/code_samples/ 2>/dev/null || true
           if git diff --staged --quiet; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
             echo "No upstream changes detected"
