@@ -1,10 +1,10 @@
 # Attribution
 
-This project contains documentation derived from [MicrosoftDocs/azure-ai-docs](https://github.com/MicrosoftDocs/azure-ai-docs), which is licensed under the [Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/) license.
+This project contains documentation derived from [MicrosoftDocs/azure-ai-docs-pr](https://github.com/MicrosoftDocs/azure-ai-docs-pr), which is licensed under the [Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/) license.
 
 ## Original Source
 
-- **Repository**: https://github.com/MicrosoftDocs/azure-ai-docs
+- **Repository**: https://github.com/MicrosoftDocs/azure-ai-docs-pr
 - **License**: CC BY 4.0
 - **Copyright**: © Microsoft Corporation
 

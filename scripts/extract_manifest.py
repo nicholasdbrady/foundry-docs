@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Extract manifest from Microsoft Foundry TOC files.
 
-Parses the root toc.yml and all sub-TOC YAML files from MicrosoftDocs/azure-ai-docs,
+Parses the root toc.yml and all sub-TOC YAML files from MicrosoftDocs/azure-ai-docs-pr,
 resolves paths, deduplicates, and outputs manifest.json.
 """
 
@@ -15,8 +15,8 @@ from urllib.parse import urlparse
 import yaml
 
 REPO_OWNER = "MicrosoftDocs"
-REPO_NAME = "azure-ai-docs"
-ROOT_TOC_PATH = "articles/ai-foundry/default/toc.yml"
+REPO_NAME = "azure-ai-docs-pr"
+ROOT_TOC_PATH = "articles/foundry/toc.yml"
 
 # Section name → output directory mapping
 SECTION_SLUG_MAP = {
@@ -169,7 +169,8 @@ def scan_doc_for_images(source_path: str) -> list[str]:
         img_path = match.group(1)
         if img_path.startswith('/azure/'):
             # Absolute MS Learn path — convert to repo-relative articles/ path
-            images.append('articles' + img_path)
+            # /azure/foundry/media/img.png → articles/foundry/media/img.png
+            images.append('articles/' + img_path[len('/azure/'):])
         else:
             resolved = resolve_path(img_path, doc_dir)
             images.append(resolved)
@@ -179,7 +180,7 @@ def scan_doc_for_images(source_path: str) -> list[str]:
         if img_path.startswith('http') or img_path.startswith('~/'):
             continue
         if img_path.startswith('/azure/'):
-            images.append('articles' + img_path)
+            images.append('articles/' + img_path[len('/azure/'):])
         else:
             resolved = resolve_path(img_path, doc_dir)
             images.append(resolved)

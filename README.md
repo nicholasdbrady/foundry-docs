@@ -4,7 +4,7 @@ A FastMCP server that provides searchable Microsoft Foundry documentation for AI
 
 ## Overview
 
-This project extracts ~250 Microsoft Foundry docs from [MicrosoftDocs/azure-ai-docs](https://github.com/MicrosoftDocs/azure-ai-docs), converts them from Microsoft Learn markdown to Mintlify MDX format, and serves them via a [FastMCP](https://github.com/jlowin/fastmcp) server.
+This project extracts ~250 Microsoft Foundry docs from [MicrosoftDocs/azure-ai-docs-pr](https://github.com/MicrosoftDocs/azure-ai-docs-pr), converts them from Microsoft Learn markdown to Mintlify MDX format, and serves them via a [FastMCP](https://github.com/jlowin/fastmcp) server.
 
 ## Quick Start
 
@@ -130,4 +130,4 @@ Default regression gate:
 
 ## Attribution
 
-Documentation content is derived from Microsoft's azure-ai-docs repository under CC BY 4.0. See [ATTRIBUTION.md](ATTRIBUTION.md).
+Documentation content is derived from Microsoft's azure-ai-docs-pr repository under CC BY 4.0. See [ATTRIBUTION.md](ATTRIBUTION.md).
