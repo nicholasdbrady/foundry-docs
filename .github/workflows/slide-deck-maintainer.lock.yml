@@ -28,7 +28,7 @@
 #     - shared/mcp/foundry-docs.md
 #     - shared/mood.md
 #
-# gh-aw-metadata: {"schema_version":"v1","frontmatter_hash":"11e933f788c458c828ee0f07507d0369ce3ce47334b20a90cfddb1d8e359185f","compiler_version":"v0.50.7"}
+# gh-aw-metadata: {"schema_version":"v1","frontmatter_hash":"e39ec88e4fce9f36415f62689a9be0b4a47c312853527194fdf016926756f846","compiler_version":"v0.50.7"}
 
 name: "Slide Deck Maintainer"
 "on":
@@ -36,9 +36,6 @@ name: "Slide Deck Maintainer"
   - cron: "11 9 * * 1"
     # Friendly format: weekly on monday around 10:00 (scattered)
   # skip-if-match: is:pr is:open in:title "[slides]" # Skip-if-match processed as search check in pre-activation job
-  # skip-if-no-match: # Skip-if-no-match processed as search check in pre-activation job
-    # min: 1
-    # query: is:pr is:merged label:docs-vnext merged:>=2026-01-01
   workflow_dispatch:
     inputs:
       focus:
@@ -1175,7 +1172,7 @@ jobs:
   pre_activation:
     runs-on: ubuntu-slim
     outputs:
-      activated: ${{ ((steps.check_membership.outputs.is_team_member == 'true') && (steps.check_skip_if_match.outputs.skip_check_ok == 'true')) && (steps.check_skip_if_no_match.outputs.skip_no_match_check_ok == 'true') }}
+      activated: ${{ (steps.check_membership.outputs.is_team_member == 'true') && (steps.check_skip_if_match.outputs.skip_check_ok == 'true') }}
       matched_command: ''
     steps:
       - name: Setup Scripts
@@ -1206,19 +1203,6 @@ jobs:
             const { setupGlobals } = require('/opt/gh-aw/actions/setup_globals.cjs');
             setupGlobals(core, github, context, exec, io);
             const { main } = require('/opt/gh-aw/actions/check_skip_if_match.cjs');
-            await main();
-      - name: Check skip-if-no-match query
-        id: check_skip_if_no_match
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
-        env:
-          GH_AW_SKIP_QUERY: "is:pr is:merged label:docs-vnext merged:>=2026-01-01"
-          GH_AW_WORKFLOW_NAME: "Slide Deck Maintainer"
-          GH_AW_SKIP_MIN_MATCHES: "1"
-        with:
-          script: |
-            const { setupGlobals } = require('/opt/gh-aw/actions/setup_globals.cjs');
-            setupGlobals(core, github, context, exec, io);
-            const { main } = require('/opt/gh-aw/actions/check_skip_if_no_match.cjs');
             await main();
 
   safe_outputs:
