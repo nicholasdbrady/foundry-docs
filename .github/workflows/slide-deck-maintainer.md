@@ -2,8 +2,7 @@
 name: Slide Deck Maintainer
 description: Maintains the foundry-docs stakeholder slide deck with latest project stats and capabilities
 on:
-  schedule:
-    - cron: "0 16 * * 1-5"
+  schedule: weekly on monday around 10:00
   workflow_dispatch:
     inputs:
       focus:
@@ -11,14 +10,16 @@ on:
         required: false
         default: 'global-sweep'
   skip-if-match: 'is:pr is:open in:title "[slides]"'
-  stop-after: "+30d"
+  skip-if-no-match:
+    query: 'is:pr is:merged label:docs-vnext merged:>=2026-01-01'
+    min: 1
 permissions:
   contents: read
   pull-requests: read
   issues: read
 tracker-id: slide-deck-maintainer
 engine: copilot
-timeout-minutes: 45
+timeout-minutes: 20
 tools:
   cache-memory: true
   playwright:
@@ -54,8 +55,11 @@ steps:
     uses: actions/setup-node@v6
     with:
       node-version: "24"
+  - name: Install foundry-docs MCP server
+    run: pip install -e .
 imports:
   - shared/mood.md
+  - shared/mcp/foundry-docs.md
 ---
 
 # Slide Deck Maintenance Agent
@@ -90,7 +94,7 @@ cat docs-vnext/slides/index.md 2>/dev/null || echo "NEEDS_CREATION"
 If slides don't exist, create an initial stakeholder deck covering:
 - What is foundry-docs (MCP server for Microsoft Foundry documentation)
 - The agentic documentation workflow approach
-- Key metrics (267 MDX docs, daily sync, search testbench)
+- Key metrics (count current MDX docs, active workflows, and search testbench stats dynamically)
 - The docs-vnext strategy (canonical vs. agent-improved)
 - Active agentic workflows and their impact
 
@@ -120,7 +124,7 @@ Use Playwright to check each slide for content overflow.
 
 ## Step 4: Scan Repository Content
 
-Use cache-memory to rotate through sources:
+Use the `foundry-docs` MCP server and cache-memory to gather current data:
 
 ### A. Project Metrics (25%)
 - Count MDX docs: `find docs-vnext -name '*.mdx' | wc -l`
