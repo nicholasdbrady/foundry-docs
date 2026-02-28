@@ -1,6 +1,6 @@
 ---
 name: Slide Deck Maintainer
-description: Maintains the foundry-docs stakeholder slide deck with latest project stats and capabilities
+description: Maintains the foundry-docs stakeholder slide deck as a PPTX presentation
 on:
   schedule: weekly on monday around 10:00
   workflow_dispatch:
@@ -22,34 +22,33 @@ engine: copilot
 timeout-minutes: 20
 tools:
   cache-memory: true
-  playwright:
-    version: "v1.56.1"
   edit:
   bash:
     - "npm install*"
-    - "npx @marp-team/marp-cli*"
-    - "npx http-server*"
-    - "curl*"
-    - "kill*"
-    - "lsof*"
+    - "npm list*"
+    - "node *"
+    - "pip install*"
+    - "python *"
     - "ls*"
-    - "pwd*"
-    - "cd*"
+    - "cat*"
     - "grep*"
     - "find*"
-    - "cat*"
     - "head*"
     - "tail*"
     - "git"
     - "wc*"
+    - "mkdir*"
+    - "cp*"
 safe-outputs:
   create-pull-request:
     title-prefix: "[slides] "
-    expires: 1d
+    expires: 3d
   noop:
 network:
   allowed:
+    - defaults
     - node
+    - python
 steps:
   - name: Setup Node.js
     uses: actions/setup-node@v6
@@ -64,7 +63,7 @@ imports:
 
 # Slide Deck Maintenance Agent
 
-You are a slide deck maintenance specialist responsible for keeping the foundry-docs stakeholder presentation up-to-date and accurate.
+You are a slide deck maintenance specialist responsible for creating and keeping the foundry-docs stakeholder PPTX presentation up-to-date and accurate.
 
 ## Context
 
@@ -72,89 +71,113 @@ You are a slide deck maintenance specialist responsible for keeping the foundry-
 - **Workflow run**: #${{ github.run_number }}
 - **Focus mode**: ${{ inputs.focus }}
 - **Working directory**: ${{ github.workspace }}
+- **Output file**: `docs-vnext/slides/foundry-docs-overview.pptx`
 
 ## Your Mission
 
-Maintain the slide deck at `docs-vnext/slides/index.md` by:
-1. Scanning repository content for sources of truth
-2. Building slides with Marp
-3. Using Playwright to detect visual layout issues
-4. Making minimal edits to keep slides accurate
+Create or update a stakeholder slide deck at `docs-vnext/slides/foundry-docs-overview.pptx` using PptxGenJS. Follow the pptx skill instructions in `.agents/skills/pptx/` for design guidance.
 
-## Step 1: Check if Slides Exist
+## Step 1: Read the PPTX Skill
+
+Read the skill documentation for design guidance and technical reference:
 
 ```bash
-if [ ! -f docs-vnext/slides/index.md ]; then
-  echo "Slides do not exist yet - creating initial deck"
+cat .agents/skills/pptx/SKILL.md
+cat .agents/skills/pptx/pptxgenjs.md
+```
+
+## Step 2: Install Dependencies
+
+```bash
+npm install pptxgenjs react react-dom react-icons sharp
+pip install "markitdown[pptx]"
+```
+
+## Step 3: Check if Slides Exist
+
+```bash
+if [ ! -f docs-vnext/slides/foundry-docs-overview.pptx ]; then
+  echo "NEEDS_CREATION"
   mkdir -p docs-vnext/slides
+else
+  echo "EXISTS — analyzing current deck"
+  python -m markitdown docs-vnext/slides/foundry-docs-overview.pptx
 fi
-cat docs-vnext/slides/index.md 2>/dev/null || echo "NEEDS_CREATION"
 ```
 
-If slides don't exist, create an initial stakeholder deck covering:
-- What is foundry-docs (MCP server for Microsoft Foundry documentation)
-- The agentic documentation workflow approach
-- Key metrics (count current MDX docs, active workflows, and search testbench stats dynamically)
-- The docs-vnext strategy (canonical vs. agent-improved)
-- Active agentic workflows and their impact
+## Step 4: Gather Current Project Data
 
-## Step 2: Build Slides with Marp
+Collect live metrics — never hardcode numbers:
 
 ```bash
-cd ${{ github.workspace }}
-npx @marp-team/marp-cli docs-vnext/slides/index.md --html --allow-local-files -o /tmp/slides-preview.html
+echo "=== MDX Docs ===" && find docs-vnext -name '*.mdx' | wc -l
+echo "=== Agentic Workflows ===" && find .github/workflows -name '*.md' | wc -l
+echo "=== Slash Commands ===" && grep -l 'slash_command' .github/workflows/*.md | wc -l
+echo "=== Workflow Chains ===" && grep -l 'workflow_run' .github/workflows/*.md | wc -l
+echo "=== Source Code ===" && find foundry_docs_mcp -name '*.py' | wc -l
+echo "=== Scripts ===" && find scripts -name '*.py' | wc -l
 ```
 
-## Step 3: Detect Layout Issues
+Use the `foundry-docs` MCP server for documentation structure:
+- `list_sections()` — section names and page counts
+- `search_docs("agent")` — sample search quality
 
-Start a local server and use Playwright to detect overflow:
+## Step 5: Create or Update the Slide Deck
+
+Write a Node.js script at `/tmp/build-slides.js` that uses PptxGenJS to generate the deck.
+
+### Required Slides
+
+1. **Title Slide** — "Foundry-Docs: Agentic Documentation for Microsoft Foundry"
+2. **What is Foundry-Docs** — MCP server serving Foundry documentation, agentic workflow approach
+3. **Architecture** — docs/ → docs-vnext pipeline, upstream sync, agent improvements
+4. **Documentation Coverage** — section breakdown with page counts (from live data)
+5. **Agentic Workflows** — count, categories (monitoring, testing, updating, slash commands)
+6. **Trigger Coverage** — event-driven triggers in use (schedule, push, PR, issues, dispatch, etc.)
+7. **Quality Pipeline** — auditor, noob tester, multi-device tester, PR reviewer
+8. **Community Integration** — microsoft-foundry/discussions dispatch, foundry-samples monitoring
+9. **SDK Monitoring** — 4 SDK repos tracked, changelog detection, docs impact assessment
+10. **Key Metrics** — live numbers: MDX docs, workflows, slash commands, docs-vnext improvements
+11. **What's Next** — roadmap items, planned improvements
+
+### Design Guidelines (from PPTX skill)
+
+- Pick a bold color palette — suggestion: **Teal Trust** (`028090` teal, `00A896` seafoam, `02C39A` mint) or **Midnight Executive** (`1E2761` navy, `CADCFC` ice blue)
+- Dark background for title + conclusion slides, light for content
+- Every slide needs a visual element — icons, charts, or shapes
+- Vary layouts across slides — don't repeat the same format
+- Use icons from react-icons for visual polish
+- 36-44pt slide titles, 14-16pt body text
+
+### Build the Deck
 
 ```bash
-cd /tmp
-npx http-server -p 8080 > /tmp/server.log 2>&1 &
-echo $! > /tmp/server.pid
-
-for i in {1..20}; do
-  curl -s http://localhost:8080/slides-preview.html > /dev/null && echo "Ready!" && break
-  sleep 1
-done
+node /tmp/build-slides.js
 ```
 
-Use Playwright to check each slide for content overflow.
+Output to: `docs-vnext/slides/foundry-docs-overview.pptx`
 
-## Step 4: Scan Repository Content
+## Step 6: QA the Deck
 
-Use the `foundry-docs` MCP server and cache-memory to gather current data:
-
-### A. Project Metrics (25%)
-- Count MDX docs: `find docs-vnext -name '*.mdx' | wc -l`
-- Count agentic workflows: `find .github/workflows -name '*.md' | wc -l`
-- Check recent workflow runs and merge rates
-
-### B. Source Code (25%)
-- Scan `foundry_docs_mcp/` for MCP server capabilities
-- Check `scripts/` for pipeline features
-
-### C. Documentation Quality (50%)
-- Review docs-vnext for coverage gaps
-- Check glossary completeness
-- Verify getting started flow quality
-
-## Step 5: Make Minimal Edits
-
-Only edit when:
-- Statistics are outdated
-- New capabilities should be highlighted
-- Content causes layout overflow
-- Slides are factually incorrect
-
-## Step 6: Cleanup
+Extract text to verify content:
 
 ```bash
-kill $(cat /tmp/server.pid) 2>/dev/null || true
+python -m markitdown docs-vnext/slides/foundry-docs-overview.pptx
 ```
 
-## Step 7: Report
+Check that:
+- All slides have content (no empty slides)
+- Metrics match the live data gathered in Step 4
+- No placeholder text remains
 
-If no changes needed, call `noop` with a summary.
-If changes were made, create a PR with `[slides]` prefix.
+## Step 7: Create PR or Noop
+
+If the deck was created or updated, create a PR with `[slides]` prefix.
+If no changes were needed (deck is current), call `noop`.
+
+## Guidelines
+
+- **Dynamic data only** — never hardcode metrics, always compute from repo
+- **One deck file** — `docs-vnext/slides/foundry-docs-overview.pptx`
+- **Professional quality** — this is for stakeholders, follow the PPTX skill design guidelines
+- **Include the build script** — commit `/tmp/build-slides.js` to `docs-vnext/slides/build-slides.js` so the deck can be regenerated
