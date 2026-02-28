@@ -15,6 +15,7 @@ strict: true
 network:
   allowed:
     - defaults
+    - hobbyist-e43fa225.mintlify.app
     - learn.microsoft.com
     - github.com
 tools:
@@ -47,13 +48,14 @@ You are the Documentation Auditor — an automated monitor that validates the do
 
 ## Mission
 
-Verify that docs-vnext documentation is accurate, code examples are correct, and external links (especially to learn.microsoft.com) are valid.
+Verify that docs-vnext documentation is accurate, code examples are correct, and links are valid — both internal navigation on the deployed Mintlify site and external links to learn.microsoft.com.
 
 ## Context
 
 - **Repository**: ${{ github.repository }}
 - **Run ID**: ${{ github.run_id }}
 - **Documentation directory**: `docs-vnext/`
+- **Deployed docs site**: `https://hobbyist-e43fa225.mintlify.app/`
 
 ## Audit Process
 
@@ -80,17 +82,18 @@ For each selected file:
    - Outdated endpoint URLs
 4. Verify import statements reference real packages
 
-### Phase 3: Validate External Links
+### Phase 3: Validate Links via Deployed Site
 
-For each selected file:
+Use Playwright to check the deployed docs site at `https://hobbyist-e43fa225.mintlify.app/`:
 
-1. Extract external links using grep
-2. Check links to `learn.microsoft.com` using Playwright:
-   - Navigate to the URL
-   - Verify HTTP 200 response
-   - Verify the page contains expected content (not a 404 page)
-3. Check links to `github.com` repositories
-4. Flag any broken or redirected links
+For each selected file, derive the page URL from the file path (e.g., `docs-vnext/agents/development/overview.mdx` → `https://hobbyist-e43fa225.mintlify.app/agents/development/overview`):
+
+1. Navigate to the page URL
+2. Verify HTTP 200 response (not a 404 or error page)
+3. Take a screenshot if the page fails to load
+4. Check that internal navigation links on the page resolve correctly
+5. Extract external links (to `learn.microsoft.com`, `github.com`, etc.) from the page and spot-check 3-5 for validity
+6. Flag any broken, redirected, or 404 links
 
 ### Phase 4: Content Accuracy Checks
 

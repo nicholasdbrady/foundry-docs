@@ -20,20 +20,13 @@ engine:
   id: claude
   max-turns: 30
 strict: true
-timeout-minutes: 30
+timeout-minutes: 20
 tools:
   playwright:
     version: "v1.56.1"
   bash:
-    - "npm install*"
-    - "npx mintlify*"
-    - "curl*"
-    - "kill*"
-    - "lsof*"
-    - "ls*"
-    - "pwd*"
-    - "cd*"
     - "cat *"
+    - "ls*"
 safe-outputs:
   upload-asset:
   create-issue:
@@ -43,50 +36,36 @@ safe-outputs:
 
 network:
   allowed:
-    - node
+    - defaults
+    - hobbyist-e43fa225.mintlify.app
+    - learn.microsoft.com
+    - github.com
 
 imports:
   - shared/mood.md
-  - shared/docs-server-lifecycle.md
   - shared/reporting.md
 ---
 
 # Multi-Device Documentation Testing
 
-You are a documentation testing specialist. Test the docs-vnext Mintlify documentation site across multiple devices and form factors.
+You are a documentation testing specialist. Test the deployed docs-vnext Mintlify documentation site across multiple devices and form factors.
 
 ## Context
 
 - Repository: ${{ github.repository }}
 - Devices to test: ${{ inputs.devices }}
-- Documentation directory: ${{ github.workspace }}/docs-vnext
+- Documentation site: https://hobbyist-e43fa225.mintlify.app/
 
-## Step 1: Build and Serve
-
-Follow the shared Documentation Server Lifecycle Management instructions to start the Mintlify dev server for docs-vnext.
-
-```bash
-cd ${{ github.workspace }}/docs-vnext
-npm install mintlify
-npx mintlify dev --port 3333 > /tmp/mintlify-server.log 2>&1 &
-echo $! > /tmp/mintlify-server.pid
-
-for i in {1..30}; do
-  curl -s http://localhost:3333/ > /dev/null && echo "Server ready!" && break
-  echo "Waiting... ($i/30)" && sleep 2
-done
-```
-
-## Step 2: Device Configuration
+## Step 1: Device Configuration
 
 **Mobile:** iPhone 12 (390x844), Pixel 5 (393x851), Galaxy S21 (360x800)
 **Tablet:** iPad (768x1024), iPad Pro 11 (834x1194)
 **Desktop:** HD (1366x768), FHD (1920x1080), 4K (2560x1440)
 
-## Step 3: Run Playwright Tests
+## Step 2: Run Playwright Tests
 
 For each device viewport, use Playwright MCP tools to:
-- Set viewport size and navigate to http://localhost:3333/
+- Set viewport size and navigate to https://hobbyist-e43fa225.mintlify.app/
 - Take screenshots
 - Test navigation, search, and interactive elements
 - Check for layout issues (overflow, truncation, broken layouts)
@@ -99,14 +78,14 @@ Key pages to test:
 - API/SDK reference
 - Setup & configuration
 
-## Step 4: Analyze Results
+## Step 3: Analyze Results
 
 Organize findings by severity:
 - 🔴 **Critical**: Blocks functionality or major accessibility issues
 - 🟡 **Warning**: Minor issues or potential problems
 - 🟢 **Passed**: Everything working as expected
 
-## Step 5: Report Results
+## Step 4: Report Results
 
 ### If NO Issues Found
 Call the `noop` tool to log completion.
@@ -118,10 +97,3 @@ Create a GitHub issue titled "🔍 Multi-Device Docs Testing Report - [Date]" wi
 - Critical issues (always visible)
 - Detailed results by device (in collapsible sections)
 - Recommendations
-
-## Step 6: Cleanup
-
-```bash
-kill $(cat /tmp/mintlify-server.pid) 2>/dev/null || true
-rm -f /tmp/mintlify-server.pid /tmp/mintlify-server.log
-```

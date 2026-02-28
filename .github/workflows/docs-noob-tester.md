@@ -11,19 +11,13 @@ permissions:
   issues: read
   pull-requests: read
 engine: copilot
-timeout-minutes: 30
+timeout-minutes: 15
 tools:
   playwright:
   bash:
-    - "npm install*"
-    - "npx mintlify*"
-    - "curl*"
-    - "kill*"
-    - "lsof*"
     - "cat *"
     - "find *"
     - "ls*"
-    - "pwd*"
 safe-outputs:
   upload-asset:
   create-discussion:
@@ -34,69 +28,55 @@ safe-outputs:
 network:
   allowed:
     - defaults
-    - node
+    - hobbyist-e43fa225.mintlify.app
+    - learn.microsoft.com
+    - github.com
 
 imports:
   - shared/mood.md
   - shared/reporting.md
-  - shared/docs-server-lifecycle.md
 ---
 
 # Documentation Noob Testing
 
-You are a brand new user trying to learn about Microsoft Foundry for the first time. Your task is to navigate through the docs-vnext documentation site, follow getting started guides, and identify any confusing, broken, or unclear steps.
+You are a brand new user trying to learn about Microsoft Foundry for the first time. Your task is to navigate through the deployed documentation site, follow getting started guides, and identify any confusing, broken, or unclear steps.
 
 ## Context
 
 - Repository: ${{ github.repository }}
-- Working directory: ${{ github.workspace }}
-- Documentation directory: ${{ github.workspace }}/docs-vnext
+- Documentation site: https://hobbyist-e43fa225.mintlify.app/
 
 ## Your Mission
 
-Act as a complete beginner who has never used Microsoft Foundry before. Build and navigate the documentation site, follow tutorials step-by-step, and document any issues you encounter.
+Act as a complete beginner who has never used Microsoft Foundry before. Navigate the live documentation site, follow tutorials step-by-step, and document any issues you encounter.
 
-## Step 1: Build and Serve Documentation Site
+## Step 1: Navigate Documentation as a Noob
 
-```bash
-cd ${{ github.workspace }}/docs-vnext
-npm install mintlify
-npx mintlify dev --port 3333 > /tmp/mintlify-server.log 2>&1 &
-echo $! > /tmp/mintlify-server.pid
+Using Playwright, navigate the deployed docs site as a complete beginner:
 
-for i in {1..30}; do
-  curl -s http://localhost:3333/ > /dev/null && echo "Server ready!" && break
-  echo "Waiting... ($i/30)" && sleep 2
-done
-```
-
-## Step 2: Navigate Documentation as a Noob
-
-Using Playwright, navigate as a complete beginner:
-
-1. **Visit the home page** at http://localhost:3333/
+1. **Visit the home page** at https://hobbyist-e43fa225.mintlify.app/
    - Take a screenshot
    - Is it clear what Microsoft Foundry does?
    - Can you find "Get Started" quickly?
 
-2. **Follow the Quickstart** at http://localhost:3333/get-started/quickstart-create-foundry-resources
+2. **Follow the Quickstart** at https://hobbyist-e43fa225.mintlify.app/get-started/quickstart-create-foundry-resources
    - Take screenshots of each section
    - Are prerequisites clear?
    - Are steps complete and unambiguous?
 
-3. **Explore Agent Development** at http://localhost:3333/agents/development/overview
+3. **Explore Agent Development** at https://hobbyist-e43fa225.mintlify.app/agents/development/overview
    - Is the agent development flow clear?
    - Are code examples runnable?
 
-4. **Check the SDK/API Reference** at http://localhost:3333/api-sdk/sdk-overview
+4. **Check the SDK/API Reference** at https://hobbyist-e43fa225.mintlify.app/api-sdk/sdk-overview
    - Are installation instructions clear?
    - Are there enough code examples?
 
-5. **Browse Setup & Configuration** at http://localhost:3333/setup/planning
+5. **Browse Setup & Configuration** at https://hobbyist-e43fa225.mintlify.app/setup/planning
    - Is the setup flow logical?
    - Are there missing steps?
 
-## Step 3: Identify Pain Points
+## Step 2: Identify Pain Points
 
 ### 🔴 Critical Issues (Block getting started)
 - Missing prerequisites or dependencies
@@ -115,7 +95,7 @@ Using Playwright, navigate as a complete beginner:
 - Good explanations
 - Logical flow
 
-## Step 4: Create Discussion Report
+## Step 3: Create Discussion Report
 
 Create a GitHub discussion titled "📚 Foundry Docs Noob Test Report - [Date]" with:
 
@@ -134,12 +114,7 @@ Create a GitHub discussion titled "📚 Foundry Docs Noob Test Report - [Date]" 
 ### Recommendations
 - Prioritized suggestions for improving the getting started experience
 
-## Step 5: Cleanup
-
-```bash
-kill $(cat /tmp/mintlify-server.pid) 2>/dev/null || true
-rm -f /tmp/mintlify-server.pid /tmp/mintlify-server.log
-```
+If no issues found, call `noop` instead.
 
 ## Guidelines
 
