@@ -27,7 +27,7 @@
 #   Imports:
 #     - shared/mood.md
 #
-# gh-aw-metadata: {"schema_version":"v1","frontmatter_hash":"942cc8468ae23d5f8d4544624f2079f0a53059ee55abd42a9efce8208cefe25c","compiler_version":"v0.50.7"}
+# gh-aw-metadata: {"schema_version":"v1","frontmatter_hash":"807811481b9fc3e0b386a6156b899431f4f7606b366cda2dd402330a47da8ca4","compiler_version":"v0.50.7"}
 
 name: "Slide Deck Maintainer"
 "on":
@@ -278,12 +278,21 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
+      - name: Setup Node.js
+        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Setup Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12'
       - name: Create gh-aw temp directory
         run: bash /opt/gh-aw/actions/create_gh_aw_tmp_dir.sh
-      - name: Setup Node.js
-        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6
-        with:
-          node-version: "24"
+      - name: Install pptxgenjs and dependencies
+        run: npm install pptxgenjs react react-dom react-icons sharp
+      - name: Install markitdown for QA
+        run: pip install "markitdown[pptx]"
 
       # Cache memory file share configuration from frontmatter processed below
       - name: Create cache-memory directory
