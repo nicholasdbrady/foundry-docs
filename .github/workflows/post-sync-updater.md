@@ -13,7 +13,7 @@ permissions:
   issues: read
   pull-requests: read
 
-engine: claude
+engine: copilot
 strict: true
 tracker-id: post-sync-updater
 

@@ -12,7 +12,7 @@ permissions:
   pull-requests: read
   issues: read
 
-engine: claude
+engine: copilot
 strict: true
 tracker-id: pr-docs-reviewer
 
