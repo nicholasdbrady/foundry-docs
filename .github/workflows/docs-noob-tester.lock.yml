@@ -25,11 +25,10 @@
 #
 # Resolved workflow manifest:
 #   Imports:
-#     - shared/docs-server-lifecycle.md
 #     - shared/mood.md
 #     - shared/reporting.md
 #
-# gh-aw-metadata: {"schema_version":"v1","frontmatter_hash":"a7929702362a6a5faeb2a090a45f3bf836fd7c760496142a9274dae0a3ad1a8d","stop_time":"2026-03-30 05:32:49","compiler_version":"v0.50.7"}
+# gh-aw-metadata: {"schema_version":"v1","frontmatter_hash":"201af7d59057c9c35edbf88ab5df4d878b4f14a188f958896ea81dec16912611","stop_time":"2026-03-30 05:32:49","compiler_version":"v0.50.7"}
 #
 # Effective stop-time: 2026-03-30 05:32:49
 
@@ -162,9 +161,6 @@ jobs:
           {{#runtime-import .github/workflows/shared/reporting.md}}
           GH_AW_PROMPT_EOF
           cat << 'GH_AW_PROMPT_EOF'
-          {{#runtime-import .github/workflows/shared/docs-server-lifecycle.md}}
-          GH_AW_PROMPT_EOF
-          cat << 'GH_AW_PROMPT_EOF'
           {{#runtime-import .github/workflows/docs-noob-tester.md}}
           GH_AW_PROMPT_EOF
           } > "$GH_AW_PROMPT"
@@ -173,7 +169,6 @@ jobs:
         env:
           GH_AW_PROMPT: /tmp/gh-aw/aw-prompts/prompt.txt
           GH_AW_GITHUB_REPOSITORY: ${{ github.repository }}
-          GH_AW_GITHUB_WORKSPACE: ${{ github.workspace }}
         with:
           script: |
             const { setupGlobals } = require('/opt/gh-aw/actions/setup_globals.cjs');
@@ -319,7 +314,7 @@ jobs:
               actor: context.actor,
               event_name: context.eventName,
               staged: false,
-              allowed_domains: ["defaults","node"],
+              allowed_domains: ["defaults","hobbyist-e43fa225.mintlify.app","learn.microsoft.com","github.com"],
               firewall_enabled: true,
               awf_version: "v0.23.0",
               awmg_version: "v0.1.6",
@@ -696,32 +691,26 @@ jobs:
         # --allow-tool safeoutputs
         # --allow-tool shell(cat *)
         # --allow-tool shell(cat)
-        # --allow-tool shell(curl*)
         # --allow-tool shell(date)
         # --allow-tool shell(echo)
         # --allow-tool shell(find *)
         # --allow-tool shell(grep)
         # --allow-tool shell(head)
-        # --allow-tool shell(kill*)
         # --allow-tool shell(ls)
         # --allow-tool shell(ls*)
-        # --allow-tool shell(lsof*)
-        # --allow-tool shell(npm install*)
-        # --allow-tool shell(npx mintlify*)
         # --allow-tool shell(pwd)
-        # --allow-tool shell(pwd*)
         # --allow-tool shell(sort)
         # --allow-tool shell(tail)
         # --allow-tool shell(uniq)
         # --allow-tool shell(wc)
         # --allow-tool shell(yq)
         # --allow-tool write
-        timeout-minutes: 30
+        timeout-minutes: 15
         run: |
           set -o pipefail
           # shellcheck disable=SC1003
-          sudo -E awf --env-all --container-workdir "${GITHUB_WORKSPACE}" --allow-domains "*.jsr.io,api.business.githubcopilot.com,api.enterprise.githubcopilot.com,api.github.com,api.githubcopilot.com,api.individual.githubcopilot.com,api.npms.io,api.snapcraft.io,archive.ubuntu.com,azure.archive.ubuntu.com,bun.sh,cdn.jsdelivr.net,cdn.playwright.dev,crl.geotrust.com,crl.globalsign.com,crl.identrust.com,crl.sectigo.com,crl.thawte.com,crl.usertrust.com,crl.verisign.com,crl3.digicert.com,crl4.digicert.com,crls.ssl.com,deb.nodesource.com,deno.land,esm.sh,get.pnpm.io,github.com,googleapis.deno.dev,googlechromelabs.github.io,host.docker.internal,json-schema.org,json.schemastore.org,jsr.io,keyserver.ubuntu.com,nodejs.org,npm.pkg.github.com,npmjs.com,npmjs.org,ocsp.digicert.com,ocsp.geotrust.com,ocsp.globalsign.com,ocsp.identrust.com,ocsp.sectigo.com,ocsp.ssl.com,ocsp.thawte.com,ocsp.usertrust.com,ocsp.verisign.com,packagecloud.io,packages.cloud.google.com,packages.microsoft.com,playwright.download.prss.microsoft.com,ppa.launchpad.net,raw.githubusercontent.com,registry.bower.io,registry.npmjs.com,registry.npmjs.org,registry.yarnpkg.com,repo.yarnpkg.com,s.symcb.com,s.symcd.com,security.ubuntu.com,skimdb.npmjs.com,storage.googleapis.com,telemetry.enterprise.githubcopilot.com,telemetry.vercel.com,ts-crl.ws.symantec.com,ts-ocsp.ws.symantec.com,www.npmjs.com,www.npmjs.org,yarnpkg.com" --log-level info --proxy-logs-dir /tmp/gh-aw/sandbox/firewall/logs --enable-host-access --image-tag 0.23.0 --skip-pull --enable-api-proxy \
-            -- /bin/bash -c '/usr/local/bin/copilot --add-dir /tmp/gh-aw/ --log-level all --log-dir /tmp/gh-aw/sandbox/agent/logs/ --add-dir "${GITHUB_WORKSPACE}" --disable-builtin-mcps --allow-tool github --allow-tool safeoutputs --allow-tool '\''shell(cat *)'\'' --allow-tool '\''shell(cat)'\'' --allow-tool '\''shell(curl*)'\'' --allow-tool '\''shell(date)'\'' --allow-tool '\''shell(echo)'\'' --allow-tool '\''shell(find *)'\'' --allow-tool '\''shell(grep)'\'' --allow-tool '\''shell(head)'\'' --allow-tool '\''shell(kill*)'\'' --allow-tool '\''shell(ls)'\'' --allow-tool '\''shell(ls*)'\'' --allow-tool '\''shell(lsof*)'\'' --allow-tool '\''shell(npm install*)'\'' --allow-tool '\''shell(npx mintlify*)'\'' --allow-tool '\''shell(pwd)'\'' --allow-tool '\''shell(pwd*)'\'' --allow-tool '\''shell(sort)'\'' --allow-tool '\''shell(tail)'\'' --allow-tool '\''shell(uniq)'\'' --allow-tool '\''shell(wc)'\'' --allow-tool '\''shell(yq)'\'' --allow-tool write --allow-all-paths --prompt "$(cat /tmp/gh-aw/aw-prompts/prompt.txt)"${GH_AW_MODEL_AGENT_COPILOT:+ --model "$GH_AW_MODEL_AGENT_COPILOT"}' 2>&1 | tee -a /tmp/gh-aw/agent-stdio.log
+          sudo -E awf --env-all --container-workdir "${GITHUB_WORKSPACE}" --allow-domains "api.business.githubcopilot.com,api.enterprise.githubcopilot.com,api.github.com,api.githubcopilot.com,api.individual.githubcopilot.com,api.snapcraft.io,archive.ubuntu.com,azure.archive.ubuntu.com,cdn.playwright.dev,crl.geotrust.com,crl.globalsign.com,crl.identrust.com,crl.sectigo.com,crl.thawte.com,crl.usertrust.com,crl.verisign.com,crl3.digicert.com,crl4.digicert.com,crls.ssl.com,github.com,hobbyist-e43fa225.mintlify.app,host.docker.internal,json-schema.org,json.schemastore.org,keyserver.ubuntu.com,learn.microsoft.com,ocsp.digicert.com,ocsp.geotrust.com,ocsp.globalsign.com,ocsp.identrust.com,ocsp.sectigo.com,ocsp.ssl.com,ocsp.thawte.com,ocsp.usertrust.com,ocsp.verisign.com,packagecloud.io,packages.cloud.google.com,packages.microsoft.com,playwright.download.prss.microsoft.com,ppa.launchpad.net,raw.githubusercontent.com,registry.npmjs.org,s.symcb.com,s.symcd.com,security.ubuntu.com,telemetry.enterprise.githubcopilot.com,ts-crl.ws.symantec.com,ts-ocsp.ws.symantec.com" --log-level info --proxy-logs-dir /tmp/gh-aw/sandbox/firewall/logs --enable-host-access --image-tag 0.23.0 --skip-pull --enable-api-proxy \
+            -- /bin/bash -c '/usr/local/bin/copilot --add-dir /tmp/gh-aw/ --log-level all --log-dir /tmp/gh-aw/sandbox/agent/logs/ --add-dir "${GITHUB_WORKSPACE}" --disable-builtin-mcps --allow-tool github --allow-tool safeoutputs --allow-tool '\''shell(cat *)'\'' --allow-tool '\''shell(cat)'\'' --allow-tool '\''shell(date)'\'' --allow-tool '\''shell(echo)'\'' --allow-tool '\''shell(find *)'\'' --allow-tool '\''shell(grep)'\'' --allow-tool '\''shell(head)'\'' --allow-tool '\''shell(ls)'\'' --allow-tool '\''shell(ls*)'\'' --allow-tool '\''shell(pwd)'\'' --allow-tool '\''shell(sort)'\'' --allow-tool '\''shell(tail)'\'' --allow-tool '\''shell(uniq)'\'' --allow-tool '\''shell(wc)'\'' --allow-tool '\''shell(yq)'\'' --allow-tool write --allow-all-paths --prompt "$(cat /tmp/gh-aw/aw-prompts/prompt.txt)"${GH_AW_MODEL_AGENT_COPILOT:+ --model "$GH_AW_MODEL_AGENT_COPILOT"}' 2>&1 | tee -a /tmp/gh-aw/agent-stdio.log
         env:
           COPILOT_AGENT_RUNNER_TYPE: STANDALONE
           COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
@@ -806,7 +795,7 @@ jobs:
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           GH_AW_SAFE_OUTPUTS: ${{ env.GH_AW_SAFE_OUTPUTS }}
-          GH_AW_ALLOWED_DOMAINS: "*.jsr.io,api.business.githubcopilot.com,api.enterprise.githubcopilot.com,api.github.com,api.githubcopilot.com,api.individual.githubcopilot.com,api.npms.io,api.snapcraft.io,archive.ubuntu.com,azure.archive.ubuntu.com,bun.sh,cdn.jsdelivr.net,cdn.playwright.dev,crl.geotrust.com,crl.globalsign.com,crl.identrust.com,crl.sectigo.com,crl.thawte.com,crl.usertrust.com,crl.verisign.com,crl3.digicert.com,crl4.digicert.com,crls.ssl.com,deb.nodesource.com,deno.land,esm.sh,get.pnpm.io,github.com,googleapis.deno.dev,googlechromelabs.github.io,host.docker.internal,json-schema.org,json.schemastore.org,jsr.io,keyserver.ubuntu.com,nodejs.org,npm.pkg.github.com,npmjs.com,npmjs.org,ocsp.digicert.com,ocsp.geotrust.com,ocsp.globalsign.com,ocsp.identrust.com,ocsp.sectigo.com,ocsp.ssl.com,ocsp.thawte.com,ocsp.usertrust.com,ocsp.verisign.com,packagecloud.io,packages.cloud.google.com,packages.microsoft.com,playwright.download.prss.microsoft.com,ppa.launchpad.net,raw.githubusercontent.com,registry.bower.io,registry.npmjs.com,registry.npmjs.org,registry.yarnpkg.com,repo.yarnpkg.com,s.symcb.com,s.symcd.com,security.ubuntu.com,skimdb.npmjs.com,storage.googleapis.com,telemetry.enterprise.githubcopilot.com,telemetry.vercel.com,ts-crl.ws.symantec.com,ts-ocsp.ws.symantec.com,www.npmjs.com,www.npmjs.org,yarnpkg.com"
+          GH_AW_ALLOWED_DOMAINS: "api.business.githubcopilot.com,api.enterprise.githubcopilot.com,api.github.com,api.githubcopilot.com,api.individual.githubcopilot.com,api.snapcraft.io,archive.ubuntu.com,azure.archive.ubuntu.com,cdn.playwright.dev,crl.geotrust.com,crl.globalsign.com,crl.identrust.com,crl.sectigo.com,crl.thawte.com,crl.usertrust.com,crl.verisign.com,crl3.digicert.com,crl4.digicert.com,crls.ssl.com,github.com,hobbyist-e43fa225.mintlify.app,host.docker.internal,json-schema.org,json.schemastore.org,keyserver.ubuntu.com,learn.microsoft.com,ocsp.digicert.com,ocsp.geotrust.com,ocsp.globalsign.com,ocsp.identrust.com,ocsp.sectigo.com,ocsp.ssl.com,ocsp.thawte.com,ocsp.usertrust.com,ocsp.verisign.com,packagecloud.io,packages.cloud.google.com,packages.microsoft.com,playwright.download.prss.microsoft.com,ppa.launchpad.net,raw.githubusercontent.com,registry.npmjs.org,s.symcb.com,s.symcd.com,security.ubuntu.com,telemetry.enterprise.githubcopilot.com,ts-crl.ws.symantec.com,ts-ocsp.ws.symantec.com"
           GITHUB_SERVER_URL: ${{ github.server_url }}
           GITHUB_API_URL: ${{ github.api_url }}
         with:
@@ -1192,7 +1181,7 @@ jobs:
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           GH_AW_AGENT_OUTPUT: ${{ env.GH_AW_AGENT_OUTPUT }}
-          GH_AW_ALLOWED_DOMAINS: "*.jsr.io,api.business.githubcopilot.com,api.enterprise.githubcopilot.com,api.github.com,api.githubcopilot.com,api.individual.githubcopilot.com,api.npms.io,api.snapcraft.io,archive.ubuntu.com,azure.archive.ubuntu.com,bun.sh,cdn.jsdelivr.net,cdn.playwright.dev,crl.geotrust.com,crl.globalsign.com,crl.identrust.com,crl.sectigo.com,crl.thawte.com,crl.usertrust.com,crl.verisign.com,crl3.digicert.com,crl4.digicert.com,crls.ssl.com,deb.nodesource.com,deno.land,esm.sh,get.pnpm.io,github.com,googleapis.deno.dev,googlechromelabs.github.io,host.docker.internal,json-schema.org,json.schemastore.org,jsr.io,keyserver.ubuntu.com,nodejs.org,npm.pkg.github.com,npmjs.com,npmjs.org,ocsp.digicert.com,ocsp.geotrust.com,ocsp.globalsign.com,ocsp.identrust.com,ocsp.sectigo.com,ocsp.ssl.com,ocsp.thawte.com,ocsp.usertrust.com,ocsp.verisign.com,packagecloud.io,packages.cloud.google.com,packages.microsoft.com,playwright.download.prss.microsoft.com,ppa.launchpad.net,raw.githubusercontent.com,registry.bower.io,registry.npmjs.com,registry.npmjs.org,registry.yarnpkg.com,repo.yarnpkg.com,s.symcb.com,s.symcd.com,security.ubuntu.com,skimdb.npmjs.com,storage.googleapis.com,telemetry.enterprise.githubcopilot.com,telemetry.vercel.com,ts-crl.ws.symantec.com,ts-ocsp.ws.symantec.com,www.npmjs.com,www.npmjs.org,yarnpkg.com"
+          GH_AW_ALLOWED_DOMAINS: "api.business.githubcopilot.com,api.enterprise.githubcopilot.com,api.github.com,api.githubcopilot.com,api.individual.githubcopilot.com,api.snapcraft.io,archive.ubuntu.com,azure.archive.ubuntu.com,cdn.playwright.dev,crl.geotrust.com,crl.globalsign.com,crl.identrust.com,crl.sectigo.com,crl.thawte.com,crl.usertrust.com,crl.verisign.com,crl3.digicert.com,crl4.digicert.com,crls.ssl.com,github.com,hobbyist-e43fa225.mintlify.app,host.docker.internal,json-schema.org,json.schemastore.org,keyserver.ubuntu.com,learn.microsoft.com,ocsp.digicert.com,ocsp.geotrust.com,ocsp.globalsign.com,ocsp.identrust.com,ocsp.sectigo.com,ocsp.ssl.com,ocsp.thawte.com,ocsp.usertrust.com,ocsp.verisign.com,packagecloud.io,packages.cloud.google.com,packages.microsoft.com,playwright.download.prss.microsoft.com,ppa.launchpad.net,raw.githubusercontent.com,registry.npmjs.org,s.symcb.com,s.symcd.com,security.ubuntu.com,telemetry.enterprise.githubcopilot.com,ts-crl.ws.symantec.com,ts-ocsp.ws.symantec.com"
           GITHUB_SERVER_URL: ${{ github.server_url }}
           GITHUB_API_URL: ${{ github.api_url }}
           GH_AW_SAFE_OUTPUTS_HANDLER_CONFIG: "{\"create_discussion\":{\"category\":\"audits\",\"close_older_discussions\":true,\"expires\":168,\"fallback_to_issue\":true,\"max\":1},\"missing_data\":{},\"missing_tool\":{}}"
