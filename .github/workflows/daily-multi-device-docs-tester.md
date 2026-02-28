@@ -33,11 +33,13 @@ tools:
     - "ls*"
     - "pwd*"
     - "cd*"
+    - "cat *"
 safe-outputs:
   upload-asset:
   create-issue:
     expires: 2d
     labels: [documentation, testing, docs-vnext]
+  noop:
 
 network:
   allowed:
