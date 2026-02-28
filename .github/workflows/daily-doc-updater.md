@@ -5,6 +5,8 @@ on:
   schedule:
     - cron: daily
   workflow_dispatch:
+  skip-if-match: 'is:pr is:open in:title "[docs-vnext]" author:app/github-actions'
+  skip-bots: [github-actions, copilot, dependabot]
 
 permissions:
   contents: read

@@ -4,6 +4,7 @@ description: Weekly report comparing canonical docs with agent-improved docs-vne
 on:
   schedule: weekly on monday around 09:00
   workflow_dispatch:
+  skip-if-no-match: 'is:pr is:merged label:docs-vnext merged:>=2026-01-01'
 
 permissions:
   contents: read

@@ -9,6 +9,8 @@ on:
         description: 'Device types to test (comma-separated: mobile,tablet,desktop)'
         required: false
         default: 'mobile,tablet,desktop'
+  skip-if-match: 'is:issue is:open in:title "Multi-Device Docs Testing"'
+  stop-after: "+30d"
 permissions:
   contents: read
   issues: read

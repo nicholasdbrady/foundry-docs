@@ -5,6 +5,7 @@ on:
   schedule:
     - cron: "0 10 * * 1-5"
   workflow_dispatch:
+  skip-if-match: 'is:pr is:open in:title "[docs-vnext]" label:glossary'
 
 permissions:
   contents: read
