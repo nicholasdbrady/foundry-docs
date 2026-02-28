@@ -7,6 +7,7 @@ on:
     name: unbloat
     events: [pull_request_comment]
   workflow_dispatch:
+  skip-if-match: 'is:pr is:open in:title "[docs-vnext]" label:unbloat'
 
 permissions:
   contents: read
@@ -56,6 +57,7 @@ safe-outputs:
     fallback-as-issue: false
   add-comment:
     max: 1
+  noop:
   messages:
     footer: "> 🗜️ *Compressed by [{workflow_name}]({run_url})*"
     run-started: "📦 Time to slim down! [{workflow_name}]({run_url}) is trimming the excess..."

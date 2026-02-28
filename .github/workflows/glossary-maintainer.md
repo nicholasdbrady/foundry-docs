@@ -36,6 +36,7 @@ safe-outputs:
     title-prefix: "[docs-vnext] "
     labels: [documentation, glossary, docs-vnext]
     draft: false
+  noop:
 
 tools:
   cache-memory: true
