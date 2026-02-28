@@ -1,0 +1,657 @@
+---
+title: "Create a project"
+description: "This article describes how to create a Microsoft Foundry project so you can work with generative AI in the cloud."
+---
+# Create a project for Microsoft Foundry
+This article describes how to create a Foundry project in [Microsoft Foundry](https://ai.azure.com/?cid=learnDocs). Projects let you organize your work—such as agents, evaluations, and files—as you build stateful apps and explore new ideas.
+
+If your organization requires customized Azure configurations like alternative names, security controls, or cost tags, you might need to use the [Azure portal](https://portal.azure.com) or [template options](/setup/create-resource-template) to comply with your organization's Azure Policy requirements.
+
+## Prerequisites
+
+* An Azure account with an active subscription. If you don't have one, create a [free Azure account, which includes a free trial subscription](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
+
+* Access to a role that allows you to create a Foundry resource, such as **Azure Account AI Owner** or **Azure AI Owner** on the subscription or resource group. For more information about permissions, see [Role-based access control for Microsoft Foundry](/security/rbac-foundry#permissions-for-each-built-in-role).
+
+* Use the following tabs to select the method you want to use to create a Foundry project:
+
+    # [Foundry portal](#tab/foundry)
+    
+    - An Azure account with an active subscription. If you don't have one, create a [free Azure account, which includes a free trial subscription](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
+    
+    # [Python SDK](#tab/python)
+    
+    - [Set up your development environment](/developer-experience/install-cli-sdk)
+    - Run `az login` or `az login --use-device-code` in your environment before running code.
+    - **Quick validation**: Before creating a project, verify your SDK and authentication are working by testing the client:
+    
+      ```python
+      from azure.identity import DefaultAzureCredential
+      from azure.mgmt.cognitiveservices import CognitiveServicesManagementClient
+      
+      # Test authentication by instantiating the client
+      credential = DefaultAzureCredential()
+      subscription_id = "<your-subscription-id>"  # Replace with your subscription ID
+      client = CognitiveServicesManagementClient(credential, subscription_id)
+      print("✓ Authentication successful! Ready to create a project.")
+      ```
+    
+    
+    - Complete these steps to start your Python script:
+        1. Install packages: `pip install azure-identity azure-mgmt-cognitiveservices~=13.7.0b1`. If you're in a notebook cell, use `%pip install` instead.
+        1. Use `pip show azure-mgmt-cognitiveservices` to check that your version is 13.7 or greater.
+        1. Start your script with the following code to create the `client` connection and variables used throughout this article. This example creates the project in East US:
+        
+            ```python
+            # source: https://github.com/Azure/agent-first-sdk/blob/main/tests/management_sdk/manage_ai_foundry.ipynb
+
+            # <create_client>
+            from azure.identity import DefaultAzureCredential
+            from azure.mgmt.cognitiveservices import CognitiveServicesManagementClient
+
+            subscription_id = 'your-subscription-id'
+            resource_group_name = 'your-resource-group-name'
+            foundry_resource_name = 'your-foundry-resource-name'
+            foundry_project_name = 'your-foundry-project-name'
+            location = 'eastus'
+
+            client = CognitiveServicesManagementClient(
+                credential=DefaultAzureCredential(), 
+                subscription_id=subscription_id,
+                api_version="2025-04-01-preview"
+            )
+            # </create_client>
+            # TODO: add code to create create a new resource group
+
+            # <create_resource_project>
+            # Create resource
+            resource = client.accounts.begin_create(
+                resource_group_name=resource_group_name,
+                account_name=foundry_resource_name,
+                account={
+                    "location": location,
+                    "kind": "AIServices",
+                    "sku": {"name": "S0",},
+                    "identity": {"type": "SystemAssigned"},
+                    "properties": {
+                        "allowProjectManagement": True,
+                        "customSubDomainName": foundry_resource_name
+                    }
+                }
+            )
+
+            # Wait for the resource creation to complete
+            resource_result = resource.result()
+
+            # Create default project
+            project = client.projects.begin_create(
+                resource_group_name=resource_group_name,
+                account_name=foundry_resource_name,
+                project_name=foundry_project_name,
+                project={
+                    "location": location,
+                    "identity": {
+                        "type": "SystemAssigned"
+                    },
+                    "properties": {}
+                }
+            )
+            # </create_resource_project>
+            # TODO: code to do role assignment to give user project manager role on the account
+
+            # <create_additional>
+            # Create additional project
+            new_project_name = 'your-new-project-name'
+
+            project = client.projects.begin_create(
+                resource_group_name=resource_group_name,
+                account_name=foundry_resource_name,
+                project_name=new_project_name,
+                project={
+                    "location": location,
+                    "identity": {
+                        "type": "SystemAssigned"
+                    },
+                    "properties": {}
+                }
+            )
+            # </create_additional>
+            # <show_project>
+            # Get project
+            project = client.projects.get(
+                resource_group_name=resource_group_name,
+                account_name=foundry_resource_name,
+                project_name=foundry_project_name
+            )
+            print(project)
+            # </show_project>
+            ```
+    
+        1. (Optional) If you have multiple accounts, add the tenant ID of the Microsoft Entra ID you want to use into the `DefaultAzureCredential`.
+                
+            ```python
+            DefaultAzureCredential(interactive_browser_tenant_id="<TENANT_ID>")
+            ```    
+    
+    # [Azure CLI](#tab/azurecli)
+    
+    - Install the [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli). 
+    - Set default values for `subscription`.
+    
+      ```azurecli
+        # Set your default subscription
+        az account set --subscription "{subscription-name}"
+       ```
+    
+    ---
+
+## Create a Foundry project
+
+<Tabs>
+  <Tab title="Foundry portal">
+
+    These steps provide a way to create a new Azure resource with basic, defaulted, settings. 
+
+    To create a Foundry project, follow these steps:
+
+    1. Sign in to [Microsoft Foundry](https://ai.azure.com/?cid=learnDocs). Make sure the **New Foundry** toggle is on. These steps refer to **Foundry (new)**.
+
+    <img src="/images/new-foundry.png" />
+
+    1. The project you're working on appears in the upper-left corner.
+    1. To create a new project, select the project name, and then select **Create new project**.
+    1. Give your project a name and select **Create project**. Or see next section for advanced options.
+
+    ### Advanced options
+
+    1. You create a Foundry project on a `Foundry` resource. The portal automatically creates this resource when you create the project. Select an existing **Resource group** to use, or leave the default to create a new resource group.
+
+<Tip>
+Especially for getting started, create a new resource group for your project. The resource group makes it easy to manage the project and all its resources together.
+</Tip>
+
+    1. Select a **Location** or use the default. The location is the region where the project resources are hosted. 
+
+    1. Select **Create**. You see the progress of resource creation. The project is created when the process is complete.
+
+  </Tab>
+  <Tab title="Python SDK">
+
+    To create a Foundry project:
+
+    - Add the following code to create a Foundry project by using the variables and `client` connection from the [Prerequisites](#prerequisites).
+
+        ```python
+        # source: https://github.com/Azure/agent-first-sdk/blob/main/tests/management_sdk/manage_ai_foundry.ipynb
+
+        # <create_client>
+        from azure.identity import DefaultAzureCredential
+        from azure.mgmt.cognitiveservices import CognitiveServicesManagementClient
+
+        subscription_id = 'your-subscription-id'
+        resource_group_name = 'your-resource-group-name'
+        foundry_resource_name = 'your-foundry-resource-name'
+        foundry_project_name = 'your-foundry-project-name'
+        location = 'eastus'
+
+        client = CognitiveServicesManagementClient(
+            credential=DefaultAzureCredential(), 
+            subscription_id=subscription_id,
+            api_version="2025-04-01-preview"
+        )
+        # </create_client>
+        # TODO: add code to create create a new resource group
+
+        # <create_resource_project>
+        # Create resource
+        resource = client.accounts.begin_create(
+            resource_group_name=resource_group_name,
+            account_name=foundry_resource_name,
+            account={
+                "location": location,
+                "kind": "AIServices",
+                "sku": {"name": "S0",},
+                "identity": {"type": "SystemAssigned"},
+                "properties": {
+                    "allowProjectManagement": True,
+                    "customSubDomainName": foundry_resource_name
+                }
+            }
+        )
+
+        # Wait for the resource creation to complete
+        resource_result = resource.result()
+
+        # Create default project
+        project = client.projects.begin_create(
+            resource_group_name=resource_group_name,
+            account_name=foundry_resource_name,
+            project_name=foundry_project_name,
+            project={
+                "location": location,
+                "identity": {
+                    "type": "SystemAssigned"
+                },
+                "properties": {}
+            }
+        )
+        # </create_resource_project>
+        # TODO: code to do role assignment to give user project manager role on the account
+
+        # <create_additional>
+        # Create additional project
+        new_project_name = 'your-new-project-name'
+
+        project = client.projects.begin_create(
+            resource_group_name=resource_group_name,
+            account_name=foundry_resource_name,
+            project_name=new_project_name,
+            project={
+                "location": location,
+                "identity": {
+                    "type": "SystemAssigned"
+                },
+                "properties": {}
+            }
+        )
+        # </create_additional>
+        # <show_project>
+        # Get project
+        project = client.projects.get(
+            resource_group_name=resource_group_name,
+            account_name=foundry_resource_name,
+            project_name=foundry_project_name
+        )
+        print(project)
+        # </show_project>
+        ```
+
+        References: [CognitiveServicesManagementClient](https://learn.microsoft.com/python/api/azure-mgmt-cognitiveservices/azure.mgmt.cognitiveservices.CognitiveServicesManagementClient).
+
+  </Tab>
+  <Tab title="Azure CLI">
+
+    1. Create a resource group or use an existing one. For example, create `my-foundry-rg` in `eastus`:
+
+       ```azurecli
+       az group create --name my-foundry-rg --location eastus
+       ```
+
+    1. Create the Foundry resource. For example, create `my-foundry-resource` in the `my-foundry-rg` resource group:
+
+       ```azurecli
+       az cognitiveservices account create \
+           --name my-foundry-resource \
+           --resource-group my-foundry-rg \
+           --kind AIServices \
+           --sku s0 \
+           --location eastus \
+          --allow-project-management
+       ```
+
+       The `--allow-project-management` flag enables project creation within this resource.
+
+    1. Create a custom subdomain for the resource. The custom domain name must be globally unique. If `my-foundry-resource` is taken, try a more unique name.
+
+       ```azurecli
+       az cognitiveservices account update \
+           --name my-foundry-resource \
+           --resource-group my-foundry-rg \
+           --custom-domain my-foundry-resource
+       ```
+
+    1. Create the project. For example, create `my-foundry-project` in the `my-foundry-resource`:
+
+       ```azurecli
+       az cognitiveservices account project create \
+           --name my-foundry-resource \
+           --resource-group my-foundry-rg \
+           --project-name my-foundry-project \
+           --location eastus
+       ```
+
+    1. Verify the project was created:
+
+       ```azurecli
+       az cognitiveservices account project show \
+           --name my-foundry-resource \
+           --resource-group my-foundry-rg \
+           --project-name my-foundry-project
+       ```
+
+       The output displays the project properties, including its resource ID.
+
+    Reference: [az cognitiveservices account](https://learn.microsoft.com/cli/azure/cognitiveservices/account)
+
+  </Tab>
+</Tabs>
+
+## Create multiple projects on the same resource
+
+Create multiple Foundry projects on an existing `Foundry` resource to enable team collaboration and shared resource access including security, deployments, and connected tools. This setup is ideal in restricted Azure subscriptions where developers need self-serve exploration ability within the setup of a preconfigured environment.
+
+<Frame>
+  <img src="/images/projects-multi-setup.png" alt="Diagram shows how a team could share resource access with multiple projects on a Foundry resource." />
+</Frame>
+
+Foundry projects as Azure child resources may get assigned their own access controls, but share common settings such as network security, deployments, and Azure tool integration from their parent resource.
+
+While not all Foundry capabilities support organizing work in projects yet, your resource's first "default" project is more powerful. You can identify it by the tag "default" in UX experiences and the resource property "is_default" when using code options.
+
+| Feature | Default project | Other projects |
+|--|--|--|
+| Model inference | ✅ | ✅ |
+| Playgrounds | ✅ | ✅ |
+| Agents | ✅ | ✅ |
+| Evaluations | ✅ | ✅ |
+| Tracing | ✅ | ✅ |
+| Datasets | ✅ | ✅ |
+| Indexes | ✅ | ✅ |
+| Foundry SDK and API | ✅ | ✅ |
+| Content understanding | ✅ | ✅ |
+| OpenAI SDK and API | ✅ | Responses, Files, Conversations |
+| OpenAI Batch, Fine-tuning, Stored completions | ✅ | - |
+| Language fine-tuning | ✅ | ✅ |
+| Speech fine-tuning | ✅ | - |
+| Connections | ✅ | ✅ |
+
+* To add a project to a Foundry resource:
+    
+    # [Foundry portal](#tab/foundry)
+    
+  
+    The Foundry (new) portal displays only the **default** project for each Foundry resource. You can't create multiple projects, or view any of the nondefault projects in the Foundry (new) portal.
+        
+    {/* 1. Select **Operate** in the upper-right navigation.
+    1. Select **Admin** in the left pane.
+    1. Select the Parent resource you want to add a project to.
+    1. Select **Add project**. 
+    */}
+          
+    # [Python SDK](#tab/python)
+
+    While this code can add additional projects to a resource, you won't be able to view them in the Foundry (new) portal. Only the default project for a resource is available in the Foundry (new) portal.    
+    Add this code to your script to create a new project on your existing resource:
+
+    ```python
+    # source: https://github.com/Azure/agent-first-sdk/blob/main/tests/management_sdk/manage_ai_foundry.ipynb
+
+    # <create_client>
+    from azure.identity import DefaultAzureCredential
+    from azure.mgmt.cognitiveservices import CognitiveServicesManagementClient
+
+    subscription_id = 'your-subscription-id'
+    resource_group_name = 'your-resource-group-name'
+    foundry_resource_name = 'your-foundry-resource-name'
+    foundry_project_name = 'your-foundry-project-name'
+    location = 'eastus'
+
+    client = CognitiveServicesManagementClient(
+        credential=DefaultAzureCredential(), 
+        subscription_id=subscription_id,
+        api_version="2025-04-01-preview"
+    )
+    # </create_client>
+    # TODO: add code to create create a new resource group
+
+    # <create_resource_project>
+    # Create resource
+    resource = client.accounts.begin_create(
+        resource_group_name=resource_group_name,
+        account_name=foundry_resource_name,
+        account={
+            "location": location,
+            "kind": "AIServices",
+            "sku": {"name": "S0",},
+            "identity": {"type": "SystemAssigned"},
+            "properties": {
+                "allowProjectManagement": True,
+                "customSubDomainName": foundry_resource_name
+            }
+        }
+    )
+
+    # Wait for the resource creation to complete
+    resource_result = resource.result()
+
+    # Create default project
+    project = client.projects.begin_create(
+        resource_group_name=resource_group_name,
+        account_name=foundry_resource_name,
+        project_name=foundry_project_name,
+        project={
+            "location": location,
+            "identity": {
+                "type": "SystemAssigned"
+            },
+            "properties": {}
+        }
+    )
+    # </create_resource_project>
+    # TODO: code to do role assignment to give user project manager role on the account
+
+    # <create_additional>
+    # Create additional project
+    new_project_name = 'your-new-project-name'
+
+    project = client.projects.begin_create(
+        resource_group_name=resource_group_name,
+        account_name=foundry_resource_name,
+        project_name=new_project_name,
+        project={
+            "location": location,
+            "identity": {
+                "type": "SystemAssigned"
+            },
+            "properties": {}
+        }
+    )
+    # </create_additional>
+    # <show_project>
+    # Get project
+    project = client.projects.get(
+        resource_group_name=resource_group_name,
+        account_name=foundry_resource_name,
+        project_name=foundry_project_name
+    )
+    print(project)
+    # </show_project>
+    ```
+    
+    
+    # [Azure CLI](#tab/azurecli)
+
+    While this code can add additional projects to a resource, you won't be able to view them in the Foundry (new) portal. Only the default project for a resource is available in the Foundry (new) portal.
+    To add a new project to `my-foundry-resource`:
+    
+    ```azurecli
+     az cognitiveservices account project create \
+     --name my-foundry-resource \
+     --project-name {new_project_name} \
+     --location eastus
+    ```
+
+    ---
+
+* If you delete your Foundry resource's default project, the next project created will become the default project.
+
+## View project settings
+
+<Tabs>
+  <Tab title="Foundry portal">
+
+    On the **Home** project page, you see the project endpoint and API key for the project. You don't need the API key if you use Microsoft Entra ID authentication.
+
+  </Tab>
+  <Tab title="Python SDK">
+
+    ```python
+    # source: https://github.com/Azure/agent-first-sdk/blob/main/tests/management_sdk/manage_ai_foundry.ipynb
+
+    # <create_client>
+    from azure.identity import DefaultAzureCredential
+    from azure.mgmt.cognitiveservices import CognitiveServicesManagementClient
+
+    subscription_id = 'your-subscription-id'
+    resource_group_name = 'your-resource-group-name'
+    foundry_resource_name = 'your-foundry-resource-name'
+    foundry_project_name = 'your-foundry-project-name'
+    location = 'eastus'
+
+    client = CognitiveServicesManagementClient(
+        credential=DefaultAzureCredential(), 
+        subscription_id=subscription_id,
+        api_version="2025-04-01-preview"
+    )
+    # </create_client>
+    # TODO: add code to create create a new resource group
+
+    # <create_resource_project>
+    # Create resource
+    resource = client.accounts.begin_create(
+        resource_group_name=resource_group_name,
+        account_name=foundry_resource_name,
+        account={
+            "location": location,
+            "kind": "AIServices",
+            "sku": {"name": "S0",},
+            "identity": {"type": "SystemAssigned"},
+            "properties": {
+                "allowProjectManagement": True,
+                "customSubDomainName": foundry_resource_name
+            }
+        }
+    )
+
+    # Wait for the resource creation to complete
+    resource_result = resource.result()
+
+    # Create default project
+    project = client.projects.begin_create(
+        resource_group_name=resource_group_name,
+        account_name=foundry_resource_name,
+        project_name=foundry_project_name,
+        project={
+            "location": location,
+            "identity": {
+                "type": "SystemAssigned"
+            },
+            "properties": {}
+        }
+    )
+    # </create_resource_project>
+    # TODO: code to do role assignment to give user project manager role on the account
+
+    # <create_additional>
+    # Create additional project
+    new_project_name = 'your-new-project-name'
+
+    project = client.projects.begin_create(
+        resource_group_name=resource_group_name,
+        account_name=foundry_resource_name,
+        project_name=new_project_name,
+        project={
+            "location": location,
+            "identity": {
+                "type": "SystemAssigned"
+            },
+            "properties": {}
+        }
+    )
+    # </create_additional>
+    # <show_project>
+    # Get project
+    project = client.projects.get(
+        resource_group_name=resource_group_name,
+        account_name=foundry_resource_name,
+        project_name=foundry_project_name
+    )
+    print(project)
+    # </show_project>
+    ```
+
+    References: [CognitiveServicesManagementClient](https://learn.microsoft.com/python/api/azure-mgmt-cognitiveservices/azure.mgmt.cognitiveservices.CognitiveServicesManagementClient).
+
+  </Tab>
+  <Tab title="Azure CLI">
+
+    To view settings for the project, use the `az cognitiveservices account connection show` command. For example:
+
+    ```azurecli
+    az cognitiveservices account connection show \
+    --name my-foundry-project \
+    --resource-group my-foundry-rg
+    ```
+
+  </Tab>
+</Tabs>
+
+## Delete projects
+
+<Tabs>
+  <Tab title="Foundry portal">
+
+    1. Sign in to [Microsoft Foundry](https://ai.azure.com/?cid=learnDocs). Make sure the **New Foundry** toggle is on. These steps refer to **Foundry (new)**.
+
+    <img src="/images/new-foundry.png" /> 
+    1. In the upper-right navigation, select **Operate**.
+    1. In the left pane, select **Admin**.
+    1. Select your project.
+    1. In the upper right, select the trash can icon to delete the project.
+
+  </Tab>
+  <Tab title="Python SDK">
+
+    This code uses the variables and `client connection` from the Prerequisites. First, create the client connection:
+
+    ```python
+    client.projects.begin_delete(
+        resource_group_name, foundry_resource_name, foundry_project_name
+    )
+    ```
+
+    References: [CognitiveServicesManagementClient](https://learn.microsoft.com/python/api/azure-mgmt-cognitiveservices/azure.mgmt.cognitiveservices.CognitiveServicesManagementClient).
+
+    Delete a Foundry resource and all of its projects:
+
+    ```python
+    # Delete projects
+    projects = client.projects.list(resource_group_name, foundry_resource_name)
+
+    for project in projects: 
+        print("Deleting project:", project.name)
+        client.projects.begin_delete(resource_group_name, foundry_resource_name,
+            project_name=project.name.split('/')[-1]
+        ).wait()
+
+    # Delete resource
+    print("Deleting resource:", foundry_resource_name)
+    client.accounts.begin_delete(resource_group_name, foundry_resource_name).wait()
+    ```
+
+    References: [CognitiveServicesManagementClient](https://learn.microsoft.com/python/api/azure-mgmt-cognitiveservices/azure.mgmt.cognitiveservices.CognitiveServicesManagementClient).
+
+  </Tab>
+  <Tab title="Azure CLI">
+
+    Run the following command:
+
+    ```azurecli
+    az cognitiveservices account project delete \
+    --name my-foundry-rg \
+    --project-name my-foundry-project
+    ```
+
+    References: [az cognitiveservices account project delete](https://learn.microsoft.com/cli/azure/cognitiveservices/account/project#az-cognitiveservices-account-project-delete).
+
+  </Tab>
+</Tabs>
+
+<Info>
+Use with caution. You can't recover a project after it's deleted.
+</Info>
+
+## Related content
+
+- [Microsoft Foundry Quickstart](/get-started/get-started-code)
+- [What is Foundry?](/overview/what-is-foundry)

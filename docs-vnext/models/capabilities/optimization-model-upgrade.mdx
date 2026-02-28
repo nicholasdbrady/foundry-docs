@@ -1,0 +1,115 @@
+---
+title: "Upgrade or switch models with Ask AI"
+description: "Learn how to use Ask AI in the Microsoft Foundry portal to detect deprecated models, evaluate alternatives, upgrade deployments, and update agents to newer model versions."
+---
+# Upgrade or switch models with Ask AI (preview)
+<Info>
+Items marked (preview) in this article are currently in public preview. This preview is provided without a service-level agreement, and we don't recommend it for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
+</Info>
+
+Use Ask AI — the built-in chat assistant in the Microsoft Foundry portal — to detect deprecated or outdated models, compare alternatives, and upgrade deployed models or agents to newer versions. Review upgrade recommendations, evaluate the new model, compare performance, and update your agent — all from the Ask AI chat panel.
+
+<Note>
+Ask AI model upgrade recommendations are available for models deployed through Foundry Models. For information about Ask AI capabilities and availability, see [What is Ask AI?](/get-started/ask-ai)
+</Note>
+
+## Prerequisites
+
+- A [Foundry project](/setup/create-projects) with one or more deployed models or [agents](/agents/development/overview).
+- Access to **Ask AI** (the chat assistant) in the Foundry portal.
+- At least one [evaluation dataset](/observability/cloud-evaluation) in CSV or JSONL format. The dataset should include columns for the input query and the expected (ground truth) response for your scenario. For dataset preparation guidance, see [Evaluate your generative AI app](/observability/evaluate-generative-ai-app).
+- **Contributor** role (or higher) on the Foundry resource to deploy models, and **Azure AI User** role (or higher) on the Foundry project to build and run evaluations. For more information, see [Role-based access control for Microsoft Foundry](/security/rbac-foundry).
+
+## Open a chat session in Ask AI
+
+You can start a chat with Ask AI from any page in the Foundry portal.
+
+1. Select the **Ask AI** icon at the top of the page.
+1. Select a predefined prompt, such as **Should I upgrade my model?**, from the **Ask AI** banner. These prompts appear on model detail, agent, and monitoring pages.
+
+<Frame>
+<img src="/images/model-upgrade-predefined-prompts.png" alt="Screenshot of the Ask AI panel showing predefined prompts for model upgrade, including Should I upgrade my model and Is any model I'm using deprecated." />
+</Frame>
+
+   The Ask AI chat panel opens on the right side of the page. You can type questions or select a predefined prompt to begin.
+
+## Review model upgrade recommendations
+
+Use Ask AI to check whether any of your deployed models are deprecated or have newer versions available.
+
+1. In the Ask AI chat panel, type a question about your deployed models. For example, try "Should I upgrade my model?" or "Is any model I'm using deprecated?"
+
+<Frame>
+<img src="/images/model-upgrade-ask-ai.png" alt="Screenshot of Ask AI displaying a list of recommended model upgrades with version comparison details." />
+</Frame>
+
+1. Review the list of recommended models that Ask AI displays. Key differences between your current model and the recommended alternatives are highlighted.
+1. Select a model name to view its details in the model catalog, or select **Deploy** to go to the model deployment page. To learn how to deploy a model, see [Add and configure models to Foundry Models](/models/capabilities/create-model-deployments).
+
+<Frame>
+<img src="/images/model-upgrade-selected-model.png" alt="Screenshot of a model detail page showing model capabilities, with Ask AI suggesting related model pages to review." />
+</Frame>
+
+1. After you deploy the recommended model, go to the **Deployments** page and confirm the deployment status shows **Succeeded** before proceeding to evaluation.
+
+## Evaluate and compare model performance
+
+After deploying the new model, evaluate it against your current model using the same agent instructions and configurations.
+
+1. In Ask AI, ask to evaluate the newly deployed model. Either follow the link that Ask AI provides or let Ask AI set up the evaluation run for you. For details on manual setup, see [Evaluate your generative AI app](/observability/evaluate-generative-ai-app).
+
+<Frame>
+<img src="/images/model-upgrade-evaluations.png" alt="Screenshot of the evaluation creation page with Ask AI guiding model evaluation setup through a step-by-step workflow." />
+</Frame>
+
+1. After the evaluation completes, open the evaluation detail page to review metric scores for both models side by side.
+1. Use [compare](/observability/evaluate-results#compare-the-evaluation-results) or [cluster analysis](/observability/cluster-analysis) to analyze differences in relevance, groundedness, and coherence.
+
+If the new model isn't satisfactory, test other models and repeat these steps. Each new run appears alongside previous runs in the same evaluation, so you can compare results across multiple models.
+
+## Update your agent to use the new model
+
+After you confirm the new model meets your requirements, update your agent to use it:
+
+1. In Ask AI, type a request like "Update my agent to use the new model."
+1. Ask AI identifies the agent and current model, then displays the proposed change. Review the summary.
+1. Select **Apply** to confirm the model switch. Ask AI creates a new agent version that uses the updated model.
+1. Verify the update by checking the agent version history on the **Agent Playground** page. The page shows the new version with the updated model in the version history.
+
+To update manually, go to the **Agent Playground** page, select your agent, and change the model in the agent configuration. To find other agents in your project that use the same model, type "Find other agents using this model" in Ask AI.
+
+<Note>
+When you update the agent model, the change applies to new conversations. In-progress conversations continue to use the previous model until they complete.
+</Note>
+
+## Roll back to a previous model
+
+If the new model doesn't meet your requirements after the update, revert to the previous version:
+
+1. Go to the **Agent Playground** page and select your agent.
+1. Open the version history and select the previous version.
+1. Select **Restore** to revert the agent to the earlier model configuration.
+1. Verify the rollback by testing the agent in the playground.
+
+<Note>
+Rolling back restores the agent configuration only. Evaluation runs and deployment records for the new model remain in your project history.
+</Note>
+
+## Troubleshoot common issues
+
+| Issue | Resolution |
+|-------|------------|
+| Ask AI doesn't suggest any model upgrades | Verify that your deployed model has a newer version available in the [model catalog](/models/capabilities/create-model-deployments). Ask AI only recommends upgrades when newer versions exist. |
+| Evaluation run fails to start | Confirm that your evaluation dataset is in CSV or JSONL format, and that you have the **Azure AI User** role (or higher) on the project. |
+| New model performs worse than the current model | Use [compare](/observability/evaluate-results#compare-the-evaluation-results) to review per-metric scores. Consider testing with a different model or adjusting agent instructions before switching. |
+| Agent update doesn't take effect | Check the agent version history in **Agent Playground** to confirm the new version was created. To revert, see [Roll back to a previous model](#roll-back-to-a-previous-model). |
+
+## Related content
+
+After you upgrade your model and verify agent performance, consider monitoring ongoing model performance or exploring cost optimization options.
+
+- [What is Ask AI?](/get-started/ask-ai)
+- [Optimize cost and performance with Ask AI](/manage/how-to-optimize-cost-performance)
+- [Model versions in Foundry Models](/models/catalog/model-versions)
+- [Evaluate your generative AI app](/observability/evaluate-generative-ai-app)
+- [Compare evaluation results](/observability/evaluate-results)

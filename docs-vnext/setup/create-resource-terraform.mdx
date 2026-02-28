@@ -1,0 +1,309 @@
+---
+title: "Use Terraform to create Microsoft Foundry"
+description: "In this article, you create a Microsoft Foundry resource, a Microsoft Foundry project, using Terraform infrastructure as code templates."
+---
+# Use Terraform to manage Microsoft Foundry resources
+Use Terraform to automate the creation of [Microsoft Foundry](https://ai.azure.com/?cid=learnDocs) resources, projects, deployments, and connections.
+
+You can use either the Terraform [AzAPI Provider](https://learn.microsoft.com/azure/developer/terraform/overview-azapi-provider) or [AzureRM Provider](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/cognitive_account) to manage Foundry resources. The AzAPI provider lets you access all Foundry control plane configurations including preview features. The AzureRM variant is limited to core management capabilities.
+
+The following table shows which actions each provider supports:
+
+|Action|AzAPI Provider|AzureRM Provider|
+| --- | --- | --- |
+| Create a resource group | ✅ | ✅ |
+| Create a Foundry resource | ✅ | ✅ |
+| Configure deployments | ✅ | ✅ |
+| Configure projects | ✅ | ✅ |
+| Configure a connection to knowledge and tools | ✅ | - |
+| Configure a capability host (for advanced tool configurations like [Agent standard setup](/agents/development/capability-hosts)) | ✅ | - |
+
+## Prerequisites
+
+An Azure account with an active subscription. If you don't have one, create a [free Azure account, which includes a free trial subscription](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
+
+- Access to a role that allows you to create a Foundry resource, such as **Azure Account AI Owner** or **Azure AI Owner** on the subscription or resource group. For more information about permissions, see [Role-based access control for Microsoft Foundry](/security/rbac-foundry#permissions-for-each-built-in-role).
+- [Install and configure Terraform](https://learn.microsoft.com/azure/developer/terraform/quickstart-configure).
+
+## Create a basic Foundry configuration
+
+<Tabs>
+  <Tab title="AzAPI Provider">
+
+    1. Create a directory to test and run the sample Terraform code. Make this directory your current directory.
+
+    1. Create a file named `providers.tf` and add the following code.
+
+        ```Terraform
+        # Setup providers
+        provider "azapi" {
+          subscription_id = var.subscription_id
+        }
+        ```
+
+    1. Create a file named `main.tf` and add the following code.
+
+        ```Terraform
+        ## Create a random string
+        ## 
+        resource "random_string" "unique" {
+          length      = 5
+          min_numeric = 5
+          numeric     = true
+          special     = false
+          lower       = true
+          upper       = false
+        }
+
+        ## Create a resource group for the resources to be stored in
+        ##
+        resource "azapi_resource" "rg" {
+          type      = "Microsoft.Resources/resourceGroups@2021-04-01"
+          name      = "rg-aifoundry-${random_string.unique.result}"
+          location  = var.location
+        }
+
+        ########## Create AI Foundry resource
+        ##########
+
+        ## Create the AI Foundry resource
+        ##
+        resource "azapi_resource" "ai_foundry" {
+          type                      = "Microsoft.CognitiveServices/accounts@2025-06-01"
+          name                      = "aifoundry${random_string.unique.result}"
+          parent_id                 = azapi_resource.rg.id
+          location                  = var.location
+          schema_validation_enabled = false
+
+          body = {
+            kind = "AIServices"
+            sku = {
+              name = "S0"
+            }
+            identity = {
+              type = "SystemAssigned"
+            }
+
+            properties = {
+              # Support both Entra ID and API Key authentication for Cognitive Services account
+              disableLocalAuth = false
+
+              # Specifies that this is an AI Foundry resourceyes
+              allowProjectManagement = true
+
+              # Set custom subdomain name for DNS names created for this Foundry resource
+              customSubDomainName = "aifoundry${random_string.unique.result}"
+            }
+          }
+        }
+
+        ## Create a deployment for OpenAI's GPT-4o in the AI Foundry resource
+        ##
+        resource "azapi_resource" "aifoundry_deployment_gpt_4o" {
+          type      = "Microsoft.CognitiveServices/accounts/deployments@2023-05-01"
+          name      = "gpt-4o"
+          parent_id = azapi_resource.ai_foundry.id
+          depends_on = [
+            azapi_resource.ai_foundry
+          ]
+
+          body = {
+            sku = {
+              name     = "GlobalStandard"
+              capacity = 1
+            }
+            properties = {
+              model = {
+                format  = "OpenAI"
+                name    = "gpt-4o"
+                version = "2024-11-20"
+              }
+            }
+          }
+        }
+
+        ## Create AI Foundry project
+        ##
+        resource "azapi_resource" "ai_foundry_project" {
+          type                      = "Microsoft.CognitiveServices/accounts/projects@2025-06-01"
+          name                      = "project${random_string.unique.result}"
+          parent_id                 = azapi_resource.ai_foundry.id
+          location                  = var.location
+          schema_validation_enabled = false
+
+          body = {
+            sku = {
+              name = "S0"
+            }
+            identity = {
+              type = "SystemAssigned"
+            }
+
+            properties = {
+              displayName = "project"
+              description = "My first project"
+            }
+          }
+        }
+        ```
+
+    1. Create a file named `variables.tf` and add the following code.
+
+        ```Terraform
+        variable "location" {
+          description = "The name of the location to provision the resources to"
+          type        = string
+        }
+
+        variable "subscription_id" {
+          type = string
+        }
+        ``` 
+
+  </Tab>
+  <Tab title="AzureRM Provider">
+
+    1. Create a directory to test and run the sample Terraform code. Make this directory your current directory.
+
+    1. Create a file named `providers.tf` and add the following code.
+
+        ```Terraform
+        # Setup providers
+        provider "azurerm" {
+          features {}
+          storage_use_azuread = true
+          subscription_id = var.subscription_id
+        }
+        ```
+
+    1. Create a file named `main.tf` and add the following code.
+
+        ```Terraform
+        ## Create a random string
+        ## 
+        resource "random_string" "unique" {
+          length      = 5
+          min_numeric = 5
+          numeric     = true
+          special     = false
+          lower       = true
+          upper       = false
+        }
+
+        ## Create a resource group for the resources to be stored in
+        ##
+        resource "azurerm_resource_group" "rg" {
+          name     = "rg-aifoundry${random_string.unique.result}"
+          location = var.location
+        }
+
+        ## Create an AI Foundry resource
+        ##
+
+        resource "azurerm_cognitive_account" "ai_foundry" {
+          name                = "aifoundry${random_string.unique.result}"
+          location            = var.location
+          resource_group_name = azurerm_resource_group.rg.name
+          kind                = "AIServices"
+
+          identity {
+            type = "SystemAssigned"
+          }
+
+          sku_name = "S0"
+
+          # required for stateful development in Foundry including agent service
+          custom_subdomain_name = "aifoundry${random_string.unique.result}"
+          project_management_enabled = true
+
+          tags = {
+            Acceptance = "Test"
+          }
+        }
+
+        # Create a Foundry project (folder for organizing stateful work)
+        resource "azurerm_cognitive_account_project" "example" {
+          name                 = "myproject"
+          cognitive_account_id = azurerm_cognitive_account.ai_foundry.id
+          location             = azurerm_resource_group.rg.location 
+
+          identity {
+            type = "SystemAssigned"
+          }
+        }
+
+        ## Create a deployment for OpenAI's GPT-4o in the AI Foundry resource
+        ##
+        resource "azurerm_cognitive_deployment" "aifoundry_deployment_gpt_4o" {
+          depends_on = [
+            azurerm_cognitive_account.ai_foundry
+          ]
+
+          name                 = "gpt-4o"
+          cognitive_account_id = azurerm_cognitive_account.ai_foundry.id
+
+          sku {
+            name     = "GlobalStandard"
+            capacity = 1
+          }
+
+          model {
+            format  = "OpenAI"
+            name    = "gpt-4o"
+            version = "2024-11-20"
+          }
+        }
+        ```
+
+    1. Create a file named `variables.tf` and add the following code.
+
+        ```Terraform
+        variable "location" {
+          description = "The name of the location to provision the resources to"
+          type        = string
+        }
+
+        variable "subscription_id" {
+          type = string
+        }
+        ``` 
+
+  </Tab>
+</Tabs>
+
+**References:**
+- [AzAPI provider documentation](https://learn.microsoft.com/azure/developer/terraform/overview-azapi-provider)
+- [AzureRM cognitive_account resource](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/cognitive_account)
+- [Foundry Terraform samples](https://github.com/microsoft-foundry/foundry-samples/tree/main/infrastructure/infrastructure-setup-terraform)
+
+## Initialize Terraform
+
+## Create a Terraform execution plan
+
+## Apply a Terraform execution plan
+
+## Verify your deployment
+
+Run `terraform state identities -json` to display the deployed resources. The last part of the `id` shows the resource names.
+
+## Customize security and compliance
+
+To meet security and compliance requirements, customize Foundry with security configurations and by bringing your own storage resources. For example, when using the Agent service, you can opt to bring your own Azure Cosmos DB database, Azure AI Search instance, and Azure Storage Account to store your threads and messages.
+
+For advanced setup samples, see the following repositories:
+
+- [Foundry Samples](https://github.com/azure-ai-foundry/foundry-samples/tree/main/infrastructure/infrastructure-setup-terraform) repository contains example Terraform configurations for the most common enterprise security configurations.
+- [Terraform Azure Verified Module (Cognitive Services account)](https://registry.terraform.io/modules/Azure/avm-res-cognitiveservices-account/azurerm/latest) is a generic module set to manage the Azure resource type used by Foundry, Azure OpenAI, Azure Speech, Azure Language.
+- [Terraform Azure Verified Pattern Module (Foundry)](https://registry.terraform.io/modules/Azure/avm-ptn-aiml-ai-foundry/azurerm/latest) is a reference implementation for Foundry.
+- [Terraform Azure Verified Pattern Module (Azure AI and ML Landing Zone)](https://registry.terraform.io/modules/Azure/avm-ptn-aiml-landing-zone/azurerm/latest) provides a reference for the set of resources typically created alongside Foundry for an end-to-end sample.
+
+## Clean up resources
+
+## Troubleshoot Terraform on Azure
+
+[Troubleshoot common problems when using Terraform on Azure](https://learn.microsoft.com/azure/developer/terraform/troubleshoot).
+
+## Next steps
+
+- [See AzureRM reference docs for Foundry](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/cognitive_account)
+- [Learn more about AzAPI provider](https://learn.microsoft.com/azure/developer/terraform/overview-azapi-provider)
