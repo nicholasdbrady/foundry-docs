@@ -12,7 +12,7 @@ permissions:
   issues: read
   pull-requests: read
 
-engine: claude
+engine: copilot
 strict: true
 tracker-id: label-ops-docs-fix
 

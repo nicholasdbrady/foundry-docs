@@ -10,7 +10,7 @@ permissions:
   issues: read
   pull-requests: read
 tracker-id: docs-auditor-weekly
-engine: claude
+engine: copilot
 strict: true
 network:
   allowed:

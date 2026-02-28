@@ -16,9 +16,7 @@ permissions:
   issues: read
   pull-requests: read
 tracker-id: daily-multi-device-docs-tester
-engine:
-  id: claude
-  max-turns: 30
+engine: copilot
 strict: true
 timeout-minutes: 20
 tools:

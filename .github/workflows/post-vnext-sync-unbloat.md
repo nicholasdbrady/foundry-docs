@@ -15,9 +15,7 @@ permissions:
 
 strict: true
 
-engine:
-  id: claude
-  max-turns: 90
+engine: copilot
 
 imports:
   - shared/mood.md
