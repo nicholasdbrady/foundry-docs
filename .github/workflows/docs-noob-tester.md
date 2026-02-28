@@ -4,6 +4,8 @@ description: Tests docs-vnext documentation as a new user would, identifying con
 on:
   schedule: daily
   workflow_dispatch:
+  skip-if-match: 'is:discussion is:open in:title "Noob Test Report"'
+  stop-after: "+30d"
 permissions:
   contents: read
   issues: read

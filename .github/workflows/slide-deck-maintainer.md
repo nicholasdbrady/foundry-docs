@@ -11,6 +11,7 @@ on:
         required: false
         default: 'global-sweep'
   skip-if-match: 'is:pr is:open in:title "[slides]"'
+  stop-after: "+30d"
 permissions:
   contents: read
   pull-requests: read

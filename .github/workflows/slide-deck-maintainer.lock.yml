@@ -27,7 +27,9 @@
 #   Imports:
 #     - shared/mood.md
 #
-# gh-aw-metadata: {"schema_version":"v1","frontmatter_hash":"3b3762472184d4f22647c36713a15d7ce9d5b05a8e2f0df1d291f377a00ca949","compiler_version":"v0.50.7"}
+# gh-aw-metadata: {"schema_version":"v1","frontmatter_hash":"ca0695a2ff94f006b109f9c5f1217a8084713a25915cd49be0d7e4e394decfd8","stop_time":"2026-03-30 05:32:49","compiler_version":"v0.50.7"}
+#
+# Effective stop-time: 2026-03-30 05:32:49
 
 name: "Slide Deck Maintainer"
 "on":
@@ -1155,7 +1157,7 @@ jobs:
   pre_activation:
     runs-on: ubuntu-slim
     outputs:
-      activated: ${{ (steps.check_membership.outputs.is_team_member == 'true') && (steps.check_skip_if_match.outputs.skip_check_ok == 'true') }}
+      activated: ${{ ((steps.check_membership.outputs.is_team_member == 'true') && (steps.check_stop_time.outputs.stop_time_ok == 'true')) && (steps.check_skip_if_match.outputs.skip_check_ok == 'true') }}
       matched_command: ''
     steps:
       - name: Setup Scripts
@@ -1173,6 +1175,18 @@ jobs:
             const { setupGlobals } = require('/opt/gh-aw/actions/setup_globals.cjs');
             setupGlobals(core, github, context, exec, io);
             const { main } = require('/opt/gh-aw/actions/check_membership.cjs');
+            await main();
+      - name: Check stop-time limit
+        id: check_stop_time
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        env:
+          GH_AW_STOP_TIME: 2026-03-30 05:32:49
+          GH_AW_WORKFLOW_NAME: "Slide Deck Maintainer"
+        with:
+          script: |
+            const { setupGlobals } = require('/opt/gh-aw/actions/setup_globals.cjs');
+            setupGlobals(core, github, context, exec, io);
+            const { main } = require('/opt/gh-aw/actions/check_stop_time.cjs');
             await main();
       - name: Check skip-if-match query
         id: check_skip_if_match
