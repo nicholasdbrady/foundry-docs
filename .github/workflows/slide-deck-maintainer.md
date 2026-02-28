@@ -21,21 +21,7 @@ tools:
   cache-memory: true
   edit:
   bash:
-    - "npm install*"
-    - "npm list*"
-    - "node *"
-    - "pip install*"
-    - "python *"
-    - "ls*"
-    - "cat*"
-    - "grep*"
-    - "find*"
-    - "head*"
-    - "tail*"
-    - "git"
-    - "wc*"
-    - "mkdir*"
-    - "cp*"
+    - "*"
 safe-outputs:
   create-pull-request:
     title-prefix: "[slides] "
