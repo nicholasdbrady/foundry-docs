@@ -51,11 +51,8 @@ steps:
     uses: actions/setup-node@v6
     with:
       node-version: "24"
-  - name: Install foundry-docs MCP server
-    run: pip install -e .
 imports:
   - shared/mood.md
-  - shared/mcp/foundry-docs.md
 ---
 
 # Slide Deck Maintenance Agent
@@ -115,9 +112,9 @@ echo "=== Source Code ===" && find foundry_docs_mcp -name '*.py' | wc -l
 echo "=== Scripts ===" && find scripts -name '*.py' | wc -l
 ```
 
-Use the `foundry-docs` MCP server for documentation structure:
-- `list_sections()` — section names and page counts
-- `search_docs("agent")` — sample search quality
+Use bash commands to explore docs structure:
+- `find docs-vnext -name '*.mdx' | head -30` — browse available pages
+- `cat docs-vnext/overview/*.mdx` — read overview content
 
 ## Step 5: Create or Update the Slide Deck
 
