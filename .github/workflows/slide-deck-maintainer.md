@@ -51,6 +51,10 @@ steps:
     uses: actions/setup-node@v6
     with:
       node-version: "24"
+  - name: Install pptxgenjs and dependencies
+    run: npm install pptxgenjs react react-dom react-icons sharp
+  - name: Install markitdown for QA
+    run: pip install "markitdown[pptx]"
 imports:
   - shared/mood.md
 ---
@@ -65,11 +69,11 @@ You are a slide deck maintenance specialist responsible for creating and keeping
 - **Workflow run**: #${{ github.run_number }}
 - **Focus mode**: ${{ inputs.focus }}
 - **Working directory**: ${{ github.workspace }}
-- **Output file**: `docs-vnext/slides/foundry-docs-overview.pptx`
+- **Output file**: `slides/foundry-docs-overview.pptx`
 
 ## Your Mission
 
-Create or update a stakeholder slide deck at `docs-vnext/slides/foundry-docs-overview.pptx` using PptxGenJS. Follow the pptx skill instructions in `.agents/skills/pptx/` for design guidance.
+Create or update a stakeholder slide deck at `slides/foundry-docs-overview.pptx` using PptxGenJS. Follow the pptx skill instructions in `.agents/skills/pptx/` for design guidance.
 
 ## Step 1: Read the PPTX Skill
 
@@ -80,26 +84,21 @@ cat .agents/skills/pptx/SKILL.md
 cat .agents/skills/pptx/pptxgenjs.md
 ```
 
-## Step 2: Install Dependencies
+## Step 2: Check if Slides Exist
+
+Dependencies (`pptxgenjs`, `react`, `react-icons`, `sharp`, `markitdown`) are pre-installed by the workflow build steps.
 
 ```bash
-npm install pptxgenjs react react-dom react-icons sharp
-pip install "markitdown[pptx]"
-```
-
-## Step 3: Check if Slides Exist
-
-```bash
-if [ ! -f docs-vnext/slides/foundry-docs-overview.pptx ]; then
+if [ ! -f slides/foundry-docs-overview.pptx ]; then
   echo "NEEDS_CREATION"
   mkdir -p docs-vnext/slides
 else
   echo "EXISTS — analyzing current deck"
-  python -m markitdown docs-vnext/slides/foundry-docs-overview.pptx
+  python -m markitdown slides/foundry-docs-overview.pptx
 fi
 ```
 
-## Step 4: Gather Current Project Data
+## Step 3: Gather Current Project Data
 
 Collect live metrics — never hardcode numbers:
 
@@ -116,7 +115,7 @@ Use bash commands to explore docs structure:
 - `find docs-vnext -name '*.mdx' | head -30` — browse available pages
 - `cat docs-vnext/overview/*.mdx` — read overview content
 
-## Step 5: Create or Update the Slide Deck
+## Step 4: Create or Update the Slide Deck
 
 Write a Node.js script at `/tmp/build-slides.js` that uses PptxGenJS to generate the deck.
 
@@ -149,14 +148,14 @@ Write a Node.js script at `/tmp/build-slides.js` that uses PptxGenJS to generate
 node /tmp/build-slides.js
 ```
 
-Output to: `docs-vnext/slides/foundry-docs-overview.pptx`
+Output to: `slides/foundry-docs-overview.pptx`
 
-## Step 6: QA the Deck
+## Step 5: QA the Deck
 
 Extract text to verify content:
 
 ```bash
-python -m markitdown docs-vnext/slides/foundry-docs-overview.pptx
+python -m markitdown slides/foundry-docs-overview.pptx
 ```
 
 Check that:
@@ -164,7 +163,7 @@ Check that:
 - Metrics match the live data gathered in Step 4
 - No placeholder text remains
 
-## Step 7: Create PR or Noop
+## Step 6: Create PR or Noop
 
 If the deck was created or updated, create a PR with `[slides]` prefix.
 If no changes were needed (deck is current), call `noop`.
@@ -172,6 +171,6 @@ If no changes were needed (deck is current), call `noop`.
 ## Guidelines
 
 - **Dynamic data only** — never hardcode metrics, always compute from repo
-- **One deck file** — `docs-vnext/slides/foundry-docs-overview.pptx`
+- **One deck file** — `slides/foundry-docs-overview.pptx`
 - **Professional quality** — this is for stakeholders, follow the PPTX skill design guidelines
-- **Include the build script** — commit `/tmp/build-slides.js` to `docs-vnext/slides/build-slides.js` so the deck can be regenerated
+- **Include the build script** — commit `/tmp/build-slides.js` to `slides/build-slides.js` so the deck can be regenerated
