@@ -1,0 +1,888 @@
+---
+title: "How to build a voice agent"
+description: "Learn how to use Voice Live with Foundry Agent Service to build real-time voice agents."
+sidebarTitle: "How to build a voice agent"
+---
+# How to build a voice agent (preview)
+
+<Note>
+This feature is currently in public preview. This preview is provided without a service-level agreement, and is not recommended for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
+</Note>
+
+Learn how to use Voice Live with [Microsoft Foundry Agent Service](https://learn.microsoft.com/azure/ai-foundry/agents/overview) using the VoiceLive SDK for Python. This article builds on the [Quickstart: Create a Voice Agent with Foundry Agent Service and Voice Live](../../../voice-live-agents-quickstart.md) with advanced features and integration options.
+
+[Reference documentation](https://learn.microsoft.com/python/api/overview/azure/ai-voicelive-readme) | [Package (PyPi)](https://pypi.org/project/azure-ai-voicelive/) | [Additional samples on GitHub](https://aka.ms/voicelive/github-python) 
+
+Create and run applications to use Voice Live with agents for real-time conversations.
+
+Agents provide several advantages:
+
+- Use centralized configuration in the agent itself instead of session code.
+- Handle complex logic and conversational behaviors for easier updates.
+- Connect automatically by using your agent ID.
+- Support multiple variations without changing client code.
+
+To use Voice Live without Foundry agents, see the [Voice Live API quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/voice-live-quickstart).
+
+<Tip>
+You don't need to deploy an audio model with Microsoft Foundry to use Voice Live. Voice Live is fully managed and automatically deploys the model for you. For model availability, see the [Voice Live overview documentation](../../../voice-live.md).
+</Tip>
+
+## Prerequisites
+
+<Note>
+This document refers to the [Microsoft Foundry (new)](../../../../../ai-foundry/what-is-foundry.md#microsoft-foundry-portals) portal and the latest Foundry Agent Service version.
+</Note>
+
+- An Azure subscription. [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
+- <a href="https://www.python.org/" target="_blank">Python 3.10 or later version</a>. If you don't have a suitable version of Python installed, you can follow the instructions in the [VS Code Python Tutorial](https://code.visualstudio.com/docs/python/python-tutorial#_install-a-python-interpreter) for the easiest way of installing Python on your operating system.
+- The required language runtimes, global tools, and Visual Studio Code extensions as described in [Prepare your development environment](../../../../../ai-foundry/how-to/develop/install-cli-sdk.md).
+- A [Microsoft Foundry resource](../../../../multi-service-resource.md) created in one of the supported regions. For more information about region availability, see the [Voice Live overview documentation](../../../voice-live.md).
+- A model deployed in Microsoft Foundry. If you don't have a model, first complete [Quickstart: Set up Microsoft Foundry resources](../../../../../foundry/tutorials/quickstart-create-foundry-resources.md).
+
+{/* - A Microsoft Foundry agent created in the [Microsoft Foundry portal](https://ai.azure.com/?cid=learnDocs). For more information about creating an agent, see the [Create an agent quickstart](../../../../../ai-foundry/quickstarts/get-started-code.md). */}
+- Assign the `Azure AI User` role to your user account. You can assign roles in the Azure portal under **Access control (IAM)** > **Add role assignment**.
+
+## Prepare the environment and create the agent
+
+Complete the [Quickstart: Create a Voice Agent with Foundry Agent Service and Voice Live](../../../voice-live-agents-quickstart.md) to set up your environment, configure the agent with Voice Live settings, and test your first conversation.
+
+## Agent integration concepts
+
+Use these concepts to understand how Voice Live and Foundry Agent Service work together in the Python sample.
+
+### Agent configuration contract
+
+Set `agent_config` in your session setup to identify the target agent and project. At minimum, include `agent_name` and `project_name`. Add `agent_version` when you want to pin behavior to a specific version.
+
+### Authentication model for agent mode
+
+Use Microsoft Entra ID credentials for agent mode. Agent invocation in this flow doesn't support key-based authentication, so configure `AzureCliCredential` (or another Entra token credential) for local development and deployment.
+
+### API version pinning
+
+Pin a supported `api_version` in the client to keep behavior predictable across preview updates. Use the same version consistently across quickstart and how-to samples to avoid schema drift.
+
+### Conversation and trace alignment
+
+Treat agent thread and trace records as text-turn history, not exact playback history. If your app allows interruption or truncation, enable truncation-aware handling so persisted history better matches what the user actually heard.
+
+## Connect to a specific agent version
+
+Pin your agent to a specific version to enable controlled deployments. This lets production use stable versions while development tests newer iterations.
+
+Set the `AGENT_VERSION` environment variable or pass the `agent_version` parameter when initializing the assistant:
+
+```python
+// Source: voice-live-with-agent-v2.py (not available)
+```
+
+In this sample, the version configuration is applied in three places:
+
+- In `main()`, `AGENT_VERSION` is read from the environment.
+- In the `BasicVoiceAssistant(...)` call, `agent_version` is passed into the class constructor.
+- In `BasicVoiceAssistant.__init__`, the value is added to `self.agent_config`, and then sent to Voice Live via `connect(..., agent_config=self.agent_config)`.
+
+The `agent_version` value corresponds to the version string returned when you create or update an agent using the Foundry Agent SDK. If not specified, Voice Live connects to the latest version of the agent.
+
+## Connect to an agent on a different Foundry resource
+
+Configure Voice Live to connect to an agent on a different Foundry resource for audio processing. This is useful when:
+- The agent is deployed in a region that has different feature availability
+- You want to separate development/staging environments from production
+- Your organization uses different resources for different workloads
+
+To connect to an agent on a different resource, configure two additional environment variables:
+
+- `FOUNDRY_RESOURCE_OVERRIDE`: The Foundry resource name hosting the agent project (for example, `my-agent-resource`).
+- `AGENT_AUTHENTICATION_IDENTITY_CLIENT_ID`: The managed identity client ID of the Voice Live resource, required for cross-resource authentication.
+
+```python
+// Source: voice-live-with-agent-v2.py (not available)
+```
+
+This configuration is resolved in `main()` and then applied when the assistant is created:
+
+- `FOUNDRY_RESOURCE_OVERRIDE` and `AGENT_AUTHENTICATION_IDENTITY_CLIENT_ID` are read from environment variables.
+- Both values are passed to `BasicVoiceAssistant(...)`.
+- In `BasicVoiceAssistant.__init__`, the values are added to `self.agent_config`, which is sent in `connect(..., agent_config=self.agent_config)`.
+
+<Info>
+Cross-resource connections require proper role assignments. Ensure the Voice Live resource's managed identity has the `Azure AI User` role on the target agent resource.
+</Info>
+
+## Add a proactive message at session start
+
+Send a proactive message to initiate conversations as soon as the session is ready. This sample checks a one-time flag in the `SESSION_UPDATED` event handler, sends a greeting prompt, and triggers a response.
+
+```python
+// Source: voice-live-with-agent-v2.py (not available)
+```
+
+In this sample, proactive messaging is applied in three steps:
+
+- `self.greeting_sent = False` initializes one-time greeting state.
+- In the `SESSION_UPDATED` branch, `if not self.greeting_sent:` gates proactive execution to run once per session.
+- `conn.conversation.item.create(...)` adds the greeting instruction to conversation context, and `conn.response.create()` generates spoken output.
+
+## Improve tool calling and latency wait times
+
+Use Voice Live's `interim_response` feature to bridge wait times during tool calling or when generating agent responses with high latency.
+
+This feature supports two modes:
+- LlmInterimResponseConfig: LLM-generated interim response - best for dynamic and adaptive starts
+- InterimResponseTrigger: Pre-generated interim response - best for deterministic or branded messaging
+
+The `voice-live-agents-quickstart.py` created with the quickstart shows the required code additions to configure this feature as follows:
+
+```python
+// Source: voice-live-with-agent-v2.py (not available)
+```
+
+In this sample, the interim response setup is applied inside `BasicVoiceAssistant._setup_session()`:
+
+- `LlmInterimResponseConfig(...)` defines when interim responses trigger and what style they use.
+- `RequestSession(...)` attaches that config through the `interim_response` field.
+- `conn.session.update(session=session_config)` sends the session configuration to Voice Live.
+
+## Use auto truncation for interrupted responses
+
+When users interrupt agent audio, conversation text can drift from what users actually heard. Auto truncation helps keep session context aligned with delivered audio, which improves follow-up response quality after barge-in and keeps voice conversation history logging more accurate.
+
+This sample currently shows interruption handling with `response.cancel()` during speech start, but it doesn't configure `auto_truncate` in `turn_detection`.
+
+<Note>
+In Foundry Agent Service, thread messages and tracing agent threads are based on text content in the thread. Without auto truncation, those records can differ from the exact portion of audio the user actually heard before interruption.
+</Note>
+
+For setup details and supported options, see [Handle voice interruptions in chat history (preview)](../../../how-to-voice-live-auto-truncation.md).
+
+## Reconnect to a previous agent conversation
+
+Reconnect to a previous conversation by specifying the conversation ID. This preserves history and context, allowing users to continue where they left off.
+
+Voice Live returns session metadata in the `SESSION_UPDATED` event when a session connects successfully:
+
+```python
+// Source: voice-live-with-agent-v2.py (not available)
+```
+
+In this event handler, session and agent metadata is logged when the session is ready.
+
+The sample code automatically writes session details to a conversation log file in the `logs/` folder (for example, `logs/2026-02-19_14-30-00_conversation.log`). You can retrieve the session ID from this file after running a session.
+
+To reconnect to that conversation, pass the conversation ID as the `CONVERSATION_ID` environment variable (or the `conversation_id` parameter):
+
+```python
+// Source: voice-live-with-agent-v2.py (not available)
+```
+
+In this sample, conversation reconnect is applied in three places:
+
+- In `main()`, `CONVERSATION_ID` is read from the environment.
+- In the `BasicVoiceAssistant(...)` call, `conversation_id` is passed into the class constructor.
+- In `BasicVoiceAssistant.__init__`, the value is assigned into `self.agent_config` as `conversation_id`.
+
+When a valid `conversation_id` is provided, the agent retrieves the previous conversation context and can reference earlier exchanges in its responses.
+
+<Note>
+Conversation IDs are tied to the agent and project. Attempting to use a conversation ID with a different agent results in a new conversation being created.
+</Note>
+
+## Log session metadata for continuity and diagnostics
+
+Log key session metadata, including the session ID, to a timestamped conversation log file under `logs/`. This helps you:
+
+- Identify the session for debugging and support scenarios.
+- Correlate user-reported behavior with session metadata.
+- Track runs over time by preserving per-session log files.
+
+The following code creates the log filename and writes session metadata when `SESSION_UPDATED` is received:
+
+```python
+// Source: voice-live-with-agent-v2.py (not available)
+```
+
+In this sample, session metadata logging is applied in three places:
+
+- A timestamped conversation log file is created per run.
+- On `SESSION_UPDATED`, metadata including session ID, agent name, and voice configuration is appended.
+- `write_conversation_log(...)` appends entries to the same file throughout the conversation lifecycle.
+
+Use the logged session metadata with `CONVERSATION_ID` to resume the same agent conversation in a later session.
+
+In this article, you'll learn how to use Voice Live with [Microsoft Foundry Agent Service](https://learn.microsoft.com/azure/ai-foundry/agents/overview) using the VoiceLive SDK for C#. This article extends the [Quickstart: Create a Voice Agent with Foundry Agent Service and Voice Live](../../../voice-live-agents-quickstart.md) with more details on features and integration options.
+
+[Reference documentation](https://learn.microsoft.com/dotnet/api/overview/azure/ai.voicelive-readme) | [Package (NuGet)](https://www.nuget.org/packages/Azure.AI.VoiceLive) | [Additional samples on GitHub](https://aka.ms/voicelive/github-csharp) 
+
+Create and run applications to use Voice Live with agents for real-time conversations.
+
+Agents provide several advantages:
+
+- Use centralized configuration in the agent itself instead of session code.
+- Handle complex logic and conversational behaviors for easier updates.
+- Connect automatically by using your agent ID.
+- Support multiple variations without changing client code.
+
+To use Voice Live without Foundry agents, see the [Voice Live API quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/voice-live-quickstart).
+
+<Tip>
+You don't need to deploy an audio model with Microsoft Foundry to use Voice Live. Voice Live is fully managed and automatically deploys the model for you. For model availability, see the [Voice Live overview documentation](../../../voice-live.md).
+</Tip>
+
+## Prerequisites
+
+<Note>
+This guide refers to the [Microsoft Foundry (new)](../../../../../ai-foundry/what-is-foundry.md#microsoft-foundry-portals) portal and the latest Foundry Agent Service version.
+</Note>
+
+- An Azure subscription. [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
+- [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) or later.
+- The required language runtimes, global tools, and Visual Studio Code extensions. See [Prepare your development environment](../../../../../ai-foundry/how-to/develop/install-cli-sdk.md).
+- A [Microsoft Foundry resource](../../../../multi-service-resource.md) created in a supported region. See [Voice Live overview documentation](../../../voice-live.md) for region availability.
+- A deployed model in Microsoft Foundry. If you don't have one, first complete [Quickstart: Set up Microsoft Foundry resources](../../../../../foundry/tutorials/quickstart-create-foundry-resources.md).
+- The `Azure AI User` role assigned to your user account. Assign roles in the Azure portal under **Access control (IAM)** > **Add role assignment**.
+
+## Prepare the environment and create the agent
+
+Complete the [Quickstart: Create a Voice Agent with Foundry Agent Service and Voice Live](../../../voice-live-agents-quickstart.md) to prepare your environment, set up the agent with Voice Live settings, and run your first test.
+
+## Agent integration concepts
+
+These concepts help you understand how Voice Live and Foundry Agent Service work together in the C# sample.
+
+### Agent configuration contract
+
+Set `AgentSessionConfig` in your session setup to identify the target agent and project. Include at minimum `agentName` and `projectName`. Add `AgentVersion` when you want to pin behavior to a specific version.
+
+### Authentication for agent mode
+
+Use Microsoft Entra ID credentials for agent mode. Agent invocation doesn't support key-based authentication, so configure `AzureCliCredential` (or another Entra token credential) for local development and deployment.
+
+### API version pinning
+
+Use a consistent SDK version (`Azure.AI.VoiceLive` 1.1.0-beta.2) in your project file. Consistent versioning keeps behavior predictable across preview updates and avoids schema drift.
+
+### Conversation and trace alignment
+
+Treat agent thread and trace records as text-turn history, not exact playback history. If your app allows interruption or truncation, enable truncation-aware handling. This ensures persisted history better matches what users actually heard.
+
+## Connect to a specific agent version
+
+Voice Live lets you connect to a specific version of your agent. This enables controlled deployments where production uses a stable version while development tests newer iterations.
+
+To connect to a specific agent version, set the `AGENT_VERSION` environment variable or pass the `agentVersion` parameter when initializing the assistant:
+
+```csharp
+// Source: VoiceLiveWithAgentV2.cs (not available)
+```
+
+The version configuration is applied in three places:
+
+- In `Main()`, read `AGENT_VERSION` from the environment.
+- Pass `agentVersion` to the `BasicVoiceAssistant(...)` constructor.
+- In the constructor, set the value on `AgentSessionConfig` via `config.AgentVersion`. Send it to Voice Live via `StartSessionAsync(SessionTarget.FromAgent(agentConfig))`.
+
+The `agentVersion` value corresponds to the version string returned when you create or update an agent using the Foundry Agent SDK. If not specified, Voice Live connects to the latest agent version.
+
+## Connect to an agent on a different Foundry resource
+
+Configure Voice Live to connect to an agent hosted on a different Foundry resource than the one used for audio processing.
+
+This is useful in these scenarios:
+
+- The agent is deployed in a region with different feature availability.
+- You want to separate development and staging from production.
+- Your organization uses different resources for different workloads.
+
+To connect to an agent on a different resource, configure two environment variables:
+
+- `FOUNDRY_RESOURCE_OVERRIDE`: The Foundry resource name hosting the agent project (for example, `my-agent-resource`).
+- `AGENT_AUTHENTICATION_IDENTITY_CLIENT_ID`: The managed identity client ID of the Voice Live resource, required for cross-resource authentication.
+
+```csharp
+// Source: VoiceLiveWithAgentV2.cs (not available)
+```
+
+The configuration is resolved in `Main()` and applied when the assistant is created:
+
+- Read `FOUNDRY_RESOURCE_OVERRIDE` and `AGENT_AUTHENTICATION_IDENTITY_CLIENT_ID` from environment variables.
+- Pass both values to the `BasicVoiceAssistant(...)` constructor.
+- In the constructor, set both values on `AgentSessionConfig` via `config.FoundryResourceOverride` and `config.AuthenticationIdentityClientId`. Send them in `StartSessionAsync(SessionTarget.FromAgent(agentConfig))`.
+
+<Info>
+Cross-resource connections require proper role assignments. Ensure the Voice Live resource's managed identity has the `Azure AI User` role on the target agent resource.
+</Info>
+
+## Add a proactive message at session start
+
+Send a proactive message to initiate conversations when the session is ready. The assistant checks a one-time flag in the `SessionUpdateSessionUpdated` event handler, sends a greeting prompt, and triggers a response.
+
+```csharp
+// Source: VoiceLiveWithAgentV2.cs (not available)
+```
+
+Proactive messaging is applied in three steps:
+
+- `_greetingSent` is a `bool` initialized to `false` to track one-time greeting state.
+- In the `SessionUpdateSessionUpdated` branch, `if (!_greetingSent)` gates execution to run once per session.
+- `SendCommandAsync(...)` with a `conversation.item.create` payload adds the greeting to conversation context. A `response.create` command generates spoken output.
+
+## Improve tool calling and latency wait times
+
+Voice Live offers `InterimResponse` to bridge wait times during tool calling or when generating responses with high latency.
+
+The feature supports two modes:
+
+- `LlmInterimResponseConfig`: LLM-generated interim response—best for dynamic starts.
+- `InterimResponseTrigger`: Pre-generated interim response—best for deterministic or branded messaging.
+
+The quickstart voice assistant shows the required code additions:
+
+```csharp
+// Source: VoiceLiveWithAgentV2.cs (not available)
+```
+
+The interim response setup is applied inside `SetupSessionAsync()`:
+
+- `ConfigureSessionAsync(options)` sends the base session configuration to Voice Live.
+- A raw `session.update` command with `interim_response` settings is sent via `SendCommandAsync`. This is necessary because `VoiceLiveSessionOptions` doesn't expose the `InterimResponse` property in this SDK version.
+- The `llm_interim_response` configuration defines when interim responses trigger and what style they use.
+
+## Use auto truncation for interrupted responses
+
+When users interrupt agent audio, conversation text can drift from what users actually heard. Auto truncation keeps session context aligned with delivered audio. This improves follow-up responses after barge-in and keeps conversation logging more accurate.
+
+The sample currently shows interruption handling with `CancelResponseAsync()` during speech start, but it doesn't configure `auto_truncate` in `turn_detection`.
+
+<Note>
+In Foundry Agent Service, thread messages and trace records are based on text content. Without auto truncation, these records can differ from the exact portion of audio users heard before interruption.
+</Note>
+
+See [Handle voice interruptions in chat history (preview)](../../../how-to-voice-live-auto-truncation.md) for setup details and supported options.
+
+## Reconnect to a previous agent conversation
+
+Reconnect to a previous conversation by specifying the conversation ID. This preserves history and context, allowing users to continue where they left off.
+
+When a session connects successfully, Voice Live returns session metadata in the `SessionUpdateSessionUpdated` event. Extract the session ID and log it to the conversation file:
+
+```csharp
+// Source: VoiceLiveWithAgentV2.cs (not available)
+```
+
+In this event handler, the session ID is extracted from `sessionUpdated.Session?.Id` and written to the conversation log.
+
+The sample writes session details to a conversation log file in the `logs/` folder (for example, `logs/conversation_20260219_143000.log`).
+
+To reconnect, pass the conversation ID as the `CONVERSATION_ID` environment variable or the `conversationId` parameter:
+
+```csharp
+// Source: VoiceLiveWithAgentV2.cs (not available)
+```
+
+Conversation reconnect is applied in three places:
+
+- In `Main()`, read `CONVERSATION_ID` from the environment (line 464).
+- Pass the value to the `BasicVoiceAssistant(...)` constructor (lines 489-492).
+- In the constructor, set the value on `AgentSessionConfig` via `config.ConversationId`.
+
+When a valid `conversationId` is provided, the agent retrieves the previous conversation context and can reference earlier exchanges.
+
+<Note>
+Conversation IDs are tied to the agent and project. Using a conversation ID with a different agent creates a new conversation.
+</Note>
+
+## Log session metadata for continuity and diagnostics
+
+The sample logs key session metadata, including the session ID, to a timestamped conversation log file under `logs/`. This helps you:
+
+- Identify the session for debugging and support.
+- Correlate user-reported behavior with session metadata.
+- Track runs over time by preserving per-session log files.
+
+The following code creates the log filename and writes session metadata when `SessionUpdateSessionUpdated` fires:
+
+```csharp
+// Source: VoiceLiveWithAgentV2.cs (not available)
+```
+
+Session metadata logging is applied in three places:
+
+- A timestamped conversation log file (`conversation_YYYYMMDD_HHmmss.log`) is created per run (lines 188–189).
+- On `SessionUpdateSessionUpdated`, the handler extracts the session ID and writes it to the log (lines 315–316).
+- `WriteLog(...)` appends entries throughout the conversation lifecycle (lines 433–445).
+
+Use the logged session metadata with `CONVERSATION_ID` to resume the same agent conversation later. Use the session ID alongside your conversation ID for diagnostics and reconnect scenarios.
+
+Learn how to use Voice Live with [Microsoft Foundry Agent Service](https://learn.microsoft.com/azure/ai-foundry/agents/overview) using the VoiceLive SDK for Java. This article builds on the [Quickstart: Create a Voice Agent with Foundry Agent Service and Voice Live](../../../voice-live-agents-quickstart.md) with advanced features and integration options.
+
+[Reference documentation](https://learn.microsoft.com/java/api/overview/azure/ai-voicelive-readme) | [Package (Maven)](https://central.sonatype.com/artifact/com.azure/azure-ai-voicelive/overview) | [Additional samples on GitHub](https://aka.ms/voicelive/github-java) 
+
+Create and run applications to use Voice Live with agents for real-time conversations.
+
+Agents provide several advantages:
+
+- Use centralized configuration in the agent itself instead of session code.
+- Handle complex logic and conversational behaviors for easier updates.
+- Connect automatically by using your agent ID.
+- Support multiple variations without changing client code.
+
+To use Voice Live without Foundry agents, see the [Voice Live API quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/voice-live-quickstart).
+
+<Tip>
+You don't need to deploy an audio model with Microsoft Foundry to use Voice Live. Voice Live is fully managed and automatically deploys the model for you. For model availability, see the [Voice Live overview documentation](../../../voice-live.md).
+</Tip>
+
+## Prerequisites
+
+<Note>
+This document refers to the [Microsoft Foundry (new)](../../../../../ai-foundry/what-is-foundry.md#microsoft-foundry-portals) portal and the latest Foundry Agent Service version.
+</Note>
+
+- An Azure subscription. [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
+- [Java Development Kit (JDK)](https://learn.microsoft.com/java/azure/jdk/) version 11 or later.
+- [Apache Maven](https://maven.apache.org/download.cgi) installed.
+- The required language runtimes, global tools, and Visual Studio Code extensions as described in [Prepare your development environment](../../../../../ai-foundry/how-to/develop/install-cli-sdk.md).
+- A [Microsoft Foundry resource](../../../../multi-service-resource.md) created in one of the supported regions. For more information about region availability, see the [Voice Live overview documentation](../../../voice-live.md).
+- A model deployed in Microsoft Foundry. If you don't have a model, first complete [Quickstart: Set up Microsoft Foundry resources](../../../../../foundry/tutorials/quickstart-create-foundry-resources.md).
+
+{/* - A Microsoft Foundry agent created in the [Microsoft Foundry portal](https://ai.azure.com/?cid=learnDocs). For more information about creating an agent, see the [Create an agent quickstart](../../../../../ai-foundry/quickstarts/get-started-code.md). */}
+- Assign the `Azure AI User` role to your user account. You can assign roles in the Azure portal under **Access control (IAM)** > **Add role assignment**.
+
+## Prepare the environment and create the agent
+
+Complete the [Quickstart: Create a Voice Agent with Foundry Agent Service and Voice Live](../../../voice-live-agents-quickstart.md) to set up your environment, configure the agent with Voice Live settings, and test your first conversation.
+
+## Agent integration concepts
+
+Use these concepts to understand how Voice Live and Foundry Agent Service work together in the Java sample.
+
+### Agent configuration contract
+
+Set `AgentSessionConfig` in your session setup to identify the target agent and project. At minimum, include `agentName` and `projectName`. Add `agentVersion` when you want to pin behavior to a specific version.
+
+### Authentication model for agent mode
+
+Use Microsoft Entra ID credentials for agent mode. Agent invocation in this flow doesn't support key-based authentication, so configure `AzureCliCredential` (or another Entra token credential) for local development and deployment.
+
+### API version pinning
+
+Use a consistent SDK version (`azure-ai-voicelive:1.0.0-beta.5`) in the Maven POM to keep behavior predictable across preview updates. Use the same version consistently across quickstart and how-to samples to avoid schema drift.
+
+### Conversation and trace alignment
+
+Treat agent thread and trace records as text-turn history, not exact playback history. If your app allows interruption or truncation, enable truncation-aware handling so persisted history better matches what the user actually heard.
+
+## Connect to a specific agent version
+
+Pin your agent to a specific version to enable controlled deployments. This lets production use stable versions while development tests newer iterations.
+
+Set the `AGENT_VERSION` environment variable or pass the `agentVersion` parameter when initializing the assistant:
+
+```java
+// Source: VoiceLiveWithAgentV2.java (not available)
+```
+
+In this sample, the version configuration is applied in three places:
+
+- In `main()`, `AGENT_VERSION` is read from the environment.
+- In the `BasicVoiceAssistant(...)` constructor, `agentVersion` is passed in.
+- In the constructor, the value is set on `AgentSessionConfig` via `config.setAgentVersion(agentVersion)`, and then sent to Voice Live via `client.startSession(agentConfig)`.
+
+The `agentVersion` value corresponds to the version string returned when you create or update an agent using the Foundry Agent SDK. If not specified, Voice Live connects to the latest version of the agent.
+
+## Connect to an agent on a different Foundry resource
+
+Configure Voice Live to connect to an agent on a different Foundry resource for audio processing. This is useful when:
+- The agent is deployed in a region that has different feature availability
+- You want to separate development/staging environments from production
+- Your organization uses different resources for different workloads
+
+To connect to an agent on a different resource, configure two additional environment variables:
+
+- `FOUNDRY_RESOURCE_OVERRIDE`: The Foundry resource name hosting the agent project (for example, `my-agent-resource`).
+- `AGENT_AUTHENTICATION_IDENTITY_CLIENT_ID`: The managed identity client ID of the Voice Live resource, required for cross-resource authentication.
+
+```java
+// Source: VoiceLiveWithAgentV2.java (not available)
+```
+
+This configuration is resolved in `main()` and then applied when the assistant is created:
+
+- `FOUNDRY_RESOURCE_OVERRIDE` and `AGENT_AUTHENTICATION_IDENTITY_CLIENT_ID` are read from environment variables.
+- Both values are passed to the `BasicVoiceAssistant(...)` constructor.
+- In the constructor, the values are set on `AgentSessionConfig` via `config.setFoundryResourceOverride(...)` and `config.setAuthenticationIdentityClientId(...)`, which is sent in `client.startSession(agentConfig)`.
+
+<Info>
+Cross-resource connections require proper role assignments. Ensure the Voice Live resource's managed identity has the `Azure AI User` role on the target agent resource.
+</Info>
+
+## Add a proactive message at session start
+
+Send a proactive message to initiate conversations as soon as the session is ready. This sample checks a one-time flag in the `SESSION_UPDATED` event handler, sends a greeting prompt, and triggers a response.
+
+```java
+// Source: VoiceLiveWithAgentV2.java (not available)
+```
+
+In this sample, proactive messaging is applied in three steps:
+
+- `greetingSent` is a `boolean` initialized to `false` to track one-time greeting state.
+- In the `SESSION_UPDATED` branch, `if (!greetingSent)` gates proactive execution to run once per session.
+- `sendEvent(new ClientEventConversationItemCreate()...)` adds the greeting instruction to conversation context, and `sendEvent(new ClientEventResponseCreate())` generates spoken output.
+
+## Improve tool calling and latency wait times
+
+Use Voice Live's `interimResponse` feature to bridge wait times during tool calling or when generating agent responses with high latency.
+
+This feature supports two modes:
+- `LlmInterimResponseConfig`: LLM-generated interim response - best for dynamic and adaptive starts
+- `InterimResponseTrigger`: Pre-generated interim response - best for deterministic or branded messaging
+
+The voice assistant created with the quickstart shows the required code additions to configure this feature as follows:
+
+```java
+// Source: VoiceLiveWithAgentV2.java (not available)
+```
+
+In this sample, the interim response setup is applied inside `BasicVoiceAssistant.setupSession()`:
+
+- `LlmInterimResponseConfig` defines when interim responses trigger and what style they use.
+- `VoiceLiveSessionOptions` attaches that config through the `interimResponse` field (serialized via `BinaryData.fromObject(...)`).
+- `session.sendEvent(new ClientEventSessionUpdate(sessionOptions))` sends the session configuration to Voice Live.
+
+## Use auto truncation for interrupted responses
+
+When users interrupt agent audio, conversation text can drift from what users actually heard. Auto truncation helps keep session context aligned with delivered audio, which improves follow-up response quality after barge-in and keeps voice conversation history logging more accurate.
+
+This sample currently shows interruption handling with `ClientEventResponseCancel` during speech start, but it doesn't configure `auto_truncate` in `turn_detection`.
+
+<Note>
+In Foundry Agent Service, thread messages and tracing agent threads are based on text content in the thread. Without auto truncation, those records can differ from the exact portion of audio the user actually heard before interruption.
+</Note>
+
+For setup details and supported options, see [Handle voice interruptions in chat history (preview)](../../../how-to-voice-live-auto-truncation.md).
+
+## Reconnect to a previous agent conversation
+
+Reconnect to a previous conversation by specifying the conversation ID. This preserves history and context, allowing users to continue where they left off.
+
+When a session connects successfully, Voice Live returns session metadata in the `SESSION_UPDATED` event. The sample extracts the session ID and logs it to the conversation file:
+
+```java
+// Source: VoiceLiveWithAgentV2.java (not available)
+```
+
+In this event handler, the session ID is extracted from the event JSON using `extractField(event, "id")` and written to the conversation log.
+
+The sample code writes session details to a conversation log file in the `logs/` folder (for example, `logs/conversation_20260219_143000.log`).
+
+To reconnect to that conversation, pass the conversation ID as the `CONVERSATION_ID` environment variable (or the `conversationId` parameter):
+
+```java
+// Source: VoiceLiveWithAgentV2.java (not available)
+```
+
+In this sample, conversation reconnect is applied in three places:
+
+- In `main()`, `CONVERSATION_ID` is read from the environment (line 512).
+- The value is passed to the `BasicVoiceAssistant(...)` constructor (lines 537-540).
+- In the constructor, the value is set on `AgentSessionConfig` via `config.setConversationId(conversationId)`.
+
+When a valid `conversationId` is provided, the agent retrieves the previous conversation context and can reference earlier exchanges in its responses.
+
+<Note>
+Conversation IDs are tied to the agent and project. Attempting to use a conversation ID with a different agent results in a new conversation being created.
+</Note>
+
+## Log session metadata for continuity and diagnostics
+
+Log key session metadata, including the session ID, to a timestamped conversation log file under `logs/`. This helps you:
+
+- Identify the session for debugging and support scenarios.
+- Correlate user-reported behavior with session metadata.
+- Track runs over time by preserving per-session log files.
+
+The following code creates the log filename and writes session metadata when `SESSION_UPDATED` is received:
+
+```java
+// Source: VoiceLiveWithAgentV2.java (not available)
+```
+
+In this sample, session metadata logging is applied in three places:
+
+- A timestamped conversation log file (`conversation_YYYYMMDD_HHmmss.log`) is created per run (lines 92–95).
+- On `SESSION_UPDATED`, the handler extracts the session ID from the event JSON and writes it to the log (lines 365–366).
+- `writeLog(...)` appends entries to the same log file throughout the conversation lifecycle (lines 471–482).
+
+Use the logged session metadata with `CONVERSATION_ID` to resume the same agent conversation in a later session.
+
+Use the session ID value alongside your conversation ID for diagnostics and reconnect scenarios.
+
+Learn how to use Voice Live with [Microsoft Foundry Agent Service](https://learn.microsoft.com/azure/ai-foundry/agents/overview) using the VoiceLive SDK for JavaScript. This article builds on the [Quickstart: Create a Voice Agent with Foundry Agent Service and Voice Live](../../../voice-live-agents-quickstart.md) with advanced features and integration options.
+
+[Reference documentation](https://learn.microsoft.com/javascript/api/overview/azure/ai-voicelive-readme) | [Package (npm)](https://www.npmjs.com/package/@azure/ai-voicelive) | [Additional samples on GitHub](https://aka.ms/voicelive/github-javascript) 
+
+Create and run applications to use Voice Live with agents for real-time conversations.
+
+Agents provide several advantages:
+
+- Use centralized configuration in the agent itself instead of session code.
+- Handle complex logic and conversational behaviors for easier updates.
+- Connect automatically by using your agent ID.
+- Support multiple variations without changing client code.
+
+To use Voice Live without Foundry agents, see the [Voice Live API quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/voice-live-quickstart).
+
+<Tip>
+You don't need to deploy an audio model with Microsoft Foundry to use Voice Live. Voice Live is fully managed and automatically deploys the model for you. For model availability, see the [Voice Live overview documentation](../../../voice-live.md).
+</Tip>
+
+<Note>
+The JavaScript Voice Live SDK is designed for browser-based applications with built-in WebSocket and Web Audio support. This how-to guide uses Node.js with `node-record-lpcm16` and `speaker` for a console experience. For a full browser-based voice UI, see the [Voice Live universal assistant sample](https://github.com/microsoft-foundry/voicelive-samples/tree/main/voice-live-universal-assistant).
+</Note>
+
+## Prerequisites
+
+<Note>
+This document refers to the [Microsoft Foundry (new)](../../../../../ai-foundry/what-is-foundry.md#microsoft-foundry-portals) portal and the latest Foundry Agent Service version.
+</Note>
+
+- An Azure subscription. [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
+- [Node.js](https://nodejs.org/) version 18 or later.
+- [SoX](https://sox.sourceforge.io/) installed on your system (required by `node-record-lpcm16` for microphone capture).
+- The required language runtimes, global tools, and Visual Studio Code extensions as described in [Prepare your development environment](../../../../../ai-foundry/how-to/develop/install-cli-sdk.md).
+- A [Microsoft Foundry resource](../../../../multi-service-resource.md) created in one of the supported regions. For more information about region availability, see the [Voice Live overview documentation](../../../voice-live.md).
+- A model deployed in Microsoft Foundry. If you don't have a model, first complete [Quickstart: Set up Microsoft Foundry resources](../../../../../foundry/tutorials/quickstart-create-foundry-resources.md).
+
+{/* - A Microsoft Foundry agent created in the [Microsoft Foundry portal](https://ai.azure.com/?cid=learnDocs). For more information about creating an agent, see the [Create an agent quickstart](../../../../../ai-foundry/quickstarts/get-started-code.md). */}
+- Assign the `Azure AI User` role to your user account. You can assign roles in the Azure portal under **Access control (IAM)** > **Add role assignment**.
+
+## Prepare the environment and create the agent
+
+Complete the [Quickstart: Create a Voice Agent with Foundry Agent Service and Voice Live](../../../voice-live-agents-quickstart.md) to set up your environment, configure the agent with Voice Live settings, and test your first conversation.
+
+## Agent integration concepts
+
+Use these concepts to understand how Voice Live and Foundry Agent Service work together in the JavaScript sample.
+
+### Agent configuration contract
+
+Set the `agent` property with an `AgentSessionConfig` object in your `createSession(...)` call to identify the target agent and project. At minimum, include `agentName` and `projectName`. Add `agentVersion` when you want to pin behavior to a specific version.
+
+### Authentication model for agent mode
+
+Use Microsoft Entra ID credentials for agent mode. Agent invocation in this flow doesn't support key-based authentication, so configure `DefaultAzureCredential` (or another Entra token credential) for local development and deployment.
+
+### API version pinning
+
+Use a consistent SDK version (`@azure/ai-voicelive@1.0.0-beta.3`) in your `package.json` to keep behavior predictable across preview updates. Use the same version consistently across quickstart and how-to samples to avoid schema drift.
+
+### Conversation and trace alignment
+
+Treat agent thread and trace records as text-turn history, not exact playback history. If your app allows interruption or truncation, enable truncation-aware handling so persisted history better matches what the user actually heard.
+
+## Connect to a specific agent version
+
+Pin your agent to a specific version to enable controlled deployments. This lets production use stable versions while development tests newer iterations.
+
+Set the `AGENT_VERSION` environment variable or pass the `agentVersion` property when initializing the assistant:
+
+```javascript
+// Source: voice-live-with-agent-v2.js (not available)
+```
+
+In this sample, the version configuration is applied in three places:
+
+- In `main()`, `AGENT_VERSION` is read from `process.env`.
+- In the `BasicVoiceAssistant` constructor, `agentVersion` is spread into the `agentConfig` object.
+- The config is passed to `client.createSession({ agent: this.agentConfig })`, which sends it to Voice Live.
+
+The `agentVersion` value corresponds to the version string returned when you create or update an agent using the Foundry Agent SDK. If not specified, Voice Live connects to the latest version of the agent.
+
+## Connect to an agent on a different Foundry resource
+
+Configure Voice Live to connect to an agent on a different Foundry resource for audio processing. This is useful when:
+- The agent is deployed in a region that has different feature availability
+- You want to separate development/staging environments from production
+- Your organization uses different resources for different workloads
+
+To connect to an agent on a different resource, configure two additional environment variables:
+
+- `FOUNDRY_RESOURCE_OVERRIDE`: The Foundry resource name hosting the agent project (for example, `my-agent-resource`).
+- `AGENT_AUTHENTICATION_IDENTITY_CLIENT_ID`: The managed identity client ID of the Voice Live resource, required for cross-resource authentication.
+
+```javascript
+// Source: voice-live-with-agent-v2.js (not available)
+```
+
+This configuration is resolved in `main()` and then applied when the assistant is created:
+
+- `FOUNDRY_RESOURCE_OVERRIDE` and `AGENT_AUTHENTICATION_IDENTITY_CLIENT_ID` are read from `process.env`.
+- Both values are spread into the constructor options.
+- In the constructor, the values are conditionally set on the `agentConfig` object, which is sent in `client.createSession({ agent: this.agentConfig })`.
+
+<Info>
+Cross-resource connections require proper role assignments. Ensure the Voice Live resource's managed identity has the `Azure AI User` role on the target agent resource.
+</Info>
+
+## Add a proactive message at session start
+
+Voice Live can initiate the conversation by sending a proactive message as soon as the session is ready. In this sample, the assistant checks a one-time flag in the `onSessionUpdated` handler, sends a greeting prompt, and then triggers a response.
+
+```javascript
+// Source: voice-live-with-agent-v2.js (not available)
+```
+
+In this sample, proactive messaging is applied in three steps:
+
+- `_greetingSent` is a `boolean` initialized to `false` to track one-time greeting state.
+- In the `onSessionUpdated` handler, `if (!this._greetingSent)` gates proactive execution to run once per session.
+- `session.addConversationItem(...)` adds the greeting instruction to conversation context, and `session.sendEvent({ type: "response.create" })` generates spoken output.
+
+## Improving tool calling and latency wait times
+
+Voice Live provides a feature called `interimResponse` to bridge wait times when tool calling is required or a high latency is experienced to generate an agent response.
+
+The voice assistant created with the quickstart shows the required code additions to configure this feature as follows:
+
+```javascript
+// Source: voice-live-with-agent-v2.js (not available)
+```
+
+In this sample, the interim response setup is applied inside `_setupSession()`:
+
+- `interimResponse` defines when interim responses trigger and what style they use.
+- `session.updateSession(...)` sends the session configuration to Voice Live, including the interim response settings.
+
+## Use auto truncation for interrupted responses
+
+When users interrupt agent audio, conversation text can drift from what users actually heard. Auto truncation helps keep session context aligned with delivered audio, which improves follow-up response quality after barge-in and keeps voice conversation history logging more accurate.
+
+This sample currently shows interruption handling with `response.cancel` during speech start, but it doesn't configure `auto_truncate` in `turn_detection`.
+
+<Note>
+In Foundry Agent Service, thread messages and tracing agent threads are based on text content in the thread. Without auto truncation, those records can differ from the exact portion of audio the user actually heard before interruption.
+</Note>
+
+For setup details and supported options, see [Handle voice interruptions in chat history (preview)](../../../how-to-voice-live-auto-truncation.md).
+
+## Reconnect to a previous agent conversation
+
+Voice Live enables you to reconnect to a previous conversation by specifying the conversation ID. This preserves the conversation history and context, allowing users to continue where they left off.
+
+When a session connects successfully, Voice Live returns session metadata in the `onSessionUpdated` handler. The sample extracts the session ID from the context and logs it to the conversation file:
+
+```javascript
+// Source: voice-live-with-agent-v2.js (not available)
+```
+
+In this event handler, the session ID is extracted from `context.sessionId` and written to the conversation log along with agent metadata.
+
+The sample code writes session details to a conversation log file in the `logs/` folder (for example, `logs/conversation_20260219_143000.log`).
+
+To reconnect to that conversation, pass the conversation ID as the `CONVERSATION_ID` environment variable (or the `conversationId` property):
+
+```javascript
+// Source: voice-live-with-agent-v2.js (not available)
+```
+
+In this sample, conversation reconnect is applied in three places:
+
+- In `main()`, `CONVERSATION_ID` is read from `process.env` (line 361).
+- The value is passed to the `BasicVoiceAssistant` constructor.
+- In the constructor, `conversationId` is conditionally spread into the `agentConfig` object.
+
+When a valid `conversationId` is provided, the agent retrieves the previous conversation context and can reference earlier exchanges in its responses.
+
+<Note>
+Conversation IDs are tied to the agent and project. Attempting to use a conversation ID with a different agent results in a new conversation being created.
+</Note>
+
+## Log session metadata for continuity and diagnostics
+
+The sample logs key session metadata, including the session ID, to a timestamped conversation log file under `logs/`. This helps you:
+
+- Identify the session for debugging and support scenarios.
+- Correlate user-reported behavior with session metadata.
+- Track runs over time by preserving per-session log files.
+
+The following code creates the log filename and writes session metadata when `onSessionUpdated` is received:
+
+```javascript
+// Source: voice-live-with-agent-v2.js (not available)
+```
+
+In this sample, session metadata logging is applied in three places:
+
+- A `logs/` directory is created if it doesn't exist, and a timestamped conversation log file (`conversation_YYYYMMDD_HHmmss.log`) is created per run (lines 21–29).
+- On `onSessionUpdated`, the handler extracts the session ID from `context.sessionId` and writes it along with agent metadata to the log (lines 190–191).
+- `writeConversationLog(...)` appends entries to the same log file throughout the conversation lifecycle (lines 31–33).
+
+Use the logged session metadata with `CONVERSATION_ID` to resume the same agent conversation in a later session.
+
+Use the session ID value alongside your conversation ID for diagnostics and reconnect scenarios.
+
+## Migrate from Agent Service (classic)
+
+If you're using Voice Live with Agent Service (classic), we recommend you migrate to the new Foundry Agent Service. For general Agent Service migration steps, see [Migrate from Agent Service (classic) to Foundry Agent Service](https://learn.microsoft.com/azure/ai-foundry/agents/how-to/migrate).
+
+### Voice Live SDK changes
+
+The Voice Live SDK introduces typed configuration classes that replace the raw query parameters used in the classic integration:
+
+| Classic (v1) | New (v2) |
+|---|---|
+| `agent-id` query parameter | `agent_name` in `AgentConfig` / `AgentSessionConfig` |
+| `agent-project-name` query parameter | Project endpoint in client constructor |
+| `agent-access-token` query parameter | Handled automatically by SDK |
+| Manual `connect()` with query dict | Strongly-typed `AgentSessionConfig` passed to session options |
+
+### Minimum SDK versions
+
+| Language | Package | Minimum version |
+|---|---|---|
+| Python | `azure-ai-voicelive` | 1.0.0b5 |
+| C# | `Azure.AI.VoiceLive` | 1.1.0-beta.2 |
+| Java | `azure-ai-voicelive` | 1.0.0-beta.5 |
+| JavaScript | `@azure/ai-voicelive` | 1.0.0-beta.3 |
+
+### Before and after: Python connection setup
+
+**Classic (v1)** — raw query parameters in `connect()`:
+
+```python
+async with connect(
+    endpoint=self.endpoint,
+    credential=self.credential,
+    query={
+        "agent-id": self.agent_id,
+        "agent-project-name": self.foundry_project_name,
+        "agent-access-token": agent_access_token
+    },
+) as connection:
+```
+
+**New (v2)** — strongly-typed `AgentSessionConfig`:
+
+```python
+from azure.ai.voicelive import AgentConfig, AgentSessionConfig
+
+agent_config = AgentConfig(agent_name=agent_name)
+agent_session_config = AgentSessionConfig(agent_config=agent_config)
+
+session_options = VoiceLiveSessionOptions(
+    agent_session_config=agent_session_config,
+    # ... other options
+)
+```
+
+For complete code examples, see the [new agent quickstart](/agents/tools/voice-live-agents-quickstart). The [classic quickstart](voice-live-agents-quickstart-classic.md) remains available.
+
+## Related content
+
+- Explore [How to add proactive messages](./how-to-voice-live-proactive-messages.md)
+- Explore [How to improve tool calling and latency wait times](./how-to-voice-live-interim-response.md)
+- Learn more about [How to use the Voice Live API](./voice-live-how-to.md)
+- See the [Voice Live API reference](./voice-live-api-reference-2025-10-01.md)

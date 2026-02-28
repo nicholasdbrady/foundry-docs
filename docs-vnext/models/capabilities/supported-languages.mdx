@@ -1,0 +1,1758 @@
+---
+title: "Azure OpenAI in Microsoft Foundry Models supported programming languages"
+description: "Programming language support for Azure OpenAI."
+---
+# Azure OpenAI supported programming languages
+## Prerequisites
+
+- An Azue OpenAI model deployed
+- One of the following authentication methods:
+	- Microsoft Entra ID (recommended).
+	- An API key.
+
+[Source code](https://github.com/openai/openai-dotnet) | [Package (NuGet)](https://www.nuget.org/packages/OpenAI) 
+ 
+## Azure OpenAI API version support
+
+- v1 Generally Available (GA) API now allows access to both GA and Preview operations. To learn more, see the [API version lifecycle guide](../../api-version-lifecycle.md).
+
+## Installation
+
+```dotnetcli
+dotnet add package OpenAI
+```
+
+## Authentication
+
+<Tabs>
+  <Tab title="Microsoft Entra ID">
+
+    A secure, keyless authentication approach is to use Microsoft Entra ID (formerly Azure Active Directory) via the [Azure Identity library](https://learn.microsoft.com/dotnet/api/overview/azure/identity-readme). To use the library:
+
+    ```dotnetcli
+    dotnet add package Azure.Identity
+    ```
+
+    Use the desired credential type from the library. For example, [`DefaultAzureCredential`](https://learn.microsoft.com/dotnet/api/azure.identity.defaultazurecredential):
+
+    ```csharp
+    using Azure.Identity;
+    using OpenAI;
+    using OpenAI.Chat;
+    using System.ClientModel.Primitives;
+
+    #pragma warning disable OPENAI001
+
+    BearerTokenPolicy tokenPolicy = new(
+        new DefaultAzureCredential(),
+        "https://cognitiveservices.azure.com/.default");
+
+    ChatClient client = new(
+        model: "gpt-4.1-nano",
+        authenticationPolicy: tokenPolicy,
+        options: new OpenAIClientOptions() { 
+
+            Endpoint = new Uri("https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1")
+       }
+    );
+
+    ChatCompletion completion = client.CompleteChat("Tell me about the bitter lesson.");
+
+    Console.WriteLine($"[ASSISTANT]: {completion.Content[0].Text}");
+    ```
+
+    For more information about Azure OpenAI keyless authentication, see the "[Get started with the Azure OpenAI security building block](https://learn.microsoft.com/azure/developer/ai/get-started-securing-your-ai-app)" QuickStart article. 
+
+  </Tab>
+  <Tab title="API Key">
+
+    ```csharp
+    using OpenAI;
+    using OpenAI.Chat;
+    using System.ClientModel;
+
+    string keyFromEnvironment = Environment.GetEnvironmentVariable("AZURE_OPENAI_API_KEY");
+
+    ChatClient client = new(
+        model: "gpt-4.1-nano",
+        credential: new ApiKeyCredential(keyFromEnvironment),
+        options: new OpenAIClientOptions() { 
+
+            Endpoint = new Uri("https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1")
+       }
+    );
+
+    ChatCompletion completion = client.CompleteChat("Tell me about the bitter lesson.");
+
+    Console.WriteLine($"[ASSISTANT]: {completion.Content[0].Text}");
+
+    ```
+
+  </Tab>
+</Tabs>
+
+## Chat
+
+Example of chat completions request to a [reasoning model](../../how-to/reasoning.md).
+
+```csharp
+using OpenAI;
+using OpenAI.Chat;
+using System.ClientModel.Primitives;
+
+#pragma warning disable OPENAI001 //currently required for token based authentication
+
+BearerTokenPolicy tokenPolicy = new(
+    new DefaultAzureCredential(),
+    "https://cognitiveservices.azure.com/.default");
+
+ChatClient client = new(
+    model: "o4-mini",
+    authenticationPolicy: tokenPolicy,
+    options: new OpenAIClientOptions()
+    {
+
+        Endpoint = new Uri("https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1")
+    }
+);
+
+ChatCompletionOptions options = new ChatCompletionOptions
+{
+    ReasoningEffortLevel = ChatReasoningEffortLevel.Low,
+    MaxOutputTokenCount = 100000
+};
+
+ChatCompletion completion = client.CompleteChat(
+         new DeveloperChatMessage("You are a helpful assistant"),
+         new UserChatMessage("Tell me about the bitter lesson")
+    );
+
+Console.WriteLine($"[ASSISTANT]: {completion.Content[0].Text}");
+
+```
+
+## Embeddings
+
+```csharp
+using OpenAI;
+using OpenAI.Embeddings;
+using System.ClientModel;
+
+string apiKey = Environment.GetEnvironmentVariable("AZURE_OPENAI_API_KEY")
+    ?? throw new InvalidOperationException("AZURE_OPENAI_API_KEY environment variable is not set");
+
+EmbeddingClient client = new(
+    "text-embedding-3-large",
+    credential: new ApiKeyCredential(apiKey),
+    options: new OpenAIClientOptions()
+    {
+        Endpoint = new Uri("https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1")
+    }
+);
+
+string input = "This is a test";
+
+OpenAIEmbedding embedding = client.GenerateEmbedding(input);
+ReadOnlyMemory<float> vector = embedding.ToFloats();
+Console.WriteLine($"Embeddings: [{string.Join(", ", vector.ToArray())}]");
+```
+
+## Responses API
+
+```csharp
+using OpenAI;
+using OpenAI.Responses;
+using System.ClientModel.Primitives;
+using Azure.Identity;
+
+#pragma warning disable OPENAI001 //currently required for token based authentication
+
+BearerTokenPolicy tokenPolicy = new(
+    new DefaultAzureCredential(),
+    "https://cognitiveservices.azure.com/.default");
+
+OpenAIResponseClient client = new(
+    model: "o4-mini",
+    authenticationPolicy: tokenPolicy,
+    options: new OpenAIClientOptions()
+    {
+        Endpoint = new Uri("https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1")
+    }
+);
+
+OpenAIResponse response = await client.CreateResponseAsync(
+    userInputText: "What's the optimal strategy to win at poker?",
+    new ResponseCreationOptions()
+    {
+        ReasoningOptions = new ResponseReasoningOptions()
+        {
+            ReasoningEffortLevel = ResponseReasoningEffortLevel.High,
+        },
+    });
+
+Console.WriteLine(response.GetOutputText());
+
+```
+
+### Streaming
+
+```csharp
+using OpenAI;
+using OpenAI.Responses;
+using System.ClientModel.Primitives;
+using Azure.Identity;
+
+#pragma warning disable OPENAI001 //currently required for token based authentication
+
+BearerTokenPolicy tokenPolicy = new(
+    new DefaultAzureCredential(),
+    "https://cognitiveservices.azure.com/.default");
+
+#pragma warning disable OPENAI001
+
+OpenAIResponseClient client = new(
+    model: "o4-mini",
+    authenticationPolicy: tokenPolicy,
+    options: new OpenAIClientOptions()
+    {
+        Endpoint = new Uri("https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1")
+    }
+);
+
+await foreach (StreamingResponseUpdate update
+    in client.CreateResponseStreamingAsync(
+        userInputText: "What's the optimal strategy to win at poker?",
+        new ResponseCreationOptions()
+        {
+            ReasoningOptions = new ResponseReasoningOptions()
+            {
+                ReasoningEffortLevel = ResponseReasoningEffortLevel.High,
+            },
+        }))
+{
+    if (update is StreamingResponseOutputItemAddedUpdate itemUpdate
+        && itemUpdate.Item is ReasoningResponseItem reasoningItem)
+    {
+        Console.WriteLine($"[Reasoning] ({reasoningItem.Status})");
+    }
+    else if (update is StreamingResponseOutputTextDeltaUpdate delta)
+    {
+        Console.Write(delta.Delta);
+    }
+}
+```
+
+### MCP Server
+
+```csharp
+using OpenAI;
+using OpenAI.Responses;
+using System.ClientModel.Primitives;
+using Azure.Identity;
+
+#pragma warning disable OPENAI001 //currently required for token based authentication
+
+BearerTokenPolicy tokenPolicy = new(
+    new DefaultAzureCredential(),
+    "https://cognitiveservices.azure.com/.default");
+
+OpenAIResponseClient client = new(
+    model: "o4-mini",
+    authenticationPolicy: tokenPolicy,
+    options: new OpenAIClientOptions()
+    {
+        Endpoint = new Uri("https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1")
+    }
+);
+
+ResponseCreationOptions options = new();
+options.Tools.Add(ResponseTool.CreateMcpTool(
+    serverLabel: "microsoft_learn",
+    serverUri: new Uri("https://learn.microsoft.com/api/mcp"),
+    toolCallApprovalPolicy: new McpToolCallApprovalPolicy(GlobalMcpToolCallApprovalPolicy.NeverRequireApproval)
+));
+
+OpenAIResponse response = (OpenAIResponse)client.CreateResponse([
+    ResponseItem.CreateUserMessageItem([
+        ResponseContentPart.CreateInputTextPart("Search for information about Azure Functions")
+    ])
+], options);
+
+Console.WriteLine(response.GetOutputText());
+```
+
+## Error handling
+
+### Error codes
+
+| Status Code | Error Type |
+|----|---|
+| 400         | `Bad Request Error`          |
+| 401         | `Authentication Error`      |
+| 403         | `Permission Denied Error`    |
+| 404         | `Not Found Error`            |
+| 422         | `Unprocessable Entity Error` |
+| 429         | `Rate Limit Error`           |
+| 500         | `Internal Server Error`      |
+| 503         | `Service Unavailable`       |
+| 504         | `Gateway Timeout` |
+
+### Retries
+
+The client classes will automatically retry the following errors up to three more times using exponential backoff:
+
+- 408 Request Timeout
+- 429 Too Many Requests
+- 500 Internal Server Error
+- 502 Bad Gateway
+- 503 Service Unavailable
+- 504 Gateway Timeout
+
+[Source code](https://github.com/openai/openai-go) | [Package (pkg.go.dev)](https://pkg.go.dev/github.com/openai/openai-go/v3) | [REST API reference documentation](../../latest.md) | [Package reference documentation](https://pkg.go.dev/github.com/openai/openai-go/v3#section-documentation) 
+
+## Azure OpenAI API version support
+
+- v1 Generally Available (GA) API now allows access to both GA and Preview operations. To learn more, see the [API version lifecycle guide](../../api-version-lifecycle.md).
+
+## Installation
+
+Install the `openai` and `azidentity` modules with go get:
+
+```
+go get -u 'github.com/openai/openai-go'
+
+# optional
+go get github.com/Azure/azure-sdk-for-go/sdk/azidentity
+```
+
+## Authentication
+
+<Tabs>
+  <Tab title="Microsoft Entra ID">
+
+    The [azidentity](https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/sdk/azidentity) module is used for Microsoft Entra ID authentication with Azure OpenAI.
+
+    ```go
+    package main
+
+    import (
+    	"context"
+    	"fmt"
+
+    	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+    	"github.com/openai/openai-go/v3"
+    	"github.com/openai/openai-go/v3/azure"
+    	"github.com/openai/openai-go/v3/option"
+    )
+
+    func main() {
+    	// Create an Azure credential
+    	tokenCredential, err := azidentity.NewDefaultAzureCredential(nil)
+    	if err != nil {
+    		panic(fmt.Sprintf("Failed to create credential: %v", err))
+    	}
+
+    	// Create a client with Azure OpenAI endpoint and token credential
+    	client := openai.NewClient(
+    		option.WithBaseURL("https://YOUR-RESOURCE_NAME.openai.azure.com/openai/v1/"),
+    		azure.WithTokenCredential(tokenCredential),
+    	)
+
+    	// Make a completion request
+    	chatCompletion, err := client.Chat.Completions.New(context.TODO(), openai.ChatCompletionNewParams{
+    		Messages: []openai.ChatCompletionMessageParamUnion{
+    			openai.UserMessage("Explain what the bitter lesson is?"),
+    		},
+    		Model: "o4-mini", // Use your deployed model name on Azure
+    	})
+    	if err != nil {
+    		panic(err.Error())
+    	}
+
+    	fmt.Println(chatCompletion.Choices[0].Message.Content)
+    }
+    ```
+
+    For more information about Azure OpenAI keyless authentication, see [Use Azure OpenAI without keys](https://learn.microsoft.com/azure/developer/ai/keyless-connections). 
+
+  </Tab>
+  <Tab title="API Key">
+
+    ```go
+    package main
+
+    import (
+    	"context"
+    	"fmt"
+
+    	"github.com/openai/openai-go/v3"
+    	"github.com/openai/openai-go/v3/option"
+    )
+
+    func main() {
+    	// Create a client with Azure OpenAI endpoint and API key
+    	client := openai.NewClient(
+    		option.WithBaseURL("https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/"),
+    		option.WithAPIKey("API-KEY-HERE"),
+    	)
+
+    	// Make a completion request
+    	chatCompletion, err := client.Chat.Completions.New(context.TODO(), openai.ChatCompletionNewParams{
+    		Messages: []openai.ChatCompletionMessageParamUnion{
+    			openai.UserMessage("Tell me about the bitter lesson"),
+    		},
+    		Model: "o4-mini", // Use your deployed model name on Azure
+    	})
+    	if err != nil {
+    		panic(err.Error())
+    	}
+
+    	fmt.Println(chatCompletion.Choices[0].Message.Content)
+    }
+    ```
+
+  </Tab>
+</Tabs>
+
+## Embeddings
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"os"
+
+	"github.com/openai/openai-go/v3"
+	"github.com/openai/openai-go/v3/option"
+)
+
+func main() {
+	// Get API key from environment variable
+	apiKey := os.Getenv("AZURE_OPENAI_API_KEY")
+	if apiKey == "" {
+		panic("AZURE_OPENAI_API_KEY environment variable is not set")
+	}
+
+	// Create a client with Azure OpenAI endpoint and API key
+	client := openai.NewClient(
+		option.WithBaseURL("https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/"),
+		option.WithAPIKey(apiKey),
+	)
+
+	ctx := context.Background()
+	text := "The attention mechanism revolutionized natural language processing"
+
+	// Make an embedding request
+	embedding, err := client.Embeddings.New(ctx, openai.EmbeddingNewParams{
+		Input: openai.EmbeddingNewParamsInputUnion{OfString: openai.String(text)},
+		Model: "text-embedding-3-small", // Use your deployed model name on Azure
+	})
+	if err != nil {
+		panic(err.Error())
+	}
+
+	// Print embedding information
+	fmt.Printf("Model: %s\n", embedding.Model)
+	fmt.Printf("Number of embeddings: %d\n", len(embedding.Data))
+	fmt.Printf("Embedding dimensions: %d\n", len(embedding.Data[0].Embedding))
+	fmt.Printf("Usage - Prompt tokens: %d, Total tokens: %d\n", embedding.Usage.PromptTokens, embedding.Usage.TotalTokens)
+	
+	// Print first few values of the embedding vector
+	fmt.Printf("First 10 embedding values: %v\n", embedding.Data[0].Embedding[:10])
+}
+```
+
+## Responses
+
+```go
+package main
+
+import (
+	"context"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	"github.com/openai/openai-go/v3"
+	"github.com/openai/openai-go/v3/azure"
+	"github.com/openai/openai-go/v3/option"
+	"github.com/openai/openai-go/v3/responses"
+)
+
+func main() {
+	// Create Azure token credential
+	tokenCredential, err := azidentity.NewDefaultAzureCredential(nil)
+	if err != nil {
+		panic(err)
+	}
+
+	// Create client with Azure endpoint and token credential
+	client := openai.NewClient(
+		option.WithBaseURL("https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/"),
+		azure.WithTokenCredential(tokenCredential),
+	)
+
+	ctx := context.Background()
+	question := "Tell me about the attention is all you need paper"
+
+	resp, err := client.Responses.New(ctx, responses.ResponseNewParams{
+		Input: responses.ResponseNewParamsInputUnion{OfString: openai.String(question)},
+		Model: "o4-mini",
+	})
+
+	if err != nil {
+		panic(err)
+	}
+
+	println(resp.OutputText())
+}
+```
+
+[Source code](https://github.com/openai/openai-java/blob/main/README.md) |[REST API reference documentation](../../latest.md) | [Package reference documentation](https://javadoc.io/doc/com.openai/openai-java/latest/index.html) | [Maven Central](https://central.sonatype.com/artifact/com.openai/openai-java/4.0.1)
+
+## Azure OpenAI API version support
+
+- v1 Generally Available (GA) API now allows access to both GA and Preview operations. To learn more, see the [API version lifecycle guide](../../api-version-lifecycle.md).
+
+## Installation
+
+### Gradle
+
+```kotlin
+implementation("com.openai:openai-java:4.0.1")
+```
+
+### Maven
+
+```xml
+<dependency>
+  <groupId>com.openai</groupId>
+  <artifactId>openai-java</artifactId>
+  <version>4.0.1</version>
+</dependency>
+```
+
+## Authentication
+
+<Tabs>
+  <Tab title="Microsoft Entra ID">
+
+    Authentication with Microsoft Entra ID requires some initial setup:
+
+    Add the Azure Identity package:
+
+    ```xml
+    <dependency>
+        <groupId>com.azure</groupId>
+        <artifactId>azure-identity</artifactId>
+        <version>1.18.0</version>
+    </dependency>
+    ```
+
+    After setup, you can choose which type of credential from `azure.identity` to use. As an example, `DefaultAzureCredential` can be used to authenticate the client: Set the values of the client ID, tenant ID, and client secret of the Microsoft Entra ID application as environment variables: AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_CLIENT_SECRET.
+
+    Authorization is easiest using `DefaultAzureCredential`. It finds the best credential to use in its running environment though use of `DefaultAzureCredential` is only recommended for testing, not for production.  
+
+    ```java
+    Credential tokenCredential = BearerTokenCredential.create(
+            AuthenticationUtil.getBearerTokenSupplier(
+                    new DefaultAzureCredentialBuilder().build(),
+                    "https://cognitiveservices.azure.com/.default"));
+    OpenAIClient client = OpenAIOkHttpClient.builder()
+            .baseUrl("https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/")
+            .credential(tokenCredential)
+            .build();
+    ```
+
+    For more information about Azure OpenAI keyless authentication, see [Use Azure OpenAI without keys](https://learn.microsoft.com/azure/developer/ai/keyless-connections).
+
+  </Tab>
+  <Tab title="API Key">
+
+    ```java
+    OpenAIClient client = OpenAIOkHttpClient.builder()
+                    .baseUrl("https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/")
+                    .apiKey(apiKey)
+                    .build();
+    ```
+
+  </Tab>
+</Tabs>
+
+## Responses
+
+```java
+package com.example;
+
+import com.openai.client.OpenAIClient;
+import com.openai.client.okhttp.OpenAIOkHttpClient;
+import com.openai.models.ChatModel;
+import com.openai.models.responses.Response;
+import com.openai.models.responses.ResponseCreateParams;
+import com.azure.core.credential.AzureKeyCredential;
+
+public class OpenAITest {
+    public static void main(String[] args) {
+        // Get API key from environment variable for security
+        String apiKey = System.getenv("OPENAI_API_KEY");
+        String resourceName = "https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1";
+        String modelDeploymentName = "gpt-4.1"; //replace with you model deployment name
+
+        try {
+            OpenAIClient client = OpenAIOkHttpClient.builder()
+                    .baseUrl(resourceName)
+                    .apiKey(apiKey)
+                    .build();
+
+            ResponseCreateParams params = ResponseCreateParams.builder()
+                    .input("Tell me about the bitter lesson?")
+                    .model(modelDeploymentName)
+                    .build();
+
+            Response response = client.responses().create(params);
+            
+            System.out.println("Response: " + response);
+        } catch (Exception e) {
+            System.err.println("Error: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}
+```
+
+[Source code](https://github.com/openai/openai-node) | [Package (npm)](https://www.npmjs.com/package/openai) | [Reference](../../../../foundry-classic/openai/reference.md) |
+
+## Azure OpenAI API version support
+
+- v1 Generally Available (GA) API now allows access to both GA and Preview operations. To learn more, see the [API version lifecycle guide](../../api-version-lifecycle.md).
+
+## Installation
+
+```cmd
+npm install openai
+```
+
+## Authentication
+
+<Tabs>
+  <Tab title="Microsoft Entra ID">
+
+    ```cmd
+    npm install @azure/identity
+    ```
+
+    In order to authenticate the `OpenAI` client, however, we need to use the `getBearerTokenProvider` function from the `@azure/identity` package. This function creates a token provider that `OpenAI` uses internally to obtain tokens for each request. The token provider is created as follows:
+
+    ```typescript
+    import { DefaultAzureCredential, getBearerTokenProvider } from "@azure/identity";
+    import { OpenAI } from "openai";
+
+    const tokenProvider = getBearerTokenProvider(
+        new DefaultAzureCredential(),
+        'https://cognitiveservices.azure.com/.default');
+    const client = new OpenAI({
+        baseURL: "https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/",
+        apiKey: tokenProvider
+    });
+    ```
+
+    For more information about Azure OpenAI keyless authentication, see the "[Get started with the Azure OpenAI security building block](https://learn.microsoft.com/azure/developer/ai/get-started-securing-your-ai-app)" QuickStart article. 
+
+  </Tab>
+  <Tab title="API Key">
+
+    API keys aren't recommended for production use because they're less secure than other authentication methods.
+
+    ```typescript
+    import { OpenAI } from "openai";
+
+    const client = new OpenAI({
+        baseURL: "https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/",
+        apiKey: process.env['OPENAI_API_KEY'] //Your Azure OpenAI API key
+    });
+    ```
+
+  </Tab>
+</Tabs>
+
+## Responses
+
+`responses.create`
+
+```typescript
+import { DefaultAzureCredential, getBearerTokenProvider } from "@azure/identity";
+import { OpenAI } from "openai";
+
+const tokenProvider = getBearerTokenProvider(
+    new DefaultAzureCredential(),
+    'https://cognitiveservices.azure.com/.default');
+const client = new OpenAI({
+  baseURL: "https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/",
+    apiKey: tokenProvider
+});
+
+const response = await client.responses.create({
+  model: 'gpt-4.1-nano', //model deployment name
+  instructions: 'You are a helpful AI agent',
+  input: 'Tell me about the bitter lesson?',
+});
+
+console.log(response.output_text);
+```
+
+### Streaming
+
+```typescript
+import { DefaultAzureCredential, getBearerTokenProvider } from "@azure/identity";
+import { OpenAI } from "openai";
+
+const tokenProvider = getBearerTokenProvider(
+    new DefaultAzureCredential(),
+    'https://cognitiveservices.azure.com/.default');
+const client = new OpenAI({
+  baseURL: "https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/",
+    apiKey: tokenProvider
+});
+
+const stream = await client.responses.create({
+  model: 'gpt-4.1-nano', // model deployment name
+  input: 'Provide a brief history of the attention is all you need paper.',
+  stream: true,
+});
+
+for await (const event of stream) {
+  if (event.type === 'response.output_text.delta' && event.delta) {
+    process.stdout.write(event.delta);
+  }
+}
+```
+
+### MCP Server
+
+```javascript
+import { DefaultAzureCredential, getBearerTokenProvider } from "@azure/identity";
+import { OpenAI } from "openai";
+
+const tokenProvider = getBearerTokenProvider(
+    new DefaultAzureCredential(),
+    'https://cognitiveservices.azure.com/.default');
+const client = new OpenAI({
+  baseURL: "https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/",
+    apiKey: tokenProvider
+});
+
+const resp = await client.responses.create({
+  model: "gpt-5",
+  tools: [
+    {
+      type: "mcp",
+      server_label: "microsoft_learn",
+      server_description: "Microsoft Learn MCP server for searching and fetching Microsoft documentation.",
+      server_url: "https://learn.microsoft.com/api/mcp",
+      require_approval: "never",
+    },
+  ],
+  input: "Search for information about Azure Functions",
+});
+
+console.log(resp.output_text);
+```
+
+## Chat
+
+`chat.completions.create`
+
+```typescript
+import { DefaultAzureCredential, getBearerTokenProvider } from "@azure/identity";
+import { OpenAI } from "openai";
+
+const tokenProvider = getBearerTokenProvider(
+    new DefaultAzureCredential(),
+    'https://cognitiveservices.azure.com/.default');
+const client = new OpenAI({
+  baseURL: "https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/",
+    apiKey: tokenProvider
+});
+
+const messages = [
+    { role: 'system', content: 'You are a helpful assistant.' },
+    { role: 'user', content: 'Tell me about the attention is all you need paper' }
+];
+
+// Make the API request with top-level await
+const result = await client.chat.completions.create({ 
+    messages, 
+    model: 'gpt-4.1-nano', // model deployment name
+    max_tokens: 100 
+});
+
+// Print the full response
+console.log('Full response:', result);
+
+// Print just the message content from the response
+console.log('Response content:', result.choices[0].message.content);
+```
+
+## Error handling
+
+### Error codes
+
+| Status Code | Error Type |
+|----|---|
+| 400         | `Bad Request Error`          |
+| 401         | `Authentication Error`       |
+| 403         | `Permission Denied Error`    |
+| 404         | `Not Found Error`            |
+| 422         | `Unprocessable Entity Error` |
+| 429         | `Rate Limit Error`           |
+| 500         | `Internal Server Error`      |
+| 503         | `Service Unavailable`       |
+| 504         | `Gateway Timeout` |
+
+### Retries
+The following errors are automatically retried twice by default with a brief exponential backoff:
+
+- Connection Errors
+- 408 Request Timeout
+- 429 Rate Limit
+- `>=`500 Internal Errors
+
+Use `maxRetries` to set/disable the retry behavior:
+
+```typescript
+// Configure the default for all requests:
+const client = new OpenAI({
+  maxRetries: 0, // default is 2
+});
+
+// Or, configure per-request:
+await client.chat.completions.create({ messages: [{ role: 'user', content: 'How can I get the name of the current day in Node.js?' }], model: '' }, {
+  maxRetries: 5,
+});
+```
+
+[Library source code](https://github.com/openai/openai-python?azure-portal=true) | [Package (PyPi)](https://pypi.org/project/openai?azure-portal=true) | [Reference](../../latest.md) |
+
+<Note>
+This library is maintained by OpenAI. Refer to the [release history](https://github.com/openai/openai-python/releases) to track the latest updates to the library.
+</Note>
+
+## Azure OpenAI API version support
+
+- v1 Generally Available (GA) API now allows access to both GA and Preview operations. To learn more, see the [API version lifecycle guide](../../api-version-lifecycle.md).
+
+## Installation
+
+```cmd
+pip install openai
+```
+
+For the latest version:
+
+```cmd
+pip install openai --upgrade
+```
+
+## Authentication
+
+Endpoints and API keys for your resources can be retrieved from the [Azure portal](https://portal.azure.com) or the [Microsoft Foundry](https://ai.azure.com/?cid=learnDocs) portal:
+
+- Sign in to [Azure portal](https://portal.azure.com) > select your resource > **Resource Management** > **Keys and Endpoint**.
+- Sign in to [Microsoft Foundry](https://ai.azure.com/?cid=learnDocs) portal > select your resource.
+
+<Tabs>
+  <Tab title="Microsoft Entra ID">
+
+    ```python
+    from openai import OpenAI
+    from azure.identity import DefaultAzureCredential, get_bearer_token_provider
+
+    token_provider = get_bearer_token_provider(
+        DefaultAzureCredential(), "https://cognitiveservices.azure.com/.default"
+    )
+
+    client = OpenAI(  
+        base_url="https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/",
+        api_key=token_provider,
+    )
+    ```
+
+  </Tab>
+  <Tab title="API Key">
+
+    ```python
+    import os
+    from openai import OpenAI
+
+    client = OpenAI(
+        api_key=os.getenv("AZURE_OPENAI_API_KEY"),  
+        base_url="https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/"
+        )
+    ```
+
+  </Tab>
+  <Tab title="Environment Variables">
+
+    If you use the default environment variables of `OPENAI_BASE_URL` and `OPENAI_API_KEY` they're automatically used by the client with no further configuration required.
+
+    | Environment Variable | Value |
+    |----------------|-------------|
+    | `OPENAI_BASE_URL`    | `https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/`|
+    | `OPENAI_API_KEY`     | Azure OpenAI or Foundry API key. |
+
+    ```python
+    from openai import OpenAI
+
+    client = OpenAI()   
+    ```
+
+  </Tab>
+  <Tab title="Response">
+
+    There's no output for client instantiation.
+
+  </Tab>
+</Tabs>
+
+## Responses API
+
+### responses.create()
+
+<Tabs>
+  <Tab title="Microsoft Entra ID">
+
+    ```python
+    from openai import OpenAI
+    from azure.identity import DefaultAzureCredential, get_bearer_token_provider
+
+    token_provider = get_bearer_token_provider(
+        DefaultAzureCredential(), "https://cognitiveservices.azure.com/.default"
+    )
+
+    client = OpenAI(  
+      base_url = "https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/",  
+      api_key=token_provider,
+    )
+
+    response = client.responses.create(
+        model="gpt-4.1-nano",
+        input= "This is a test" 
+    )
+
+    print(response.model_dump_json(indent=2)) 
+    ```
+
+    For more examples, see the [Responses API](../../how-to/responses.md) documentation.
+
+  </Tab>
+  <Tab title="API Key">
+
+    ```python
+    import os
+    from openai import OpenAI
+
+    client = OpenAI(
+        api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+        base_url="https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/",
+    )
+
+    response = client.responses.create(   
+      model="gpt-4.1-nano", # Replace with your model deployment name 
+      input="This is a test.",
+    )
+
+    print(response.model_dump_json(indent=2)) 
+    ```
+
+    For more examples, see the [Responses API](../../how-to/responses.md) documentation.
+
+  </Tab>
+  <Tab title="Environment Variables">
+
+    ```python
+    from openai import OpenAI
+
+    client = OpenAI()
+
+    response = client.responses.create(   
+      model="gpt-4.1-nano", # Replace with your model deployment name 
+      input="This is a test.",
+    )
+
+    print(response.model_dump_json(indent=2)) 
+    ```
+
+    For more examples, see the [Responses API](../../how-to/responses.md) documentation.
+
+  </Tab>
+  <Tab title="Response">
+
+    ```json
+    {
+      "id": "resp_088ffc6b5f37c64d0068e187d0ceac819499c9331c2a02e92e",
+      "created_at": 1759610832.0,
+      "error": null,
+      "incomplete_details": null,
+      "instructions": null,
+      "metadata": {},
+      "model": "gpt-4.1-nano",
+      "object": "response",
+      "output": [
+        {
+          "id": "msg_088ffc6b5f37c64d0068e187d15f8c819495f84e214435175d",
+          "content": [
+            {
+              "annotations": [],
+              "text": "Hello! I see you've sent a message saying \"This is a test.\" How can I assist you today?",
+              "type": "output_text",
+              "logprobs": []
+            }
+          ],
+          "role": "assistant",
+          "status": "completed",
+          "type": "message"
+        }
+      ],
+      "parallel_tool_calls": true,
+      "temperature": 1.0,
+      "tool_choice": "auto",
+      "tools": [],
+      "top_p": 1.0,
+      "background": false,
+      "conversation": null,
+      "max_output_tokens": null,
+      "max_tool_calls": null,
+      "previous_response_id": null,
+      "prompt": null,
+      "prompt_cache_key": null,
+      "reasoning": {
+        "effort": null,
+        "generate_summary": null,
+        "summary": null
+      },
+      "safety_identifier": null,
+      "service_tier": "default",
+      "status": "completed",
+      "text": {
+        "format": {
+          "type": "text"
+        },
+        "verbosity": "medium"
+      },
+      "top_logprobs": 0,
+      "truncation": "disabled",
+      "usage": {
+        "input_tokens": 11,
+        "input_tokens_details": {
+          "cached_tokens": 0
+        },
+        "output_tokens": 23,
+        "output_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "total_tokens": 34
+      },
+      "user": null,
+      "content_filters": null,
+      "store": true
+    }
+    ```
+
+  </Tab>
+</Tabs>
+
+### responses.create() with MCP server tool
+
+<Tabs>
+  <Tab title="Microsoft Entra ID">
+
+    ```python
+    from openai import OpenAI
+    from azure.identity import DefaultAzureCredential, get_bearer_token_provider
+
+    token_provider = get_bearer_token_provider(
+        DefaultAzureCredential(), "https://cognitiveservices.azure.com/.default"
+    )
+
+    client = OpenAI(  
+      base_url = "https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/",  
+      api_key=token_provider,
+    )
+
+    resp = client.responses.create(
+        model="gpt-5",
+        tools=[
+            {
+                "type": "mcp",
+                "server_label": "microsoft_learn",
+                "server_description": "Microsoft Learn MCP server for searching and fetching Microsoft documentation.",
+                "server_url": "https://learn.microsoft.com/api/mcp",
+                "require_approval": "never",
+            },
+        ],
+        input="Search for information about Azure Functions",
+    )
+
+    print(resp.output_text)
+    ```
+
+    For more examples, see the [Responses API](../../how-to/responses.md) documentation.
+
+  </Tab>
+  <Tab title="API Key">
+
+    ```python
+    import os
+    from openai import OpenAI
+
+    client = OpenAI(
+        api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+        base_url="https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/",
+    )
+
+    resp = client.responses.create(
+        model="gpt-5",
+        tools=[
+            {
+                "type": "mcp",
+                "server_label": "microsoft_learn",
+                "server_description": "Microsoft Learn MCP server for searching and fetching Microsoft documentation.",
+                "server_url": "https://learn.microsoft.com/api/mcp",
+                "require_approval": "never",
+            },
+        ],
+        input="Search for information about Azure Functions",
+    )
+
+    print(resp.output_text)
+    ```
+
+    For more examples, see the [Responses API](../../how-to/responses.md) documentation.
+
+  </Tab>
+  <Tab title="Environment Variables">
+
+    ```python
+    from openai import OpenAI
+
+    client = OpenAI()
+
+    resp = client.responses.create(
+        model="gpt-5",
+        tools=[
+            {
+                "type": "mcp",
+                "server_label": "microsoft_learn",
+                "server_description": "Microsoft Learn MCP server for searching and fetching Microsoft documentation.",
+                "server_url": "https://learn.microsoft.com/api/mcp",
+                "require_approval": "never",
+            },
+        ],
+        input="Search for information about Azure Functions",
+    )
+
+    print(resp.output_text)
+    ```
+
+    For more examples, see the [Responses API](../../how-to/responses.md) documentation.
+
+  </Tab>
+  <Tab title="Response">
+
+    ```markdown
+    Here is a summary of Azure Functions based on official Microsoft documentation:
+
+    ## What is Azure Functions?
+    Azure Functions is a serverless compute service that enables you to run event-driven code without managing infrastructure. You write code in your preferred language—such as C#, Java, JavaScript, PowerShell, or Python—and Azure Functions handles the hosting, scaling, and maintenance for you. You pay only for the compute time you consume, making it cost-effective for many use cases.
+
+    - **Official overview:** [What is Azure Functions?](https://learn.microsoft.com/en-us/azure/azure-functions/functions-overview)
+
+    ## Key Scenarios for Azure Functions
+    Azure Functions supports a wide range of cloud application scenarios, including:
+
+    - Processing file uploads from blob storage.
+    - Real-time stream and event processing (IoT, analytics).
+    - Executing AI and machine learning inference.
+    - Running scheduled tasks or background jobs.
+    - Building scalable web APIs with HTTP endpoints.
+    - Orchestrating serverless workflows (using Durable Functions).
+    - Responding to data or database changes.
+    - Creating reliable message processing systems (with queues, Service Bus, Event Hubs).
+
+    Read more about scenarios here: [Azure Functions scenarios](https://learn.microsoft.com/en-us/azure/azure-functions/functions-scenarios).
+
+    ## How It Works
+    - **Triggers and Bindings:** Functions are executed by triggers (events like HTTP requests, file uploads, timers, etc.) and can use bindings to automatically interact with other Azure services.
+    - **Coding:** Write only the code you need for business logic; Azure Functions integrates with IDEs like Visual Studio and VS Code for development and debugging.
+    - **Monitoring:** Built-in integration with Azure Monitor and Application Insights.
+    - **Hosting plans:** Choose serverless (Consumption plan), Premium, Dedicated, or deploy in custom containers.
+
+    ## Getting Started
+    You can create your first Azure Function quickly using:
+
+    - [Azure CLI or Developer CLI](https://learn.microsoft.com/en-us/azure/azure-functions/create-first-function-azure-developer-cli)
+    - [Visual Studio Code](https://learn.microsoft.com/en-us/azure/azure-functions/how-to-create-function-vs-code)
+    - [Visual Studio](https://learn.microsoft.com/en-us/azure/azure-functions/functions-create-your-first-function-visual-studio)
+
+    See quickstarts for all languages: [Getting started with Azure Functions](https://learn.microsoft.com/en-us/azure/azure-functions/functions-get-started)
+
+    ## Supported Languages
+    - Native: C#, Java, JavaScript, PowerShell, Python
+    - With custom handlers: Go, Rust, and more
+
+    ## Learn More
+    - [Overview of Azure Functions](https://learn.microsoft.com/en-us/azure/azure-functions/functions-overview)
+    - [Supported languages](https://learn.microsoft.com/en-us/azure/azure-functions/supported-languages)
+    - [Triggers and bindings](https://learn.microsoft.com/en-us/azure/azure-functions/functions-triggers-bindings)
+
+    Let me know if you're looking for step-by-step tutorials, specific language samples, or deeper technical details!
+    ```
+
+  </Tab>
+</Tabs>
+
+## Chat
+
+### chat.completions.create()
+
+<CodeGroup>
+```python Microsoft Entra ID
+    from openai import OpenAI
+    from azure.identity import DefaultAzureCredential, get_bearer_token_provider
+
+    token_provider = get_bearer_token_provider(
+        DefaultAzureCredential(), "https://cognitiveservices.azure.com/.default"
+    )
+
+    client = OpenAI(  
+      base_url = "https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/",  
+      api_key=token_provider,
+    )
+
+    completion = client.chat.completions.create(
+      model="gpt-4o", # Replace with your model deployment name.
+      messages=[
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "When was Microsoft founded?"}
+      ]
+    )
+
+    #print(completion.choices[0].message)
+    print(completion.model_dump_json(indent=2))
+    ```
+
+```python API Key
+    import os
+    from openai import OpenAI
+
+    client = OpenAI(
+        api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+        base_url="https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/",
+    )
+
+    completion = client.chat.completions.create(
+      model="gpt-4o", # Replace with your model deployment name.
+      messages=[
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "When was Microsoft founded?"}
+      ]
+    )
+
+    #print(completion.choices[0].message)
+    print(completion.model_dump_json(indent=2))
+    ```
+
+```python Environment Variables
+    from openai import OpenAI
+    client = OpenAI()
+
+    completion = client.chat.completions.create(
+      model="gpt-4o", # Replace with your model deployment name.
+      messages=[
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "When was Microsoft founded?"}
+      ]
+    )
+
+    #print(completion.choices[0].message)
+    print(completion.model_dump_json(indent=2))
+    ```
+
+```json Response
+    {
+      "id": "chatcmpl-AUhZ11g6aNb1Nnxjp4hFUNcszw3uf",
+      "choices": [
+        {
+          "finish_reason": "stop",
+          "index": 0,
+          "logprobs": null,
+          "message": {
+            "content": "Microsoft was founded on April 4, 1975, by Bill Gates and Paul Allen in Albuquerque, New Mexico.",
+            "refusal": null,
+            "role": "assistant",
+            "function_call": null,
+            "tool_calls": null
+          },
+          "content_filter_results": {
+            "hate": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "self_harm": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "sexual": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "violence": {
+              "filtered": false,
+              "severity": "safe"
+            }
+          }
+        }
+      ],
+      "created": 1731880663,
+      "model": "gpt-4o-2024-08-06",
+      "object": "chat.completion",
+      "service_tier": null,
+      "system_fingerprint": "fp_04751d0b65",
+      "usage": {
+        "completion_tokens": 24,
+        "prompt_tokens": 22,
+        "total_tokens": 46,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": null
+      },
+      "prompt_filter_results": [
+        {
+          "prompt_index": 0,
+          "content_filter_results": {
+            "hate": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "jailbreak": {
+              "filtered": false,
+              "detected": false
+            },
+            "self_harm": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "sexual": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "violence": {
+              "filtered": false,
+              "severity": "safe"
+            }
+          }
+        }
+      ]
+    }
+    ```
+</CodeGroup>
+
+### chat.completions.create() - streaming
+
+<CodeGroup>
+```python Microsoft Entra ID
+    from openai import OpenAI
+    from azure.identity import DefaultAzureCredential, get_bearer_token_provider
+
+    token_provider = get_bearer_token_provider(
+        DefaultAzureCredential(), "https://cognitiveservices.azure.com/.default"
+    )
+
+    client = OpenAI(  
+      base_url = "https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/",  
+      api_key=token_provider,
+    )
+
+    completion = client.chat.completions.create(
+      model="gpt-4o", # Replace with your model deployment name.
+      messages=[
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "When was Microsoft founded?"}
+      ],
+      stream=True
+    )
+
+    for chunk in completion:
+        if chunk.choices and chunk.choices[0].delta.content is not None:
+            print(chunk.choices[0].delta.content, end='',)
+    ```
+
+```python API Key
+    import os
+    from openai import OpenAI
+
+    client = OpenAI(
+        api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+        base_url="https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/",
+    )
+
+    completion = client.chat.completions.create(
+      model="gpt-4o", # Replace with your model deployment name.
+      messages=[
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "When was Microsoft founded?"}
+      ],
+      stream=True
+    )
+
+    for chunk in completion:
+        if chunk.choices and chunk.choices[0].delta.content is not None:
+            print(chunk.choices[0].delta.content, end='',)
+    ```
+
+```python Environment Variables
+    from openai import OpenAI
+
+    client = OpenAI()
+
+    completion = client.chat.completions.create(
+      model="gpt-4o", # Replace with your model deployment name.
+      messages=[
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "When was Microsoft founded?"}
+      ],
+      stream=True
+    )
+
+    for chunk in completion:
+        if chunk.choices and chunk.choices[0].delta.content is not None:
+            print(chunk.choices[0].delta.content, end='',)
+    ```
+
+```text Response
+    Microsoft was founded on April 4, 1975, by Bill Gates and Paul Allen.
+    ```
+</CodeGroup>
+
+### chat.completions.create() - image input
+
+<CodeGroup>
+```python Microsoft Entra ID
+    from openai import OpenAI
+    from azure.identity import DefaultAzureCredential, get_bearer_token_provider
+
+    token_provider = get_bearer_token_provider(
+        DefaultAzureCredential(), "https://cognitiveservices.azure.com/.default"
+    )
+
+    client = OpenAI(  
+      base_url = "https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/",  
+      api_key=token_provider,
+    )
+
+    completion = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "What's in this image?"},
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": "https://raw.githubusercontent.com/MicrosoftDocs/azure-ai-docs/main/articles/ai-foundry/openai/media/how-to/generated-seattle.png",
+                        }
+                    },
+                ],
+            }
+        ],
+        max_tokens=300,
+    )
+
+    print(completion.model_dump_json(indent=2))
+
+    ```
+
+```python API Key
+    import os
+    from openai import OpenAI
+
+    client = OpenAI(
+        api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+        base_url="https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/",
+    )
+
+    completion = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "What's in this image?"},
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": "https://raw.githubusercontent.com/MicrosoftDocs/azure-ai-docs/main/articles/ai-foundry/openai/media/how-to/generated-seattle.png",
+                        }
+                    },
+                ],
+            }
+        ],
+        max_tokens=300,
+    )
+
+    print(completion.model_dump_json(indent=2))
+    ```
+
+```python Environment Variables
+    from openai import OpenAI
+
+    client = OpenAI()
+
+    completion = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "What's in this image?"},
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": "https://raw.githubusercontent.com/MicrosoftDocs/azure-ai-docs/main/articles/ai-foundry/openai/media/how-to/generated-seattle.png",
+                        }
+                    },
+                ],
+            }
+        ],
+        max_tokens=300,
+    )
+
+    print(completion.model_dump_json(indent=2))
+    ```
+
+```json Response
+    {
+      "id": "chatcmpl-AUisNBsjzPisMbx3k5Uz5SOKN63KN",
+      "choices": [
+        {
+          "finish_reason": "stop",
+          "index": 0,
+          "logprobs": null,
+          "message": {
+            "content": "This image is a watercolor painting of a city skyline, featuring a prominent tower that resembles the Space Needle, which is located in Seattle. The painting uses a blend of colors to depict the cityscape and sky.",
+            "refusal": null,
+            "role": "assistant",
+            "function_call": null,
+            "tool_calls": null
+          },
+          "content_filter_results": {
+            "hate": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "self_harm": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "sexual": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "violence": {
+              "filtered": false,
+              "severity": "safe"
+            }
+          }
+        }
+      ],
+      "created": 1731885707,
+      "model": "gpt-4o-2024-08-06",
+      "object": "chat.completion",
+      "service_tier": null,
+      "system_fingerprint": "fp_04751d0b65",
+      "usage": {
+        "completion_tokens": 42,
+        "prompt_tokens": 639,
+        "total_tokens": 681,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": null
+      },
+      "prompt_filter_results": [
+        {
+          "prompt_index": 0,
+          "content_filter_results": {
+            "jailbreak": {
+              "filtered": false,
+              "detected": false
+            }
+          }
+        },
+        {
+          "prompt_index": 1,
+          "content_filter_results": {
+            "sexual": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "violence": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "hate": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "self_harm": {
+              "filtered": false,
+              "severity": "safe"
+            }
+          }
+        }
+      ]
+    }
+    ```
+</CodeGroup>
+
+## Embeddings
+
+### embeddings.create()
+
+<Tabs>
+  <Tab title="Microsoft Entra ID">
+
+    Embeddings currently don't support Microsoft Entra ID with Azure OpenAI and the v1 API.
+
+  </Tab>
+  <Tab title="API Key">
+
+    ```python
+    client = OpenAI(
+        api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+        base_url="https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/",
+    )
+
+    embedding = client.embeddings.create(
+      model="text-embedding-3-large", # Replace with your model deployment name
+      input="Attenion is all you need",
+      encoding_format="float" 
+    )
+
+    print(embedding)
+    ```
+
+  </Tab>
+  <Tab title="Environment Variables">
+
+    ```python
+    client = OpenAI()
+
+    embedding = client.embeddings.create(
+      model="text-embedding-3-large", # Replace with your model deployment name
+      input="Attenion is all you need",
+      encoding_format="float" 
+    )
+
+    print(embedding)
+    ```
+
+  </Tab>
+  <Tab title="Response">
+
+    The response has been truncated for brevity.
+
+    ```
+    CreateEmbeddingResponse(data=[Embedding(embedding=[0.009098228, -0.010369237, -0.00048062875, -0.014328566, 0.019677775, 0.010049199, -0.005600668, 0.003858746, -0.007818076, 0.012554641, 0.005134327, 0.004514824, -0.020262988, -0.0039181816, 0.025475038, 0.016733425, 0.002136255, 0.0155172795, 0.0058978465, 0.012911255, -0.014273703, -0.016806576, 0.0265906, 0.037673064, 0.003909038, 0.0265906, -0.001935088, -0.014913779, 0.01781241, -0.017821554, 0.0016596265, -0.002987785, -0.014346854, -0.000962972, 0.0068671047, 0.004405097, -0.015764166, -0.007539185, -0.030394483, -0.01586475, 0.0074706054, -0.013761641, 0.010186358, 0.008805621, -0.009939471, 0.013944521, -0.010113207, -0.015745878, -0.021927187, 0.03231471, 0.0026951786, 0.004759425, 0.0065196347, 0.010927018, 0.017263774, 0.0055229445, 0.009381691, -0.042903405], index=0, object='embedding')], model='text-embedding-3-large', object='list', usage=Usage(prompt_tokens=7, total_tokens=7))
+    ```
+
+  </Tab>
+</Tabs>
+
+## Fine-tuning
+
+[Fine-tuning with Python how-to article](../../how-to/fine-tuning.md)
+
+## Error handling
+
+```python
+# from openai import OpenAI
+# client = OpenAI()
+
+import openai
+
+try:
+    client.fine_tuning.jobs.create(
+        model="gpt-4o",
+        training_file="file-test",
+    )
+except openai.APIConnectionError as e:
+    print("The server could not be reached")
+    print(e.__cause__)  # an underlying Exception, likely raised within httpx.
+except openai.RateLimitError as e:
+    print("A 429 status code was received; we should back off a bit.")
+except openai.APIStatusError as e:
+    print("Another non-200-range status code was received")
+    print(e.status_code)
+    print(e.response)
+```
+
+### Error codes
+
+| Status Code | Error Type |
+|----|---|
+| 400         | `BadRequestError`          |
+| 401         | `AuthenticationError`      |
+| 403         | `PermissionDeniedError`    |
+| 404         | `NotFoundError`            |
+| 422         | `UnprocessableEntityError` |
+| 429         | `RateLimitError`           |
+| >=500       | `InternalServerError`      |
+| N/A         | `APIConnectionError`       |
+
+### Request IDs
+
+To retrieve the ID of your request, you can use the `_request_id` property, which corresponds to the `x-request-id` response header.
+
+```python
+print(completion._request_id) 
+print(legacy_completion._request_id)
+```
+
+### Retries
+
+The following errors are automatically retired twice by default with a brief exponential backoff:
+
+- Connection Errors
+- 408 Request Timeout
+- 429 Rate Limit
+- `>=`500 Internal Errors
+
+Use `max_retries` to set/disable the retry behavior:
+
+```python
+# For all requests
+
+from openai import OpenAI
+client = OpenAI(
+      max_retries=0
+)
+```
+
+```python
+# max retires for specific requests
+
+client.with_options(max_retries=5).chat.completions.create(
+    messages=[
+        {
+            "role": "user",
+            "content": "When was Microsoft founded?",
+        }
+    ],
+    model="gpt-4o",
+)
+```
+
+## Troubleshooting
+
+- If you get a `401` or `403` error, confirm you authenticated with the intended identity or key, and that it has access to the Azure OpenAI resource.
+- If you get a `404` error, confirm the endpoint uses the `...openai.azure.com/openai/v1/` path and that you used a valid model deployment name.
+- If requests fail unexpectedly, check for proxy and firewall restrictions, and retry with a smaller prompt to rule out payload-size issues.

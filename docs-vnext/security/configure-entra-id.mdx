@@ -1,0 +1,1324 @@
+---
+title: "Configure keyless authentication with Microsoft Entra ID"
+description: "Learn how to configure keyless authentication with Microsoft Entra ID for Microsoft Foundry Models. Eliminate the need for API keys, enhance security with RBAC, and simplify compliance."
+---
+# Configure keyless authentication with Microsoft Entra ID
+This article explains how to configure keyless authentication with Microsoft Entra ID for Microsoft Foundry Models. Keyless authentication enhances security by eliminating the need for API keys, simplifies the user experience with role-based access control (RBAC), and reduces operational complexity while providing robust compliance support.
+
+## Prerequisites
+
+To complete this article, you need:
+
+- An Azure subscription. If you're using [GitHub Models](https://docs.github.com/en/github-models/), you can upgrade your experience and create an Azure subscription in the process. Read [Upgrade from GitHub Models to Microsoft Foundry Models](/models/capabilities/quickstart-github-models) if that's your case.
+
+- A Foundry project. This kind of project is managed under a Foundry resource. If you don't have a Foundry project, see [Create a project for Foundry (Foundry projects)](/setup/create-projects)
+
+- The endpoint's URL.
+
+- An account with `Microsoft.Authorization/roleAssignments/write` and `Microsoft.Authorization/roleAssignments/delete` permissions, such as the **Administrator** role-based access control. See the next section on [Required Azure roles and permissions](#required-azure-roles-and-permissions) for more details.
+
+### Required Azure roles and permissions
+
+Microsoft Entra ID uses role-based access control (RBAC) to manage access to Azure resources. You need different roles, depending on whether you're setting up authentication (administrator) or using it to make API calls (developer).
+
+#### For setting up authentication
+
+* **Subscription owner or administrator**: An account with `Microsoft.Authorization/roleAssignments/write` and `Microsoft.Authorization/roleAssignments/delete` permissions, such as the **Owner** or **User Access Administrator** role, required to assign the **Cognitive Services User** role to developers.
+
+#### For making authenticated API calls
+
+* **Cognitive Services User** role: Required for developers to authenticate and make inference API calls using Microsoft Entra ID. This role must be assigned at the scope of your Foundry resource.
+
+#### Role assignment requirements
+
+When assigning roles, specify these three elements:
+
+* **Security principal**: Your user account, service principal, or security group (recommended for managing multiple users)
+* **Role definition**: The **Cognitive Services User** role
+* **Scope**: Your specific Foundry resource
+
+<Tip>
+Azure role assignments can take up to 5 minutes to propagate. When using security groups, changes to group membership propagate immediately.
+</Tip>
+
+#### Custom role (optional)
+
+If you prefer a custom role instead of **Cognitive Services User**, make sure it includes these permissions:
+
+```json
+{
+  "permissions": [
+    {
+      "dataActions": [
+        "Microsoft.CognitiveServices/accounts/MaaS/*"
+      ]
+    }
+  ]
+}
+```
+
+For more context on how roles work with Azure resources, see [Understand roles in the context of resource in Azure](#understand-roles-in-the-context-of-resource-in-azure).
+
+## Configure Microsoft Entra ID for inference
+
+This section lists the steps to configure Microsoft Entra ID for inference from the Microsoft Foundry resource page in the [Azure portal](https://portal.azure.com).
+
+<Frame>
+  <img src="/images/locate-resource-ai-services.png" alt="Screenshot showing the resource to which we configure Microsoft Entra ID." />
+</Frame>
+
+1. Select the resource name to open it.
+ 
+1. In the left pane, select **Access control (IAM)**, and then select **Add** > **Add role assignment**.
+
+<Frame>
+<img src="/images/resource-aim.png" alt="Screenshot showing how to add a role assignment in the Access control section of the resource in the Azure portal." />
+</Frame>
+
+<Tip>
+Use the **View my access** option to verify which roles are already assigned to you.
+</Tip>
+
+1. In **Job function roles**, type **Cognitive Services User**.
+
+<Frame>
+<img src="/images/cognitive-services-user.png" alt="Screenshot showing how to select the Cognitive Services User role assignment." />
+</Frame>
+
+1. Select the role and select **Next**.
+
+1. On **Members**, select the user or group you want to grant access to. Use security groups whenever possible because they're easier to manage and maintain.
+
+<Frame>
+<img src="/images/select-user.png" alt="Screenshot showing how to select the user to whom assign the role." />
+</Frame>
+
+1. Select **Next** and finish the wizard.
+
+1. The selected user can now use Microsoft Entra ID for inference.
+
+<Tip>
+Azure role assignments can take up to five minutes to propagate. When working with security groups, adding or removing users from the security group propagates immediately.
+</Tip>
+
+1. Verify the role assignment:
+
+   1. On the left pane in the Azure portal, select **Access control (IAM)**.
+   
+   1. Select **Check access**.
+   
+   1. Search for the user or security group you assigned the role to.
+   
+   1. Verify that **Cognitive Services User** appears in their assigned roles.
+
+Key-based access is still possible for users who already have keys available to them. To revoke the keys, in Azure portal, on the left navigation, select **Resource Management** > **Keys and Endpoints** > **Regenerate Key1** and **Regenerate Key2**.
+
+## Use Microsoft Entra ID in your code
+
+After you configure Microsoft Entra ID in your resource, update your code to use it when you consume the inference endpoint. This example shows how to use a chat completions model:
+
+<Tabs>
+  <Tab title="Python">
+
+    Install the OpenAI SDK using a package manager like pip:
+
+    ```bash
+    pip install openai
+    ```
+
+    For Microsoft Entra ID authentication, also install:
+
+    ```bash
+    pip install azure-identity
+    ```
+
+    Use the package to consume the model. The following example shows how to create a client to consume chat completions with Microsoft Entra ID and make a test call to the chat completions endpoint with your model deployment.
+
+    Replace `<resource>` with your Foundry resource name. Find it in the Azure portal or by running `az cognitiveservices account list`. Replace `DeepSeek-V3.1` with your actual deployment name.
+
+    ```python
+    from openai import OpenAI
+    from azure.identity import DefaultAzureCredential, get_bearer_token_provider
+
+    token_provider = get_bearer_token_provider(
+        DefaultAzureCredential(), 
+        "https://cognitiveservices.azure.com/.default"
+    )
+
+    client = OpenAI(
+        base_url="https://<resource>.openai.azure.com/openai/v1/",
+        api_key=token_provider,
+    )
+
+    completion = client.chat.completions.create(
+        model="DeepSeek-V3.1",  # Required: your deployment name
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": "What is Azure AI?"}
+        ]
+    )
+
+    print(completion.choices[0].message.content)
+    ```
+
+    Expected output
+
+    ```output
+    Azure AI is a comprehensive suite of artificial intelligence services and tools from Microsoft that enables developers to build intelligent applications. It includes services for natural language processing, computer vision, speech recognition, and machine learning capabilities.
+    ```
+
+    Reference: [OpenAI Python SDK](https://github.com/openai/openai-python) and [DefaultAzureCredential class](https://learn.microsoft.com/python/api/azure-identity/azure.identity.defaultazurecredential).
+
+  </Tab>
+  <Tab title="C#">
+
+    Install the OpenAI SDK:
+
+    ```dotnetcli
+    dotnet add package OpenAI
+    ```
+
+    For Microsoft Entra ID authentication, also install the `Azure.Identity` package:
+
+    ```dotnetcli
+    dotnet add package Azure.Identity
+    ```
+
+    Import the following namespaces:
+
+    ```csharp
+    using Azure.Identity;
+    using OpenAI;
+    using OpenAI.Chat;
+    using System.ClientModel.Primitives;
+    ```
+
+    Then, use the package to consume the model. The following example shows how to create a client to consume chat completions with Microsoft Entra ID, and then make a test call to the chat completions endpoint with your model deployment.
+
+    Replace `<resource>` with your Foundry resource name (find it in the Azure portal). Replace `gpt-4o-mini` with your actual deployment name.
+
+    ```csharp
+    #pragma warning disable OPENAI001
+
+    BearerTokenPolicy tokenPolicy = new(
+        new DefaultAzureCredential(),
+        "https://cognitiveservices.azure.com/.default"
+    );
+
+    ChatClient client = new(
+        model: "gpt-4o-mini", // Your deployment name
+        authenticationPolicy: tokenPolicy,
+        options: new OpenAIClientOptions() {
+            Endpoint = new Uri("https://<resource>.openai.azure.com/openai/v1/")
+        }
+    );
+
+    ChatCompletion completion = client.CompleteChat(
+        new SystemChatMessage("You are a helpful assistant."),
+        new UserChatMessage("What is Azure AI?")
+    );
+
+    Console.WriteLine(completion.Content[0].Text);
+    ```
+
+    Expected output:
+
+    ```output
+    Azure AI is a comprehensive suite of artificial intelligence services and tools from Microsoft that enables developers to build intelligent applications. It includes services for natural language processing, computer vision, speech recognition, and machine learning capabilities.
+    ```
+
+    Reference: [OpenAI .NET SDK](https://github.com/openai/openai-dotnet) and [DefaultAzureCredential class](https://learn.microsoft.com/dotnet/api/azure.identity.defaultazurecredential).
+
+  </Tab>
+  <Tab title="JavaScript">
+
+    Install the OpenAI SDK with npm:
+
+    ```bash
+    npm install openai
+    ```
+
+    For Microsoft Entra ID authentication, also install:
+
+    ```bash
+    npm install @azure/identity
+    ```
+
+    Then, use the package to consume the model. The following example shows how to create a client to consume chat completions with Microsoft Entra ID, and then make a test call to the chat completions endpoint with your model deployment.
+
+    Replace `<resource>` with your Foundry resource name (find it in the Azure portal or by running `az cognitiveservices account list`). Replace `DeepSeek-V3.1` with your actual deployment name.
+
+    ```javascript
+    import { DefaultAzureCredential, getBearerTokenProvider } from "@azure/identity";
+    import { OpenAI } from "openai";
+
+    const tokenProvider = getBearerTokenProvider(
+        new DefaultAzureCredential(),
+        'https://cognitiveservices.azure.com/.default'
+    );
+
+    const client = new OpenAI({
+        baseURL: "https://<resource>.openai.azure.com/openai/v1/",
+        apiKey: tokenProvider
+    });
+
+    const completion = await client.chat.completions.create({
+        model: "DeepSeek-V3.1", // Required: your deployment name
+        messages: [
+            { role: "system", content: "You are a helpful assistant." },
+            { role: "user", content: "What is Azure AI?" }
+        ]
+    });
+
+    console.log(completion.choices[0].message.content);
+    ```
+
+    Expected output:
+
+    ```output
+    Azure AI is a comprehensive suite of artificial intelligence services and tools from Microsoft that enables developers to build intelligent applications. It includes services for natural language processing, computer vision, speech recognition, and machine learning capabilities.
+    ```
+
+    Reference: [OpenAI Node.js SDK](https://github.com/openai/openai-node) and [DefaultAzureCredential class](https://learn.microsoft.com/javascript/api/@azure/identity/defaultazurecredential).
+
+  </Tab>
+  <Tab title="Java">
+
+    Add the OpenAI SDK to your project. Check the [OpenAI Java GitHub repository](https://github.com/openai/openai-java) for the latest version and installation instructions.
+
+    For Microsoft Entra ID authentication, also add:
+
+    ```xml
+    <dependency>
+        <groupId>com.azure</groupId>
+        <artifactId>azure-identity</artifactId>
+        <version>1.18.0</version>
+    </dependency>
+    ```
+
+    Then, use the package to consume the model. The following example shows how to create a client to consume chat completions with Microsoft Entra ID, and then make a test call to the chat completions endpoint with your model deployment.
+
+    Replace `<resource>` with your Foundry resource name (find it in the Azure portal). Replace `DeepSeek-V3.1` with your actual deployment name.
+
+    ```java
+    import com.openai.client.OpenAIClient;
+    import com.openai.client.okhttp.OpenAIOkHttpClient;
+    import com.azure.identity.DefaultAzureCredential;
+    import com.azure.identity.DefaultAzureCredentialBuilder;
+    import com.openai.models.chat.completions.*;
+
+    DefaultAzureCredential tokenCredential = new DefaultAzureCredentialBuilder().build();
+
+    OpenAIClient client = OpenAIOkHttpClient.builder()
+        .baseUrl("https://<resource>.openai.azure.com/openai/v1/")
+        .credential(BearerTokenCredential.create(
+            AuthenticationUtil.getBearerTokenSupplier(
+                tokenCredential, 
+                "https://cognitiveservices.azure.com/.default"
+            )
+        ))
+        .build();
+
+    ChatCompletionCreateParams params = ChatCompletionCreateParams.builder()
+        .addSystemMessage("You are a helpful assistant.")
+        .addUserMessage("What is Azure AI?")
+        .model("DeepSeek-V3.1") // Required: your deployment name
+        .build();
+
+    ChatCompletion completion = client.chat().completions().create(params);
+    System.out.println(completion.choices().get(0).message().content());
+    ```
+
+    Expected output:
+
+    ```output
+    Azure AI is a comprehensive suite of artificial intelligence services and tools from Microsoft that enables developers to build intelligent applications. It includes services for natural language processing, computer vision, speech recognition, and machine learning capabilities.
+    ```
+
+    Reference: [OpenAI Java SDK](https://github.com/openai/openai-java) and [DefaultAzureCredential class](https://learn.microsoft.com/java/api/com.azure.identity.defaultazurecredential).
+
+  </Tab>
+  <Tab title="REST">
+
+    Explore the API design in the reference section to see which parameters are available. Indicate the authentication token in the header `Authorization`. For example, the [Chat completion](/api-sdk/latest#create-chat-completion) reference section details how to use the `/chat/completions` route to generate predictions based on chat-formatted instructions. The path `/models` is included in the root of the URL:
+
+    __Request__
+
+    Replace `<resource>` with your Foundry resource name (find it in the Azure portal or by running `az cognitiveservices account list`). Replace `MAI-DS-R1` with your actual deployment name.
+
+    The base_url will accept both `https://<resource>.openai.azure.com/openai/v1/` and `https://<resource>.services.ai.azure.com/openai/v1/` formats.
+
+    ```bash
+    curl -X POST https://<resource>.openai.azure.com/openai/v1/chat/completions \
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer $AZURE_OPENAI_AUTH_TOKEN" \
+      -d '{
+          "model": "MAI-DS-R1",
+          "messages": [
+          {
+            "role": "system",
+            "content": "You are a helpful assistant."
+          },
+          {
+            "role": "user",
+            "content": "Explain what the bitter lesson is?"
+          }
+        ]
+      }'
+    ```
+
+    __Response__
+
+    If authentication is successful, you receive a `200 OK` response with chat completion results in the response body:
+
+    ```json
+    {
+      "id": "chatcmpl-...",
+      "object": "chat.completion",
+      "created": 1738368234,
+      "model": "MAI-DS-R1",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "The bitter lesson refers to a key insight in AI research that emphasizes the importance of general-purpose learning methods that leverage computation, rather than human-designed domain-specific approaches. It suggests that methods which scale with increased computation tend to be more effective in the long run."
+          },
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 28,
+        "completion_tokens": 52,
+        "total_tokens": 80
+      }
+    }
+    ```
+
+    Tokens must be issued with scope `https://cognitiveservices.azure.com/.default`.
+
+    For testing purposes, the easiest way to get a valid token for your user account is to use the Azure CLI. In a console, run the following Azure CLI command:
+
+    ```azurecli
+    az account get-access-token --resource https://cognitiveservices.azure.com --query "accessToken" --output tsv
+    ```
+
+    This command outputs an access token that you can store in the `$AZURE_OPENAI_AUTH_TOKEN` environment variable.
+
+    Reference: [Chat Completions API](/api-sdk/latest#create-chat-completion)
+
+  </Tab>
+</Tabs>
+
+### Options for credential when using Microsoft Entra ID
+
+`DefaultAzureCredential` is an opinionated, ordered sequence of mechanisms for authenticating to Microsoft Entra ID. Each authentication mechanism is a class that's derived from the `TokenCredential` class and is known as a credential. At runtime, `DefaultAzureCredential` attempts to authenticate using the first credential. If that credential fails to acquire an access token, the next credential in the sequence is attempted, and so on, until an access token is obtained. In this way, your app can use different credentials in different environments without writing environment-specific code.
+
+When the preceding code runs on your local development workstation, it looks in the environment variables for an application service principal or at locally installed developer tools, like Visual Studio, for a set of developer credentials. You can use either approach to authenticate the app to Azure resources during local development.
+
+When deployed to Azure, this same code can also authenticate your app to other Azure resources. `DefaultAzureCredential` can retrieve environment settings and managed identity configurations to authenticate to other services automatically.
+
+### Best practices
+
+* Use deterministic credentials in production environments: Strongly consider moving from `DefaultAzureCredential` to one of the following deterministic solutions in production environments:
+
+  * A specific `TokenCredential` implementation, like `ManagedIdentityCredential`. See the [Derived list for options](https://learn.microsoft.com/dotnet/api/azure.core.tokencredential#definition).
+  * A pared-down `ChainedTokenCredential` implementation that's optimized for the Azure environment in which your app runs. `ChainedTokenCredential` essentially creates a specific allowlist of acceptable credential options, like `ManagedIdentity` for production and `VisualStudioCredential` for development.
+
+* Configure system-assigned or user-assigned managed identities to the Azure resources where your code runs, if possible. Configure Microsoft Entra ID access to those specific identities.
+
+## Disable key-based authentication in the resource
+
+Disable key-based authentication when you implement Microsoft Entra ID and fully address compatibility or fallback concerns in all applications that consume the service. You can disable key-based authentication by using Azure CLI or when deploying with Bicep or ARM.
+
+Key-based access is still possible for users that already have keys available to them. To revoke the keys, in the Azure portal, on the left navigation, select **Resource Management** > **Keys and Endpoints** > **Regenerate Key1** and **Regenerate Key2**.
+
+* Install the [Azure CLI](https://learn.microsoft.com/cli/azure/)
+
+* Identify the following information:
+
+  * Your Azure subscription ID
+
+  * Your Microsoft Foundry resource name
+
+  * The resource group where you deployed the Foundry resource
+
+## Configure Microsoft Entra ID for inference
+
+To configure Microsoft Entra ID for inference, follow these steps:
+
+1. Sign in to your Azure subscription.
+
+    ```azurecli
+    # Authenticate with Azure and sign in interactively
+    az login
+    ```
+
+1. If you have more than one subscription, select the subscription where your resource is located.
+
+    ```azurecli
+    # Set the active subscription context
+    az account set --subscription "<subscription-id>"
+    ```
+
+1. Set the following environment variables with the name of the resource and resource group you plan to use.
+
+    ```azurecli
+    # Store resource identifiers for reuse in subsequent commands
+    ACCOUNT_NAME="<ai-services-resource-name>"
+    RESOURCE_GROUP="<resource-group>"
+    ```
+
+1. Get the full name of your resource.
+
+    ```azurecli
+    # Retrieve the full Azure Resource Manager ID for role assignment scoping
+    RESOURCE_ID=$(az resource show -g $RESOURCE_GROUP -n $ACCOUNT_NAME --resource-type "Microsoft.CognitiveServices/accounts" --query id --output tsv)
+    ```
+
+1. Get the object ID of the security principal you want to assign permissions to. The following examples show how to get the object ID associated with:
+    
+    **Your own signed in account:**
+
+    ```azurecli
+    # Get your user's Microsoft Entra ID object ID
+    OBJECT_ID=$(az ad signed-in-user show --query id --output tsv)
+    ```
+
+    **A security group:**
+
+    ```azurecli
+    # Get the object ID for a security group (recommended for production)
+    OBJECT_ID=$(az ad group show --group "<group-name>" --query id --output tsv)
+    ```
+
+    **A service principal:**
+
+    ```azurecli
+    # Get the object ID for a service principal (for app authentication)
+    OBJECT_ID=$(az ad sp show --id "<service-principal-guid>" --query id --output tsv)
+    ```
+    
+1. Assign the **Cognitive Services User** role to the service principal (scoped to the resource). By assigning a role, you grant the service principal access to this resource.
+
+    ```azurecli
+    # Grant inference access by assigning the Cognitive Services User role
+    az role assignment create --assignee-object-id $OBJECT_ID --role "Cognitive Services User" --scope $RESOURCE_ID
+    ```
+
+1. The selected user can now use Microsoft Entra ID for inference.
+
+<Tip>
+Keep in mind that Azure role assignments can take up to five minutes to propagate. Adding or removing users from a security group propagates immediately.
+</Tip>
+
+1. Verify the role assignment:
+
+    ```azurecli
+    az role assignment list --scope $RESOURCE_ID --assignee $OBJECT_ID --query "[?roleDefinitionName=='Cognitive Services User'].{principalName:principalName, roleDefinitionName:roleDefinitionName}" --output table
+    ```
+
+    The output should show the **Cognitive Services User** role assigned to your principal.
+
+## Use Microsoft Entra ID in your code
+
+After you configure Microsoft Entra ID in your resource, update your code to use it when you consume the inference endpoint. The following example shows how to use a chat completions model:
+
+<Tabs>
+  <Tab title="Python">
+
+    Install the OpenAI SDK using a package manager like pip:
+
+    ```bash
+    pip install openai
+    ```
+
+    For Microsoft Entra ID authentication, also install:
+
+    ```bash
+    pip install azure-identity
+    ```
+
+    Use the package to consume the model. The following example shows how to create a client to consume chat completions with Microsoft Entra ID and make a test call to the chat completions endpoint with your model deployment.
+
+    Replace `<resource>` with your Foundry resource name. Find it in the Azure portal or by running `az cognitiveservices account list`. Replace `DeepSeek-V3.1` with your actual deployment name.
+
+    ```python
+    from openai import OpenAI
+    from azure.identity import DefaultAzureCredential, get_bearer_token_provider
+
+    token_provider = get_bearer_token_provider(
+        DefaultAzureCredential(), 
+        "https://cognitiveservices.azure.com/.default"
+    )
+
+    client = OpenAI(
+        base_url="https://<resource>.openai.azure.com/openai/v1/",
+        api_key=token_provider,
+    )
+
+    completion = client.chat.completions.create(
+        model="DeepSeek-V3.1",  # Required: your deployment name
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": "What is Azure AI?"}
+        ]
+    )
+
+    print(completion.choices[0].message.content)
+    ```
+
+    Expected output
+
+    ```output
+    Azure AI is a comprehensive suite of artificial intelligence services and tools from Microsoft that enables developers to build intelligent applications. It includes services for natural language processing, computer vision, speech recognition, and machine learning capabilities.
+    ```
+
+    Reference: [OpenAI Python SDK](https://github.com/openai/openai-python) and [DefaultAzureCredential class](https://learn.microsoft.com/python/api/azure-identity/azure.identity.defaultazurecredential).
+
+  </Tab>
+  <Tab title="C#">
+
+    Install the OpenAI SDK:
+
+    ```dotnetcli
+    dotnet add package OpenAI
+    ```
+
+    For Microsoft Entra ID authentication, also install the `Azure.Identity` package:
+
+    ```dotnetcli
+    dotnet add package Azure.Identity
+    ```
+
+    Import the following namespaces:
+
+    ```csharp
+    using Azure.Identity;
+    using OpenAI;
+    using OpenAI.Chat;
+    using System.ClientModel.Primitives;
+    ```
+
+    Then, use the package to consume the model. The following example shows how to create a client to consume chat completions with Microsoft Entra ID, and then make a test call to the chat completions endpoint with your model deployment.
+
+    Replace `<resource>` with your Foundry resource name (find it in the Azure portal). Replace `gpt-4o-mini` with your actual deployment name.
+
+    ```csharp
+    #pragma warning disable OPENAI001
+
+    BearerTokenPolicy tokenPolicy = new(
+        new DefaultAzureCredential(),
+        "https://cognitiveservices.azure.com/.default"
+    );
+
+    ChatClient client = new(
+        model: "gpt-4o-mini", // Your deployment name
+        authenticationPolicy: tokenPolicy,
+        options: new OpenAIClientOptions() {
+            Endpoint = new Uri("https://<resource>.openai.azure.com/openai/v1/")
+        }
+    );
+
+    ChatCompletion completion = client.CompleteChat(
+        new SystemChatMessage("You are a helpful assistant."),
+        new UserChatMessage("What is Azure AI?")
+    );
+
+    Console.WriteLine(completion.Content[0].Text);
+    ```
+
+    Expected output:
+
+    ```output
+    Azure AI is a comprehensive suite of artificial intelligence services and tools from Microsoft that enables developers to build intelligent applications. It includes services for natural language processing, computer vision, speech recognition, and machine learning capabilities.
+    ```
+
+    Reference: [OpenAI .NET SDK](https://github.com/openai/openai-dotnet) and [DefaultAzureCredential class](https://learn.microsoft.com/dotnet/api/azure.identity.defaultazurecredential).
+
+  </Tab>
+  <Tab title="JavaScript">
+
+    Install the OpenAI SDK with npm:
+
+    ```bash
+    npm install openai
+    ```
+
+    For Microsoft Entra ID authentication, also install:
+
+    ```bash
+    npm install @azure/identity
+    ```
+
+    Then, use the package to consume the model. The following example shows how to create a client to consume chat completions with Microsoft Entra ID, and then make a test call to the chat completions endpoint with your model deployment.
+
+    Replace `<resource>` with your Foundry resource name (find it in the Azure portal or by running `az cognitiveservices account list`). Replace `DeepSeek-V3.1` with your actual deployment name.
+
+    ```javascript
+    import { DefaultAzureCredential, getBearerTokenProvider } from "@azure/identity";
+    import { OpenAI } from "openai";
+
+    const tokenProvider = getBearerTokenProvider(
+        new DefaultAzureCredential(),
+        'https://cognitiveservices.azure.com/.default'
+    );
+
+    const client = new OpenAI({
+        baseURL: "https://<resource>.openai.azure.com/openai/v1/",
+        apiKey: tokenProvider
+    });
+
+    const completion = await client.chat.completions.create({
+        model: "DeepSeek-V3.1", // Required: your deployment name
+        messages: [
+            { role: "system", content: "You are a helpful assistant." },
+            { role: "user", content: "What is Azure AI?" }
+        ]
+    });
+
+    console.log(completion.choices[0].message.content);
+    ```
+
+    Expected output:
+
+    ```output
+    Azure AI is a comprehensive suite of artificial intelligence services and tools from Microsoft that enables developers to build intelligent applications. It includes services for natural language processing, computer vision, speech recognition, and machine learning capabilities.
+    ```
+
+    Reference: [OpenAI Node.js SDK](https://github.com/openai/openai-node) and [DefaultAzureCredential class](https://learn.microsoft.com/javascript/api/@azure/identity/defaultazurecredential).
+
+  </Tab>
+  <Tab title="Java">
+
+    Add the OpenAI SDK to your project. Check the [OpenAI Java GitHub repository](https://github.com/openai/openai-java) for the latest version and installation instructions.
+
+    For Microsoft Entra ID authentication, also add:
+
+    ```xml
+    <dependency>
+        <groupId>com.azure</groupId>
+        <artifactId>azure-identity</artifactId>
+        <version>1.18.0</version>
+    </dependency>
+    ```
+
+    Then, use the package to consume the model. The following example shows how to create a client to consume chat completions with Microsoft Entra ID, and then make a test call to the chat completions endpoint with your model deployment.
+
+    Replace `<resource>` with your Foundry resource name (find it in the Azure portal). Replace `DeepSeek-V3.1` with your actual deployment name.
+
+    ```java
+    import com.openai.client.OpenAIClient;
+    import com.openai.client.okhttp.OpenAIOkHttpClient;
+    import com.azure.identity.DefaultAzureCredential;
+    import com.azure.identity.DefaultAzureCredentialBuilder;
+    import com.openai.models.chat.completions.*;
+
+    DefaultAzureCredential tokenCredential = new DefaultAzureCredentialBuilder().build();
+
+    OpenAIClient client = OpenAIOkHttpClient.builder()
+        .baseUrl("https://<resource>.openai.azure.com/openai/v1/")
+        .credential(BearerTokenCredential.create(
+            AuthenticationUtil.getBearerTokenSupplier(
+                tokenCredential, 
+                "https://cognitiveservices.azure.com/.default"
+            )
+        ))
+        .build();
+
+    ChatCompletionCreateParams params = ChatCompletionCreateParams.builder()
+        .addSystemMessage("You are a helpful assistant.")
+        .addUserMessage("What is Azure AI?")
+        .model("DeepSeek-V3.1") // Required: your deployment name
+        .build();
+
+    ChatCompletion completion = client.chat().completions().create(params);
+    System.out.println(completion.choices().get(0).message().content());
+    ```
+
+    Expected output:
+
+    ```output
+    Azure AI is a comprehensive suite of artificial intelligence services and tools from Microsoft that enables developers to build intelligent applications. It includes services for natural language processing, computer vision, speech recognition, and machine learning capabilities.
+    ```
+
+    Reference: [OpenAI Java SDK](https://github.com/openai/openai-java) and [DefaultAzureCredential class](https://learn.microsoft.com/java/api/com.azure.identity.defaultazurecredential).
+
+  </Tab>
+  <Tab title="REST">
+
+    Explore the API design in the reference section to see which parameters are available. Indicate the authentication token in the header `Authorization`. For example, the [Chat completion](/api-sdk/latest#create-chat-completion) reference section details how to use the `/chat/completions` route to generate predictions based on chat-formatted instructions. The path `/models` is included in the root of the URL:
+
+    __Request__
+
+    Replace `<resource>` with your Foundry resource name (find it in the Azure portal or by running `az cognitiveservices account list`). Replace `MAI-DS-R1` with your actual deployment name.
+
+    The base_url will accept both `https://<resource>.openai.azure.com/openai/v1/` and `https://<resource>.services.ai.azure.com/openai/v1/` formats.
+
+    ```bash
+    curl -X POST https://<resource>.openai.azure.com/openai/v1/chat/completions \
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer $AZURE_OPENAI_AUTH_TOKEN" \
+      -d '{
+          "model": "MAI-DS-R1",
+          "messages": [
+          {
+            "role": "system",
+            "content": "You are a helpful assistant."
+          },
+          {
+            "role": "user",
+            "content": "Explain what the bitter lesson is?"
+          }
+        ]
+      }'
+    ```
+
+    __Response__
+
+    If authentication is successful, you receive a `200 OK` response with chat completion results in the response body:
+
+    ```json
+    {
+      "id": "chatcmpl-...",
+      "object": "chat.completion",
+      "created": 1738368234,
+      "model": "MAI-DS-R1",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "The bitter lesson refers to a key insight in AI research that emphasizes the importance of general-purpose learning methods that leverage computation, rather than human-designed domain-specific approaches. It suggests that methods which scale with increased computation tend to be more effective in the long run."
+          },
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 28,
+        "completion_tokens": 52,
+        "total_tokens": 80
+      }
+    }
+    ```
+
+    Tokens must be issued with scope `https://cognitiveservices.azure.com/.default`.
+
+    For testing purposes, the easiest way to get a valid token for your user account is to use the Azure CLI. In a console, run the following Azure CLI command:
+
+    ```azurecli
+    az account get-access-token --resource https://cognitiveservices.azure.com --query "accessToken" --output tsv
+    ```
+
+    This command outputs an access token that you can store in the `$AZURE_OPENAI_AUTH_TOKEN` environment variable.
+
+    Reference: [Chat Completions API](/api-sdk/latest#create-chat-completion)
+
+  </Tab>
+</Tabs>
+
+### Options for credential when using Microsoft Entra ID
+
+`DefaultAzureCredential` is an opinionated, ordered sequence of mechanisms for authenticating to Microsoft Entra ID. Each authentication mechanism is a class that's derived from the `TokenCredential` class and is known as a credential. At runtime, `DefaultAzureCredential` attempts to authenticate using the first credential. If that credential fails to acquire an access token, the next credential in the sequence is attempted, and so on, until an access token is obtained. In this way, your app can use different credentials in different environments without writing environment-specific code.
+
+When the preceding code runs on your local development workstation, it looks in the environment variables for an application service principal or at locally installed developer tools, like Visual Studio, for a set of developer credentials. You can use either approach to authenticate the app to Azure resources during local development.
+
+When deployed to Azure, this same code can also authenticate your app to other Azure resources. `DefaultAzureCredential` can retrieve environment settings and managed identity configurations to authenticate to other services automatically.
+
+### Best practices
+
+* Use deterministic credentials in production environments: Strongly consider moving from `DefaultAzureCredential` to one of the following deterministic solutions in production environments:
+
+  * A specific `TokenCredential` implementation, like `ManagedIdentityCredential`. See the [Derived list for options](https://learn.microsoft.com/dotnet/api/azure.core.tokencredential#definition).
+  * A pared-down `ChainedTokenCredential` implementation that's optimized for the Azure environment in which your app runs. `ChainedTokenCredential` essentially creates a specific allowlist of acceptable credential options, like `ManagedIdentity` for production and `VisualStudioCredential` for development.
+
+* Configure system-assigned or user-assigned managed identities to the Azure resources where your code runs, if possible. Configure Microsoft Entra ID access to those specific identities.
+
+## Disable key-based authentication in the resource
+
+Disable key-based authentication when you implement Microsoft Entra ID and fully address compatibility or fallback concerns in all the applications that consume the service. 
+Use PowerShell with the Azure CLI to disable local authentication for an individual resource. First sign in with the `Connect-AzAccount` command. Then use the `Set-AzCognitiveServicesAccount` cmdlet with the parameter `-DisableLocalAuth $true`, like the following example:
+
+```powershell
+Set-AzCognitiveServicesAccount -ResourceGroupName "my-resource-group" -Name "my-resource-name" -DisableLocalAuth $true
+```
+
+For more information about how to use the Azure CLI to disable or reenable local authentication and verify authentication status, see [Disable local authentication in Foundry Tools](../../../../ai-services/disable-local-auth.md).
+
+* Install the [Azure CLI](https://learn.microsoft.com/cli/azure/)
+
+* Identify the following information:
+
+  * Your Azure subscription ID
+
+## About this tutorial
+
+The example in this article is based on code samples in the [Azure-Samples/azureai-model-inference-bicep](https://github.com/Azure-Samples/azureai-model-inference-bicep) repository. To run the commands locally without copying or pasting file content, clone the repository with these commands and go to the folder for your coding language:
+
+```azurecli
+git clone https://github.com/Azure-Samples/azureai-model-inference-bicep
+```
+
+The files for this example are in the following directory:
+
+```azurecli
+cd azureai-model-inference-bicep/infra
+```
+
+## Understand the resources
+
+In this tutorial, you create the following resources:
+
+* A Microsoft Foundry resource with key access disabled. For simplicity, this template doesn't deploy models.
+* A role assignment for a given security principal with the role **Cognitive Services User**.
+
+To create these resources, use the following assets:
+
+1. Use the template `modules/ai-services-template.bicep` to describe your Foundry resource.
+
+    __modules/ai-services-template.bicep__
+
+    ```bicep
+    // Source: ai-services-template.bicep (not available)
+    ```
+
+<Tip>
+This template accepts the `allowKeys` parameter. Set it to `false` to disable key access in the resource.
+</Tip>
+
+1. Use the template `modules/role-assignment-template.bicep` to describe a role assignment in Azure:
+
+    __modules/role-assignment-template.bicep__
+
+    ```bicep
+    // Source: role-assignment-template.bicep (not available)
+    ```
+
+## Create the resources
+
+In your console, follow these steps:
+
+1. Define the main deployment:
+
+    __deploy-entra-id.bicep__
+
+    ```bicep
+    // Source: deploy-entra-id.bicep (not available)
+    ```
+
+1. Sign in to Azure:
+
+    ```azurecli
+    az login
+    ```
+
+1. Make sure you're in the right subscription:
+
+    ```azurecli
+    az account set --subscription "<subscription-id>"
+    ```
+
+1. Run the deployment:
+
+    ```azurecli
+    RESOURCE_GROUP="<resource-group-name>"
+    SECURITY_PRINCIPAL_ID="<your-security-principal-id>"
+    
+    az deployment group create \
+      --resource-group $RESOURCE_GROUP \
+      --parameters securityPrincipalId=$SECURITY_PRINCIPAL_ID \
+      --template-file deploy-entra-id.bicep
+    ```
+
+1. The template outputs the Foundry Models endpoint that you can use to consume any of the model deployments you created.
+
+1. Verify the deployment and role assignment:
+
+    ```azurecli
+    # Get the endpoint from deployment output
+    ENDPOINT=$(az deployment group show --resource-group $RESOURCE_GROUP --name deploy-entra-id --query properties.outputs.endpoint.value --output tsv)
+    
+    # Verify role assignment
+    RESOURCE_ID=$(az deployment group show --resource-group $RESOURCE_GROUP --name deploy-entra-id --query properties.outputs.resourceId.value --output tsv)
+    az role assignment list --scope $RESOURCE_ID --assignee $SECURITY_PRINCIPAL_ID --query "[?roleDefinitionName=='Cognitive Services User'].roleDefinitionName" --output tsv
+    
+    # Test authentication by getting an access token
+    az account get-access-token --resource https://cognitiveservices.azure.com --query "accessToken" --output tsv
+    ```
+
+    If successful, you see **Cognitive Services User** from the role assignment check and an access token from the authentication test. You can now use this endpoint and Microsoft Entra ID authentication in your code.
+
+## Use Microsoft Entra ID in your code
+
+After you configure Microsoft Entra ID in your resource, update your code to use it when you consume the inference endpoint. The following example shows how to use a chat completions model.
+
+<Tabs>
+  <Tab title="Python">
+
+    Install the OpenAI SDK using a package manager like pip:
+
+    ```bash
+    pip install openai
+    ```
+
+    For Microsoft Entra ID authentication, also install:
+
+    ```bash
+    pip install azure-identity
+    ```
+
+    Use the package to consume the model. The following example shows how to create a client to consume chat completions with Microsoft Entra ID and make a test call to the chat completions endpoint with your model deployment.
+
+    Replace `<resource>` with your Foundry resource name. Find it in the Azure portal or by running `az cognitiveservices account list`. Replace `DeepSeek-V3.1` with your actual deployment name.
+
+    ```python
+    from openai import OpenAI
+    from azure.identity import DefaultAzureCredential, get_bearer_token_provider
+
+    token_provider = get_bearer_token_provider(
+        DefaultAzureCredential(), 
+        "https://cognitiveservices.azure.com/.default"
+    )
+
+    client = OpenAI(
+        base_url="https://<resource>.openai.azure.com/openai/v1/",
+        api_key=token_provider,
+    )
+
+    completion = client.chat.completions.create(
+        model="DeepSeek-V3.1",  # Required: your deployment name
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": "What is Azure AI?"}
+        ]
+    )
+
+    print(completion.choices[0].message.content)
+    ```
+
+    Expected output
+
+    ```output
+    Azure AI is a comprehensive suite of artificial intelligence services and tools from Microsoft that enables developers to build intelligent applications. It includes services for natural language processing, computer vision, speech recognition, and machine learning capabilities.
+    ```
+
+    Reference: [OpenAI Python SDK](https://github.com/openai/openai-python) and [DefaultAzureCredential class](https://learn.microsoft.com/python/api/azure-identity/azure.identity.defaultazurecredential).
+
+  </Tab>
+  <Tab title="C#">
+
+    Install the OpenAI SDK:
+
+    ```dotnetcli
+    dotnet add package OpenAI
+    ```
+
+    For Microsoft Entra ID authentication, also install the `Azure.Identity` package:
+
+    ```dotnetcli
+    dotnet add package Azure.Identity
+    ```
+
+    Import the following namespaces:
+
+    ```csharp
+    using Azure.Identity;
+    using OpenAI;
+    using OpenAI.Chat;
+    using System.ClientModel.Primitives;
+    ```
+
+    Then, use the package to consume the model. The following example shows how to create a client to consume chat completions with Microsoft Entra ID, and then make a test call to the chat completions endpoint with your model deployment.
+
+    Replace `<resource>` with your Foundry resource name (find it in the Azure portal). Replace `gpt-4o-mini` with your actual deployment name.
+
+    ```csharp
+    #pragma warning disable OPENAI001
+
+    BearerTokenPolicy tokenPolicy = new(
+        new DefaultAzureCredential(),
+        "https://cognitiveservices.azure.com/.default"
+    );
+
+    ChatClient client = new(
+        model: "gpt-4o-mini", // Your deployment name
+        authenticationPolicy: tokenPolicy,
+        options: new OpenAIClientOptions() {
+            Endpoint = new Uri("https://<resource>.openai.azure.com/openai/v1/")
+        }
+    );
+
+    ChatCompletion completion = client.CompleteChat(
+        new SystemChatMessage("You are a helpful assistant."),
+        new UserChatMessage("What is Azure AI?")
+    );
+
+    Console.WriteLine(completion.Content[0].Text);
+    ```
+
+    Expected output:
+
+    ```output
+    Azure AI is a comprehensive suite of artificial intelligence services and tools from Microsoft that enables developers to build intelligent applications. It includes services for natural language processing, computer vision, speech recognition, and machine learning capabilities.
+    ```
+
+    Reference: [OpenAI .NET SDK](https://github.com/openai/openai-dotnet) and [DefaultAzureCredential class](https://learn.microsoft.com/dotnet/api/azure.identity.defaultazurecredential).
+
+  </Tab>
+  <Tab title="JavaScript">
+
+    Install the OpenAI SDK with npm:
+
+    ```bash
+    npm install openai
+    ```
+
+    For Microsoft Entra ID authentication, also install:
+
+    ```bash
+    npm install @azure/identity
+    ```
+
+    Then, use the package to consume the model. The following example shows how to create a client to consume chat completions with Microsoft Entra ID, and then make a test call to the chat completions endpoint with your model deployment.
+
+    Replace `<resource>` with your Foundry resource name (find it in the Azure portal or by running `az cognitiveservices account list`). Replace `DeepSeek-V3.1` with your actual deployment name.
+
+    ```javascript
+    import { DefaultAzureCredential, getBearerTokenProvider } from "@azure/identity";
+    import { OpenAI } from "openai";
+
+    const tokenProvider = getBearerTokenProvider(
+        new DefaultAzureCredential(),
+        'https://cognitiveservices.azure.com/.default'
+    );
+
+    const client = new OpenAI({
+        baseURL: "https://<resource>.openai.azure.com/openai/v1/",
+        apiKey: tokenProvider
+    });
+
+    const completion = await client.chat.completions.create({
+        model: "DeepSeek-V3.1", // Required: your deployment name
+        messages: [
+            { role: "system", content: "You are a helpful assistant." },
+            { role: "user", content: "What is Azure AI?" }
+        ]
+    });
+
+    console.log(completion.choices[0].message.content);
+    ```
+
+    Expected output:
+
+    ```output
+    Azure AI is a comprehensive suite of artificial intelligence services and tools from Microsoft that enables developers to build intelligent applications. It includes services for natural language processing, computer vision, speech recognition, and machine learning capabilities.
+    ```
+
+    Reference: [OpenAI Node.js SDK](https://github.com/openai/openai-node) and [DefaultAzureCredential class](https://learn.microsoft.com/javascript/api/@azure/identity/defaultazurecredential).
+
+  </Tab>
+  <Tab title="Java">
+
+    Add the OpenAI SDK to your project. Check the [OpenAI Java GitHub repository](https://github.com/openai/openai-java) for the latest version and installation instructions.
+
+    For Microsoft Entra ID authentication, also add:
+
+    ```xml
+    <dependency>
+        <groupId>com.azure</groupId>
+        <artifactId>azure-identity</artifactId>
+        <version>1.18.0</version>
+    </dependency>
+    ```
+
+    Then, use the package to consume the model. The following example shows how to create a client to consume chat completions with Microsoft Entra ID, and then make a test call to the chat completions endpoint with your model deployment.
+
+    Replace `<resource>` with your Foundry resource name (find it in the Azure portal). Replace `DeepSeek-V3.1` with your actual deployment name.
+
+    ```java
+    import com.openai.client.OpenAIClient;
+    import com.openai.client.okhttp.OpenAIOkHttpClient;
+    import com.azure.identity.DefaultAzureCredential;
+    import com.azure.identity.DefaultAzureCredentialBuilder;
+    import com.openai.models.chat.completions.*;
+
+    DefaultAzureCredential tokenCredential = new DefaultAzureCredentialBuilder().build();
+
+    OpenAIClient client = OpenAIOkHttpClient.builder()
+        .baseUrl("https://<resource>.openai.azure.com/openai/v1/")
+        .credential(BearerTokenCredential.create(
+            AuthenticationUtil.getBearerTokenSupplier(
+                tokenCredential, 
+                "https://cognitiveservices.azure.com/.default"
+            )
+        ))
+        .build();
+
+    ChatCompletionCreateParams params = ChatCompletionCreateParams.builder()
+        .addSystemMessage("You are a helpful assistant.")
+        .addUserMessage("What is Azure AI?")
+        .model("DeepSeek-V3.1") // Required: your deployment name
+        .build();
+
+    ChatCompletion completion = client.chat().completions().create(params);
+    System.out.println(completion.choices().get(0).message().content());
+    ```
+
+    Expected output:
+
+    ```output
+    Azure AI is a comprehensive suite of artificial intelligence services and tools from Microsoft that enables developers to build intelligent applications. It includes services for natural language processing, computer vision, speech recognition, and machine learning capabilities.
+    ```
+
+    Reference: [OpenAI Java SDK](https://github.com/openai/openai-java) and [DefaultAzureCredential class](https://learn.microsoft.com/java/api/com.azure.identity.defaultazurecredential).
+
+  </Tab>
+  <Tab title="REST">
+
+    Explore the API design in the reference section to see which parameters are available. Indicate the authentication token in the header `Authorization`. For example, the [Chat completion](/api-sdk/latest#create-chat-completion) reference section details how to use the `/chat/completions` route to generate predictions based on chat-formatted instructions. The path `/models` is included in the root of the URL:
+
+    __Request__
+
+    Replace `<resource>` with your Foundry resource name (find it in the Azure portal or by running `az cognitiveservices account list`). Replace `MAI-DS-R1` with your actual deployment name.
+
+    The base_url will accept both `https://<resource>.openai.azure.com/openai/v1/` and `https://<resource>.services.ai.azure.com/openai/v1/` formats.
+
+    ```bash
+    curl -X POST https://<resource>.openai.azure.com/openai/v1/chat/completions \
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer $AZURE_OPENAI_AUTH_TOKEN" \
+      -d '{
+          "model": "MAI-DS-R1",
+          "messages": [
+          {
+            "role": "system",
+            "content": "You are a helpful assistant."
+          },
+          {
+            "role": "user",
+            "content": "Explain what the bitter lesson is?"
+          }
+        ]
+      }'
+    ```
+
+    __Response__
+
+    If authentication is successful, you receive a `200 OK` response with chat completion results in the response body:
+
+    ```json
+    {
+      "id": "chatcmpl-...",
+      "object": "chat.completion",
+      "created": 1738368234,
+      "model": "MAI-DS-R1",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "The bitter lesson refers to a key insight in AI research that emphasizes the importance of general-purpose learning methods that leverage computation, rather than human-designed domain-specific approaches. It suggests that methods which scale with increased computation tend to be more effective in the long run."
+          },
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 28,
+        "completion_tokens": 52,
+        "total_tokens": 80
+      }
+    }
+    ```
+
+    Tokens must be issued with scope `https://cognitiveservices.azure.com/.default`.
+
+    For testing purposes, the easiest way to get a valid token for your user account is to use the Azure CLI. In a console, run the following Azure CLI command:
+
+    ```azurecli
+    az account get-access-token --resource https://cognitiveservices.azure.com --query "accessToken" --output tsv
+    ```
+
+    This command outputs an access token that you can store in the `$AZURE_OPENAI_AUTH_TOKEN` environment variable.
+
+    Reference: [Chat Completions API](/api-sdk/latest#create-chat-completion)
+
+  </Tab>
+</Tabs>
+
+### Options for credential when using Microsoft Entra ID
+
+`DefaultAzureCredential` is an opinionated, ordered sequence of mechanisms for authenticating to Microsoft Entra ID. Each authentication mechanism is a class that's derived from the `TokenCredential` class and is known as a credential. At runtime, `DefaultAzureCredential` attempts to authenticate using the first credential. If that credential fails to acquire an access token, the next credential in the sequence is attempted, and so on, until an access token is obtained. In this way, your app can use different credentials in different environments without writing environment-specific code.
+
+When the preceding code runs on your local development workstation, it looks in the environment variables for an application service principal or at locally installed developer tools, like Visual Studio, for a set of developer credentials. You can use either approach to authenticate the app to Azure resources during local development.
+
+When deployed to Azure, this same code can also authenticate your app to other Azure resources. `DefaultAzureCredential` can retrieve environment settings and managed identity configurations to authenticate to other services automatically.
+
+### Best practices
+
+* Use deterministic credentials in production environments: Strongly consider moving from `DefaultAzureCredential` to one of the following deterministic solutions in production environments:
+
+  * A specific `TokenCredential` implementation, like `ManagedIdentityCredential`. See the [Derived list for options](https://learn.microsoft.com/dotnet/api/azure.core.tokencredential#definition).
+  * A pared-down `ChainedTokenCredential` implementation that's optimized for the Azure environment in which your app runs. `ChainedTokenCredential` essentially creates a specific allowlist of acceptable credential options, like `ManagedIdentity` for production and `VisualStudioCredential` for development.
+
+* Configure system-assigned or user-assigned managed identities to the Azure resources where your code runs, if possible. Configure Microsoft Entra ID access to those specific identities.
+
+## Disable key-based authentication in the resource
+
+Disable key-based authentication when you implement Microsoft Entra ID and fully address compatibility or fallback concerns in all applications that consume the service. Change the `disableLocalAuth` property to disable key-based authentication.
+
+For more information about how to disable local authentication when you're using a Bicep or ARM template, see [How to disable local authentication](../../../../ai-services/disable-local-auth.md#how-to-disable-local-authentication).
+
+__modules/ai-services-template.bicep__
+
+```bicep
+// Source: ai-services-template.bicep (not available)
+```
+
+## Understand roles in the context of resource in Azure
+
+Microsoft Entra ID uses role-based access control (RBAC) for authorization, which controls what actions users can perform on Azure resources. Roles are central to managing access to cloud resources. A role is a collection of permissions that define what actions can be performed on specific Azure resources. By assigning roles to users, groups, service principals, or managed identities—collectively known as security principals—you control their access within your Azure environment to specific resources.
+
+When you assign a role, you specify the security principal, role definition, and scope. This combination is known as a role assignment. Foundry Models is a capability of the Foundry Tools resources, therefore, roles assigned to that particular resource control the access for inference.
+
+There are two types of access to the resources:
+
+* **Administration access**: Actions related to the administration of the resource. These actions usually change the resource state and its configuration. In Azure, these operations are control-plane operations that you can execute using the Azure portal, Azure CLI, or infrastructure as code. Examples include creating new model deployments, changing content filtering configurations, changing the version of the model served, or changing the SKU of a deployment.
+
+* **Developer access**: Actions related to consuming the resources, such as invoking the chat completions API. However, the user can't change the resource state and its configuration.
+
+In Azure, Microsoft Entra ID always performs administration operations. Roles like **Cognitive Services Contributor** allow you to perform those operations. Developer operations can be performed using either access keys or Microsoft Entra ID. Roles like **Cognitive Services User** allow you to perform those operations.
+
+<Info>
+Having administration access to a resource doesn't grant developer access to it. Explicit access by granting roles is still required. This is analogous to how database servers work. Having administrator access to the database server doesn't mean you can read the data inside of a database.
+</Info>
+
+## Troubleshooting
+
+Before you troubleshoot, verify that you have the right permissions assigned:
+
+1. Go to the [Azure portal](https://portal.azure.com) and locate the **Microsoft Foundry resource** that you're using.
+
+1. On the left pane, select **Access control (IAM)** and then select **Check access**.
+
+1. Type the name of the user or identity you're using to connect to the service.
+
+1. Verify that the role **Cognitive Services User** is listed (or a role that contains the required permissions, as explained in the Prerequisites section).
+
+<Info>
+Roles like **Owner** or **Contributor** don't provide access via Microsoft Entra ID.
+</Info>
+
+1. If the role isn't listed, follow the steps in this guide before you continue.
+
+The following table contains multiple scenarios that can help you troubleshoot Microsoft Entra ID:
+
+| Error / Scenario     | Root cause    | Solution |
+| -------------------- | ------------- | -------- |
+| You're using an SDK | Known issues | Before you troubleshoot further, install the latest version of the software you're using to connect to the service. Authentication bugs might already be fixed in a newer version of the software you're using. |
+| `401 Principal does not have access to API/Operation` | The request indicates authentication in the correct way, but the user principal doesn't have the required permissions to use the inference endpoint. | Ensure you have: <br /> 1. Assigned the role **Cognitive Services User** to your principal to the Foundry resource. Notice that **Cognitive Services OpenAI User** grants only access to OpenAI models. **Owner** or **Contributor** don't provide access either.<br /> 1. Waited at least 5 minutes before making the first call. |
+| `401 HTTP/1.1 401 PermissionDenied` | The request indicates authentication in the correct way, but the user principal doesn't have the required permissions to use the inference endpoint. | Assigned the role **Cognitive Services User** to your principal in the Foundry resource. Roles like **Administrator** or **Contributor** don't grant inference access. Wait at least 5 minutes before making the first call. |
+| You're using REST API calls and you get `401 Unauthorized. Access token is missing, invalid, audience is incorrect, or have expired.` | The request fails to authenticate with Microsoft Entra ID. | Ensure the `Authentication` header contains a valid token with a scope `https://cognitiveservices.azure.com/.default`. |
+
+## Next step
+
+- [Azure OpenAI supported programming languages](/models/capabilities/supported-languages)

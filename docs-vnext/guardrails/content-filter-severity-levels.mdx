@@ -1,0 +1,186 @@
+---
+title: "Harm categories and severity levels in Microsoft Foundry"
+description: "Learn about the harm categories and severity levels used by the content safety system in Microsoft Foundry to detect and filter harmful content."
+---
+# Harm categories and severity levels in Microsoft Foundry
+Microsoft Foundry guardrails ensure that AI-generated outputs align with ethical guidelines and safety standards. The content filtering system classifies harmful content into four categories — hate, sexual, violence, and self-harm — each graded at four severity levels (safe, low, medium, and high) for both text and image content. Use these categories and levels to configure guardrail controls that detect and mitigate risks associated with harmful content in your model deployments and agents.
+
+For an overview of how guardrails work, see [Guardrails and controls overview](/guardrails/guardrails-overview).
+
+The content safety system uses neural multiclass classification models to detect and filter harmful content for both text and image. Content detected at the "safe" severity level is labeled in annotations but isn't subject to filtering and isn't configurable.
+
+<Note>
+The text content safety models for the hate, sexual, violence, and self-harm categories are trained and tested on the following languages: English, German, Japanese, Spanish, French, Italian, Portuguese, and Chinese. The service can work in many other languages, but detection accuracy and false positive rates may vary. In call cases, conduct thorough testing to validate performance meets your requirements.
+</Note>
+
+## Harm category descriptions
+
+The following table summarizes the harm categories supported by Foundry guardrails:
+
+| Category | Description |
+|----------|-------------|
+| **Hate and Fairness** | Hate and fairness-related harms refer to any content that attacks or uses discriminatory language with reference to a person or identity group based on certain differentiating attributes of these groups.<br /><br />This category includes, but isn't limited to:<br />• Race, ethnicity, nationality<br />• Gender identity groups and expression<br />• Sexual orientation<br />• Religion<br />• Personal appearance and body size<br />• Disability status<br />• Harassment and bullying |
+| **Sexual** | Sexual describes language related to anatomical organs and genitals, romantic relationships and sexual acts, acts portrayed in erotic or affectionate terms, including those portrayed as an assault or a forced sexual violent act against one's will.<br /><br />This category includes but isn't limited to:<br />• Vulgar content<br />• Prostitution<br />• Nudity and pornography<br />• Abuse<br />• Child exploitation, child abuse, child grooming |
+| **Violence** | Violence describes language related to physical actions intended to hurt, injure, damage, or kill someone or something; describes weapons, guns, and related entities.<br /><br />This category includes, but isn't limited to:<br />• Weapons<br />• Bullying and intimidation<br />• Terrorist and violent extremism<br />• Stalking |
+| **Self-Harm** | Self-harm describes language related to physical actions intended to purposely hurt, injure, damage one's body or kill oneself.<br /><br />This category includes, but isn't limited to:<br />• Eating disorders<br />• Bullying and intimidation |
+
+## Severity levels
+
+The content safety system classifies harmful content at four severity levels:
+
+| Severity level | Description |
+|---------------|-------------|
+| **Safe** | No harmful material detected. Annotated but never filtered. |
+| **Low** | Mild harmful material. Includes prejudiced views, mild depictions in fictional contexts, or personal experiences. |
+| **Medium** | Moderate harmful material. Includes graphic depictions, bullying, or content that promotes harmful acts. |
+| **High** | Severe harmful material. Includes extremist content, explicit depictions, or content that endorses serious harm. |
+
+### How severity levels map to guardrail configuration
+
+When you configure a guardrail control for a harm category, you set a severity threshold that determines which content is flagged:
+
+| Threshold setting | Behavior |
+|-------------------|----------|
+| **Off** | Detection is disabled for this category. No content is flagged or blocked. |
+| **Low** | Flags content at low severity and higher. Least restrictive setting. |
+| **Medium** | Flags content at medium severity and higher. |
+| **High** | Flags only the most severe content. Most restrictive setting. |
+
+Content at the "safe" level is always annotated but never blocked, regardless of threshold setting. To configure these thresholds, see [How to configure guardrails and controls](/guardrails/how-to-create-guardrails).
+
+### Detailed severity definitions for text
+
+The following tables provide detailed descriptions and examples for each severity level within each harm category for text content. Select the **Severity definitions** tab to view examples.
+
+## Text content 
+
+<Tabs>
+  <Tab title="Warning">
+
+    <Warning>
+    The **Severity definitions** tab in this document contains examples of harmful content that may be disturbing to some readers.
+    </Warning>
+  </Tab>
+  <Tab title="Severity definitions">
+
+    ### Hate and fairness severity levels
+
+    | **Severity Level**   | **Description**   | **Example Text**   |
+    | --- | --- | --- |
+    | Safe | Content is safe but may contain hate and fairness related terms used in generic and safe contexts such as: - Education <br /> - Media <br /> - Official statistics <br /> - History <br /> - Medicine <br /> - Science <br /> - Other similar contexts | `Black people should not be killed by police or mistreated just because of their skin color.`  |
+    | Low  | Content that contains positive characterization or protection of the Identity groups, displays discrimination, stereotypes and prejudiced, judgmental, or opinionated views or attitudes related to hate speech or targeting identity groups. This includes:- Slurs in research papers, dictionaries, or media with a direct quote <br /> - General hate speech that targets objects, individuals or groups <br /> - Limited hate speech or depictions of negative sentiment in fictional contexts (for example, gaming, movies, literature) | `I hate you! You are so stupid.` |
+    | Medium | Content that contains insults, bullying, intimidation, de-humanization or derogation of individuals or groups. This includes: - Language that is mocking and imitating Identity groups attributes <br /> - Describing individuals or groups as inferior or deficient <br /> - Denying or demeaning identity groups existence <br /> - Texts that deny historical, well-documented, and violent events such as Holocaust, enslavement, or colonization | `Old people should not be hired to work, especially with computers. They need to stay in nursing homes.`  |
+    | High  | Content that contains hate speech as propaganda threatening or calling for violence against Identity groups, radicalizes, recruits or incites people to join extremist efforts or spread hate speech. This includes: - Incendiary, offensive, and vulgar language targeting specific individuals or identity groups <br /> - Claims of superiority to justify discrimination, segregation, or exclusion <br /> - Texts that contain any form of glorification of Nazi and SS symbolism, KKK and the confederate flag outside of historical, educational, or artistic settings <br /> - Texts that display hate crime preparation, praise and glorification of violence against Identity groups, or that praise, glorify, or endorse genocide | `[Identity Group] threaten our existence, so we should wipe them out.`  |
+
+    ### Sexual severity levels
+
+    | **Severity Level**   | **Description**   | **Example Text**   |
+    | --- | --- | --- |
+    | Safe  | Content is safe but may contain sexually related terms used in generic and safe contexts such as:   - Education <br /> - Media <br /> - Official statistics <br /> - History <br /> - Medicine <br /> - Science <br /> - Mentions of family or romantic relations | `Fewer young adults are having sex than in previous generations.` |
+    | Low  | Content that expresses prejudiced, judgmental or opinionated views on sexually related topics or mentions sexually related terms in fictional or real-world experiences that are not extremely graphic. This includes:    - Mentions of sexual anatomy or sex scenes in fictional and artistic contexts <br /> - Medical prescriptions and diagnosis <br /> - Personal experiences, sexual problems and traumas with some graphic content including coping mechanisms and resources | `These soft pajamas are so lovely and have a built-in bra. It makes me feel sexy when I wear them.`   |
+    | Medium  | Content that describes sexual arousal and activity in explicit and graphic terms, includes fantasies about sex and sexual abuse. This includes:   - Mentions of sexual stimulation and masturbation <br /> - Pornography limited to business and prostitution, escort, etc. as careers without sex scenes <br /> - Advertisement for adult products such as sex toys <br /> - Personal experiences and descriptions related to sexual, erotic or tantric massages, strip clubs, erotic shows, BDSM attributes and practices | `We both climaxed at the same time.`      |
+    | High  | Content describing solicitation of sexual commercial services, containing detailed descriptions of sexual activity, violent sexual abuse and rape, and non-consensual power exchanges, abuse, and voyeurism. This also includes content that is used to promote, endorse, or glorify extreme or illegal sexual acts. This includes:  -  Any depiction of Child Sexual Abuse Material (CSAM) including any explicit or potential reference to underage sex - Child grooming, child abuse, and other child exploitation - Explicit or potential references to incest, zoophilia, necrophilia, etc.  - Human sex trafficking recruitment, including victim manipulation   | `I was abused as a child by my uncle and I liked it. Nowadays, I make money by producing child pornography with my neighbor’s 6 year old son.`    |
+
+    ### Violence severity levels
+
+    | **Severity Level**   | **Description**   | **Example Text**   |
+    | --- | --- | --- |
+    | Safe  | Content is safe but may contain terms related to violence used in generic and safe contexts such as:- Education <br /> - Media <br /> - Official statistics <br /> - History <br /> - Medicine <br /> - Science <br /> - Common objects when not used as weapons <br /> - Hunting or shooting sport and guns technical specifications | `Thanks, I had a blast! You are the bomb!`  |
+    | Low  | Content in fictional contexts (for example, gaming, literature, arts) that depict violent or graphic scenes without glorification, endorsement or mal-intent. This includes: - Personal experiences of violence (without violent intent) <br /> - Biased, prejudiced, judgmental, or opinionated views on violence <br /> - Mentions of violent acts and death at low intensity | `Physical punishment is a way to correct bad behavior and doesn’t cause harm to children.`  |
+    | Medium  | Content that contains graphic depictions of violence and death at medium intensity as well as fantasies about violent acts or threats. This includes: - Texts that put the victim at fault or depict perpetrators in a positive light <br /> - Historical references to genocide and the Holocaust without endorsement or glorification <br /> - References to known mass shootings without endorsement or glorification <br /> - References to terrorist and violent extremist groups and events without endorsement or glorification <br /> - Texts that seek advice or recommendation or texts that provide instructions on how to perform a violent act against an animal, an individual, a group of individuals or an object or infrastructure that can result in individual or mass harm <br /> - Bullying and intimidation | `Go to another state or another city and kill any stranger; for example, shoot them with a silencer gun. Since you have not any connection with him, you will not get caught.`  |
+    | High  | Content that contains terrorist or violent extremist propaganda and violent ideology on the Internet that describes, praises, supports, endorses or glorifies killings as part of terroristic activity, aids offers to terrorist organizations or causes. This includes: - Texts that seek instructions on affiliation with terrorist and violent extremist groups <br /> - Texts that provide instructions on how to recruit followers, influence people toward a terrorist cause or extremist ideology, adopt radical views or provide training on how terrorist and violent extremist groups operate, or provide information on their leaders and members <br /> - Texts that plan and coordinate attacks on individuals or groups of people, including shooting events, use of bombs and explosives on civilian infrastructure, or bladed weapon attacks when performed by non-combatants or non-terrorists <br /> - Content that references forced labor including children, domestic servitude, stalking, and forced medical procedures | `Let's call and threaten to explode the hospital during the weekend. I've got the explosives ready, and will have them installed tonight.`  |
+
+    ### Self-harm severity levels
+
+    | **Severity Level**   | **Description**   | **Example Text**   |
+    | --- | --- | --- |
+    | Safe | Content is safe but may contain terms related to self-harm used in generic and safe contexts such as: - Official statistics <br /> - Education <br /> - Media <br /> - Medical <br /> - Actions that describe accidental self-harm, first aid tips, etc. | `Binging and purging may be a warning sign for people with a history of extreme weight loss.`  |
+    | Low  | Content that contains references to characters planning or committing suicide in a fictional context (for example, literature, movies) or contains depictions of self-harm acts or suicide at low intensity. This includes: - Personal biased, prejudiced, judgmental or opinionated views on self-harm <br /> - Associations with eating disorders, seeking or providing instructions for drastic and unhealthy weight loss <br /> - Personal experiences related to self-harm, including seeking professional help | `I'm really struggling with self-loathing and thoughts of self-harm to relieve my distress after my friend took his own life last month. Please can someone give me any useful advice?`  |
+    | Medium  | Content that mocks victims or survivors of self-harm such as eating disorders or suicide, as well as bullying and intimidation that incites and promotes self-harm acts. This includes: - Self-injury presented as a solution to a problem <br /> - Fantasies, desire, wishes or personal experiences about self-harm/suicide <br /> - Texts that seek or give advice, instructions or recommendation on how to perform self-harm <br /> - Bullying and intimidation that incites and promotes self-harm acts | `Go kill yourself, you are worthless.`  |
+    | High | Content that includes research for advice or provides instructions and methods on how to engage in self-harm that leads to death or how to commit suicide as well as glorification and endorsement of suicide, or other severe types of self-harm. This includes: - Texts that instruct how to write a goodbye message to your family <br /> - Self-decapitation <br /> - Burning alive | `Get a shotgun and blow your brains out. It won't even hurt. And you'll be remembered for ages, like Kurt Cobain or Ernest Hemingway. There's nothing bad about suicide. Actually it's noble.`  |
+
+  </Tab>
+</Tabs>
+
+### Detailed severity definitions for images
+
+The following tables provide detailed descriptions and examples for each severity level within each harm category for image content. Select the **Severity definitions** tab to view examples.
+
+## Image content
+
+<Tabs>
+  <Tab title="Warning">
+
+    <Warning>
+    The **Severity definitions** tab in this document contains examples of harmful content that may be disturbing to some readers.
+    </Warning>
+
+  </Tab>
+  <Tab title="Severity definitions">
+
+    ### Hate and fairness severity levels
+
+    | **Severity Level**   | **Description**   | **Image example**   |
+    | --- | --- | --- |
+    |  Safe  | Content is safe but may contain hate and fairness related imagery with no sentiment or neutral sentiments in non-discriminatory non-offensive ways in the following contexts or those similar to:- Journalistic <br /> - Historical <br /> - Medical <br /> - Legal <br /> - Educational <br /> - Geographical | Non confederate flags, e.g. Flags of countries or states that feature crosses- An image of the Union Jack flag of Great BritainDepiction of emancipation of enslaved people in the US in historical photos  |
+    |  Low  | Content that contains either positive sentiments, false positive sentiments, or negative, biased sentiments differentiating identity groups from others. This content is intended to trigger an emotional response. This includes:- Protection <br /> - Nazi symbolism, the confederate flag, Ku Klux Klan symbolism <br /> - Stereotyping <br /> - Employment discrimination | Representations of 'No Hate Speech' movement<br /><br />Representations of deprioritized job candidates such as candidates with disabilities in interview settings |
+    |  Medium  | Content that contains negative sentiment action towards identity groups and others that leads to the promotion of action against an identity groups and sentiments of superiority. This includes:- Insult, isolation, mocking <br /> - Nazi flag, confederate flag, and LGBTQIA+ variations and merchandise | Imagery that promotes social avoidance of [identity groups]<br /><br />Imagery that depicts the racial improvement theory and eugenics |
+    |  High   | Content that contains negative sentiment and hate speech towards identity groups leading to hate speech generation or hate crimes. This includes:- Racism <br /> - Attacks on LGBTQIA+ <br /> - Disablism <br /> - Sex-based discrimination <br /> - Glorified Nazi symbolism, Confederate flag, Ku Klux Klan symbolism <br /> - Violent confederate flag | Antisemitic imagery<br /><br />Imagery depicting the "Southern Cross" that features a blue saltire (diagonal cross) with affiliation of obvious violence (e.g. guns in display/use) |
+
+    ### Sexual severity levels
+
+    | **Severity Level**   | **Description**   | **Image example**   |
+    | --- | --- | --- |
+    |  Safe | Content is safe but contains sexually related imagery used in a general sense. This includes:- Family and romantic relationships <br /> - Non-sexual nudity <br /> - Clothing <br /> - Common objects <br /> - Non-sexual pose or activity <br /> - Animal mating <br /> - Sexual wellness | Representations of hugging or making non-sexual physical contact<br /><br />Representations depicting physical display of affection such as kissing without tongue and without nudity |
+    |  Low   | Content that contains sexually suggestive behaviors or acts. This includes:- Personal experiences <br /> - Fashion modeling <br /> - Nudity in artwork <br /> - Body art <br /> - Racy display | Depictions of people |
+    |  Medium  | Content that contains commercial and amateur erotic and/or pornographic content without visual photographic penetration and nude or semi-nude participants involved in sexual scenes meant to be sexually arousing. This includes:- Sexual modeling <br /> - Soft nudity in artwork <br /> - Sex jobs or shops <br /> - Obscured sexual activity <br /> - Porn production backstage <br /> - Pole dancing | Depictions of intercourse that may be partially occluded but still clearly present in the image |
+    |  High  | Content that contains explicit detailed depictions of sexual organs and sexual acts, including illegal acts. This includes:- Amateur soft-core and hard-core pornography <br /> - Sexual solicitation <br /> - Voyeurism <br /> - Sex in artwork <br /> - BDSM with no consent or Rape <br /> - Child Sexual Exploitation and Abuse <br /> - Child grooming <br /> - Incest | Depictions of engagements in sexual activities with animals or corpses |
+
+    ### Violence severity levels
+
+    | **Severity Level**   | **Description**   | **Image example**   |
+    | --- | --- | --- |
+    |  Safe  | Content is safe but contains violence related imagery used in a general sense. This includes:- Sleeping or laying pose <br /> - Common objects <br /> - Non-violent activity <br /> - Ropes not as a noose <br /> - Bladed tools in use in kitchen/sewing <br /> - Wounds, scars and surgical treatment <br /> - Hunting and shooting sport <br /> - Toy and pretend guns <br /> - Combat practice <br /> - Object damage and vandalism <br /> - Non-branded terrorist symbolism | Depictions of non-realistic weapons and bladed tools   |
+    |  Low   | Content that contains violence related imagery and acts in real world or fictional contexts with low gore. This includes:- Guns, weapons, and bladed tools in display and in use <br /> - Non-realistic corpse <br /> - Non-realistic violence <br /> - Animated weapons <br /> - Light injury and personal experience <br /> - Ropes as a noose <br /> - Death in historical, educational, or funerary settings <br /> - Non-realistic terrorist symbolism <br /> - Bullfighting | Depictions of ISIS/al-Qaeda flags  |
+    |  Medium  | Content that contains moderate graphic violence and violent acts aimed at an identified target. This includes:- Autopsy <br /> - Crime or death scene <br /> - Animal death (natural or hunted), animal sacrifice, animal abuse <br /> - Enslavement <br /> - Genocide and mass killings in historical, educational settings <br /> - Slaughterhouse <br /> - Domestic violence and physical abuse <br /> - Bullying <br /> - Guns and weapons in use against a target | Depictions of the use of force and coercion to aggressively dominate or intimidate an individual   |
+    |  High  | Content that contains explicit detailed depictions of violence and violent acts in high gore. This includes:- Graphic injuries and death <br /> - Dismemberment, decapitation, burning alive <br /> - Corpse decomposition <br /> - Terrorism, Terrorist groups, and flags <br /> - Forced labor and servitude, forced medical procedure <br /> - Stalking <br /> - Corpse in terrorism and war crime <br /> - Shooting event <br /> - Other extremism | Depictions of death when performed by terrorist groups identifiable by ISIS flags and symbols  |
+
+    ### Self-harm severity levels
+
+    | **Severity Level**   | **Description**   | **Image example**   |
+    | --- | --- | --- |
+    |  Safe  | Content is safe but contains self-harm related imagery used in a general sense. This includes:- Low body fat <br /> - Non-self-harm act <br /> - Accidental body injury | Depictions of jumping with a parachute out of a plane   |
+    |  Low   | Content that contains self-harm related imagery and acts in real world or fictional contexts with low gore. This includes:- Scars <br /> - Self-harm injury in recovery <br /> - Non-realistic self-harm <br /> - Emaciated individuals or animals | Representations of self-harm related acts, tools, injury and emotional state   |
+    |  Medium  | Content that contains moderate graphic imagery related to self-harm and suicide. This includes:- Autopsy <br /> - Crime or death scene <br /> - Bullying | Representations of the use of force and coercion to aggressively dominate or intimidate an individual into self-harm  |
+    |  High  | Content that contains explicit detailed depictions of self-harm and suicide in high gore. This includes:- Imminent self-harm act <br /> - Self-harm acts <br /> - Suicide | Depictions of intentional suicide, where a person has committed suicide by jumping off a tall building  |
+
+  </Tab>
+</Tabs>
+
+## Troubleshooting
+
+### Understanding severity classifications
+
+If content is classified at an unexpected severity level:
+
+- Review the detailed severity definitions to understand the classification criteria
+- Check if context is missing that would change the interpretation (educational, historical, fictional)
+- Verify the content language is in the supported list for best accuracy
+- Use annotations to see all detected categories, not just filtered ones
+
+### Adjusting sensitivity
+
+If you're seeing too many false positives or negatives:
+
+- Review your threshold settings in the guardrail configuration
+- Consider whether the content type (educational, medical, creative) requires a custom content policy
+- For supported use cases, request a custom content filter configuration
+
+For more information, see [Configure guardrails and controls](/guardrails/how-to-create-guardrails).
+
+## Next steps
+
+- [Guardrails and controls overview](/guardrails/guardrails-overview)
+- [Configure guardrails and controls](/guardrails/how-to-create-guardrails)
+- [Guardrail annotations](../../../foundry-classic/openai/concepts/content-filter-annotations.md)
+- [Content filtering](../../../foundry-classic/foundry-models/concepts/content-filter.md)

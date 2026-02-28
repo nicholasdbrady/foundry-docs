@@ -1,0 +1,1115 @@
+---
+title: "Quickstart: Use vision-enabled chats with the Azure OpenAI in Microsoft Foundry Models"
+description: "Use this article to get started using Azure OpenAI to deploy and use the GPT-4 Turbo with Vision model or other vision-enabled models."
+sidebarTitle: "Quickstart: Use vision-enabled chats with the Azure OpenAI in Microsoft Foundry Models"
+---
+# Quickstart: Use images in your AI chats
+
+Get started using images in your chats with Azure OpenAI in Microsoft Foundry Models.
+
+<Note>
+This article refers to the [Microsoft Foundry (new)](/overview/what-is-foundry#microsoft-foundry-portals) portal.
+</Note>
+{/* > 🔄 [Switch to the Microsoft Foundry (classic) documentation]() if you're using the classic portal. */}
+
+<Info>
+- Extra usage fees might apply when using chat completion models with vision functionality.
+- When uploading images, there's a limit of **10 images per chat request**.
+- Always set `max_tokens` in your API requests, or responses might be truncated.
+</Info>
+
+Use this article to get started using [Microsoft Foundry](https://ai.azure.com/?cid=learnDocs) to deploy and test a chat completion model with image understanding. 
+
+## Prerequisites
+
+- An Azure subscription. [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
+- Once you have your Azure subscription, <a href="/azure/ai-foundry/openai/how-to/create-resource?pivots=web-portal"  title="Create an Azure OpenAI resource."  target="_blank">create an Azure OpenAI resource </a>.
+ For more information about resource creation, see the [resource deployment guide](https://learn.microsoft.com/azure/ai-foundry/openai/how-to/create-resource).
+- A [Foundry project](https://learn.microsoft.com/azure/ai-foundry/how-to/create-projects) with your Azure OpenAI resource added as a connection. 
+
+## Prepare your media
+
+You need an image to complete this quickstart. You can use this sample image or any other image you have available.
+
+<Frame>
+  <img src="/images/car-accident.png" alt="Photo of a car accident that can be used to complete the quickstart." />
+</Frame>
+
+## Go to Foundry
+
+<Tip>
+If you already have a vision-capable model deployed, skip to [Start a chat session to analyze images](#start-a-chat-session-to-analyze-images).
+</Tip>
+
+1. Browse to [Foundry](https://ai.azure.com/?cid=learnDocs) and sign in with the credentials associated with your Azure OpenAI resource. During or after the sign-in workflow, select the appropriate directory, Azure subscription, and Azure OpenAI resource.
+1. Select the project you'd like to work in.
+1. On the left nav menu, select **Models + endpoints** and select **+ Deploy model**.
+1. Choose an image-capable deployment by selecting model name: **gpt-4o** or **gpt-4o-mini**. In the window that appears, select a name and deployment type. Make sure your Azure OpenAI resource is connected. For more information about model deployment, see the [resource deployment guide](https://learn.microsoft.com/azure/ai-foundry/openai/how-to/create-resource).
+1. Select **Deploy**.
+1. Next, select your new model and select **Open in playground**. In the chat playground, the deployment you created should be selected in the **Deployment** dropdown.
+
+## Playground
+
+In this chat session, you instruct the assistant to aid you in understanding images that you input.
+
+For general help with assistant setup, chat sessions, settings, and panels, refer to the [Chat quickstart](https://learn.microsoft.com/azure/ai-foundry/openai/chatgpt-quickstart). 
+
+## Start a chat session to analyze images
+
+In this chat session, you're instructing the assistant to aid in understanding images that you input. 
+1. To start, make sure your image-capable deployment is selected in the **Deployment** dropdown.
+1. In the context text box on the **Setup** panel, provide this prompt to guide the assistant: `"You're an AI assistant that helps people find information."` Or, you can tailor the prompt to your image or scenario.
+
+<Note>
+
+</Note>
+
+    > We recommend you update the System Message to be specific to the task in order to avoid unhelpful responses from the model.
+
+1. Select **Apply changes** to save your changes. 
+1. In the chat session pane, select the attachment button and then **Upload image**. Choose your image.
+1. Add the following prompt in the chat field: `Describe this image`, and then select the send icon to submit it.
+1. The send icon is replaced by a stop button. If you select it, the assistant stops processing your request. For this quickstart, let the assistant finish its reply.
+1. The assistant replies with a description of the image.
+1. Ask a follow-up question related to the analysis of your image. You could enter, `"What should I highlight about this image to my insurance company?"`.
+1. You should receive a relevant response similar to what's shown here:
+    ```
+    When reporting the incident to your insurance company, you should highlight the following key points from the image:  
+       
+    1. **Location of Damage**: Clearly state that the front end of the car, particularly the driver's side, is damaged. Mention the crumpled hood, broken front bumper, and the damaged left headlight.  
+       
+    2. **Point of Impact**: Indicate that the car has collided with a guardrail, which may suggest that no other vehicles were involved in the accident.  
+       
+    3. **Condition of the Car**: Note that the damage seems to be concentrated on the front end, and there is no visible damage to the windshield or rear of the car from this perspective.  
+       
+    4. **License Plate Visibility**: Mention that the license plate is intact and can be used for identification purposes.  
+       
+    5. **Environment**: Report that the accident occurred near a roadside with a guardrail, possibly in a rural or semi-rural area, which might help in establishing the accident location and context.  
+       
+    6. **Other Observations**: If there were any other circumstances or details not visible in the image that may have contributed to the accident, such as weather conditions, road conditions, or any other relevant information, be sure to include those as well.  
+       
+    Remember to be factual and descriptive, avoiding speculation about the cause of the accident, as the insurance company will conduct its own investigation.
+    ```
+## View and export code
+
+At any point in the chat session, you can enable the **Show raw JSON** switch at the top of the chat window to see the conversation formatted as JSON. Heres' what it looks like at the beginning of the quickstart chat session:
+
+```json
+[
+	{
+		"role": "system",
+		"content": [
+			"You are an AI assistant that helps people find information."
+		]
+	},
+]
+```
+
+{/*
+## Troubleshooting
+
+| Error | Cause | Solution |
+|-------|-------|----------|
+| Model not available in deployment dropdown | Vision-capable model not deployed | Deploy **gpt-4o** or **gpt-4o-mini** from **Models + endpoints**. |
+| Image upload fails | Image too large or unsupported format | Use JPEG, PNG, GIF, or WebP. Maximum 20 MB per image. |
+| Response seems incomplete | `max_tokens` not set or too low | Increase the token limit in **Parameters** panel. |
+| Content filtered response | Image triggered content filter | GPT-4 Turbo with Vision has mandatory content filtering that can't be disabled. |
+*/}
+
+## Clean up resources
+
+If you want to clean up and remove an Azure OpenAI resource, you can delete the resource or resource group. Deleting the resource group also deletes any other resources associated with it.
+
+- [Azure portal](../../../ai-services/multi-service-resource.md)
+- [Azure CLI](../../../ai-services/multi-service-resource.md)
+
+Use this article to get started using the Azure OpenAI REST APIs to deploy and use vision-enabled chat models. 
+
+## Prerequisites
+
+- An Azure subscription. [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
+- <a href="https://www.python.org/" target="_blank">Python 3.8 or later version</a>.
+- The following Python libraries: `requests`, `json`.
+- An Azure OpenAI in Microsoft Foundry Models resource with a vision-enabled model deployed. See [Model availability](../../foundry-models/concepts/models-sold-directly-by-azure.md) for available regions. For more information about resource creation, see the [resource deployment guide](https://learn.microsoft.com/azure/ai-foundry/openai/how-to/create-resource).
+
+<Note>
+It is currently not supported to turn off content filtering for the GPT-4 Turbo with Vision model.
+</Note>
+
+## Retrieve key and endpoint
+
+To successfully call the Azure OpenAI APIs, you need the following information about your Azure OpenAI resource:
+
+| Variable | Name | Value |
+|---|---|---|
+| **Endpoint** | `api_base` | The endpoint value is located under **Keys and Endpoint** for your resource in the Azure portal. You can also find the endpoint via the **Deployments** page in Foundry portal. An example endpoint is: `https://docs-test-001.openai.azure.com/`. |
+| **Key** | `api_key` | The key value is also located under **Keys and Endpoint** for your resource in the Azure portal. Azure generates two keys for your resource. You can use either value. |
+
+Go to your resource in the Azure portal. On the navigation pane, select **Keys and Endpoint** under **Resource Management**. Copy the **Endpoint** value and an access key value. You can use either the **KEY 1** or **KEY 2** value. Having two keys allows you to securely rotate and regenerate keys without causing a service disruption.
+
+<Frame>
+  <img src="/images/endpoint.png" alt="Screenshot that shows the Keys and Endpoint page for an Azure OpenAI resource in the Azure portal." />
+</Frame>
+
+## Create a new Python application
+
+Create a new Python file named _quickstart.py_. Open the new file in your preferred editor or IDE.
+
+1. Replace the contents of _quickstart.py_ with the following code. 
+    
+    ```python
+    # Packages required:
+    import requests 
+    import json 
+    
+    api_base = '<your_azure_openai_endpoint>' 
+    deployment_name = '<your_deployment_name>'
+    API_KEY = '<your_azure_openai_key>'
+    
+    base_url = f"{api_base}openai/deployments/{deployment_name}" 
+    headers = {   
+        "Content-Type": "application/json",   
+        "api-key": API_KEY 
+    } 
+    
+    # Prepare endpoint, headers, and request body 
+    endpoint = f"{base_url}/chat/completions?api-version=2023-12-01-preview" 
+    data = { 
+        "messages": [ 
+            { "role": "system", "content": "You are a helpful assistant." }, 
+            { "role": "user", "content": [  
+                { 
+                    "type": "text", 
+                    "text": "Describe this picture:" 
+                },
+                { 
+                    "type": "image_url",
+                    "image_url": {
+                        "url": "<image URL>"
+                    }
+                }
+            ] } 
+        ], 
+        "max_tokens": 2000 
+    }   
+    
+    # Make the API call   
+    response = requests.post(endpoint, headers=headers, data=json.dumps(data))   
+    
+    print(f"Status Code: {response.status_code}")   
+    print(response.text)
+    ```
+
+1. Make the following changes:
+    1. Enter your endpoint URL and key in the appropriate fields.
+    1. Enter your model deployment name in the appropriate field. 
+    1. Change the value of the `"image"` field to the publicly accessible URL of your image.
+
+<Tip>
+You can also use a base 64 encoded image data instead of a URL. For more information, see the [Vision chats how-to guide](../how-to/gpt-with-vision.md#use-a-local-image).
+</Tip>
+
+1. Run the application with the `python` command:
+
+    ```console
+    python quickstart.py
+    ```
+
+## Clean up resources
+
+If you want to clean up and remove an Azure OpenAI resource, you can delete the resource or resource group. Deleting the resource group also deletes any other resources associated with it.
+
+- [Azure portal](../../../ai-services/multi-service-resource.md)
+- [Azure CLI](../../../ai-services/multi-service-resource.md)
+
+Use this article to get started using the Azure OpenAI Python SDK to deploy and use a vision-enabled chat model. 
+
+[Library source code](https://github.com/openai/openai-python?azure-portal=true) | [Package (PyPi)](https://pypi.org/project/openai?azure-portal=true) |
+
+## Prerequisites
+
+- An Azure subscription. [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
+- <a href="https://www.python.org/" target="_blank">Python 3.8 or later version</a>.
+- An Azure OpenAI in Microsoft Foundry Models resource with a vision-enabled chat model deployed. See [Model availability](../../foundry-models/concepts/models-sold-directly-by-azure.md) for available regions. For more information about resource creation, see the [resource deployment guide](https://learn.microsoft.com/azure/ai-foundry/openai/how-to/create-resource).
+
+### Microsoft Entra ID prerequisites
+
+For the recommended keyless authentication with Microsoft Entra ID, you need to:
+- Install the [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) used for keyless authentication with Microsoft Entra ID.
+- Assign the `Cognitive Services User` role to your user account. You can assign roles in the Azure portal under **Access control (IAM)** > **Add role assignment**.
+
+## Set up 
+
+Install the OpenAI Python client library with:
+
+```console
+pip install openai
+```
+
+<Note>
+This library is maintained by OpenAI. Refer to the [release history](https://github.com/openai/openai-python/releases) to track the latest updates to the library.
+</Note>
+
+### Retrieve key and endpoint
+
+To successfully make a call against Azure OpenAI, you need an **endpoint** and a **key**.
+
+|Variable name | Value |
+|--------------------------|-------------|
+| `ENDPOINT`    | The service endpoint can be found in the **Keys & Endpoint** section when examining your resource from the Azure portal. Alternatively, you can find the endpoint via the **Deployments** page in Microsoft Foundry portal. An example endpoint is: `https://docs-test-001.openai.azure.com/`. |
+| `API-KEY` | This value can be found in the **Keys & Endpoint** section when examining your resource from the Azure portal. You can use either `KEY1` or `KEY2`.|
+
+Go to your resource in the Azure portal. The **Keys & Endpoint** section can be found in the **Resource Management** section. Copy your endpoint and access key as you'll need both for authenticating your API calls. You can use either `KEY1` or `KEY2`. Always having two keys allows you to securely rotate and regenerate keys without causing a service disruption.
+
+<Frame>
+  <img src="/images/endpoint.png" alt="Screenshot of the overview UI for an Azure OpenAI resource in the Azure portal with the endpoint and access keys location circled in red." />
+</Frame>
+
+### Environment variables
+
+Create and assign persistent environment variables for your key and endpoint.
+
+<CodeGroup>
+```cmd Command Line
+    setx AZURE_OPENAI_API_KEY "REPLACE_WITH_YOUR_KEY_VALUE_HERE" 
+    setx AZURE_OPENAI_ENDPOINT "REPLACE_WITH_YOUR_ENDPOINT_HERE" 
+    ```
+
+```powershell PowerShell
+    [System.Environment]::SetEnvironmentVariable('AZURE_OPENAI_API_KEY', 'REPLACE_WITH_YOUR_KEY_VALUE_HERE', 'User')
+    [System.Environment]::SetEnvironmentVariable('AZURE_OPENAI_ENDPOINT', 'REPLACE_WITH_YOUR_ENDPOINT_HERE', 'User')
+    ```
+
+```bash Bash
+    export AZURE_OPENAI_API_KEY="REPLACE_WITH_YOUR_KEY_VALUE_HERE"
+    export AZURE_OPENAI_ENDPOINT="REPLACE_WITH_YOUR_ENDPOINT_HERE"
+    ```
+</CodeGroup>
+
+## Create a new Python application
+
+Create a new Python file named _quickstart.py_. Open the new file in your preferred editor or IDE.
+
+1. Replace the contents of _quickstart.py_ with the following code. 
+    
+    ```python
+    import os
+    from openai import AzureOpenAI
+    
+    api_base = os.getenv("AZURE_OPENAI_ENDPOINT")
+    api_key= os.getenv("AZURE_OPENAI_API_KEY")
+    deployment_name = '<your_deployment_name>'
+    api_version = '2023-12-01-preview' # this might change in the future
+    
+    client = AzureOpenAI(
+        api_key=api_key,  
+        api_version=api_version,
+        base_url=f"{api_base}/openai/deployments/{deployment_name}"
+    )
+    
+    response = client.chat.completions.create(
+        model=deployment_name,
+        messages=[
+            { "role": "system", "content": "You are a helpful assistant." },
+            { "role": "user", "content": [  
+                { 
+                    "type": "text", 
+                    "text": "Describe this picture:" 
+                },
+                { 
+                    "type": "image_url",
+                    "image_url": {
+                        "url": "<image URL>"
+                    }
+                }
+            ] } 
+        ],
+        max_tokens=2000 
+    )
+    
+    print(response)
+    ```
+
+1. Make the following changes:
+    1. Make sure the `AZURE_OPENAI_ENDPOINT` and `AZURE_OPENAI_API_KEY` environment variables are set.
+    1. Enter the name of your model deployment in the `deployment_name` variable.
+    1. Change the value of the `"url"` field to the publicly accessible URL of your image.
+
+<Tip>
+You can also use a base 64 encoded image data instead of a URL. For more information, see the [Vision chats how-to guide](../how-to/gpt-with-vision.md#use-a-local-image).
+</Tip>
+
+1. Run the application with the `python` command:
+
+    ```console
+    python quickstart.py
+    ```
+
+{/*
+## Troubleshooting
+
+| Error | Cause | Solution |
+|-------|-------|----------|
+| `AuthenticationError` | Invalid or missing API key | Verify `AZURE_OPENAI_API_KEY` environment variable is set correctly. |
+| `NotFoundError` | Incorrect endpoint or deployment | Check `AZURE_OPENAI_ENDPOINT` and `deployment_name` match your Azure resource. |
+| `RateLimitError` | Quota exceeded | Wait and retry, or request a quota increase in Azure portal. |
+| Truncated response | `max_tokens` too low | Increase the `max_tokens` value in your request. |
+| `BadRequestError` with content filter | Image triggered content filter | GPT-4 Turbo with Vision has mandatory content filtering that can't be disabled. |
+*/}
+
+## Clean up resources
+
+If you want to clean up and remove an Azure OpenAI resource, you can delete the resource or resource group. Deleting the resource group also deletes any other resources associated with it.
+
+- [Azure portal](../../../ai-services/multi-service-resource.md)
+- [Azure CLI](../../../ai-services/multi-service-resource.md)
+
+Use this article to get started using the OpenAI JavaScript SDK to deploy and use a vision-enabled chat model. 
+
+This SDK is provided by OpenAI with Azure specific types provided by Azure. 
+
+[Reference documentation](https://platform.openai.com/docs/api-reference/chat) | [Library source code](https://github.com/openai/openai-node?azure-portal=true) | [Package (npm)](https://www.npmjs.com/package/openai) | [Samples](https://github.com/Azure/azure-sdk-for-js/tree/main/sdk/openai/openai/samples)
+
+## Prerequisites
+
+- An Azure subscription - [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn)
+- [LTS versions of Node.js](https://github.com/nodejs/release#release-schedule)
+- [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) used for passwordless authentication in a local development environment, create the necessary context by signing in with the Azure CLI.
+- An Azure OpenAI resource created in a supported region (see [Region availability](https://learn.microsoft.com/azure/ai-foundry/openai/concepts/models#model-summary-table-and-region-availability)). For more information, see [Create a resource and deploy a model with Azure OpenAI](../how-to/create-resource.md).
+
+<Note>
+This library is maintained by OpenAI. Refer to the [release history](https://github.com/openai/openai-node/releases) to track the latest updates to the library.
+</Note>
+
+### Microsoft Entra ID prerequisites
+
+For the recommended keyless authentication with Microsoft Entra ID, you need to:
+- Install the [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) used for keyless authentication with Microsoft Entra ID.
+- Assign the `Cognitive Services User` role to your user account. You can assign roles in the Azure portal under **Access control (IAM)** > **Add role assignment**.
+
+## Set up
+ 
+1. Create a new folder `vision-quickstart` and go to the quickstart folder with the following command:
+
+    ```shell
+    mkdir vision-quickstart && cd vision-quickstart
+    ```
+    
+
+1. Create the `package.json` with the following command:
+
+    ```shell
+    npm init -y
+    ```   
+
+1. Install the OpenAI client library for JavaScript with:
+
+    ```console
+    npm install openai
+    ```
+
+1. For the **recommended** passwordless authentication:
+
+    ```console
+    npm install @azure/identity
+    ```
+
+## Retrieve resource information
+
+You need to retrieve the following information to authenticate your application with your Azure OpenAI resource:
+
+<Tabs>
+  <Tab title="Microsoft Entra ID">
+
+    |Variable name | Value |
+    |--------------------------|-------------|
+    | `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
+    | `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
+
+    Learn more about [keyless authentication](https://learn.microsoft.com/azure/ai-services/authentication) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
+
+  </Tab>
+  <Tab title="API key">
+
+    |Variable name | Value |
+    |--------------------------|-------------|
+    | `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
+    | `AZURE_OPENAI_API_KEY` | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. You can use either `KEY1` or `KEY2`.|
+    | `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
+
+    Learn more about [finding API keys](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
+
+  </Tab>
+</Tabs>
+
+<Danger>
+To use the recommended keyless authentication with the SDK, make sure that the `AZURE_OPENAI_API_KEY` environment variable isn't set.
+</Danger>
+
+## Create a new JavaScript application for image prompts
+
+Select an image from the [azure-samples/cognitive-services-sample-data-files](https://github.com/Azure-Samples/cognitive-services-sample-data-files/tree/master/ComputerVision/Images). Enter your publicly accessible image URL in the code below or set the `IMAGE_URL` environment variable to it.
+
+<Info>
+If you use a SAS URL to an image stored in Azure blob storage, you need to enable Managed Identity and assign the **Storage Blob Reader** role to your Azure OpenAI resource (do this in the Azure portal). This allows the model to access the image in blob storage.
+</Info>
+
+<Tip>
+You can also use a base 64 encoded image data instead of a URL. For more information, see the [Vision chats how-to guide](../how-to/gpt-with-vision.md#use-a-local-image).
+</Tip>
+
+<Tabs>
+  <Tab title="Microsoft Entra ID">
+
+    1. Create the `index.js` file with the following code:
+
+        ```javascript
+        const AzureOpenAI = require('openai').AzureOpenAI;
+        const { 
+            DefaultAzureCredential, 
+            getBearerTokenProvider 
+        } = require('@azure/identity');
+
+        // You will need to set these environment variables or edit the following values
+        const endpoint = process.env.AZURE_OPENAI_ENDPOINT || "Your endpoint";
+        const imageUrl = process.env.IMAGE_URL || "<image url>";
+
+        // Required Azure OpenAI deployment name and API version
+        const apiVersion = process.env.OPENAI_API_VERSION || "2024-07-01-preview";
+        const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "gpt-4-with-turbo";
+
+        // keyless authentication    
+        const credential = new DefaultAzureCredential();
+        const scope = "https://cognitiveservices.azure.com/.default";
+        const azureADTokenProvider = getBearerTokenProvider(credential, scope);
+
+        function getClient(): AzureOpenAI {
+          return new AzureOpenAI({
+            endpoint,
+            azureADTokenProvider,
+            apiVersion,
+            deployment: deploymentName,
+          });
+        }
+        function createMessages() {
+          return {
+            messages: [
+              { role: "system", content: "You are a helpful assistant." },
+              {
+                role: "user",
+                content: [
+                  {
+                    type: "text",
+                    text: "Describe this picture:",
+                  },
+                  {
+                    type: "image_url",
+                    image_url: {
+                      url: imageUrl,
+                    },
+                  },
+                ],
+              },
+            ],
+            model: "",
+            max_tokens: 2000,
+          };
+        }
+        async function printChoices(completion) {
+          for (const choice of completion.choices) {
+            console.log(choice.message);
+          }
+        }
+        export async function main() {
+          console.log("== Get Vision chats Sample ==");
+
+          const client = getClient();
+          const messages = createMessages();
+          const completion = await client.chat.completions.create(messages);
+          await printChoices(completion);
+        }
+
+        main().catch((err) => {
+          console.error("Error occurred:", err);
+        });
+        ```
+
+    1. Sign in to Azure with the following command:
+
+        ```shell
+        az login
+        ```
+
+    1. Run the JavaScript file.
+
+        ```shell
+        node index.js
+        ```
+
+  </Tab>
+  <Tab title="API key">
+
+    1. Create the `index.js` file with the following code: 
+
+        ```javascript
+        const { AzureOpenAI } = require("openai");
+
+        // You will need to set these environment variables or edit the following values
+        const endpoint = process.env.AZURE_OPENAI_ENDPOINT || "Your endpoint";
+        const apiKey = process.env.AZURE_OPENAI_API_KEY || "Your API key";
+        const imageUrl = process.env.IMAGE_URL || "<image url>";
+
+        // Required Azure OpenAI deployment name and API version
+        const apiVersion = process.env.OPENAI_API_VERSION || "2024-07-01-preview";
+        const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "gpt-4-with-turbo";
+
+        function getClient() {
+          return new AzureOpenAI({
+            endpoint,
+            apiKey,
+            apiVersion,
+            deployment: deploymentName,
+          });
+        }
+        function createMessages() {
+          return {
+            messages: [
+              { role: "system", content: "You are a helpful assistant." },
+              {
+                role: "user",
+                content: [
+                  {
+                    type: "text",
+                    text: "Describe this picture:",
+                  },
+                  {
+                    type: "image_url",
+                    image_url: {
+                      url: imageUrl,
+                    },
+                  },
+                ],
+              },
+            ],
+            model: "",
+            max_tokens: 2000,
+          };
+        }
+        async function printChoices(completion) {
+          for (const choice of completion.choices) {
+            console.log(choice.message);
+          }
+        }
+        export async function main() {
+          console.log("== Get Vision chats Sample ==");
+
+          const client = getClient();
+          const messages = createMessages();
+          const completion = await client.chat.completions.create(messages);
+          await printChoices(completion);
+        }
+
+        main().catch((err) => {
+          console.error("Error occurred:", err);
+        });
+        ```
+
+    1. Run the JavaScript file.
+
+        ```shell
+        node index.js
+        ```
+
+  </Tab>
+</Tabs>
+
+{/*
+## Troubleshooting
+
+| Error | Cause | Solution |
+|-------|-------|----------|
+| `401 Unauthorized` | Invalid API key or token | Verify `AZURE_OPENAI_API_KEY` is set, or for keyless auth, run `az login` and check role assignment. |
+| `404 Not Found` | Incorrect endpoint or deployment | Check `AZURE_OPENAI_ENDPOINT` and `AZURE_OPENAI_DEPLOYMENT_NAME` match your Azure resource. |
+| `429 Too Many Requests` | Rate limit exceeded | Wait and retry, or request a quota increase in Azure portal. |
+| Truncated response | `max_tokens` too low | Increase the `max_tokens` value in your request. |
+| Content filtered response | Image triggered content filter | GPT-4 Turbo with Vision has mandatory content filtering that can't be disabled. |
+*/} 
+## Clean up resources
+
+If you want to clean up and remove an Azure OpenAI resource, you can delete the resource or resource group. Deleting the resource group also deletes any other resources associated with it.
+
+- [Azure portal](../../../ai-services/multi-service-resource.md)
+- [Azure CLI](../../../ai-services/multi-service-resource.md)
+
+Use this article to get started using the OpenAI JavaScript SDK to deploy and use a vision-enabled chat model. 
+
+This SDK is provided by OpenAI with Azure specific types provided by Azure. 
+
+[Reference documentation](https://platform.openai.com/docs/api-reference/chat) | [Library source code](https://github.com/openai/openai-node?azure-portal=true) | [Package (npm)](https://www.npmjs.com/package/openai) | [Samples](https://github.com/Azure/azure-sdk-for-js/tree/main/sdk/openai/openai/samples)
+
+## Prerequisites
+
+- An Azure subscription - [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn)
+- [LTS versions of Node.js](https://github.com/nodejs/release#release-schedule)
+- [TypeScript](https://www.typescriptlang.org/download/)
+- [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) used for passwordless authentication in a local development environment, create the necessary context by signing in with the Azure CLI.
+- An Azure OpenAI resource created in a supported region (see [Region availability](https://learn.microsoft.com/azure/ai-foundry/openai/concepts/models#model-summary-table-and-region-availability)). For more information, see [Create a resource and deploy a model with Azure OpenAI](../how-to/create-resource.md).
+
+<Note>
+This library is maintained by OpenAI. Refer to the [release history](https://github.com/openai/openai-node/releases) to track the latest updates to the library.
+</Note>
+
+### Microsoft Entra ID prerequisites
+
+For the recommended keyless authentication with Microsoft Entra ID, you need to:
+- Install the [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) used for keyless authentication with Microsoft Entra ID.
+- Assign the `Cognitive Services User` role to your user account. You can assign roles in the Azure portal under **Access control (IAM)** > **Add role assignment**.
+
+## Set up
+
+1. Create a new folder `vision-quickstart` and go to the quickstart folder with the following command:
+
+    ```shell
+    mkdir vision-quickstart && cd vision-quickstart
+    ```
+    
+
+1. Create the `package.json` with the following command:
+
+    ```shell
+    npm init -y
+    ```
+
+1. Update the `package.json` to ECMAScript with the following command: 
+
+    ```shell
+    npm pkg set type=module
+    ```
+    
+
+1. Install the OpenAI client library for JavaScript with:
+
+    ```console
+    npm install openai
+    ```
+
+1. For the **recommended** passwordless authentication:
+
+    ```console
+    npm install @azure/identity
+    ```
+
+## Retrieve resource information
+
+You need to retrieve the following information to authenticate your application with your Azure OpenAI resource:
+
+<Tabs>
+  <Tab title="Microsoft Entra ID">
+
+    |Variable name | Value |
+    |--------------------------|-------------|
+    | `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
+    | `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
+
+    Learn more about [keyless authentication](https://learn.microsoft.com/azure/ai-services/authentication) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
+
+  </Tab>
+  <Tab title="API key">
+
+    |Variable name | Value |
+    |--------------------------|-------------|
+    | `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
+    | `AZURE_OPENAI_API_KEY` | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. You can use either `KEY1` or `KEY2`.|
+    | `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
+
+    Learn more about [finding API keys](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
+
+  </Tab>
+</Tabs>
+
+<Danger>
+To use the recommended keyless authentication with the SDK, make sure that the `AZURE_OPENAI_API_KEY` environment variable isn't set.
+</Danger>
+
+## Create a new JavaScript application for image prompts
+
+Select an image from the [azure-samples/cognitive-services-sample-data-files](https://github.com/Azure-Samples/cognitive-services-sample-data-files/tree/master/ComputerVision/Images). Use the image URL in the code below or set the `IMAGE_URL` environment variable to the image URL.
+
+<Tip>
+You can also use a base 64 encoded image data instead of a URL. For more information, see the [Vision chats how-to guide](../how-to/gpt-with-vision.md#use-a-local-image).
+</Tip>
+
+<Tabs>
+  <Tab title="Microsoft Entra ID">
+
+    1. Create the `index.ts` file with the following code:
+
+        ```typescript
+        import { AzureOpenAI } from "openai";
+        import { 
+            DefaultAzureCredential, 
+            getBearerTokenProvider 
+        } from "@azure/identity";
+        import type {
+          ChatCompletion,
+          ChatCompletionCreateParamsNonStreaming,
+        } from "openai/resources/index";
+
+        // You will need to set these environment variables or edit the following values
+        const endpoint = process.env.AZURE_OPENAI_ENDPOINT || "Your endpoint";
+        const imageUrl = process.env["IMAGE_URL"] || "<image url>";
+
+        // Required Azure OpenAI deployment name and API version
+        const apiVersion = process.env.OPENAI_API_VERSION || "2024-07-01-preview";
+        const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "gpt-4-with-turbo";
+
+        // keyless authentication    
+        const credential = new DefaultAzureCredential();
+        const scope = "https://cognitiveservices.azure.com/.default";
+        const azureADTokenProvider = getBearerTokenProvider(credential, scope);
+
+        function getClient(): AzureOpenAI {
+          return new AzureOpenAI({
+            endpoint,
+            azureADTokenProvider,
+            apiVersion,
+            deployment: deploymentName,
+          });
+        }
+        function createMessages(): ChatCompletionCreateParamsNonStreaming {
+          return {
+            messages: [
+              { role: "system", content: "You are a helpful assistant." },
+              {
+                role: "user",
+                content: [
+                  {
+                    type: "text",
+                    text: "Describe this picture:",
+                  },
+                  {
+                    type: "image_url",
+                    image_url: {
+                      url: imageUrl,
+                    },
+                  },
+                ],
+              },
+            ],
+            model: "",
+            max_tokens: 2000,
+          };
+        }
+        async function printChoices(completion: ChatCompletion): Promise<void> {
+          for (const choice of completion.choices) {
+            console.log(choice.message);
+          }
+        }
+        export async function main() {
+          console.log("== Get Vision chat Sample ==");
+
+          const client = getClient();
+          const messages = createMessages();
+          const completion = await client.chat.completions.create(messages);
+          await printChoices(completion);
+        }
+
+        main().catch((err) => {
+          console.error("Error occurred:", err);
+        });
+        ```
+
+    1. Create the `tsconfig.json` file to transpile the TypeScript code and copy the following code for ECMAScript.
+
+        ```json
+        {
+            "compilerOptions": {
+              "module": "NodeNext",
+              "target": "ES2022", // Supports top-level await
+              "moduleResolution": "NodeNext",
+              "skipLibCheck": true, // Avoid type errors from node_modules
+              "strict": true // Enable strict type-checking options
+            },
+            "include": ["*.ts"]
+        }
+        ```
+
+    1. Transpile from TypeScript to JavaScript.
+
+        ```shell
+        tsc
+        ```
+
+    1. Sign in to Azure with the following command:
+
+        ```shell
+        az login
+        ```
+
+    1. Run the code with the following command:
+
+        ```shell
+        node index.js
+        ```
+
+  </Tab>
+  <Tab title="API key">
+
+    1. Create the `index.ts` file with the following code:
+
+        ```typescript
+        import { AzureOpenAI } from "openai";
+        import type {
+          ChatCompletion,
+          ChatCompletionCreateParamsNonStreaming,
+        } from "openai/resources/index";
+
+        // You will need to set these environment variables or edit the following values
+        const endpoint = process.env.AZURE_OPENAI_ENDPOINT || "Your endpoint";
+        const apiKey = process.env.AZURE_OPENAI_API_KEY || "Your API key";
+        const imageUrl = process.env["IMAGE_URL"] || "<image url>";
+
+        // Required Azure OpenAI deployment name and API version
+        const apiVersion = process.env.OPENAI_API_VERSION || "2024-07-01-preview";
+        const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "gpt-4-with-turbo";
+
+        function getClient(): AzureOpenAI {
+          return new AzureOpenAI({
+            endpoint,
+            apiKey,
+            apiVersion,
+            deployment: deploymentName,
+          });
+        }
+        function createMessages(): ChatCompletionCreateParamsNonStreaming {
+          return {
+            messages: [
+              { role: "system", content: "You are a helpful assistant." },
+              {
+                role: "user",
+                content: [
+                  {
+                    type: "text",
+                    text: "Describe this picture:",
+                  },
+                  {
+                    type: "image_url",
+                    image_url: {
+                      url: imageUrl,
+                    },
+                  },
+                ],
+              },
+            ],
+            model: "",
+            max_tokens: 2000,
+          };
+        }
+        async function printChoices(completion: ChatCompletion): Promise<void> {
+          for (const choice of completion.choices) {
+            console.log(choice.message);
+          }
+        }
+        export async function main() {
+          console.log("== Get Vision chat Sample ==");
+
+          const client = getClient();
+          const messages = createMessages();
+          const completion = await client.chat.completions.create(messages);
+          await printChoices(completion);
+        }
+
+        main().catch((err) => {
+          console.error("Error occurred:", err);
+        });
+        ```
+
+    1. Create the `tsconfig.json` file to transpile the TypeScript code and copy the following code for ECMAScript.
+
+        ```json
+        {
+            "compilerOptions": {
+              "module": "NodeNext",
+              "target": "ES2022", // Supports top-level await
+              "moduleResolution": "NodeNext",
+              "skipLibCheck": true, // Avoid type errors from node_modules
+              "strict": true // Enable strict type-checking options
+            },
+            "include": ["*.ts"]
+        }
+        ```
+
+    1. Transpile from TypeScript to JavaScript.
+
+        ```shell
+        tsc
+        ```
+
+    1. Run the code with the following command:
+
+        ```shell
+        node index.js
+        ```
+
+  </Tab>
+</Tabs>
+
+## Clean up resources
+
+If you want to clean up and remove an Azure OpenAI resource, you can delete the resource or resource group. Deleting the resource group also deletes any other resources associated with it.
+
+- [Azure portal](../../../ai-services/multi-service-resource.md)
+- [Azure CLI](../../../ai-services/multi-service-resource.md)
+
+Use this article to get started using the Azure OpenAI .NET SDK to deploy and use a vision-enabled chat model. 
+
+## Prerequisites
+
+- An Azure subscription. You can [create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
+- [The .NET 8.0 SDK](https://dotnet.microsoft.com/download)
+- An Azure OpenAI in Microsoft Foundry Models resource with a vision-enabled chat model deployed. See [Model availability](../../foundry-models/concepts/models-sold-directly-by-azure.md) for available regions. For more information about resource creation, see the [resource deployment guide](https://learn.microsoft.com/azure/ai-foundry/openai/how-to/create-resource).
+
+### Microsoft Entra ID prerequisites
+
+For the recommended keyless authentication with Microsoft Entra ID, you need to:
+- Install the [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) used for keyless authentication with Microsoft Entra ID.
+- Assign the `Cognitive Services User` role to your user account. You can assign roles in the Azure portal under **Access control (IAM)** > **Add role assignment**.
+
+## Set up
+
+1. Create a new folder `vision-quickstart` and go to the quickstart folder with the following command:
+
+    ```shell
+    mkdir vision-quickstart && cd vision-quickstart
+    ```
+
+1. Create a new console application with the following command:
+
+    ```shell
+    dotnet new console
+    ```
+
+3. Install the [OpenAI .NET client library](https://www.nuget.org/packages/Azure.AI.OpenAI/) with the [dotnet add package](https://learn.microsoft.com/dotnet/core/tools/dotnet-add-package) command:
+
+    ```console
+    dotnet add package Azure.AI.OpenAI
+    ```
+
+1. For the **recommended** keyless authentication with Microsoft Entra ID, install the [Azure.Identity](https://www.nuget.org/packages/Azure.Identity) package with:
+
+    ```console
+    dotnet add package Azure.Identity
+    ```
+
+1. For the **recommended** keyless authentication with Microsoft Entra ID, sign in to Azure with the following command:
+
+    ```console
+    az login
+    ```
+
+## Retrieve resource information
+
+You need to retrieve the following information to authenticate your application with your Azure OpenAI resource:
+
+<Tabs>
+  <Tab title="Microsoft Entra ID">
+
+    |Variable name | Value |
+    |--------------------------|-------------|
+    | `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
+    | `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
+
+    Learn more about [keyless authentication](https://learn.microsoft.com/azure/ai-services/authentication) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
+
+  </Tab>
+  <Tab title="API key">
+
+    |Variable name | Value |
+    |--------------------------|-------------|
+    | `AZURE_OPENAI_ENDPOINT`               | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. |
+    | `AZURE_OPENAI_API_KEY` | This value can be found in the **Keys and Endpoint** section when examining your resource from the Azure portal. You can use either `KEY1` or `KEY2`.|
+    | `AZURE_OPENAI_DEPLOYMENT_NAME` | This value will correspond to the custom name you chose for your deployment when you deployed a model. This value can be found under **Resource Management** > **Model Deployments** in the Azure portal.|
+
+    Learn more about [finding API keys](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables) and [setting environment variables](https://learn.microsoft.com/azure/ai-services/cognitive-services-environment-variables).
+
+  </Tab>
+</Tabs>
+
+## Run the quickstart
+
+The sample code in this quickstart uses Microsoft Entra ID for the recommended keyless authentication. If you prefer to use an API key, you can replace the `DefaultAzureCredential` object with an `AzureKeyCredential` object. 
+
+<CodeGroup>
+```csharp Microsoft Entra ID
+    AzureOpenAIClient openAIClient = new AzureOpenAIClient(new Uri(endpoint), new DefaultAzureCredential()); 
+    ```
+
+```csharp API key
+    AzureOpenAIClient openAIClient = new AzureOpenAIClient(new Uri(endpoint), new AzureKeyCredential(key));
+    ```
+</CodeGroup>
+
+To run the quickstart, follow these steps:
+
+1. Replace the contents of `Program.cs` with the following code and update the placeholder values with your own.
+
+    ```csharp
+    using Azure;
+    using Azure.AI.OpenAI;
+    using Azure.Identity;
+    using OpenAI.Chat; // Required for Passwordless auth
+    
+    string deploymentName = "gpt-4";
+    
+    string endpoint = Environment.GetEnvironmentVariable("AZURE_OPENAI_ENDPOINT") ?? "https://<your-resource-name>.openai.azure.com/";
+    string key = Environment.GetEnvironmentVariable("AZURE_OPENAI_API_KEY") ?? "<your-key>";
+    
+    // Use the recommended keyless credential instead of the AzureKeyCredential credential.
+    AzureOpenAIClient openAIClient = new AzureOpenAIClient(new Uri(endpoint), new DefaultAzureCredential()); 
+    //AzureOpenAIClient openAIClient = new AzureOpenAIClient(new Uri(endpoint), new AzureKeyCredential(key));
+
+    var chatClient = openAIClient.GetChatClient(deploymentName);
+    
+    var imageUrl = "YOUR_IMAGE_URL";
+    
+    var textPart = ChatMessageContentPart.CreateTextPart("Describe this picture:");
+    var imgPart = ChatMessageContentPart.CreateImagePart(imageUrl); 
+
+    var chatMessages = new List<ChatMessage>
+    {
+        new SystemChatMessage("You are a helpful assistant."),
+        new UserChatMessage(textPart, imgPart)
+
+    };
+        
+    ChatCompletion chatCompletion = await chatClient.CompleteChatAsync(chatMessages);
+    
+    Console.WriteLine($"[ASSISTANT]:");
+    Console.WriteLine($"{chatCompletion.Content[0].Text}");
+    ```
+
+1. Replace `YOUR_IMAGE_URL` with the publicly accessible of the image you want to upload.
+
+1. Run the application using the `dotnet run` command or the run button at the top of Visual Studio:
+
+    ```dotnetcli
+    dotnet run
+    ```
+
+## Output
+
+The output of the application will be a description of the image you provided in the `imageUri` variable. The assistant will analyze the image and provide a detailed description based on its content.
+
+## Clean up resources
+
+If you want to clean up and remove an Azure OpenAI resource, you can delete the resource or resource group. Deleting the resource group also deletes any other resources associated with it.
+
+- [Azure portal](../../../ai-services/multi-service-resource.md)
+- [Azure CLI](../../../ai-services/multi-service-resource.md)
+
+## Related content
+
+* [Get started with multimodal vision chat apps using Azure OpenAI AI App template](https://learn.microsoft.com/azure/developer/ai/get-started-app-chat-vision)
+* Learn more about these APIs in the [Vision-enabled models how-to guide](/models/catalog/gpt-with-vision)
+* [GPT-4 Turbo with Vision frequently asked questions](./faq.yml#gpt-4-turbo-with-vision)
+* [GPT-4 Turbo with Vision API reference](https://aka.ms/gpt-v-api-ref)
