@@ -14,14 +14,22 @@ engine: copilot
 timeout-minutes: 30
 tools:
   playwright:
-  edit:
   bash:
-    - "*"
+    - "npm install*"
+    - "npx mintlify*"
+    - "curl*"
+    - "kill*"
+    - "lsof*"
+    - "cat *"
+    - "find *"
+    - "ls*"
+    - "pwd*"
 safe-outputs:
   upload-asset:
   create-discussion:
     category: "audits"
     close-older-discussions: true
+  noop:
 
 network:
   allowed:
@@ -30,6 +38,7 @@ network:
 
 imports:
   - shared/mood.md
+  - shared/reporting.md
   - shared/docs-server-lifecycle.md
 ---
 

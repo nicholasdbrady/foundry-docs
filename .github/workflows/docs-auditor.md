@@ -4,13 +4,14 @@ description: Validates docs-vnext documentation accuracy, code examples, and ext
 on:
   workflow_dispatch:
   schedule: weekly on wednesday around 12:00
+  skip-if-match: 'is:discussion is:open in:title "[audit]"'
 permissions:
   contents: read
   issues: read
   pull-requests: read
 tracker-id: docs-auditor-weekly
 engine: claude
-strict: false
+strict: true
 network:
   allowed:
     - defaults
@@ -27,12 +28,14 @@ tools:
     - "python *"
     - "test *"
 safe-outputs:
+  upload-asset:
   create-discussion:
     title-prefix: "[audit] "
     category: "audits"
     max: 1
     close-older-discussions: true
-timeout-minutes: 15
+  noop:
+timeout-minutes: 25
 imports:
   - shared/mood.md
   - shared/reporting.md
@@ -101,10 +104,11 @@ For each selected file:
 
 #### For Passing Audits ✅
 
-Create a discussion titled "[audit] Foundry Docs Audit - PASSED" with:
-- Audit timestamp
-- Files audited
-- All checks passed details
+Call `noop` with a summary of what was checked:
+
+```json
+{"noop": {"message": "Audit passed. Checked N files: code examples valid, M links verified, no content discrepancies."}}
+```
 
 #### For Failed Audits ❌
 
