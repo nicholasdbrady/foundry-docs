@@ -10,9 +10,6 @@ on:
         required: false
         default: 'global-sweep'
   skip-if-match: 'is:pr is:open in:title "[slides]"'
-  skip-if-no-match:
-    query: 'is:pr is:merged label:docs-vnext merged:>=2026-01-01'
-    min: 1
 permissions:
   contents: read
   pull-requests: read
