@@ -29,7 +29,7 @@
 #     - shared/mood.md
 #     - shared/reporting.md
 #
-# gh-aw-metadata: {"schema_version":"v1","frontmatter_hash":"45eaa67d69754bda3db6d9d5463dbab8f18debec9ebb2cc4da56f1939236de07","compiler_version":"v0.50.7"}
+# gh-aw-metadata: {"schema_version":"v1","frontmatter_hash":"9aac85acafee1eb1bdb997814c2f412ea8acf25331b81451c70b3f86792a6679","compiler_version":"v0.50.7"}
 
 name: "Documentation Unbloat"
 "on":
@@ -39,6 +39,7 @@ name: "Documentation Unbloat"
     - edited
   schedule:
   - cron: "6 2 * * *"
+  # skip-if-match: is:pr is:open in:title "[docs-vnext]" label:unbloat # Skip-if-match processed as search check in pre-activation job
   workflow_dispatch: null
 
 permissions: {}
@@ -1260,7 +1261,7 @@ jobs:
       issues: write
       pull-requests: write
     outputs:
-      activated: ${{ (steps.check_membership.outputs.is_team_member == 'true') && (steps.check_command_position.outputs.command_position_ok == 'true') }}
+      activated: ${{ ((steps.check_membership.outputs.is_team_member == 'true') && (steps.check_skip_if_match.outputs.skip_check_ok == 'true')) && (steps.check_command_position.outputs.command_position_ok == 'true') }}
       matched_command: ${{ steps.check_command_position.outputs.matched_command }}
     steps:
       - name: Setup Scripts
@@ -1291,6 +1292,19 @@ jobs:
             const { setupGlobals } = require('/opt/gh-aw/actions/setup_globals.cjs');
             setupGlobals(core, github, context, exec, io);
             const { main } = require('/opt/gh-aw/actions/check_membership.cjs');
+            await main();
+      - name: Check skip-if-match query
+        id: check_skip_if_match
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        env:
+          GH_AW_SKIP_QUERY: "is:pr is:open in:title \"[docs-vnext]\" label:unbloat"
+          GH_AW_WORKFLOW_NAME: "Documentation Unbloat"
+          GH_AW_SKIP_MAX_MATCHES: "1"
+        with:
+          script: |
+            const { setupGlobals } = require('/opt/gh-aw/actions/setup_globals.cjs');
+            setupGlobals(core, github, context, exec, io);
+            const { main } = require('/opt/gh-aw/actions/check_skip_if_match.cjs');
             await main();
       - name: Check command position
         id: check_command_position
