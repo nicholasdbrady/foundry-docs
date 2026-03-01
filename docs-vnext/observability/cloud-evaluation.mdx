@@ -17,7 +17,6 @@ Cloud evaluation results are stored in your Foundry project. You can review resu
 For complete runnable examples, see the [Python SDK evaluation samples](https://github.com/Azure/azure-sdk-for-python/blob/main/sdk/ai/azure-ai-projects/samples/evaluations/README.md) on GitHub.
 </Tip>
 
-When you use the Foundry SDK, it logs evaluation results in your Foundry project for better observability. This feature supports all Microsoft-curated [built in evaluators](/observability/built-in-evaluators). and your own [custom evaluators](/observability/custom-evaluators). Your evaluators can be located in the [evaluator library](/observability/evaluate-generative-ai-app) and have the same project-scope, role-based access control.
 ## How cloud evaluation works
 
 To run a cloud evaluation, you create an evaluation definition with your data schema and testing criteria (evaluators), then create an evaluation run. The run executes each evaluator against your data and returns scored results that you can poll for completion.
@@ -341,10 +340,6 @@ For a complete runnable example, see [sample_evaluations_builtin_with_dataset_id
 
 Send queries to a deployed model at runtime and evaluate the responses using the `azure_ai_target_completions` data source type with an `azure_ai_model` target. Your input data contains queries; the model generates responses which are then evaluated.
 
-<Tip>
-Before you begin, complete [Get started](#get-started) and [Prepare input data](#uploading-evaluation-data).
-</Tip>
-
 ### Define the message template and target
 
 The `input_messages` template controls how queries are sent to the model. Use `{{item.query}}` to reference fields from your input data. Specify the model to evaluate and optional sampling parameters:
@@ -484,17 +479,9 @@ testing_criteria = [
 
 For a complete runnable example, see [sample_model_evaluation.py](https://github.com/Azure/azure-sdk-for-python/blob/main/sdk/ai/azure-ai-projects/samples/evaluations/sample_model_evaluation.py) on GitHub. To poll for completion and interpret results, see [Get results](#get-results).
 
-<Tip>
-To add another evaluation run,  you can use the same code.
-</Tip>
-
 ## Agent target evaluation
 
 Send queries to a Foundry agent at runtime and evaluate the responses using the `azure_ai_target_completions` data source type with an `azure_ai_agent` target.
-
-<Tip>
-Before you begin, complete [Get started](#get-started) and [Prepare input data](#uploading-evaluation-data).
-</Tip>
 
 ### Define the message template and target
 
@@ -671,10 +658,6 @@ For a complete runnable example, see [sample_agent_evaluation.py](https://github
 
 Retrieve and evaluate Foundry agent responses by response IDs using the `azure_ai_responses` data source type. Use this scenario to evaluate specific agent interactions after they occur.
 
-<Tip>
-Before you begin, complete [Get started](#get-started).
-</Tip>
-
 A **response ID** is a unique identifier returned each time a Foundry agent generates a response. You can collect response IDs from agent interactions by using the [Responses API](https://learn.microsoft.com/rest/api/aifoundry) or from your application's trace logs. Provide the IDs inline as file content, or upload them as a dataset (see [Prepare input data](#uploading-evaluation-data)).
 
 ### Collect response IDs
@@ -690,7 +673,7 @@ response = client.responses.create(
 print(response.id)  # Example: resp_abc123
 ```
 
-You can also collect response IDs from agent interactions in your application's trace logs or monitoring pipeline. Each response ID uniquely identifies a stored response that the evaluation service can retrieve.
+You can also collect response IDs from agent interactions in your application's trace logs or monitoring pipeline.
 
 ### Create evaluation and run
 
@@ -802,13 +785,15 @@ print(f"Report URL: {run.report_url}")
 
 ### Interpret results
 
-For a single data example, all evaluators output the following schema:  
+For a single data example, all evaluators output the following schema:
 
-- **Label**: a binary "pass" or "fail" label, similar to a unit test's output. Use this result to facilitate comparisons across evaluators.
-- **Score**: a score from the natural scale of each evaluator. Some evaluators use a fine-grained rubric, scoring on a 5-point scale (quality evaluators) or a 7-point scale (content safety evaluators). Others, like textual similarity evaluators, use F1 scores, which are floats between 0 and 1. Any non-binary "score" is binarized to "pass" or "fail" in the "label" field based on the "threshold".
-- **Threshold**: any non-binary scores are binarized to "pass" or "fail" based on a default threshold, which the user can override in the SDK experience.
-- **Reason**: To improve intelligibility, all LLM-judge evaluators also output a reasoning field to explain why a certain score is given.
-- **Details**: (optional) For some evaluators, such as tool_call_accuracy, there might be a "details" field or flags that contain additional information to help users debug their applications.
+| Field | Description |
+|-------|-------------|
+| **Label** | Binary `pass` or `fail`, binarized from the score using the threshold. |
+| **Score** | Numeric score on the evaluator's natural scale: 1–5 (quality), 1–7 (content safety), or 0–1 F1 (similarity). |
+| **Threshold** | Default cutoff for binarizing score to label; can be overridden in the SDK. |
+| **Reason** | LLM-judge explanation for the score (AI-assisted evaluators only). |
+| **Details** | Optional per-evaluator flags with additional debug information (for example, `tool_call_accuracy`). |
 
 ### Example output (single item)
 
