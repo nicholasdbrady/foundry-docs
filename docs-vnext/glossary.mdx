@@ -1,0 +1,188 @@
+---
+title: "Glossary"
+description: "Definitions of key terms used in Microsoft Foundry documentation and the foundry-docs project"
+---
+
+A reference for technical terms used throughout Microsoft Foundry documentation, the foundry-docs MCP server, and the supporting toolchain.
+
+## A
+
+### Agent
+
+An AI-powered entity that can perceive context, reason over goals, and take actions autonomously using tools, models, and instructions. In Microsoft Foundry, agents are built and deployed via the Azure AI Agents Service and may use tools such as Code Interpreter, File Search, and Function Calling.
+
+### AI Red Teaming
+
+An adversarial testing methodology that systematically probes AI systems for safety vulnerabilities, harmful outputs, and security weaknesses. Foundry provides an AI Red Teaming Agent for automated scanning across risk categories.
+
+### Azure AI Foundry
+
+See [Microsoft Foundry](#microsoft-foundry).
+
+### Azure AI Projects
+
+The Python SDK and client library (`azure-ai-projects`) for interacting with Microsoft Foundry resources programmatically. Provides access to agents, models, evaluations, and connections.
+
+### Azure AI Search
+
+A cloud search service that provides keyword (BM25), vector, and semantic search capabilities. The foundry-docs MCP server uses Azure AI Search in hybrid mode when `AZURE_SEARCH_ENDPOINT` is configured.
+
+## C
+
+### Capability Host
+
+The runtime environment in Microsoft Foundry that hosts an agent's tool connections, including Azure AI Search, Azure Storage, and other integrated services. Capability hosts are configured per-agent and determine which tools the agent can access.
+
+### Code Interpreter
+
+An agent tool that executes Python code in a sandboxed environment. Used for data analysis, file processing, and generating outputs such as charts or transformed datasets.
+
+### Content Chunking
+
+The process of splitting large MDX documents into smaller, semantically coherent segments (chunks) before indexing into a vector store. The `MarkdownChunker` in `foundry_docs_mcp/chunker.py` splits documents by heading structure with configurable overlap to preserve context across chunk boundaries.
+
+## D
+
+### Devvit
+
+Reddit's developer platform for building server-side apps on Reddit. The `devvit-app/` in this repository monitors subreddits for Microsoft Foundry and Azure AI discussions and dispatches signals to GitHub via `repository_dispatch` for documentation impact analysis.
+
+### Diátaxis
+
+A documentation framework that organizes content into four types: tutorials (learning-oriented), how-to guides (goal-oriented), reference (information-oriented), and explanation (understanding-oriented). The docs-vnext documentation follows the Diátaxis framework.
+
+### docs-vnext
+
+The Mintlify MDX documentation directory (`docs-vnext/`) under active development. Served by the `foundry-docs-vnext` MCP server and used as the "D" backend in A/B/C/D evaluation. Distinct from the canonical `docs/` directory synchronized from upstream.
+
+## E
+
+### Embeddings
+
+Dense numerical vector representations of text produced by an embedding model (e.g., `text-embedding-3-small`). Used for semantic similarity search: documents and queries are embedded into the same vector space so that semantically related content can be retrieved via nearest-neighbor lookup.
+
+### Evaluator
+
+A component that measures the quality of AI model outputs against defined criteria. Foundry provides built-in evaluators for relevance, groundedness, fluency, safety, and agent task completion, as well as support for custom evaluators.
+
+## F
+
+### FastMCP
+
+A Python framework for building Model Context Protocol (MCP) servers. The `foundry_docs_mcp` and `foundry_docs_vnext_mcp` packages are built on FastMCP 3.x, using composable lifespans, tool annotations, resource templates, and reusable prompts.
+
+### File Search
+
+An agent tool that retrieves relevant content from uploaded files using vector search over a vector store. Documents are chunked and embedded at upload time; queries are matched against chunk embeddings at runtime.
+
+### Fine-tuning
+
+The process of continuing training on a pre-trained foundation model using a domain-specific dataset, adapting the model's behavior for a target task or style. Foundry supports fine-tuning for select models with JSONL training data.
+
+### Function Calling
+
+A capability that allows language models to invoke external functions or APIs defined by the developer. The model emits a structured tool-call response that the application executes, returning results to the model for grounded generation.
+
+## G
+
+### Guardrails
+
+Safety controls and content filters applied to AI model inputs and outputs. In Foundry, guardrails include prompt shields, content filtering policies, and custom policy definitions that govern what content models may produce.
+
+## H
+
+### Hit@K
+
+An information retrieval metric that measures whether at least one expected result appears in the top-K results returned by a search query. Used in the A/B/C/D evaluation harness (`scripts/run_abcd_eval.py`) to compare documentation search backends.
+
+### HNSW (Hierarchical Navigable Small World)
+
+An approximate nearest-neighbor graph algorithm used for efficient vector search. The Azure AI Search index in foundry-docs uses HNSW with cosine similarity to retrieve semantically similar document chunks.
+
+### Hosted Agent
+
+An agent deployed and managed entirely on Microsoft Foundry infrastructure. Hosted agents have their own identity, tool connections, and lifecycle managed by the Foundry platform, as opposed to agents run locally or in a custom compute environment.
+
+### Hybrid Search
+
+A retrieval strategy that combines keyword search (BM25/full-text) with vector search (embedding similarity) to improve relevance. The `AzureSearchIndex` in `foundry_docs_mcp/indexer.py` uses hybrid search with semantic reranking when Azure AI Search is configured.
+
+## M
+
+### MCP (Model Context Protocol)
+
+An open protocol for connecting AI models to external tools, data sources, and services. MCP defines a standard interface for tools (callable functions), resources (readable data), and prompts (reusable message templates), allowing AI assistants to interact with the external world in a structured way.
+
+### MCP Gateway (MCPG)
+
+A proxy service that manages the lifecycle of stdio MCP servers via container-based deployment. From MCPG v0.1.6, servers must be declared with `container:` rather than `command:` in workflow configuration. The foundry-docs server runs as `ghcr.io/nicholasdbrady/foundry-docs:latest`.
+
+### MDX
+
+Markdown with JSX components. The documentation format used by Mintlify, allowing standard Markdown content to be mixed with React-style components such as `<Note>`, `<Tip>`, `<CodeGroup>`, and `<Accordion>`. All files in `docs-vnext/` use the `.mdx` extension.
+
+### Microsoft Foundry
+
+Microsoft's unified AI development platform for building, deploying, and managing AI agents and models. Formerly referred to as Azure AI Foundry or Azure AI Studio, it provides the Azure AI Agents Service, model catalog, fine-tuning, evaluation, observability, and governance capabilities.
+
+### Mintlify
+
+A documentation platform used to author and serve the `docs-vnext/` content. Provides MDX-based page authoring, navigation configuration via `docs.json`, built-in search, and a hosted publishing pipeline.
+
+### MRR (Mean Reciprocal Rank)
+
+An information retrieval metric that measures the average reciprocal rank of the first relevant result across a set of queries. Computed in `scripts/run_abcd_eval.py` to compare documentation search backends. A higher MRR indicates that relevant results appear closer to the top of result lists.
+
+## P
+
+### Provisioned Throughput
+
+A model deployment option that reserves dedicated compute capacity for predictable, low-latency inference. Provisioned throughput units (PTUs) are purchased and allocated to specific deployments, unlike standard pay-per-token deployments.
+
+## R
+
+### RAG (Retrieval Augmented Generation)
+
+A pattern that combines document retrieval with language model generation to produce responses grounded in a knowledge base. A query is used to retrieve relevant document chunks, which are then included as context in the model prompt. The foundry-docs MCP server supports RAG workflows via Azure AI Search hybrid retrieval.
+
+### RBAC (Role-Based Access Control)
+
+An authorization model that grants permissions to users and services based on assigned roles rather than individual identities. Microsoft Foundry uses Azure RBAC roles (e.g., Azure AI Developer, Cognitive Services OpenAI User) to control access to resources.
+
+### Redis
+
+An in-memory data store used for caching and deduplication. The Devvit Reddit community monitor uses Redis with a 7-day TTL to deduplicate post and comment events before dispatching to GitHub.
+
+### `repository_dispatch`
+
+A GitHub webhook event type that allows external systems to trigger GitHub Actions workflows by sending an HTTP POST to the GitHub API. The Devvit app uses `repository_dispatch` to signal Reddit community activity to the foundry-docs repository.
+
+## S
+
+### SearchIndex
+
+The local TF-IDF-based search index (`foundry_docs_mcp/indexer.py`) built from MDX documentation files at MCP server startup. Used as the default search backend when Azure AI Search is not configured. Supports full-text search with title-weighted scoring.
+
+### Semantic Reranking
+
+Reordering search results using a semantic language model to improve relevance beyond initial keyword or vector ranking. Azure AI Search applies semantic reranking via a `SemanticConfiguration` that prioritizes title, section heading, and content fields.
+
+## T
+
+### TF-IDF (Term Frequency–Inverse Document Frequency)
+
+A statistical measure used to rank document relevance for a query. TF measures how often a term appears in a document; IDF down-weights terms that appear across many documents. The local `SearchIndex` uses TF-IDF scoring with title boosting (title tokens are weighted 2×).
+
+### Telemetry
+
+Structured logging and metrics emission for observability of MCP server operations. The `foundry_docs_mcp/telemetry.py` module tracks search queries, result counts, backend latency, and search feedback events using OpenTelemetry-compatible instrumentation.
+
+## V
+
+### Vector Search
+
+Similarity-based document retrieval using dense embedding vectors. A query is embedded using the same model as the indexed documents, and the nearest vectors (by cosine similarity) are returned as results. Used in conjunction with keyword search in hybrid mode.
+
+### Vector Store
+
+A storage system that indexes and retrieves documents using embedding vectors. In Foundry, vector stores are associated with the File Search tool and back agent knowledge bases. The Azure AI Search index in foundry-docs functions as a vector store for documentation chunks.
