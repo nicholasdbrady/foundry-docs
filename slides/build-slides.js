@@ -39,18 +39,18 @@ const C = {
 
 // ── LIVE DATA — computed from repo ────────────────────────────────────────
 const DATA = {
-  mdxDocs:           267,
-  agenticWorkflows:  25,
-  totalWorkflows:    29,
-  slashCommands:     5,
+  mdxDocs:           269,
+  agenticWorkflows:  26,
+  totalWorkflows:    59,
+  slashCommands:     6,
   workflowChains:    4,
   scheduleWorkflows: 12,
-  pushWorkflows:     1,
+  pushWorkflows:     3,
   prWorkflows:       7,
-  issueWorkflows:    24,
-  dispatchWorkflows: 19,
+  issueWorkflows:    25,
+  dispatchWorkflows: 20,
   sdkRepos:          4,
-  docSections:       14,
+  docSections:       15,
   sections: [
     { name: "Models",            count: 72 },
     { name: "Agents",            count: 57 },
@@ -66,6 +66,7 @@ const DATA = {
     { name: "Best Practices",    count: 5  },
     { name: "Get Started",       count: 4  },
     { name: "Overview",          count: 1  },
+    { name: "Reference",         count: 1  },
   ],
 };
 
@@ -289,7 +290,7 @@ async function buildPresentation() {
     const boxes = [
       { label: "MicrosoftDocs\nupstream", sub: "azure-ai-docs-pr", color: C.darkBg,   textCol: C.white,  subCol: C.lightTeal },
       { label: "Sync &\nConvert",         sub: "scripts/",         color: C.primary,  textCol: C.white,  subCol: C.accent },
-      { label: "docs-vnext/",             sub: "267 MDX pages",    color: C.secondary,textCol: C.white,  subCol: C.darkBg },
+      { label: "docs-vnext/",             sub: `${DATA.mdxDocs} MDX pages`,    color: C.secondary,textCol: C.white,  subCol: C.darkBg },
       { label: "FastMCP\nServer",         sub: "foundry_docs_mcp/",color: C.primary,  textCol: C.white,  subCol: C.accent },
       { label: "AI Assistants\n& IDEs",   sub: "via MCP protocol", color: C.darkBg,   textCol: C.white,  subCol: C.lightTeal },
     ];
@@ -434,7 +435,7 @@ async function buildPresentation() {
       { icon: FaFlask,         label: "Testing",        count: 4,  desc: "Noob tester, multi-device,\nsearch quality, testbench" },
       { icon: MdUpdate,        label: "Content Updates",count: 7,  desc: "Healer, updater, unbloat,\nglossary, labels, sync" },
       { icon: FaShieldAlt,     label: "Quality Review", count: 5,  desc: "Auditor, PR reviewer,\nmerge verify, push check" },
-      { icon: FaUsers,         label: "Community",      count: 3,  desc: "Discussion monitor,\nresponder, auto-triage" },
+      { icon: FaUsers,         label: "Community",      count: 4,  desc: "Discussion monitor, Reddit\nmonitor, responder, triage" },
       { icon: FaCog,           label: "Operations",     count: 1,  desc: "Slide deck maintainer\n(this deck!)" },
     ];
 
@@ -847,7 +848,7 @@ async function buildPresentation() {
       { val: `${DATA.mdxDocs}`,           label: "MDX Pages",            sub: "in docs-vnext/",            icon: FaFileAlt },
       { val: `${DATA.agenticWorkflows}`,  label: "Agentic Workflows",    sub: ".md definitions",           icon: FaRobot },
       { val: `${DATA.docSections}`,       label: "Doc Sections",         sub: "topic areas covered",       icon: FaList },
-      { val: `${DATA.slashCommands}`,     label: "Slash Commands",       sub: "/audit /unbloat /sdk-check…", icon: FaBolt },
+      { val: `${DATA.slashCommands}`,     label: "Slash Commands",       sub: "/audit /unbloat /check-reddit…", icon: FaBolt },
       { val: `${DATA.sdkRepos}`,          label: "SDK Repos Tracked",    sub: "Python · JS · .NET · Java", icon: FaCode },
       { val: `${DATA.scheduleWorkflows}`, label: "Scheduled Jobs",       sub: "daily/weekly cron",         icon: FaTachometerAlt },
     ];
