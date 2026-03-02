@@ -138,6 +138,18 @@ repo:microsoft-foundry/foundry-samples is:issue is:open documentation OR docs OR
 
 These issues surface real user confusion that often stems from incomplete docs. Examples include missing health endpoint documentation, RBAC permission gaps, and broken tutorial links.
 
+### 1E: Reddit Community Signals (foundry-docs)
+
+Search for open issues created by the Reddit community monitor workflow:
+
+```
+repo:${{ github.repository }} is:issue is:open in:title "[reddit-community]"
+```
+
+These issues are created when the Devvit app detects Reddit posts about Microsoft Foundry / Azure AI keywords and the `reddit-community-monitor` agentic workflow classifies them as documentation-relevant. Reddit Pro provides the analytics layer for keyword/subreddit discovery.
+
+Skip issue numbers already in the cache.
+
 ## Step 2: Cross-Reference Against docs-vnext
 
 For each signal found across all sources:
@@ -208,19 +220,20 @@ internal_issues=COMMA_SEPARATED_IDS
 discussions=COMMA_SEPARATED_IDS
 public_docs_issues=COMMA_SEPARATED_IDS
 samples_issues=COMMA_SEPARATED_IDS
+reddit_issues=COMMA_SEPARATED_IDS
 EOF
 ```
 
 If no gaps found across all sources, call `noop`:
 
 ```json
-{"noop": {"message": "No documentation gaps found. Scanned: N internal issues, M discussions, P public docs issues, Q samples issues."}}
+{"noop": {"message": "No documentation gaps found. Scanned: N internal issues, M discussions, P public docs issues, Q samples issues, R reddit community issues."}}
 ```
 
 ## Guidelines
 
 - **Target `docs-vnext/` ONLY** — never modify `docs/`
 - **High certainty required**: Only propose fixes you are confident about
-- **Prioritize by source**: samples repo issues > community `documentation` discussions > public docs issues > internal issues
+- **Prioritize by source**: samples repo issues > community `documentation` discussions > reddit community issues > public docs issues > internal issues
 - **Be minimal**: Fix only confirmed gaps, don't over-expand scope
 - **Exit cleanly**: Always call exactly one safe-output tool (create-pull-request, create-issue, or noop)

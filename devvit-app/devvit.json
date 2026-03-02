@@ -1,0 +1,52 @@
+{
+  "name": "foundry-community-monitor",
+  "version": "0.0.1",
+  "description": "Monitors subreddits for Microsoft Foundry / Azure AI discussions and dispatches events to the foundry-docs GitHub repository for documentation impact analysis.",
+  "permissions": {
+    "reddit": true,
+    "http": {
+      "enable": true,
+      "domains": ["api.github.com"]
+    },
+    "redis": true
+  },
+  "triggers": {
+    "onPostSubmit": "/internal/on-post-submit",
+    "onCommentCreate": "/internal/on-comment-create"
+  },
+  "scheduler": {
+    "tasks": {
+      "weekly-digest": {
+        "endpoint": "/internal/scheduler/weekly-digest",
+        "cron": "0 14 * * 1"
+      }
+    }
+  },
+  "settings": {
+    "global": {
+      "githubToken": {
+        "type": "string",
+        "label": "GitHub PAT for repository_dispatch",
+        "isSecret": true,
+        "defaultValue": ""
+      },
+      "githubRepo": {
+        "type": "string",
+        "label": "GitHub repo (owner/name)",
+        "defaultValue": "nicholasdbrady/foundry-docs"
+      }
+    },
+    "subreddit": {
+      "keywords": {
+        "type": "string",
+        "label": "Comma-separated keywords to monitor",
+        "defaultValue": "microsoft foundry,azure openai,azure ai,ai foundry,ai projects sdk,hosted agent,azure ai search,model context protocol"
+      },
+      "enabled": {
+        "type": "boolean",
+        "label": "Enable monitoring in this subreddit",
+        "defaultValue": true
+      }
+    }
+  }
+}
