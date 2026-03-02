@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Chunk docs and ingest into Azure AI Search with embeddings."""
+"""Chunk docs and ingest into Azure AI Search with embeddings.
+
+Supports both the primary docs/ and docs-vnext/ content sets via CLI args.
+"""
 
 from __future__ import annotations
 
@@ -14,7 +17,6 @@ from foundry_docs_mcp.foundry_client import FoundryProjectOpenAI
 from foundry_docs_mcp.indexer import AzureSearchIndex
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DOCS_DIR = Path(os.environ.get("FOUNDRY_DOCS_DIR", PROJECT_ROOT / "docs"))
 
 
 def _require(name: str) -> str:
@@ -39,6 +41,18 @@ def _parse_args() -> argparse.Namespace:
         default=int(os.environ.get("FOUNDRY_INGEST_MAX_CONCURRENCY", "1")),
         help="Number of concurrent embedding/upload workers",
     )
+    parser.add_argument(
+        "--docs-dir",
+        type=str,
+        default=None,
+        help="Path to docs directory (default: env FOUNDRY_DOCS_DIR or docs/)",
+    )
+    parser.add_argument(
+        "--index-name",
+        type=str,
+        default=None,
+        help="Azure Search index name (default: env AZURE_SEARCH_INDEX_NAME or 'foundry-docs')",
+    )
     return parser.parse_args()
 
 
@@ -46,8 +60,10 @@ def main():
     args = _parse_args()
     started = time.perf_counter()
 
+    docs_dir = Path(args.docs_dir) if args.docs_dir else Path(os.environ.get("FOUNDRY_DOCS_DIR", PROJECT_ROOT / "docs"))
+
     search_endpoint = _require("AZURE_SEARCH_ENDPOINT")
-    search_index_name = os.environ.get("AZURE_SEARCH_INDEX_NAME", "foundry-docs")
+    search_index_name = args.index_name or os.environ.get("AZURE_SEARCH_INDEX_NAME", "foundry-docs")
     search_api_key = os.environ.get("AZURE_SEARCH_API_KEY")
 
     project_endpoint = _require("AZURE_AI_PROJECT_ENDPOINT")
@@ -65,7 +81,7 @@ def main():
     )
     azure_index.create_index(recreate=args.recreate)
 
-    chunks = chunk_directory(DOCS_DIR)
+    chunks = chunk_directory(docs_dir)
 
     def embed_batch(texts: list[str]) -> list[list[float]]:
         return foundry_client.embed_texts(texts)
