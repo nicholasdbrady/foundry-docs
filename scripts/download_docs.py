@@ -9,8 +9,7 @@ import json
 import os
 import subprocess
 import sys
-import time
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 REPO_OWNER = "MicrosoftDocs"
@@ -125,7 +124,7 @@ def main():
                     else:
                         failed += 1
                         failed_files.append(source)
-            except Exception as e:
+            except Exception:
                 failed += 1
                 failed_files.append(source)
 
@@ -134,7 +133,7 @@ def main():
 
     print(f"\nDownload complete: {success} succeeded, {failed} failed", file=sys.stderr)
     if failed_files:
-        print(f"Failed files:", file=sys.stderr)
+        print("Failed files:", file=sys.stderr)
         for f in failed_files[:20]:
             print(f"  {f}", file=sys.stderr)
         if len(failed_files) > 20:

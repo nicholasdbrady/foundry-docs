@@ -6,7 +6,6 @@ tabs, images, zone pivots, link rewriting, code includes, and YML FAQ docs.
 """
 
 import json
-import os
 import re
 import sys
 from pathlib import Path, PurePosixPath
@@ -422,7 +421,7 @@ def convert_tabs(content: str) -> str:
             else:
                 # Close previous tab, start new one
                 result.append(f'  <Tab title="{current_tab_title}">')
-                result.extend(f"    {l}" if l.strip() else "" for l in current_tab_content)
+                result.extend(f"    {line}" if line.strip() else "" for line in current_tab_content)
                 result.append("  </Tab>")
                 current_tab_title = tab_title
                 current_tab_content = []
@@ -433,7 +432,7 @@ def convert_tabs(content: str) -> str:
         if in_tabs and line.strip() == "---":
             # Close the last tab and the tabs group
             result.append(f'  <Tab title="{current_tab_title}">')
-            result.extend(f"    {l}" if l.strip() else "" for l in current_tab_content)
+            result.extend(f"    {line}" if line.strip() else "" for line in current_tab_content)
             result.append("  </Tab>")
             result.append("</Tabs>")
             in_tabs = False
@@ -452,7 +451,7 @@ def convert_tabs(content: str) -> str:
     # Handle unclosed tabs
     if in_tabs:
         result.append(f'  <Tab title="{current_tab_title}">')
-        result.extend(f"    {l}" if l.strip() else "" for l in current_tab_content)
+        result.extend(f"    {line}" if line.strip() else "" for line in current_tab_content)
         result.append("  </Tab>")
         result.append("</Tabs>")
 
@@ -814,7 +813,7 @@ def fix_components_in_list_items(content: str) -> str:
             continue
 
         # Non-blank, non-indented line ends list context
-        if line.strip() and not line[0:1] in (' ', '\t'):
+        if line.strip() and line[0:1] not in (' ', '\t'):
             in_list = False
 
         if in_list:
@@ -842,15 +841,15 @@ def fix_components_in_list_items(content: str) -> str:
 
                 # De-indent all lines until the closing tag
                 while i < len(lines):
-                    l = lines[i]
-                    if l.startswith(indent):
-                        result.append(l[len(indent):])
-                    elif l.strip():
-                        result.append(l.lstrip())
+                    cur = lines[i]
+                    if cur.startswith(indent):
+                        result.append(cur[len(indent):])
+                    elif cur.strip():
+                        result.append(cur.lstrip())
                     else:
                         result.append('')
                     i += 1
-                    if close_tag in l:
+                    if close_tag in cur:
                         break
 
                 if i < len(lines) and lines[i].strip():
@@ -1086,10 +1085,10 @@ def convert_yml_faq(source_path: str) -> str:
     summary = data.get("summary", meta.get("description", ""))
 
     lines = [
-        f"---",
+        "---",
         f'title: "{title}"',
         f'description: "{summary.strip()}"' if summary else "",
-        f"---\n",
+        "---\n",
         f"# {title}\n",
     ]
     if summary:

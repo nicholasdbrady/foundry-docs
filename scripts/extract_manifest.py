@@ -10,7 +10,6 @@ import re
 import subprocess
 import sys
 from pathlib import PurePosixPath
-from urllib.parse import urlparse
 
 import yaml
 

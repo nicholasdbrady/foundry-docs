@@ -5,7 +5,6 @@ Generates docs.json with full navigation structure.
 """
 
 import json
-import os
 import sys
 from pathlib import Path
 
@@ -15,7 +14,6 @@ DOCS_DIR = Path("docs")
 def build_nav_group(section: dict) -> dict | None:
     """Build a Mintlify navigation group from a TOC section."""
     name = section.get("name", "")
-    slug = section.get("slug", "")
     pages = section.get("pages", [])
 
     if not pages:
