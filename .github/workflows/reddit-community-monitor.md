@@ -28,6 +28,8 @@ tools:
     - "cat *"
     - "grep *"
     - "find docs-vnext -name '*.mdx'"
+    - "echo *"
+    - "date *"
 
 safe-outputs:
   create-issue:
@@ -47,11 +49,6 @@ network:
 imports:
   - shared/mood.md
   - shared/reporting.md
-  - shared/mcp/foundry-docs.md
-
-steps:
-  - name: Install foundry-docs MCP server
-    run: pip install -e .
 
 timeout-minutes: 10
 ---
@@ -97,15 +94,25 @@ Check the cache for any pending posts. If none, call noop.
 
 ## Step 3: Search Existing Documentation
 
-Use the `foundry-docs` MCP server to check if the topic is already documented:
+Use bash tools to search the documentation for related content:
 
-1. `search_docs("matched_keyword")` — Find related pages
-2. For each result, assess coverage depth
+1. Search for keywords in docs-vnext:
+   ```bash
+   grep -r -l -i "keyword" docs-vnext/ --include="*.mdx"
+   ```
+2. Read a specific doc file:
+   ```bash
+   cat docs-vnext/path/to/file.mdx
+   ```
+3. List all doc files:
+   ```bash
+   find docs-vnext -name '*.mdx' | sort
+   ```
 
 Keywords from the payload indicate which topics to search. For example:
-- `azure openai` → search for deployment, API, models
-- `hosted agent` → search for agent deployment, hosted agents
-- `model context protocol` → search for MCP setup, MCP authentication
+- `azure openai` → grep for "openai", "deployment", "model"
+- `hosted agent` → grep for "hosted", "agent", "deploy"
+- `model context protocol` → grep for "mcp", "model context protocol"
 
 ## Step 4: Classify the Post
 
