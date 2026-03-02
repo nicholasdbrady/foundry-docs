@@ -48,6 +48,7 @@ tools:
     - "git log --since='24 hours ago' --oneline"
     - "git log --since='7 days ago' --oneline"
     - "cat *"
+    - "mkdir *"
 
 timeout-minutes: 20
 ---
