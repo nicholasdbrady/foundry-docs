@@ -1,0 +1,38 @@
+name: Label Dispatch
+
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+
+    steps:
+      - name: Dispatch slash command
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LABEL: ${{ github.event.label.name }}
+          ISSUE: ${{ github.event.issue.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          case "$LABEL" in
+            needs-audit)
+              COMMAND="/audit"
+              ;;
+            sdk-update)
+              COMMAND="/sdk-check"
+              ;;
+            needs-search-test)
+              COMMAND="/search-test"
+              ;;
+            *)
+              echo "No dispatch mapping for label: $LABEL"
+              exit 0
+              ;;
+          esac
+
+          echo "Dispatching $COMMAND on issue #$ISSUE (triggered by label: $LABEL)"
+          gh issue comment "$ISSUE" --repo "$REPO" --body "$COMMAND"
