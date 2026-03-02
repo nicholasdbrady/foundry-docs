@@ -25,7 +25,7 @@ network:
 
 safe-outputs:
   create-pull-request:
-    expires: 1d
+    expires: 2d
     title-prefix: "[docs-vnext] "
     labels: [documentation, automation, docs-vnext]
     reviewers: [copilot]

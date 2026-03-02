@@ -2,12 +2,11 @@
 name: SDK Release Monitor
 description: Monitors Azure SDK repos for new azure-ai-projects releases across Python, JS, .NET, and Java
 on:
-  schedule: every 2h
+  schedule: every 12h
   slash_command:
     name: sdk-check
     events: [issue_comment]
   workflow_dispatch:
-  skip-if-match: 'is:issue is:open in:title "[sdk-release]"'
   reaction: "eyes"
 
 permissions:
@@ -34,7 +33,7 @@ safe-outputs:
   create-issue:
     title-prefix: "[sdk-release] "
     labels: [sdk-update, automation]
-    expires: 7d
+    expires: 3d
     close-older-issues: true
   noop:
 

@@ -2,9 +2,8 @@
 name: Upstream Docs Monitor
 description: Monitors azure-ai-docs-pr for changes to Foundry documentation and triggers sync when detected
 on:
-  schedule: every 4h
+  schedule: every 8h
   workflow_dispatch:
-  skip-if-match: 'is:issue is:open in:title "[upstream-docs]"'
 
 permissions:
   contents: read
@@ -29,7 +28,7 @@ safe-outputs:
   create-issue:
     title-prefix: "[upstream-docs] "
     labels: [upstream-sync, automation]
-    expires: 3d
+    expires: 2d
     close-older-issues: true
   dispatch-workflow:
     workflows: ["sync-and-convert"]
