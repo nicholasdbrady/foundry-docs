@@ -1,13 +1,13 @@
 ---
 mcp-servers:
   foundry-docs:
-    command: "foundry-docs"
+    container: "ghcr.io/nicholasdbrady/foundry-docs:latest"
     allowed: ["search_docs", "get_doc", "list_sections", "get_section"]
 ---
 
 # Foundry Documentation MCP Server
 
-This MCP server provides search access to the project's own Microsoft Foundry documentation (~267 pages).
+This MCP server provides search access to the project's own Microsoft Foundry documentation (~267 pages). It runs as a containerized stdio MCP server via the MCP Gateway.
 
 ## Available Tools
 
@@ -23,12 +23,6 @@ This MCP server provides search access to the project's own Microsoft Foundry do
 - **Understanding structure**: Use `list_sections()` and `get_section()` to find the right location for content
 - **Cross-referencing**: Search for related topics to add appropriate internal links
 
-## Prerequisites
+## Container Image
 
-The server requires `pip install -e .` to be run first. Add this as a build step:
-
-```yaml
-steps:
-  - name: Install foundry-docs MCP server
-    run: pip install -e .
-```
+The server runs from `ghcr.io/nicholasdbrady/foundry-docs:latest` — no `pip install` or build steps needed.

@@ -49,6 +49,7 @@ network:
 imports:
   - shared/mood.md
   - shared/reporting.md
+  - shared/mcp/foundry-docs.md
 
 timeout-minutes: 10
 ---
@@ -94,25 +95,16 @@ Check the cache for any pending posts. If none, call noop.
 
 ## Step 3: Search Existing Documentation
 
-Use bash tools to search the documentation for related content:
+Use the `foundry-docs` MCP server to check if the topic is already documented:
 
-1. Search for keywords in docs-vnext:
-   ```bash
-   grep -r -l -i "keyword" docs-vnext/ --include="*.mdx"
-   ```
-2. Read a specific doc file:
-   ```bash
-   cat docs-vnext/path/to/file.mdx
-   ```
-3. List all doc files:
-   ```bash
-   find docs-vnext -name '*.mdx' | sort
-   ```
+1. `search_docs("matched_keyword")` — Find related pages
+2. `get_doc("path")` — Read the current content of a page
+3. For each result, assess coverage depth
 
 Keywords from the payload indicate which topics to search. For example:
-- `azure openai` → grep for "openai", "deployment", "model"
-- `hosted agent` → grep for "hosted", "agent", "deploy"
-- `model context protocol` → grep for "mcp", "model context protocol"
+- `azure openai` → `search_docs("azure openai deployment")`
+- `hosted agent` → `search_docs("hosted agent deploy")`
+- `model context protocol` → `search_docs("MCP server setup")`
 
 ## Step 4: Classify the Post
 

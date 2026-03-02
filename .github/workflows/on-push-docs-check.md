@@ -27,10 +27,6 @@ imports:
   - shared/mood.md
   - shared/mcp/foundry-docs.md
 
-steps:
-  - name: Install foundry-docs MCP server
-    run: pip install -e .
-
 tools:
   github:
     toolsets: [default]

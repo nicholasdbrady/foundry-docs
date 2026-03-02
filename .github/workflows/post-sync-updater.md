@@ -29,10 +29,6 @@ imports:
   - shared/mcp/mintlify-docs.md
   - shared/mcp/foundry-docs.md
 
-steps:
-  - name: Install foundry-docs MCP server
-    run: pip install -e .
-
 tools:
   cache-memory: true
   github:
