@@ -328,11 +328,26 @@ Make sure you have RBAC enabled so that `azd` can provision the services and mod
 
 ### Roles and permissions
 
+The following roles apply to the **user or service principal** performing the deployment:
+
 * If you have an existing Foundry resource and need to create a new Foundry project to deploy a hosted agent, you need **Azure AI Owner** roles.
 
 * If you have an existing project and want to create the model deployment and container registry in the project, you need **Azure AI Owner**  role on Foundry in addition to the **Contributor** role on the Azure subscription.
 
-* If you have everything configured in the project to deploy a hosted agent, you need **Reader** on the Foundry account and **Azure AI User** on the project. 
+* If you have everything configured in the project to deploy a hosted agent, you need **Reader** on the Foundry account and **Azure AI User** on the project.
+
+In addition to user permissions, the **project's system-assigned managed identity** requires its own roles to operate at runtime:
+
+| Identity | Required role | Scope | Purpose |
+|----------|---------------|-------|---------|
+| Deploying user or service principal | Azure AI User + Reader | Foundry account | Create and manage hosted agents |
+| Project's system-assigned managed identity | Azure AI User | Foundry account | Runtime operations: read connections, initialize tracing |
+
+<Warning>
+If the project managed identity lacks **Azure AI User** at the Foundry account scope, the hosted agent container fails to initialize tracing at startup with a `PermissionDenied` error referencing the `Microsoft.CognitiveServices/accounts/AIServices/connections/read` data action. Grant this role assignment before deploying.
+</Warning>
+
+If you use the `azd ai agent` CLI extension, this role assignment is configured automatically. If you set up resources manually, assign the **Azure AI User** role to your project's system-assigned managed identity at the Foundry account (resource) scope.
 
 Refer to [this article](/security/authentication-authorization-foundry#built-in-roles-overview) to learn more about built-in roles in Foundry.
 
@@ -907,9 +922,9 @@ Currently supported built-in Foundry tools include:
 
 Hosted agents support exposing OpenTelemetry traces, metrics, and logs from underlying frameworks to Microsoft Foundry with Application Insights or any user-specified OpenTelemetry Collector endpoint.
 
-If you use the `azd ai agent` CLI extension, Application Insights is automatically provisioned and connected to your Foundry project for you. Your project's managed identity is granted the Azure AI User role on the Foundry resource so that traces are exported to Application Insights.
+If you use the `azd ai agent` CLI extension, Application Insights is automatically provisioned and connected to your Foundry project for you. Your project's managed identity is granted the **Azure AI User** role on the Foundry resource so that traces are exported to Application Insights.
 
-If you use the Foundry SDK, you need to perform these steps independently. For more information, see [Enable tracing in your project](../../../foundry-classic/how-to/develop/trace-application.md#enable-tracing-in-your-project).
+If you set up resources manually with the Foundry SDK, you must grant the **Azure AI User** role to your project's system-assigned managed identity at the Foundry account (resource) scope before initializing tracing. Without this role, tracing initialization fails at container startup. For steps to find your project's managed identity object ID, see [Configure Azure Container Registry permissions](#configure-azure-container-registry-permissions).
 
 The hosting adapter provides:
 
