@@ -73,7 +73,7 @@ async def load_docs(server):
         try:
             azure_index = AzureSearchIndex(
                 endpoint=os.environ["AZURE_SEARCH_ENDPOINT"],
-                index_name=os.environ.get("AZURE_SEARCH_INDEX_NAME", "foundry-docs-vnext"),
+                index_name=os.environ.get("AZURE_SEARCH_VNEXT_INDEX_NAME", "foundry-docs-vnext"),
                 api_key=os.environ.get("AZURE_SEARCH_API_KEY"),
             )
 
