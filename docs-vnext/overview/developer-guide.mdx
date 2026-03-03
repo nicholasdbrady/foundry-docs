@@ -37,7 +37,7 @@ Microsoft Foundry represents eight simultaneous transitions across branding, API
 | Agent API | Assistants API (Agents v0.5/v1) | Responses API (Agents v2) |
 | API versioning | Monthly `api-version` params | v1 stable routes (`/openai/v1/`) |
 | Resource model | Hub + Azure OpenAI + Azure AI Services | Foundry resource (single, with projects) |
-| SDKs | `azure-ai-inference`, `AzureOpenAI()` | `azure-ai-projects` 2.x, `OpenAI()` |
+| SDKs & endpoints | Multiple packages (`azure-ai-inference`, `azure-ai-generative`, `azure-ai-ml`, `AzureOpenAI()`) against 5+ endpoints | Unified project client (`azure-ai-projects` 2.x) + `OpenAI()` against one project endpoint. See [SDK evolution](/api-sdk/sdk-classic-vs-new). |
 | Terminology | Threads, Messages, Runs, Assistants | Conversations, Items, Responses, Agent Versions |
 | AI services branding | Azure AI Services | Foundry Tools |
 
@@ -119,6 +119,8 @@ A Foundry resource exposes three endpoints:
 
 Upgrading an existing Azure OpenAI resource changes `kind` from `OpenAI` to `AIServices` while preserving the existing endpoint, keys, deployments, and state. The upgrade is non-breaking and additive — it enables Foundry features without disrupting existing workloads.
 
+The SDK story parallels the resource consolidation. Previously, each Azure AI resource required its own SDK package and endpoint configuration. The Foundry SDK (`azure-ai-projects`) connects to a single project endpoint and provides access to agents, models, evaluations, connections, and datasets — replacing the need to configure multiple packages against multiple endpoints.
+
 ## Which migration path do I need?
 
 The transition involves multiple independent axes. Most developers only need to act on one or two.
@@ -128,7 +130,8 @@ The transition involves multiple independent axes. Most developers only need to 
 | Using Azure OpenAI resources | Upgrade the resource to a Foundry resource | [Upgrade to Foundry](/setup/upgrade-azure-openai) |
 | Using the Assistants API or Agents v1 | Migrate agent code to Agents v2 (Responses API) | [Migrate to Agents v2](/setup/migrate) |
 | Using monthly `api-version` parameters | Switch to v1 API routes | [Move to v1 API](/api-sdk/api-version-lifecycle) |
-| Using `azure-ai-inference` SDK | Switch to the OpenAI SDK | [SDK overview](/api-sdk/sdk-overview) |
+| Using `azure-ai-inference` SDK | Switch to the OpenAI SDK | [Migration guide](/setup/model-inference-to-openai-migration) |
+| Using multiple Azure AI SDK packages | Consolidate to the Foundry SDK + OpenAI SDK | [SDK evolution](/api-sdk/sdk-classic-vs-new) |
 | Using hub-based projects | Continue using Foundry (classic) portal | Migration guides forthcoming |
 
 ## How Foundry differs from Copilot Studio and M365 Copilot
