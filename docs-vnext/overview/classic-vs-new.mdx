@@ -1,0 +1,71 @@
+---
+title: "Classic vs. New: terminology and feature comparison"
+description: "A reference mapping of terminology, features, and capabilities between Microsoft Foundry (classic) and Microsoft Foundry (new)."
+---
+
+Microsoft Foundry evolved through several naming and architectural changes. This page provides a reference mapping between classic and new terminology, capabilities, and features to help developers navigate the transition.
+
+<Info>
+**Naming history:** Azure AI Studio (Nov 2023) → Azure AI Foundry (Nov 2024) → Microsoft Foundry (Nov 2025). Azure AI Services → Foundry Tools. The Azure resource type remains `Microsoft.CognitiveServices/accounts`. All names in this documentation refer to the same evolving platform.
+</Info>
+
+## Terminology mapping
+
+| Concept | Classic term | New term | Notes |
+|---------|-------------|----------|-------|
+| Conversation state | Threads | Conversations | Conversations store items (messages, tool calls, outputs), not just messages. |
+| Chat messages | Messages | Items | Items are a superset of messages. |
+| Execution | Runs (async, polled) | Responses (sync by default) | No polling loop required. |
+| Agent definition | Assistants / Agents | Agent Versions | Versioned, with explicit kind (prompt, workflow, hosted). |
+| Agent creation | `create_agent()` | `create_version()` | Uses `PromptAgentDefinition`. |
+| API wire protocol | Assistants API | Responses API | Assistants API sunset: August 26, 2026. |
+| API versioning | Monthly `api-version` params | v1 stable routes | No version parameter required. |
+| Client library | `AzureOpenAI()` | `OpenAI()` with `base_url` | Standard client, Azure-specific code eliminated. |
+| Portal (main) | Foundry (classic) | Foundry (new) | Toggle in portal banner switches between them. |
+| Portal settings | Management Center | Operate section | Navigation reorganized. |
+| Resource type | Azure OpenAI + Hub | Foundry Resource | Single `AIServices` kind with child projects. |
+| AI services | Azure AI Services | Foundry Tools | Speech, Vision, Language, Content Safety, Content Understanding. |
+| RBAC roles | Cognitive Services OpenAI User | Azure AI User, Azure AI Project Manager, Azure AI Owner | New roles with control/data plane separation. |
+| Model billing | Model-as-a-Service (MaaS) | Foundry Direct Models | First-party models billed directly via Azure meters. |
+| SDK (Python) | `azure-ai-inference`, `AzureOpenAI` | `azure-ai-projects` 2.x, `openai` | `azure-ai-inference` retiring May 30, 2026. |
+| Documentation | Foundry (classic) docs | Foundry (new) docs | Version selector in documentation banner. |
+
+## Feature comparison: Classic vs. New portal
+
+| Feature | Foundry (classic) | Foundry (new) |
+|---------|-------------------|---------------|
+| Azure OpenAI resources | ✅ | Use Foundry resource (upgrade available) |
+| Hub-based projects | ✅ | Not visible (use classic portal) |
+| Foundry projects | ✅ | ✅ |
+| Agents v2 (Responses API) | ❌ | ✅ |
+| Multi-agent workflows | ❌ | ✅ |
+| Tool catalog (1,400+ tools) | ❌ | ✅ |
+| Agent memory | ❌ | ✅ |
+| Foundry IQ | ❌ | ✅ (preview) |
+| Hosted agents | ❌ | ✅ (preview) |
+| A2A protocol | ❌ | ✅ (preview) |
+| Foundry Control Plane | ❌ | ✅ (preview) |
+| Agent publishing to M365/Teams | ❌ | ✅ |
+| Chat completions | ✅ | ✅ |
+| Responses API | ❌ | ✅ |
+| Fine-tuning | ✅ | ✅ |
+| Evaluations | ✅ | ✅ (enhanced) |
+| Model catalog | ✅ | ✅ (expanded) |
+
+## SDK version mapping
+
+| SDK Version | Portal Version | Status |
+|---|---|---|
+| `azure-ai-projects` 2.x (preview) | Foundry (new) | Preview |
+| `azure-ai-projects` 1.x (GA) | Foundry (classic) | Stable |
+
+<Warning>
+Ensure the SDK version matches your portal experience. Using a 2.x SDK sample with a 1.x setup (or vice versa) causes errors.
+</Warning>
+
+## Related content
+
+- [A developer's guide to Microsoft Foundry](/overview/developer-guide)
+- [SDK comparison: Classic vs. New](/api-sdk/sdk-classic-vs-new)
+- [Migrate to the new Foundry Agent Service](/setup/migrate)
+- [Upgrade from Azure OpenAI to Microsoft Foundry](/setup/upgrade-azure-openai)

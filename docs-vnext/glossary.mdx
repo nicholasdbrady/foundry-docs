@@ -1,9 +1,9 @@
 ---
 title: "Glossary"
-description: "Definitions of key terms used in Microsoft Foundry documentation and the foundry-docs project"
+description: "Definitions of key terms used in Microsoft Foundry documentation"
 ---
 
-A reference for technical terms used throughout Microsoft Foundry documentation, the foundry-docs MCP server, and the supporting toolchain.
+A reference for technical terms used throughout Microsoft Foundry documentation.
 
 ## A
 
@@ -11,13 +11,25 @@ A reference for technical terms used throughout Microsoft Foundry documentation,
 
 An AI-powered entity that can perceive context, reason over goals, and take actions autonomously using tools, models, and instructions. In Microsoft Foundry, agents are built and deployed via the Azure AI Agents Service and may use tools such as Code Interpreter, File Search, and Function Calling.
 
+### Agent Framework
+
+An open-source framework for building multi-agent systems in code. The Agent Framework supports local orchestration with workflow patterns and is cloud-agnostic, connecting to Microsoft Foundry via the project endpoint.
+
+### Agent Version
+
+A versioned, named definition of an agent in Microsoft Foundry. Agent versions have an explicit kind (prompt, workflow, or hosted) and are created using `create_version()`. Replaces the earlier pattern of creating agents with `create_agent()`.
+
 ### AI Red Teaming
 
 An adversarial testing methodology that systematically probes AI systems for safety vulnerabilities, harmful outputs, and security weaknesses. Foundry provides an AI Red Teaming Agent for automated scanning across risk categories.
 
+### Assistants API
+
+The previous wire protocol used by Agents v0.5 and v1 in Foundry Agent Service. Deprecated in favor of the Responses API, with a sunset date of August 26, 2026. See [Migrate to the new agents developer experience](/setup/migrate).
+
 ### Azure AI Foundry
 
-See [Microsoft Foundry](#microsoft-foundry).
+The previous name for Microsoft Foundry, used from November 2024 to November 2025. See [Microsoft Foundry](#microsoft-foundry).
 
 ### Azure AI Projects
 
@@ -37,23 +49,9 @@ The runtime environment in Microsoft Foundry that hosts an agent's tool connecti
 
 An agent tool that executes Python code in a sandboxed environment. Used for data analysis, file processing, and generating outputs such as charts or transformed datasets.
 
-### Content Chunking
+### Conversation
 
-The process of splitting large MDX documents into smaller, semantically coherent segments (chunks) before indexing into a vector store. The `MarkdownChunker` in `foundry_docs_mcp/chunker.py` splits documents by heading structure with configurable overlap to preserve context across chunk boundaries.
-
-## D
-
-### Devvit
-
-Reddit's developer platform for building server-side apps on Reddit. The `devvit-app/` in this repository monitors subreddits for Microsoft Foundry and Azure AI discussions and dispatches signals to GitHub via `repository_dispatch` for documentation impact analysis.
-
-### Diátaxis
-
-A documentation framework that organizes content into four types: tutorials (learning-oriented), how-to guides (goal-oriented), reference (information-oriented), and explanation (understanding-oriented). The docs-vnext documentation follows the Diátaxis framework.
-
-### docs-vnext
-
-The Mintlify MDX documentation directory (`docs-vnext/`) under active development. Served by the `foundry-docs-vnext` MCP server and used as the "D" backend in A/B/C/D evaluation. Distinct from the canonical `docs/` directory synchronized from upstream.
+A durable, server-managed object that stores items (messages, tool calls, tool outputs, reasoning items) across turns. Conversations replace threads in the new agents API. Created via the OpenAI client: `openai_client.conversations.create()`.
 
 ## E
 
@@ -79,6 +77,30 @@ An agent tool that retrieves relevant content from uploaded files using vector s
 
 The process of continuing training on a pre-trained foundation model using a domain-specific dataset, adapting the model's behavior for a target task or style. Foundry supports fine-tuning for select models with JSONL training data.
 
+### Foundry (classic)
+
+The portal experience at ai.azure.com that supports all resource types including Azure OpenAI, hub-based projects, and Foundry projects. Also referred to as "Mainline" internally. See [What is Microsoft Foundry?](/overview/what-is-foundry).
+
+### Foundry (new)
+
+The modernized portal experience at ai.azure.com optimized for multi-agent applications. Displays only Foundry projects. Supports Agents v2, workflows, tool catalog, memory, and Foundry Control Plane. See [What is Microsoft Foundry?](/overview/what-is-foundry).
+
+### Foundry Control Plane
+
+A unified management interface for observing, governing, and controlling AI agents, models, and tools across an enterprise. Provides fleet-level visibility and compliance enforcement.
+
+### Foundry Direct Models
+
+Models sold directly by Azure (including Azure OpenAI, DeepSeek, Meta, xAI, Mistral, and Microsoft models) billed through Azure meters rather than the Azure Marketplace.
+
+### Foundry Resource
+
+The top-level Azure resource (`Microsoft.CognitiveServices/accounts` with `kind: AIServices`) that provides unified access to agents, models, Foundry Tools, evaluations, and projects. Replaces the previous pattern of managing separate Azure OpenAI and Hub resources.
+
+### Foundry Tools
+
+The collection of domain-specific AI services available in Microsoft Foundry, including Azure Speech, Azure Vision, Azure Language, Content Safety, and Content Understanding. Formerly known as Azure AI Services (and before that, Cognitive Services).
+
 ### Function Calling
 
 A capability that allows language models to invoke external functions or APIs defined by the developer. The model emits a structured tool-call response that the application executes, returning results to the model for grounded generation.
@@ -91,21 +113,19 @@ Safety controls and content filters applied to AI model inputs and outputs. In F
 
 ## H
 
-### Hit@K
-
-An information retrieval metric that measures whether at least one expected result appears in the top-K results returned by a search query. Used in the A/B/C/D evaluation harness (`scripts/run_abcd_eval.py`) to compare documentation search backends.
-
-### HNSW (Hierarchical Navigable Small World)
-
-An approximate nearest-neighbor graph algorithm used for efficient vector search. The Azure AI Search index in foundry-docs uses HNSW with cosine similarity to retrieve semantically similar document chunks.
-
 ### Hosted Agent
 
-An agent deployed and managed entirely on Microsoft Foundry infrastructure. Hosted agents have their own identity, tool connections, and lifecycle managed by the Foundry platform, as opposed to agents run locally or in a custom compute environment.
+An agent deployed and managed entirely on Microsoft Foundry infrastructure. Hosted agents have their own identity, tool connections, and lifecycle managed by the Foundry platform, as opposed to agents run locally or in a custom compute environment. Hosted agents run as containerized services with managed scaling, identity, and observability.
 
 ### Hybrid Search
 
 A retrieval strategy that combines keyword search (BM25/full-text) with vector search (embedding similarity) to improve relevance. The `AzureSearchIndex` in `foundry_docs_mcp/indexer.py` uses hybrid search with semantic reranking when Azure AI Search is configured.
+
+## I
+
+### Item
+
+A unit of content in a conversation. Items are a superset of messages and can represent messages, tool calls, tool outputs, reasoning items, and other data. Replaces the message-only model used in threads.
 
 ## M
 
@@ -113,27 +133,15 @@ A retrieval strategy that combines keyword search (BM25/full-text) with vector s
 
 An open protocol for connecting AI models to external tools, data sources, and services. MCP defines a standard interface for tools (callable functions), resources (readable data), and prompts (reusable message templates), allowing AI assistants to interact with the external world in a structured way.
 
-### MCP Gateway (MCPG)
-
-A proxy service that manages the lifecycle of stdio MCP servers via container-based deployment. From MCPG v0.1.6, servers must be declared with `container:` rather than `command:` in workflow configuration. The foundry-docs server runs as `ghcr.io/nicholasdbrady/foundry-docs:latest`.
-
-### MDX
-
-Markdown with JSX components. The documentation format used by Mintlify, allowing standard Markdown content to be mixed with React-style components such as `<Note>`, `<Tip>`, `<CodeGroup>`, and `<Accordion>`. All files in `docs-vnext/` use the `.mdx` extension.
-
 ### Microsoft Foundry
 
-Microsoft's unified AI development platform for building, deploying, and managing AI agents and models. Formerly referred to as Azure AI Foundry or Azure AI Studio, it provides the Azure AI Agents Service, model catalog, fine-tuning, evaluation, observability, and governance capabilities.
-
-### Mintlify
-
-A documentation platform used to author and serve the `docs-vnext/` content. Provides MDX-based page authoring, navigation configuration via `docs.json`, built-in search, and a hosted publishing pipeline.
-
-### MRR (Mean Reciprocal Rank)
-
-An information retrieval metric that measures the average reciprocal rank of the first relevant result across a set of queries. Computed in `scripts/run_abcd_eval.py` to compare documentation search backends. A higher MRR indicates that relevant results appear closer to the top of result lists.
+Microsoft's unified AI development platform for building, deploying, and managing AI agents, models, and tools. Previously known as Azure AI Foundry (2024) and Azure AI Studio (2023). Provides Foundry Agent Service, model catalog, fine-tuning, evaluation, observability, and governance capabilities under a single Foundry resource.
 
 ## P
+
+### Project
+
+A development boundary inside a Foundry resource where teams build, evaluate, and isolate use cases. Projects share the parent resource's security and networking settings but provide independent access control and data isolation.
 
 ### Provisioned Throughput
 
@@ -147,37 +155,27 @@ A pattern that combines document retrieval with language model generation to pro
 
 ### RBAC (Role-Based Access Control)
 
-An authorization model that grants permissions to users and services based on assigned roles rather than individual identities. Microsoft Foundry uses Azure RBAC roles (e.g., Azure AI Developer, Cognitive Services OpenAI User) to control access to resources.
+An authorization model that grants permissions to users and services based on assigned roles rather than individual identities. Microsoft Foundry uses Azure RBAC roles (e.g., Azure AI User, Azure AI Project Manager, Azure AI Owner, Cognitive Services OpenAI User) to control access to resources.
 
-### Redis
+### Response
 
-An in-memory data store used for caching and deduplication. The Devvit Reddit community monitor uses Redis with a 7-day TTL to deduplicate post and comment events before dispatching to GitHub.
+The result of invoking an agent or model through the Responses API. Responses are synchronous by default, returning output items directly without requiring polling. Replaces the async run-and-poll pattern used in the Assistants API.
 
-### `repository_dispatch`
+### Responses API
 
-A GitHub webhook event type that allows external systems to trigger GitHub Actions workflows by sending an HTTP POST to the GitHub API. The Devvit app uses `repository_dispatch` to signal Reddit community activity to the foundry-docs repository.
-
-## S
-
-### SearchIndex
-
-The local TF-IDF-based search index (`foundry_docs_mcp/indexer.py`) built from MDX documentation files at MCP server startup. Used as the default search backend when Azure AI Search is not configured. Supports full-text search with title-weighted scoring.
-
-### Semantic Reranking
-
-Reordering search results using a semantic language model to improve relevance beyond initial keyword or vector ranking. Azure AI Search applies semantic reranking via a `SemanticConfiguration` that prioritizes title, section heading, and content fields.
+The modern API primitive for generating model outputs in Microsoft Foundry. Supports built-in tools (web search, file search, code interpreter, MCP, image generation), stateful context via conversations, and encrypted reasoning for compliance scenarios. Recommended for all new projects.
 
 ## T
 
-### TF-IDF (Term Frequency–Inverse Document Frequency)
+### Thread
 
-A statistical measure used to rank document relevance for a query. TF measures how often a term appears in a document; IDF down-weights terms that appear across many documents. The local `SearchIndex` uses TF-IDF scoring with title boosting (title tokens are weighted 2×).
-
-### Telemetry
-
-Structured logging and metrics emission for observability of MCP server operations. The `foundry_docs_mcp/telemetry.py` module tracks search queries, result counts, backend latency, and search feedback events using OpenTelemetry-compatible instrumentation.
+(Deprecated) A server-side collection of messages used in the Assistants API. Replaced by [Conversation](#conversation) in the Responses API. See [Migrate to the new agents developer experience](/setup/migrate).
 
 ## V
+
+### v1 API
+
+The stable Azure OpenAI API route (`/openai/v1/`) that eliminates monthly `api-version` parameters. Uses the standard `OpenAI()` client instead of the Azure-specific `AzureOpenAI()` client. Supports cross-provider model calls. See [Azure OpenAI v1 API](/api-sdk/api-version-lifecycle).
 
 ### Vector Search
 
@@ -186,3 +184,9 @@ Similarity-based document retrieval using dense embedding vectors. A query is em
 ### Vector Store
 
 A storage system that indexes and retrieves documents using embedding vectors. In Foundry, vector stores are associated with the File Search tool and back agent knowledge bases. The Azure AI Search index in foundry-docs functions as a vector store for documentation chunks.
+
+## W
+
+### Workflow Agent
+
+An agent type in Foundry Agent Service defined as a declarative YAML-based or visual orchestration of multiple agents. Workflow agents coordinate sequential, parallel, or group-chat patterns with optional human-in-the-loop steps.
