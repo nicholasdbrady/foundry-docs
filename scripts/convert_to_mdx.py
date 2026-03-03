@@ -1038,6 +1038,36 @@ def escape_jsx_braces(content: str) -> str:
     return ''.join(parts)
 
 
+def strip_leading_h1(body: str, meta: dict) -> str:
+    """Remove the first H1 heading from the body if it duplicates the frontmatter title.
+
+    Mintlify renders the frontmatter ``title`` as the page H1 and ``description``
+    as a subtitle paragraph.  Microsoft Learn source files also include a body-level
+    ``# Title`` heading, which creates a visible duplicate on Mintlify.  This function
+    strips the first body H1 (and any immediately following paragraph that matches
+    the frontmatter description) so only the frontmatter controls the rendered heading.
+    """
+    if not meta.get("title"):
+        return body
+
+    # Match the first H1 at the start of the body (allowing leading whitespace/newlines)
+    h1_match = re.match(r'^(\s*# .+\n)', body)
+    if not h1_match:
+        return body
+
+    body = body[h1_match.end():]
+
+    # If the next non-empty line is a paragraph that matches the frontmatter description,
+    # strip it too (it would duplicate the Mintlify-rendered subtitle).
+    desc = meta.get("description", "")
+    if desc:
+        desc_match = re.match(r'^(\s*\n)?' + re.escape(desc.strip()) + r'\s*\n', body)
+        if desc_match:
+            body = body[desc_match.end():]
+
+    return body
+
+
 def clean_up(content: str) -> str:
     """Final cleanup pass."""
     # Remove leftover moniker range from front matter comments
@@ -1089,10 +1119,7 @@ def convert_yml_faq(source_path: str) -> str:
         f'title: "{title}"',
         f'description: "{summary.strip()}"' if summary else "",
         "---\n",
-        f"# {title}\n",
     ]
-    if summary:
-        lines.append(summary.strip() + "\n")
 
     for section in data.get("sections", []):
         section_name = section.get("name", "")
@@ -1203,6 +1230,10 @@ def convert_doc(doc: dict) -> str | None:
 
     # Step 20: Final cleanup
     body = clean_up(body)
+
+    # Step 21: Strip leading H1 that duplicates the frontmatter title
+    # Mintlify renders frontmatter title as the page H1, so body H1 creates a duplicate
+    body = strip_leading_h1(body, meta)
 
     # Build final MDX
     front_matter = build_mdx_front_matter(meta)
