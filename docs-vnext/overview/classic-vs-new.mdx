@@ -27,7 +27,14 @@ Microsoft Foundry evolved through several naming and architectural changes. This
 | AI services | Azure AI Services | Foundry Tools | Speech, Vision, Language, Content Safety, Content Understanding. |
 | RBAC roles | Cognitive Services OpenAI User | Azure AI User, Azure AI Project Manager, Azure AI Owner | New roles with control/data plane separation. |
 | Model billing | Model-as-a-Service (MaaS) | Foundry Direct Models | First-party models billed directly via Azure meters. |
-| SDK (Python) | `azure-ai-inference`, `AzureOpenAI` | `azure-ai-projects` 2.x, `openai` | `azure-ai-inference` retiring May 30, 2026. |
+| Model inference SDK | `azure-ai-inference` | `openai` | `azure-ai-inference` retiring May 30, 2026. |
+| Project client | `azure-ai-projects` 1.x | `azure-ai-projects` 2.x | 2.x targets Foundry (new); 1.x targets Foundry (classic). |
+| Generative AI SDK | `azure-ai-generative` | `azure-ai-projects` 2.x | Capabilities merged into project client. |
+| Evaluation SDK | `azure-ai-evaluation` (standalone) | `azure-ai-projects` (remote) + `azure-ai-evaluation` (local) | Remote evaluations via project client; local evaluations unchanged. |
+| Hub workspace SDK | `azure-ai-ml` | `azure-ai-projects` 2.x | For hub-to-project migration scenarios. |
+| Search SDK | `azure-search-documents` | `azure-search-documents` (via project connections) | Separate package, discoverable through project client. |
+| Client library | `AzureOpenAI()` | `OpenAI()` with `base_url` | Standard client, Azure-specific code eliminated. |
+| Endpoints | Multiple (openai, azureml, cognitiveservices, search, speech) | Single project endpoint + OpenAI v1 endpoint | See [SDK evolution](/api-sdk/sdk-classic-vs-new). |
 | Documentation | Foundry (classic) docs | Foundry (new) docs | Version selector in documentation banner. |
 
 ## Feature comparison: Classic vs. New portal

@@ -1,30 +1,101 @@
 ---
-title: "SDK comparison: Classic vs. New"
-description: "Side-by-side comparison of classic and new SDK patterns in Microsoft Foundry, with code examples for common migration scenarios."
+title: "SDK evolution: from fragmented packages to a unified project client"
+description: "Understand how Microsoft Foundry's SDK ecosystem consolidated from multiple packages and endpoints to a single project client with unified access to agents, models, evaluations, and tools."
 ---
 
-{/* Reference page: neutral, technical comparisons of classic and new SDK patterns */}
+{/* Explanation page: understanding the SDK consolidation from fragmented packages to unified project client */}
 
-# SDK comparison: Classic vs. New
+# SDK evolution: from fragmented packages to a unified project client
 
-Microsoft Foundry's SDK ecosystem evolved alongside the platform's shift from model-centric inference to agent-centric workloads. This page provides side-by-side comparisons of classic and new SDK patterns to help migrate existing code.
+Microsoft Foundry's SDK ecosystem evolved from a collection of separate packages, each targeting a different endpoint and capability, to a unified project client that provides access to the full platform from a single entry point. This page explains what changed, why, and how to map previous packages to their current equivalents.
 
-## SDK mapping
+## The problem: too many packages, too many endpoints
 
-| Classic SDK | New SDK | Purpose | Migration effort |
-|-------------|---------|---------|-----------------|
-| `azure-ai-inference` | `openai` | Model inference (chat completions, embeddings) | Low — package swap, endpoint change |
-| `AzureOpenAI()` client | `OpenAI()` client with `base_url` | Azure OpenAI API access | Low — 3-line change |
-| Monthly `api-version` param | v1 stable routes (`/openai/v1/`) | API version management | Low — remove param |
-| `azure-ai-projects` 1.x | `azure-ai-projects` 2.x | Foundry project capabilities | Medium — API surface changes |
-| `client.agents.create_agent()` | `client.agents.create_version()` | Agent creation | Medium — new definition model |
-| `client.agents.threads.create()` | `openai_client.conversations.create()` | Conversation state | Medium — different client |
-| `client.agents.runs.create()` | `openai_client.responses.create()` | Agent execution | Medium — sync by default |
+The previous SDK landscape required developers to install and configure multiple packages, each with its own endpoint, authentication pattern, and API conventions. A developer building an agent with retrieval-augmented generation, evaluations, and speech might need five or more packages against four or more endpoints.
 
-## Client library: AzureOpenAI → OpenAI
+| Capability | Previous endpoints | Previous SDK packages |
+|-----------|-------------------|----------------------|
+| Model inference | `*.openai.azure.com` | `openai` (with `AzureOpenAI` client), `azure-ai-inference` |
+| Agents | `*.openai.azure.com`, `*.api.azureml.ms/agents` | `openai` (assistants), `azure-ai-projects` 1.x |
+| Knowledge and search | `*.search.windows.net`, `*.api.azureml.ms/assets` | `azure-search-documents`, `azure-ai-ml` |
+| Evaluations | `*.openai.azure.com`, `*.api.azureml.ms/evaluations` | `azure-ai-evaluation`, `azure-ai-projects` 1.x |
+| Generative AI (RAG, prompt flow) | `*.api.azureml.ms` | `azure-ai-generative` |
+| Speech, Vision, Language, Content Safety | `*.cognitiveservices.azure.com`, `*.speech.microsoft.com` | `azure-cognitiveservices-speech`, `azure-ai-contentsafety`, `azure-ai-vision-imageanalysis`, and others |
+
+<Note>
+This fragmentation meant developers often had to configure multiple credentials, manage multiple package versions, and learn different API conventions for each capability.
+</Note>
+
+## The solution: one endpoint, one project client
+
+Foundry converges on:
+
+- **One project endpoint:** `https://{resource}.services.ai.azure.com/api/projects/{project}`
+- **One project client** (`AIProjectClient`) that provides access to agents, models, evaluations, connections, datasets, and indexes
+- **The OpenAI SDK** for model inference through `client.inference.get_azure_openai_client()` or direct use with the `/openai/v1/` endpoint
+
+```bash
+pip install azure-ai-projects azure-identity openai
+```
+
+```python
+from azure.identity import DefaultAzureCredential
+from azure.ai.projects import AIProjectClient
+
+# One client, one endpoint — access to all Foundry capabilities
+client = AIProjectClient(
+    endpoint="https://YOUR_RESOURCE.services.ai.azure.com/api/projects/YOUR_PROJECT",
+    credential=DefaultAzureCredential(),
+)
+
+# Get an OpenAI-compatible client for model inference
+openai_client = client.inference.get_azure_openai_client()
+```
+
+<Tip>
+With the v1 API, `get_azure_openai_client()` returns a standard `OpenAI()` client — no Azure-specific client code required. The same patterns work across providers.
+</Tip>
+
+## SDK mapping: previous packages → current packages
+
+| Previous package | Current package | Capability | Migration effort |
+|-----------------|----------------|------------|-----------------|
+| `azure-ai-inference` | `openai` | Model inference (chat completions, embeddings) | Low — package swap, endpoint change. See [migration guide](/setup/model-inference-to-openai-migration). |
+| `AzureOpenAI()` client | `OpenAI()` client with `base_url` | Azure OpenAI API access | Low — 3-line code change. See [v1 API](/api-sdk/api-version-lifecycle). |
+| Monthly `api-version` param | v1 stable routes (`/openai/v1/`) | API version management | Low — remove parameter |
+| `azure-ai-generative` | `azure-ai-projects` 2.x | RAG, prompt flow, generative scenarios | Medium — package replaced |
+| `azure-ai-projects` 1.x | `azure-ai-projects` 2.x | Project client (agents, evaluations, connections) | Medium — API surface changes |
+| `azure-ai-evaluation` (standalone) | `azure-ai-projects` evaluations API + `azure-ai-evaluation` (local) | Evaluation runs | Low — remote evals via project client; local evals unchanged |
+| `azure-ai-ml` (hub workspaces) | `azure-ai-projects` 2.x | Workspace and project management | Medium — hub→project migration |
+| `azure-search-documents` | `azure-search-documents` (via project connections) | Search index management and queries | Unchanged — discoverable through `client.connections` |
+| `client.agents.create_agent()` | `client.agents.create_version()` | Agent creation | Medium — versioned definition model. See [migration guide](/setup/migrate). |
+| `client.agents.threads.create()` | `openai_client.conversations.create()` | Conversation state | Medium — different client (OpenAI client) |
+| `client.agents.runs.create()` | `openai_client.responses.create()` | Agent execution | Medium — synchronous by default |
+| AI Services SDKs (Speech, Vision, Language, etc.) | Foundry Tools SDKs (unchanged) | Domain-specific AI capabilities | No change — accessible via project connections |
+
+## Endpoint consolidation
+
+| Before | After |
+|--------|-------|
+| `*.openai.azure.com` | `*.openai.azure.com/openai/v1` (v1 API) |
+| `*.api.azureml.ms/agents` | `*.services.ai.azure.com/api/projects/{project}` |
+| `*.api.azureml.ms/evaluations` | `*.services.ai.azure.com/api/projects/{project}` |
+| `*.api.azureml.ms/assets` | `*.services.ai.azure.com/api/projects/{project}` |
+| `*.search.windows.net` | `*.search.windows.net` (separate, discoverable via connections) |
+| `*.cognitiveservices.azure.com` | `*.cognitiveservices.azure.com` (Foundry Tools) |
+
+<Info>
+A Foundry resource exposes three endpoints. The project endpoint at `*.services.ai.azure.com` provides access to most capabilities. The OpenAI v1 endpoint at `*.openai.azure.com/openai/v1` provides direct model access. Foundry Tools at `*.cognitiveservices.azure.com` serve domain-specific services. See [SDKs and Endpoints](/api-sdk/sdk-overview) for details.
+</Info>
+
+## Code comparisons
+
+The following sections show side-by-side code examples for each major API change.
+
+### Client library: AzureOpenAI → OpenAI
 
 <CodeGroup>
-```python Classic
+```python Previous
 from openai import AzureOpenAI
 
 client = AzureOpenAI(
@@ -39,7 +110,7 @@ response = client.chat.completions.create(
 )
 ```
 
-```python New
+```python Current
 from openai import OpenAI
 
 client = OpenAI(
@@ -61,17 +132,17 @@ Key differences:
 - The `api_version` parameter is removed.
 - Both `chat.completions` and `responses` endpoints are available on v1.
 
-## API versioning: monthly params → v1 routes
+### API versioning: monthly params → v1 routes
 
 <CodeGroup>
-```bash Classic
+```bash Previous
 curl -X POST "https://YOUR_RESOURCE.openai.azure.com/openai/deployments/gpt-4o/chat/completions?api-version=2024-10-21" \
   -H "api-key: $AZURE_OPENAI_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"messages": [{"role": "user", "content": "Hello"}]}'
 ```
 
-```bash New
+```bash Current
 curl -X POST "https://YOUR_RESOURCE.openai.azure.com/openai/v1/chat/completions" \
   -H "api-key: $AZURE_OPENAI_API_KEY" \
   -H "Content-Type: application/json" \
@@ -83,10 +154,10 @@ curl -X POST "https://YOUR_RESOURCE.openai.azure.com/openai/v1/chat/completions"
 Preview features use headers (for example, `"aoai-evals":"preview"`) instead of preview API versions. Some features indicate preview status through their API path (for example, `/openai/v1/fine_tuning/alpha/graders/`).
 </Note>
 
-## Agent creation: create_agent → create_version
+### Agent creation: create_agent → create_version
 
 <CodeGroup>
-```python Classic
+```python Previous
 agent = project_client.agents.create_agent(
     model="gpt-4.1",
     name="my-agent",
@@ -95,7 +166,7 @@ agent = project_client.agents.create_agent(
 )
 ```
 
-```python New
+```python Current
 from azure.ai.projects.models import PromptAgentDefinition
 
 agent = project_client.agents.create_version(
@@ -110,16 +181,16 @@ agent = project_client.agents.create_version(
 
 Agent versions have an explicit `kind` (prompt, workflow, hosted) and are versioned by name. The response object includes an `id` in the format `agent-name:version-number`.
 
-## Conversations: threads → conversations
+### Conversations: threads → conversations
 
 <CodeGroup>
-```python Classic
+```python Previous
 thread = project_client.agents.threads.create(
     messages=[{"role": "user", "content": "Hello"}],
 )
 ```
 
-```python New
+```python Current
 openai_client = project_client.get_openai_client()
 
 conversation = openai_client.conversations.create(
@@ -129,13 +200,13 @@ conversation = openai_client.conversations.create(
 </CodeGroup>
 
 <Info>
-In the new API, agent creation uses `AIProjectClient` (project client), while conversations and responses use the OpenAI client obtained via `project_client.get_openai_client()`. This split exists because conversations and responses are built on the Responses API wire format.
+In the current API, agent creation uses `AIProjectClient` (project client), while conversations and responses use the OpenAI client obtained via `project_client.get_openai_client()`. This split exists because conversations and responses are built on the Responses API wire format.
 </Info>
 
-## Execution: runs → responses
+### Execution: runs → responses
 
 <CodeGroup>
-```python Classic
+```python Previous
 run = project_client.agents.runs.create(
     thread_id=thread.id,
     agent_id=agent.id,
@@ -147,7 +218,7 @@ while run.status in ("queued", "in_progress"):
     )
 ```
 
-```python New
+```python Current
 response = openai_client.responses.create(
     input="Draw a graph with slope 4 and y-intercept 9.",
     conversation=conversation.id,
@@ -162,9 +233,10 @@ Responses are synchronous by default — no polling loop is required.
 
 ## Deprecation timeline
 
-| SDK / API | Status | Retirement date | Replacement |
-|-----------|--------|-----------------|-------------|
-| `azure-ai-inference` | Deprecated | May 30, 2026 | `openai` SDK |
+| Package / API | Status | Retirement date | Replacement |
+|--------------|--------|-----------------|-------------|
+| `azure-ai-inference` | Deprecated | May 30, 2026 | `openai` SDK. See [migration guide](/setup/model-inference-to-openai-migration). |
+| `azure-ai-generative` | Superseded | No formal retirement date | `azure-ai-projects` 2.x |
 | Assistants API wire protocol | Deprecated | August 26, 2026 | Responses API |
 | Monthly `api-version` params | Supported (opt-in to v1) | No retirement date | v1 stable routes |
 | `azure-ai-projects` 1.x | Stable | No retirement date | `azure-ai-projects` 2.x (when GA) |
@@ -173,5 +245,6 @@ Responses are synchronous by default — no polling loop is required.
 
 - [Microsoft Foundry SDKs and Endpoints](/api-sdk/sdk-overview)
 - [Azure OpenAI v1 API](/api-sdk/api-version-lifecycle)
+- [Migrate from Azure AI Inference SDK to OpenAI SDK](/setup/model-inference-to-openai-migration)
 - [Migrate to the new Foundry Agent Service](/setup/migrate)
-- [Classic vs. New: terminology and feature comparison](/overview/classic-vs-new)
+- [A developer's guide to Microsoft Foundry](/overview/developer-guide)
