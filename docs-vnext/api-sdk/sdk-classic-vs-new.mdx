@@ -1,0 +1,177 @@
+---
+title: "SDK comparison: Classic vs. New"
+description: "Side-by-side comparison of classic and new SDK patterns in Microsoft Foundry, with code examples for common migration scenarios."
+---
+
+{/* Reference page: neutral, technical comparisons of classic and new SDK patterns */}
+
+# SDK comparison: Classic vs. New
+
+Microsoft Foundry's SDK ecosystem evolved alongside the platform's shift from model-centric inference to agent-centric workloads. This page provides side-by-side comparisons of classic and new SDK patterns to help migrate existing code.
+
+## SDK mapping
+
+| Classic SDK | New SDK | Purpose | Migration effort |
+|-------------|---------|---------|-----------------|
+| `azure-ai-inference` | `openai` | Model inference (chat completions, embeddings) | Low — package swap, endpoint change |
+| `AzureOpenAI()` client | `OpenAI()` client with `base_url` | Azure OpenAI API access | Low — 3-line change |
+| Monthly `api-version` param | v1 stable routes (`/openai/v1/`) | API version management | Low — remove param |
+| `azure-ai-projects` 1.x | `azure-ai-projects` 2.x | Foundry project capabilities | Medium — API surface changes |
+| `client.agents.create_agent()` | `client.agents.create_version()` | Agent creation | Medium — new definition model |
+| `client.agents.threads.create()` | `openai_client.conversations.create()` | Conversation state | Medium — different client |
+| `client.agents.runs.create()` | `openai_client.responses.create()` | Agent execution | Medium — sync by default |
+
+## Client library: AzureOpenAI → OpenAI
+
+<CodeGroup>
+```python Classic
+from openai import AzureOpenAI
+
+client = AzureOpenAI(
+    azure_endpoint="https://YOUR_RESOURCE.openai.azure.com",
+    api_key="YOUR_API_KEY",
+    api_version="2024-10-21",
+)
+
+response = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Hello"}]
+)
+```
+
+```python New
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="https://YOUR_RESOURCE.openai.azure.com/openai/v1/",
+    api_key="YOUR_API_KEY",
+)
+
+response = client.responses.create(
+    model="gpt-4.1-nano",
+    input="Hello",
+)
+```
+</CodeGroup>
+
+Key differences:
+
+- `OpenAI()` replaces `AzureOpenAI()`.
+- `base_url` replaces `azure_endpoint` (append `/openai/v1/`).
+- The `api_version` parameter is removed.
+- Both `chat.completions` and `responses` endpoints are available on v1.
+
+## API versioning: monthly params → v1 routes
+
+<CodeGroup>
+```bash Classic
+curl -X POST "https://YOUR_RESOURCE.openai.azure.com/openai/deployments/gpt-4o/chat/completions?api-version=2024-10-21" \
+  -H "api-key: $AZURE_OPENAI_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"messages": [{"role": "user", "content": "Hello"}]}'
+```
+
+```bash New
+curl -X POST "https://YOUR_RESOURCE.openai.azure.com/openai/v1/chat/completions" \
+  -H "api-key: $AZURE_OPENAI_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"model": "gpt-4.1-nano", "messages": [{"role": "user", "content": "Hello"}]}'
+```
+</CodeGroup>
+
+<Note>
+Preview features use headers (for example, `"aoai-evals":"preview"`) instead of preview API versions. Some features indicate preview status through their API path (for example, `/openai/v1/fine_tuning/alpha/graders/`).
+</Note>
+
+## Agent creation: create_agent → create_version
+
+<CodeGroup>
+```python Classic
+agent = project_client.agents.create_agent(
+    model="gpt-4.1",
+    name="my-agent",
+    instructions="You help with math questions.",
+    tools=[{"type": "code_interpreter"}]
+)
+```
+
+```python New
+from azure.ai.projects.models import PromptAgentDefinition
+
+agent = project_client.agents.create_version(
+    agent_name="my-agent",
+    definition=PromptAgentDefinition(
+        model="gpt-4.1",
+        instructions="You help with math questions.",
+    )
+)
+```
+</CodeGroup>
+
+Agent versions have an explicit `kind` (prompt, workflow, hosted) and are versioned by name. The response object includes an `id` in the format `agent-name:version-number`.
+
+## Conversations: threads → conversations
+
+<CodeGroup>
+```python Classic
+thread = project_client.agents.threads.create(
+    messages=[{"role": "user", "content": "Hello"}],
+)
+```
+
+```python New
+openai_client = project_client.get_openai_client()
+
+conversation = openai_client.conversations.create(
+    items=[{"type": "message", "role": "user", "content": "Hello"}],
+)
+```
+</CodeGroup>
+
+<Info>
+In the new API, agent creation uses `AIProjectClient` (project client), while conversations and responses use the OpenAI client obtained via `project_client.get_openai_client()`. This split exists because conversations and responses are built on the Responses API wire format.
+</Info>
+
+## Execution: runs → responses
+
+<CodeGroup>
+```python Classic
+run = project_client.agents.runs.create(
+    thread_id=thread.id,
+    agent_id=agent.id,
+)
+while run.status in ("queued", "in_progress"):
+    time.sleep(1)
+    run = project_client.agents.runs.get(
+        thread_id=thread.id, run_id=run.id
+    )
+```
+
+```python New
+response = openai_client.responses.create(
+    input="Draw a graph with slope 4 and y-intercept 9.",
+    conversation=conversation.id,
+    extra_body={
+        "agent_reference": {"name": "my-agent", "type": "agent_reference"}
+    }
+)
+```
+</CodeGroup>
+
+Responses are synchronous by default — no polling loop is required.
+
+## Deprecation timeline
+
+| SDK / API | Status | Retirement date | Replacement |
+|-----------|--------|-----------------|-------------|
+| `azure-ai-inference` | Deprecated | May 30, 2026 | `openai` SDK |
+| Assistants API wire protocol | Deprecated | August 26, 2026 | Responses API |
+| Monthly `api-version` params | Supported (opt-in to v1) | No retirement date | v1 stable routes |
+| `azure-ai-projects` 1.x | Stable | No retirement date | `azure-ai-projects` 2.x (when GA) |
+
+## Related content
+
+- [Microsoft Foundry SDKs and Endpoints](/api-sdk/sdk-overview)
+- [Azure OpenAI v1 API](/api-sdk/api-version-lifecycle)
+- [Migrate to the new Foundry Agent Service](/setup/migrate)
+- [Classic vs. New: terminology and feature comparison](/overview/classic-vs-new)

@@ -1,0 +1,154 @@
+---
+title: "A developer's guide to Microsoft Foundry"
+description: "Understand how Microsoft Foundry evolved from a model-centric platform to an agent-centric one, what changed, and how to navigate the transition."
+---
+
+{/* Diátaxis type: Explanation (understanding-oriented) */}
+
+Microsoft Foundry is the result of a rapid industry evolution from model-centric to agent-centric AI. This page explains the forces that drove that evolution, summarizes the eight dimensions of change, and provides a map for navigating the transition.
+
+## How the AI industry changed
+
+The AI industry underwent a phase transition between 2023 and 2025. The pace of model releases accelerated by two orders of magnitude, and the role of models in the software stack shifted fundamentally.
+
+| Era | Release cadence | Paradigm | Platform response |
+|-----|----------------|----------|-------------------|
+| **2023** | Major model release every ~6 months | Model-centric: models are the product. Developers consume inference APIs. | Azure AI Studio launched as a model playground and experimentation environment. |
+| **2024** | Releases every ~2–3 months | Transitional: reasoning and multimodal capabilities emerge (o1-preview, September 2024). Tool-calling and instruction-following improve dramatically. | Azure AI Foundry rebranding — reflecting a shift from "studio" (experimentation) to "foundry" (production). |
+| **2025** | Multiple releases every ~6 days | Agent-centric: models become infrastructure. Agents — compositions of models, tools, memory, and orchestration — are the product. | Microsoft Foundry launched with a unified resource model, Responses API, and v1 API routes. |
+
+Four capabilities converged to make this shift possible:
+
+- **Advanced reasoning** — Models that can plan, decompose tasks, and self-correct (o1, o3, o4-mini) made autonomous agent behavior viable.
+- **Improved tool-calling** — Models became reliable enough at structured function calling to be trusted with real-world tool execution without constant human oversight.
+- **Enhanced instruction following** — System prompt fidelity improved to the point where agents could maintain persona and follow constraints across long conversations.
+- **Multimodal capabilities** — Vision, audio, and image generation collapsed into single model families, enabling agents that perceive and act across modalities.
+
+The platform had to evolve from "serve a model" to "operate an agent factory." Every transition described below follows from this shift.
+
+## What changed
+
+Microsoft Foundry represents eight simultaneous transitions across branding, APIs, portals, SDKs, resource models, and terminology.
+
+| Dimension | Classic | New |
+|-----------|---------|-----|
+| Brand | Azure AI Studio / Azure AI Foundry | Microsoft Foundry |
+| Portal | Mainline → Foundry (classic) | NextGen → Foundry (new) |
+| Agent API | Assistants API (Agents v0.5/v1) | Responses API (Agents v2) |
+| API versioning | Monthly `api-version` params | v1 stable routes (`/openai/v1/`) |
+| Resource model | Hub + Azure OpenAI + Azure AI Services | Foundry resource (single, with projects) |
+| SDKs | `azure-ai-inference`, `AzureOpenAI()` | `azure-ai-projects` 2.x, `OpenAI()` |
+| Terminology | Threads, Messages, Runs, Assistants | Conversations, Items, Responses, Agent Versions |
+| AI services branding | Azure AI Services | Foundry Tools |
+
+For a complete terminology mapping and feature comparison, see [Classic vs. New comparison](/overview/classic-vs-new).
+
+## Why the agent API moved to the Responses API
+
+The Assistants API — the wire protocol underpinning Agents v0.5 and v1 — required managing four tightly-coupled objects (Assistants, Threads, Messages, Runs) with asynchronous polling loops. The Responses API replaces this with a fundamentally different architecture. Seven factors drove the change.
+
+**Simpler mental model.** The Responses API uses a single pattern: send input items, get output items back. There are no polling loops, no run-status checks, and no async orchestration complexity. This reduces the surface area for bugs in agent code.
+
+**Better performance.** The Responses API delivers measurably better model intelligence with reasoning models (o3, o4-mini). Evaluations show a 3% improvement on code-generation benchmarks with the same prompt and setup, because the Responses API preserves reasoning items across tool-calling turns.
+
+**Lower costs.** The Responses API achieves 40–80% improvement in cache utilization compared to previous approaches. Higher cache hit rates translate directly to lower input token costs — cached input tokens for o4-mini are 75% cheaper than uncached ones.
+
+**Native agentic tools.** The Responses API supports a built-in tool loop where the model can call multiple tools — web search, file search, code interpreter, image generation, remote MCP servers, and custom functions — within a single API request. The Assistants API required manual orchestration for multi-tool scenarios.
+
+**Conversations replace threads.** Threads could only store messages. Conversations store items — messages, tool calls, tool outputs, reasoning items, and other data. This richer context enables better debugging, training data extraction, and multi-agent coordination.
+
+**Encrypted reasoning for compliance.** Organizations with Zero Data Retention (ZDR) requirements cannot use stateful APIs. The Responses API supports encrypted reasoning items: the client receives an encrypted blob of reasoning tokens that can be passed back in future requests without the service persisting intermediate state. This capability had no equivalent in the Assistants API and is critical for regulated enterprise scenarios.
+
+**Future-proofing.** All new model support, tool integrations, and API features land exclusively on the Responses API. The Assistants API has received no new features since its deprecation notice. Agents v2, built on the Responses API, is the only path to new capabilities.
+
+<Warning>
+The Assistants API wire protocol is being sunset on August 26, 2026. Applications built on the Assistants API (Agents v0.5 and v1) must migrate to the Responses API (Agents v2) before that date.
+</Warning>
+
+## Why API versions moved to v1 routes
+
+Azure OpenAI historically required a dated `api-version` query parameter on every request. Each month brought a new preview version, each adding features that developers needed — 12 API versions in 12 months. When model releases accelerated to days rather than months, the monthly cadence became a treadmill.
+
+The v1 API eliminates this pattern:
+
+- No `api-version` query parameter. Developers access the latest features without updating version strings.
+- Standard `OpenAI()` client instead of the Azure-specific `AzureOpenAI()` client. The same code runs against multiple providers with only a `base_url` change.
+- Cross-provider model calls. The same `/openai/v1/chat/completions` route works with DeepSeek, Grok, and other Foundry Direct models.
+- Feature-specific preview headers instead of whole-API preview versions. Individual features can be previewed without affecting stable endpoints.
+
+The migration is a three-line code change:
+
+```python
+# Before (classic, monthly api-version)
+from openai import AzureOpenAI
+
+client = AzureOpenAI(
+    azure_endpoint="https://YOUR_RESOURCE.openai.azure.com",
+    api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+    api_version="2024-10-21",
+)
+```
+
+```python
+# After (v1, standard OpenAI client)
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="https://YOUR_RESOURCE.openai.azure.com/openai/v1/",
+    api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+)
+```
+
+<Info>
+Classic monthly `api-version` parameters continue to work. The v1 API is opt-in — existing code does not break.
+</Info>
+
+## One resource, one portal
+
+The classic resource model required multiple Azure resource types working together: an Azure OpenAI resource, an Azure AI Services resource, and a hub-based workspace — each with its own RBAC scope, private endpoint, and SDK configuration.
+
+The Foundry resource model consolidates these into a single resource (`Microsoft.CognitiveServices/accounts` with `kind: AIServices`) that contains child projects. Each project is an isolated workspace with its own agents, models, evaluations, and connections, but all projects share a single set of credentials, network configuration, and access control policies.
+
+A Foundry resource exposes three endpoints:
+
+| Endpoint | Purpose |
+|----------|---------|
+| `{name}.openai.azure.com` | Azure OpenAI API compatibility (chat completions, responses, embeddings) |
+| `{name}.services.ai.azure.com` | Foundry API (projects, agents, evaluations) |
+| `{name}.cognitiveservices.azure.com` | Foundry Tools (Speech, Vision, Language, Content Safety) |
+
+Upgrading an existing Azure OpenAI resource changes `kind` from `OpenAI` to `AIServices` while preserving the existing endpoint, keys, deployments, and state. The upgrade is non-breaking and additive — it enables Foundry features without disrupting existing workloads.
+
+## Which migration path do I need?
+
+The transition involves multiple independent axes. Most developers only need to act on one or two.
+
+| Current state | Action | Guide |
+|---------------|--------|-------|
+| Using Azure OpenAI resources | Upgrade the resource to a Foundry resource | [Upgrade to Foundry](/setup/upgrade-azure-openai) |
+| Using the Assistants API or Agents v1 | Migrate agent code to Agents v2 (Responses API) | [Migrate to Agents v2](/setup/migrate) |
+| Using monthly `api-version` parameters | Switch to v1 API routes | [Move to v1 API](/api-sdk/api-version-lifecycle) |
+| Using `azure-ai-inference` SDK | Switch to the OpenAI SDK | [SDK overview](/api-sdk/sdk-overview) |
+| Using hub-based projects | Continue using Foundry (classic) portal | Migration guides forthcoming |
+
+## How Foundry differs from Copilot Studio and M365 Copilot
+
+Microsoft Foundry, Copilot Studio, and M365 Copilot serve different personas and development models. The choice depends on who is building, what level of control is required, and where the agent runs.
+
+| Dimension | Microsoft Foundry | Copilot Studio | M365 Copilot |
+|-----------|------------------|----------------|--------------|
+| Target user | Developers, ML engineers | Business users, IT pros | End users |
+| Development model | Code-first (SDKs, CLI, VS Code) | Low-code (visual designer) | No development |
+| Agent complexity | Multi-agent systems, custom models | Departmental chatbots | Built-in assistant |
+| Deployment targets | Azure, containers, any cloud | Teams, Outlook, web | M365 apps |
+
+<Tip>
+For maximum flexibility, build backend logic in Foundry and compose user-facing experiences in Copilot Studio. This hybrid pattern combines full infrastructure control with broad end-user reach.
+</Tip>
+
+## Related content
+
+- [What is Microsoft Foundry?](/overview/what-is-foundry)
+- [Classic vs. New: terminology and feature comparison](/overview/classic-vs-new)
+- [SDK comparison: Classic vs. New](/api-sdk/sdk-classic-vs-new)
+- [Quickstart: Get started with Microsoft Foundry](/get-started/quickstart-create-foundry-resources)
