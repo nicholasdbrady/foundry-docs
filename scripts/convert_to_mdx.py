@@ -208,7 +208,7 @@ def convert_nextstep(content: str) -> str:
 
 
 def convert_checklists(content: str) -> str:
-    """Convert > [!div class="checklist"] blocks to Mintlify Check components."""
+    """Convert > [!div class="checklist"] blocks to markdown lists."""
     def replace_checklist(match):
         block = match.group(1)
         lines = []
@@ -216,7 +216,7 @@ def convert_checklists(content: str) -> str:
             stripped = re.sub(r'^>\s?', '', line).strip()
             if stripped.startswith("* ") or stripped.startswith("- "):
                 item = stripped[2:].strip()
-                lines.append(f"<Check>{item}</Check>")
+                lines.append(f"- {item}")
             elif stripped:
                 lines.append(stripped)
         return "\n".join(lines)
@@ -792,7 +792,7 @@ def fix_components_in_list_items(content: str) -> str:
     list items, MDX fails with 'Expected a closing tag before end of
     listItem'. Fix by de-indenting component blocks to top level.
     """
-    components = ('Frame', 'Note', 'Info', 'Tip', 'Warning', 'Check', 'Danger')
+    components = ('Frame', 'Note', 'Info', 'Tip', 'Warning', 'Danger')
     comp_names = '|'.join(components)
     open_re = re.compile(rf'^(\s+)<({comp_names})(\s|>|/>)')
     inline_re = re.compile(rf'^(\s+)<({comp_names})\b[^>]*>.*</\2>')
