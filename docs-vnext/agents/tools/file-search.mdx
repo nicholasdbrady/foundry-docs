@@ -4,6 +4,40 @@ description: "Configure the file search tool for Microsoft Foundry agents. Uploa
 ---
 Use the file search tool to enable Microsoft Foundry agents to search through your documents and retrieve relevant information. File search augments agents with knowledge from outside their model, such as proprietary product information or user-provided documents.
 
+{/* Code snippet for quick reference */}
+<CodeGroup>
+```python Python
+from azure.identity import DefaultAzureCredential
+from azure.ai.projects import AIProjectClient
+from azure.ai.projects.models import PromptAgentDefinition, FileSearchTool
+
+client = AIProjectClient(endpoint="YOUR_PROJECT_ENDPOINT", credential=DefaultAzureCredential())
+
+agent = client.agents.create_version(
+    agent_name="MyAgent",
+    definition=PromptAgentDefinition(
+        model="YOUR_MODEL_DEPLOYMENT",
+        instructions="You are a helpful assistant that can search through documents.",
+        tools=[FileSearchTool(vector_store_ids=["YOUR_VECTOR_STORE_ID"])],
+    ),
+)
+```
+
+```typescript TypeScript
+import { DefaultAzureCredential } from "@azure/identity";
+import { AIProjectClient } from "@azure/ai-projects";
+
+const project = new AIProjectClient("YOUR_PROJECT_ENDPOINT", new DefaultAzureCredential());
+
+const agent = await project.agents.createVersion("MyAgent", {
+    kind: "prompt",
+    model: "YOUR_MODEL_DEPLOYMENT",
+    instructions: "You are a helpful assistant that can search through documents.",
+    tools: [{ type: "file_search", vector_store_ids: ["YOUR_VECTOR_STORE_ID"] }],
+});
+```
+</CodeGroup>
+
 In this article, you learn how to:
 
 - Upload files and create a vector store

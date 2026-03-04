@@ -4,6 +4,41 @@ description: "Learn how to use Web search with the Responses API"
 ---
 Web search enables models to retrieve and ground responses with real-time information from the public web before generating output. When enabled, the model can return up-to-date answers with inline citations. Web search is available via the `web_search_preview` tool in the **Responses API**.
 
+{/* Code snippet for quick reference */}
+<CodeGroup>
+```python Python
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="YOUR_ENDPOINT/openai/v1",
+    api_key="YOUR_API_KEY",
+)
+
+response = client.responses.create(
+    model="gpt-4.1",
+    tools=[{"type": "web_search_preview"}],
+    input="What are the latest trends in renewable energy?",
+)
+print(response.output_text)
+```
+
+```javascript JavaScript
+import OpenAI from "openai";
+
+const client = new OpenAI({
+    baseURL: "YOUR_ENDPOINT/openai/v1",
+    apiKey: "YOUR_API_KEY",
+});
+
+const response = await client.responses.create({
+    model: "gpt-4.1",
+    tools: [{ type: "web_search_preview" }],
+    input: "What are the latest trends in renewable energy?",
+});
+console.log(response.output_text);
+```
+</CodeGroup>
+
 <Note>
 Some SDKs may expose both `web_search_preview` and `web_search` tool types.
 Only `web_search_preview` is currently supported for Web search in the Azure OpenAI Responses API.

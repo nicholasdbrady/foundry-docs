@@ -4,6 +4,55 @@ description: "Learn how to improve your model responses with structured outputs"
 ---
 Structured outputs make a model follow a [JSON Schema](https://json-schema.org/overview/what-is-jsonschema) definition that you provide as part of your inference API call. This is in contrast to the older [JSON mode](/models/capabilities/json-mode) feature, which guaranteed valid JSON would be generated, but was unable to ensure strict adherence to the supplied schema. Structured outputs are recommended for function calling, extracting structured data, and building complex multi-step workflows.
 
+{/* Code snippet for quick reference */}
+<CodeGroup>
+```python Python
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="YOUR_ENDPOINT/openai/v1",
+    api_key="YOUR_API_KEY",
+)
+
+response = client.chat.completions.create(
+    model="gpt-4.1",
+    messages=[{"role": "user", "content": "Extract: Alice joins on 2025-01-15"}],
+    response_format={"type": "json_schema", "json_schema": {
+        "name": "event",
+        "strict": True,
+        "schema": {"type": "object", "properties": {
+            "name": {"type": "string"},
+            "date": {"type": "string"},
+        }, "required": ["name", "date"], "additionalProperties": False},
+    }},
+)
+print(response.choices[0].message.content)
+```
+
+```javascript JavaScript
+import OpenAI from "openai";
+
+const client = new OpenAI({
+    baseURL: "YOUR_ENDPOINT/openai/v1",
+    apiKey: "YOUR_API_KEY",
+});
+
+const response = await client.chat.completions.create({
+    model: "gpt-4.1",
+    messages: [{ role: "user", content: "Extract: Alice joins on 2025-01-15" }],
+    response_format: { type: "json_schema", json_schema: {
+        name: "event",
+        strict: true,
+        schema: { type: "object", properties: {
+            name: { type: "string" },
+            date: { type: "string" },
+        }, required: ["name", "date"], additionalProperties: false },
+    }},
+});
+console.log(response.choices[0].message.content);
+```
+</CodeGroup>
+
 ## Getting started
 
 <Tabs>

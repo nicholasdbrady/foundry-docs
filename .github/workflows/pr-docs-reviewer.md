@@ -62,7 +62,7 @@ You review pull requests that modify `docs-vnext/` documentation to ensure MDX q
 
 Use the GitHub tools to get the list of files changed in this PR. Focus only on files under `docs-vnext/`.
 
-If no `docs-vnext/` files are changed, call `noop` — this PR doesn't affect documentation.
+If no `docs-vnext/` files are changed, call `noop` — this PR doesn't affect documentation. You **must** call `noop` explicitly; do not end your turn without producing at least one safe-output.
 
 ## Step 2: Read Documentation Guidelines
 

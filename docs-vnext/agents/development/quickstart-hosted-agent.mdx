@@ -4,6 +4,50 @@ description: "Learn how to deploy a containerized AI agent to Foundry Agent Serv
 ---
 In this quickstart, you deploy a containerized AI agent with Foundry tools to Foundry Agent Service. The sample agent uses web search and optionally MCP tools to answer questions. By the end, you have a running hosted agent that you can interact with through the Foundry playground.
 
+{/* Code snippet for quick reference */}
+<CodeGroup>
+```python Python
+from azure.ai.projects import AIProjectClient
+from azure.ai.projects.models import HostedAgentDefinition, ProtocolVersionRecord, AgentProtocol
+from azure.identity import DefaultAzureCredential
+
+client = AIProjectClient(
+    endpoint="YOUR_PROJECT_ENDPOINT",
+    credential=DefaultAzureCredential(),
+)
+
+agent = client.agents.create_version(
+    agent_name="my-hosted-agent",
+    definition=HostedAgentDefinition(
+        container_protocol_versions=[ProtocolVersionRecord(protocol=AgentProtocol.RESPONSES, version="v1")],
+        cpu="1",
+        memory="2Gi",
+        image="YOUR_REGISTRY.azurecr.io/YOUR_IMAGE:TAG",
+    ),
+)
+print(f"Hosted agent deployed: {agent.name} (version: {agent.version})")
+```
+
+```typescript TypeScript
+import { AIProjectClient } from "@azure/ai-projects";
+import { DefaultAzureCredential } from "@azure/identity";
+
+const client = new AIProjectClient(
+  "YOUR_PROJECT_ENDPOINT",
+  new DefaultAzureCredential(),
+);
+
+const agent = await client.agents.createVersion("my-hosted-agent", {
+  kind: "hosted",
+  containerProtocolVersions: [{ protocol: "responses", version: "v1" }],
+  cpu: "1",
+  memory: "2Gi",
+  image: "YOUR_REGISTRY.azurecr.io/YOUR_IMAGE:TAG",
+});
+console.log(`Hosted agent deployed: ${agent.name} (version: ${agent.version})`);
+```
+</CodeGroup>
+
 **In this quickstart, you:**
 
 <Check>Set up an agent sample project with Foundry tools</Check>

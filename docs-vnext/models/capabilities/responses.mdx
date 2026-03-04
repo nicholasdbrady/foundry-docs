@@ -4,6 +4,39 @@ description: "Learn how to use the Azure OpenAI Responses API to create, retriev
 ---
 Use the Azure OpenAI Responses API to generate stateful, multi-turn responses. It brings together capabilities from chat completions and the Assistants API in one unified experience. The Responses API also supports the `computer-use-preview` model that powers [Computer use](../../../foundry-classic/openai/how-to/computer-use.md).
 
+{/* Code snippet for quick reference */}
+<CodeGroup>
+```python Python
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="YOUR_ENDPOINT/openai/v1",
+    api_key="YOUR_API_KEY",
+)
+
+response = client.responses.create(
+    model="gpt-4.1",
+    input="Explain the concept of recursion in programming.",
+)
+print(response.output_text)
+```
+
+```javascript JavaScript
+import OpenAI from "openai";
+
+const client = new OpenAI({
+    baseURL: "YOUR_ENDPOINT/openai/v1",
+    apiKey: "YOUR_API_KEY",
+});
+
+const response = await client.responses.create({
+    model: "gpt-4.1",
+    input: "Explain the concept of recursion in programming.",
+});
+console.log(response.output_text);
+```
+</CodeGroup>
+
 ## Prerequisites
 
 - A deployed Azure OpenAI model

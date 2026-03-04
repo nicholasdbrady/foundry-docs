@@ -4,6 +4,53 @@ description: "Learn how to use function calling with OpenAI models."
 ---
 If one or more functions are included in your request, the model determines if any of the functions should be called based on the context of the prompt. When the model determines thatodel a function should be called, it responds with a JSON object including the arguments for the function.
 
+{/* Code snippet for quick reference */}
+<CodeGroup>
+```python Python
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="YOUR_ENDPOINT/openai/v1",
+    api_key="YOUR_API_KEY",
+)
+
+tools = [{"type": "function", "function": {
+    "name": "get_weather",
+    "parameters": {"type": "object", "properties": {
+        "location": {"type": "string"}
+    }, "required": ["location"]},
+}}]
+
+response = client.chat.completions.create(
+    model="gpt-4.1",
+    messages=[{"role": "user", "content": "What's the weather in Seattle?"}],
+    tools=tools,
+)
+print(response.choices[0].message.tool_calls)
+```
+
+```javascript JavaScript
+import OpenAI from "openai";
+
+const client = new OpenAI({
+    baseURL: "YOUR_ENDPOINT/openai/v1",
+    apiKey: "YOUR_API_KEY",
+});
+
+const response = await client.chat.completions.create({
+    model: "gpt-4.1",
+    messages: [{ role: "user", content: "What's the weather in Seattle?" }],
+    tools: [{ type: "function", function: {
+        name: "get_weather",
+        parameters: { type: "object", properties: {
+            location: { type: "string" },
+        }, required: ["location"] },
+    }}],
+});
+console.log(response.choices[0].message.tool_calls);
+```
+</CodeGroup>
+
 The models formulate API calls and structure data outputs, all based on the functions you specify. It's important to note that while the models can generate these calls, it's up to you to execute them, ensuring you remain in control.
 
 At a high level, you can break down working with functions into three steps:

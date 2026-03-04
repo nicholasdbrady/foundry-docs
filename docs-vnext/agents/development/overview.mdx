@@ -6,6 +6,46 @@ Most businesses don't want just chatbots. They want automation that's faster and
 
 Large language models (LLMs) introduce a new type of automation with systems that can understand unstructured data, make decisions, and generate content. In practice, businesses can have difficulty moving beyond demos and into production. LLMs can drift, be incorrect, and lack accountability. Without visibility, policy enforcement, and orchestration, these models are hard to trust in real business workflows.
 
+{/* Code snippet for quick reference */}
+<CodeGroup>
+```python Python
+from azure.ai.projects import AIProjectClient
+from azure.ai.projects.models import PromptAgentDefinition
+from azure.identity import DefaultAzureCredential
+
+client = AIProjectClient(
+    endpoint="YOUR_PROJECT_ENDPOINT",
+    credential=DefaultAzureCredential(),
+)
+
+agent = client.agents.create_version(
+    agent_name="my-agent",
+    definition=PromptAgentDefinition(
+        model="YOUR_MODEL_DEPLOYMENT_NAME",
+        instructions="You are a helpful assistant.",
+    ),
+)
+print(f"Agent created: {agent.name} (version: {agent.version})")
+```
+
+```typescript TypeScript
+import { AIProjectClient } from "@azure/ai-projects";
+import { DefaultAzureCredential } from "@azure/identity";
+
+const client = new AIProjectClient(
+  "YOUR_PROJECT_ENDPOINT",
+  new DefaultAzureCredential(),
+);
+
+const agent = await client.agents.createVersion("my-agent", {
+  kind: "prompt",
+  model: "YOUR_MODEL_DEPLOYMENT_NAME",
+  instructions: "You are a helpful assistant.",
+});
+console.log(`Agent created: ${agent.name} (version: ${agent.version})`);
+```
+</CodeGroup>
+
 <Columns cols={2}>
   <Card>
     *Microsoft Foundry* is designed to change that. It's a platform that combines models, tools, frameworks, and governance into a unified system for building intelligent agents. At the center of this system is *Foundry Agent Service*, which enables the operation of agents across development, deployment, and production.

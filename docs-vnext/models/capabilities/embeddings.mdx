@@ -4,6 +4,39 @@ description: "Learn how to use Azure OpenAI's embeddings API for document search
 ---
 This tutorial will walk you through using the Azure OpenAI [embeddings](../../../foundry-classic/openai/concepts/understand-embeddings.md) API to perform **document search** where you'll query a knowledge base to find the most relevant document.
 
+{/* Code snippet for quick reference */}
+<CodeGroup>
+```python Python
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="YOUR_ENDPOINT/openai/v1",
+    api_key="YOUR_API_KEY",
+)
+
+response = client.embeddings.create(
+    model="text-embedding-ada-002",
+    input="The quick brown fox jumped over the lazy dog.",
+)
+print(response.data[0].embedding[:5])
+```
+
+```javascript JavaScript
+import OpenAI from "openai";
+
+const client = new OpenAI({
+    baseURL: "YOUR_ENDPOINT/openai/v1",
+    apiKey: "YOUR_API_KEY",
+});
+
+const response = await client.embeddings.create({
+    model: "text-embedding-ada-002",
+    input: "The quick brown fox jumped over the lazy dog.",
+});
+console.log(response.data[0].embedding.slice(0, 5));
+```
+</CodeGroup>
+
 In this tutorial, you learn how to:
 
 <Check>Download a sample dataset and prepare it for analysis.</Check>
