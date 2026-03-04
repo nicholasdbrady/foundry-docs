@@ -1008,12 +1008,12 @@ def _build_code_samples(
             if preamble_apikey is not None:
                 result.append({
                     "lang": lang,
-                    "label": f"{label} (Entra ID)",
+                    "label": "Entra ID",
                     "source": preamble_entra + call,
                 })
                 result.append({
                     "lang": lang,
-                    "label": f"{label} (API Key)",
+                    "label": "API Key",
                     "source": preamble_apikey + call_apikey,
                 })
             else:
