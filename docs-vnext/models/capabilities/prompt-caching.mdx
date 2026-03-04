@@ -6,6 +6,45 @@ Prompt caching allows you to reduce overall request latency and cost for longer 
 
 Azure AI Foundry Model prompt caches are cleared within 24 hours. Prompt caches aren't shared between Azure subscriptions.
 
+{/* Code snippet for quick reference */}
+<CodeGroup>
+```python Python
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="YOUR_ENDPOINT/openai/v1",
+    api_key="YOUR_API_KEY",
+)
+
+response = client.chat.completions.create(
+    model="gpt-4.1",
+    messages=[
+        {"role": "system", "content": "You are a helpful assistant. " * 200},
+        {"role": "user", "content": "Summarize the key points."},
+    ],
+)
+print("Cached tokens:", response.usage.prompt_tokens_details.cached_tokens)
+```
+
+```javascript JavaScript
+import OpenAI from "openai";
+
+const client = new OpenAI({
+    baseURL: "YOUR_ENDPOINT/openai/v1",
+    apiKey: "YOUR_API_KEY",
+});
+
+const response = await client.chat.completions.create({
+    model: "gpt-4.1",
+    messages: [
+        { role: "system", content: "You are a helpful assistant. ".repeat(200) },
+        { role: "user", content: "Summarize the key points." },
+    ],
+});
+console.log("Cached tokens:", response.usage.prompt_tokens_details.cached_tokens);
+```
+</CodeGroup>
+
 ## Supported models
 
 - Prompt caching is supported with all Azure OpenAI models GPT-4o or newer.

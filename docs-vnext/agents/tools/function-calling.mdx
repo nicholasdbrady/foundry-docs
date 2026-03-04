@@ -4,6 +4,50 @@ description: "Use function calling to extend Microsoft Foundry agents with custo
 ---
 Microsoft Foundry agents support function calling, which lets you extend agents with custom capabilities. Define a function with its name, parameters, and description, and the agent can request your app to call it. Your app executes the function and returns the output. The agent then uses the result to continue the conversation with accurate, real-time data from your systems.
 
+{/* Code snippet for quick reference */}
+<CodeGroup>
+```python Python
+from azure.identity import DefaultAzureCredential
+from azure.ai.projects import AIProjectClient
+from azure.ai.projects.models import PromptAgentDefinition, FunctionTool
+
+client = AIProjectClient(endpoint="YOUR_PROJECT_ENDPOINT", credential=DefaultAzureCredential())
+
+func_tool = FunctionTool(
+    name="get_weather",
+    description="Get current weather for a city.",
+    parameters={"type": "object", "properties": {"city": {"type": "string"}}, "required": ["city"]},
+)
+
+agent = client.agents.create_version(
+    agent_name="MyAgent",
+    definition=PromptAgentDefinition(
+        model="YOUR_MODEL_DEPLOYMENT",
+        instructions="You are a helpful assistant.",
+        tools=[func_tool],
+    ),
+)
+```
+
+```typescript TypeScript
+import { DefaultAzureCredential } from "@azure/identity";
+import { AIProjectClient } from "@azure/ai-projects";
+
+const project = new AIProjectClient("YOUR_PROJECT_ENDPOINT", new DefaultAzureCredential());
+
+const agent = await project.agents.createVersion("MyAgent", {
+    kind: "prompt",
+    model: "YOUR_MODEL_DEPLOYMENT",
+    instructions: "You are a helpful assistant.",
+    tools: [{
+        type: "function", name: "get_weather",
+        description: "Get current weather for a city.",
+        parameters: { type: "object", properties: { city: { type: "string" } }, required: ["city"] },
+    }],
+});
+```
+</CodeGroup>
+
 <Info>
 Runs expire 10 minutes after creation. Submit your tool outputs before they expire.
 </Info>

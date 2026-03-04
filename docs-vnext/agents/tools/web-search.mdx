@@ -8,6 +8,40 @@ Items marked (preview) in this article are currently in public preview. This pre
 
 The web search tool in Foundry Agent Service enables models to retrieve and ground responses with real-time information from the public web before generating output. When enabled, the model can return up-to-date answers with inline citations, helping you build agents that provide current, factual information to users.
 
+{/* Code snippet for quick reference */}
+<CodeGroup>
+```python Python
+from azure.identity import DefaultAzureCredential
+from azure.ai.projects import AIProjectClient
+from azure.ai.projects.models import PromptAgentDefinition, WebSearchTool
+
+client = AIProjectClient(endpoint="YOUR_PROJECT_ENDPOINT", credential=DefaultAzureCredential())
+
+agent = client.agents.create_version(
+    agent_name="MyAgent",
+    definition=PromptAgentDefinition(
+        model="YOUR_MODEL_DEPLOYMENT",
+        instructions="You are a helpful assistant that can search the web.",
+        tools=[WebSearchTool()],
+    ),
+)
+```
+
+```typescript TypeScript
+import { DefaultAzureCredential } from "@azure/identity";
+import { AIProjectClient } from "@azure/ai-projects";
+
+const project = new AIProjectClient("YOUR_PROJECT_ENDPOINT", new DefaultAzureCredential());
+
+const agent = await project.agents.createVersion("MyAgent", {
+    kind: "prompt",
+    model: "YOUR_MODEL_DEPLOYMENT",
+    instructions: "You are a helpful assistant that can search the web.",
+    tools: [{ type: "web_search_preview" }],
+});
+```
+</CodeGroup>
+
 <Info>
 - Web Search(preview) uses Grounding with Bing Search and Grounding with Bing Custom Search, which are [First Party Consumption Services](https://www.microsoft.com/licensing/terms/product/Glossary/EAEAS#:%7E:text=First-Party%20Consumption%20Services) governed by these [Grounding with Bing terms of use](https://www.microsoft.com/bing/apis/grounding-legal-enterprise) and the [Microsoft Privacy Statement](https://go.microsoft.com/fwlink/?LinkId=521839&clcid=0x409).
 - The Microsoft [Data Protection Addendum](https://aka.ms/dpa) doesn't apply to data sent to Grounding with Bing Search and Grounding with Bing Custom Search. When you use Grounding with Bing Search and Grounding with Bing Custom Search, data transfers occur outside compliance and geographic boundaries.

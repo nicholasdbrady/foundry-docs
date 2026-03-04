@@ -6,6 +6,58 @@ Workflows are UI-based tools in Microsoft Foundry. Use them to create declarativ
 
 Workflows enable you to build intelligent automation systems that seamlessly blend AI agents with business processes in a visual manner. Traditional single-agent systems are limited in their ability to handle complex, multifaceted tasks. By orchestrating multiple agents, each with specialized skills or roles, you can create systems that are more robust, adaptive, and capable of solving real-world problems collaboratively.
 
+{/* Code snippet for quick reference */}
+<CodeGroup>
+```python Python
+from azure.ai.projects import AIProjectClient
+from azure.ai.projects.models import WorkflowAgentDefinition
+from azure.identity import DefaultAzureCredential
+
+client = AIProjectClient(
+    endpoint="YOUR_PROJECT_ENDPOINT",
+    credential=DefaultAzureCredential(),
+)
+
+workflow_yaml = """
+sequence:
+  - agent: researcher
+    prompt: "Research the topic: {{input}}"
+  - agent: writer
+    prompt: "Write a summary based on: {{researcher.output}}"
+"""
+
+agent = client.agents.create_version(
+    agent_name="my-workflow",
+    definition=WorkflowAgentDefinition(workflow=workflow_yaml),
+)
+print(f"Workflow created: {agent.name} (version: {agent.version})")
+```
+
+```typescript TypeScript
+import { AIProjectClient } from "@azure/ai-projects";
+import { DefaultAzureCredential } from "@azure/identity";
+
+const client = new AIProjectClient(
+  "YOUR_PROJECT_ENDPOINT",
+  new DefaultAzureCredential(),
+);
+
+const workflowYaml = `
+sequence:
+  - agent: researcher
+    prompt: "Research the topic: {{input}}"
+  - agent: writer
+    prompt: "Write a summary based on: {{researcher.output}}"
+`;
+
+const agent = await client.agents.createVersion("my-workflow", {
+  kind: "workflow",
+  workflow: workflowYaml,
+});
+console.log(`Workflow created: ${agent.name} (version: ${agent.version})`);
+```
+</CodeGroup>
+
 ## Prerequisites
 
 - An Azure account with an active subscription. If you don't have one, create a [free Azure account, which includes a free trial subscription](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).

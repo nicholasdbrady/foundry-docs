@@ -8,6 +8,49 @@ For a managed knowledge base experience, see [Foundry IQ](/agents/tools/foundry-
 
 Ground your Foundry agent's responses in your proprietary content by connecting it to an Azure AI Search index. The [Azure AI Search](../../../../search/search-what-is-azure-search.md) tool retrieves indexed documents and generates answers with inline citations, enabling accurate, source-backed responses.
 
+{/* Code snippet for quick reference */}
+<CodeGroup>
+```python Python
+from azure.identity import DefaultAzureCredential
+from azure.ai.projects import AIProjectClient
+from azure.ai.projects.models import (
+    PromptAgentDefinition, AzureAISearchTool,
+    AzureAISearchToolResource, AISearchIndexResource, AzureAISearchQueryType,
+)
+
+client = AIProjectClient(endpoint="YOUR_PROJECT_ENDPOINT", credential=DefaultAzureCredential())
+conn = client.connections.get("YOUR_AI_SEARCH_CONNECTION_NAME")
+
+agent = client.agents.create_version(
+    agent_name="MyAgent",
+    definition=PromptAgentDefinition(
+        model="YOUR_MODEL_DEPLOYMENT",
+        instructions="You are a helpful assistant. Provide citations for answers.",
+        tools=[AzureAISearchTool(azure_ai_search=AzureAISearchToolResource(indexes=[
+            AISearchIndexResource(project_connection_id=conn.id, index_name="YOUR_INDEX_NAME", query_type=AzureAISearchQueryType.SIMPLE),
+        ]))],
+    ),
+)
+```
+
+```typescript TypeScript
+import { DefaultAzureCredential } from "@azure/identity";
+import { AIProjectClient } from "@azure/ai-projects";
+
+const project = new AIProjectClient("YOUR_PROJECT_ENDPOINT", new DefaultAzureCredential());
+const conn = await project.connections.get("YOUR_AI_SEARCH_CONNECTION_NAME");
+
+const agent = await project.agents.createVersion("MyAgent", {
+    kind: "prompt",
+    model: "YOUR_MODEL_DEPLOYMENT",
+    instructions: "You are a helpful assistant. Provide citations for answers.",
+    tools: [{ type: "azure_ai_search", azure_ai_search: { indexes: [
+        { project_connection_id: conn.id, index_name: "YOUR_INDEX_NAME", query_type: "simple" },
+    ]}}],
+});
+```
+</CodeGroup>
+
 ## Usage support
 
 ✔️ (GA) indicates general availability, ✔️ (Preview) indicates public preview, and a dash (-) indicates the feature isn't available.

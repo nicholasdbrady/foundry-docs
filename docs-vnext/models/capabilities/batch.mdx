@@ -4,6 +4,49 @@ description: "Learn how to use global batch with Azure OpenAI"
 ---
 The Azure OpenAI Batch API is designed to handle large-scale and high-volume processing tasks efficiently. Process asynchronous groups of requests with separate quota, with 24-hour target turnaround, at [50% less cost than global standard](https://azure.microsoft.com/pricing/details/cognitive-services/openai-service/). With batch processing, rather than send one request at a time you send a large number of requests in a single file. Global batch requests have a separate enqueued token quota avoiding any disruption of your online workloads.  
 
+{/* Code snippet for quick reference */}
+<CodeGroup>
+```python Python
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="YOUR_ENDPOINT/openai/v1",
+    api_key="YOUR_API_KEY",
+)
+
+file = client.files.create(file=open("batch_requests.jsonl", "rb"), purpose="batch")
+
+batch = client.batches.create(
+    input_file_id=file.id,
+    endpoint="/chat/completions",
+    completion_window="24h",
+)
+print(batch.id, batch.status)
+```
+
+```javascript JavaScript
+import OpenAI from "openai";
+import fs from "fs";
+
+const client = new OpenAI({
+    baseURL: "YOUR_ENDPOINT/openai/v1",
+    apiKey: "YOUR_API_KEY",
+});
+
+const file = await client.files.create({
+    file: fs.createReadStream("batch_requests.jsonl"),
+    purpose: "batch",
+});
+
+const batch = await client.batches.create({
+    input_file_id: file.id,
+    endpoint: "/chat/completions",
+    completion_window: "24h",
+});
+console.log(batch.id, batch.status);
+```
+</CodeGroup>
+
 Key use cases include:
 
 * **Large-Scale Data Processing:** Quickly analyze extensive datasets in parallel.

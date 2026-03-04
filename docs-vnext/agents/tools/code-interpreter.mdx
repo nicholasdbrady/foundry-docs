@@ -4,6 +4,40 @@ description: "Create agents that run Python code in a sandboxed environment usin
 ---
 Code Interpreter enables a Microsoft Foundry agent to run Python code in a sandboxed execution environment. Use this tool for data analysis, chart generation, and iterative problem-solving tasks that benefit from code execution.
 
+{/* Code snippet for quick reference */}
+<CodeGroup>
+```python Python
+from azure.identity import DefaultAzureCredential
+from azure.ai.projects import AIProjectClient
+from azure.ai.projects.models import PromptAgentDefinition, CodeInterpreterTool, CodeInterpreterContainerAuto
+
+client = AIProjectClient(endpoint="YOUR_PROJECT_ENDPOINT", credential=DefaultAzureCredential())
+
+agent = client.agents.create_version(
+    agent_name="MyAgent",
+    definition=PromptAgentDefinition(
+        model="YOUR_MODEL_DEPLOYMENT",
+        instructions="You are a helpful assistant.",
+        tools=[CodeInterpreterTool(container=CodeInterpreterContainerAuto())],
+    ),
+)
+```
+
+```typescript TypeScript
+import { DefaultAzureCredential } from "@azure/identity";
+import { AIProjectClient } from "@azure/ai-projects";
+
+const project = new AIProjectClient("YOUR_PROJECT_ENDPOINT", new DefaultAzureCredential());
+
+const agent = await project.agents.createVersion("MyAgent", {
+    kind: "prompt",
+    model: "YOUR_MODEL_DEPLOYMENT",
+    instructions: "You are a helpful assistant.",
+    tools: [{ type: "code_interpreter", container: { type: "auto" } }],
+});
+```
+</CodeGroup>
+
 In this article, you create an agent that uses Code Interpreter, upload a CSV file for analysis, and download a generated chart.
 
 When enabled, your agent can write and run Python code iteratively to solve data analysis and math tasks, and to generate charts.
