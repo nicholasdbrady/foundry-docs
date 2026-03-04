@@ -329,7 +329,14 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nbatch = openai.batches.create(\n    input_file_id=\"file-abc123\",\n    endpoint=\"/v1/chat/completions\",\n    completion_window=\"24h\",\n)\nprint(batch.id, batch.status)"
+          }
+        ]
       },
       "get": {
         "operationId": "listBatches",
@@ -456,6 +463,13 @@
         },
         "tags": [
           "Batch"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nbatches = openai.batches.list()\nfor b in batches:\n    print(b.id, b.status)"
+          }
         ]
       }
     },
@@ -706,6 +720,13 @@
         },
         "tags": [
           "Batch"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nbatch = openai.batches.retrieve(\"batch_abc123\")\nprint(batch.status, batch.request_counts)"
+          }
         ]
       }
     },
@@ -956,6 +977,13 @@
         },
         "tags": [
           "Batch"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.batches.cancel(\"batch_abc123\")"
+          }
         ]
       }
     },
@@ -1552,7 +1580,14 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nresponse = openai.chat.completions.create(\n    model=\"gpt-4o\",\n    messages=[{\"role\": \"user\", \"content\": \"Hello!\"}],\n)\nprint(response.choices[0].message.content)"
+          }
+        ]
       }
     },
     "/completions": {
@@ -1920,7 +1955,14 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nresponse = openai.completions.create(\n    model=\"gpt-4o\",\n    prompt=\"Say hello\",\n    max_tokens=100,\n)\nprint(response.choices[0].text)"
+          }
+        ]
       }
     },
     "/containers": {
@@ -2061,6 +2103,13 @@
         },
         "tags": [
           "Containers"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\ncontainers = openai.containers.list()\nfor c in containers:\n    print(c.id, c.name)"
+          }
         ]
       },
       "post": {
@@ -2164,7 +2213,14 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\ncontainer = openai.containers.create(\n    name=\"my-container\",\n)\nprint(container.id)"
+          }
+        ]
       }
     },
     "/containers/{container_id}": {
@@ -2268,6 +2324,13 @@
         },
         "tags": [
           "Containers"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\ncontainer = openai.containers.retrieve(\"container_abc123\")\nprint(container.name)"
+          }
         ]
       },
       "delete": {
@@ -2363,6 +2426,13 @@
         },
         "tags": [
           "Containers"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.containers.delete(\"container_abc123\")"
+          }
         ]
       }
     },
@@ -2513,6 +2583,13 @@
         },
         "tags": [
           "Containers"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nfiles = openai.containers.files.list(\"container_abc123\")\nfor f in files:\n    print(f.id, f.path)"
+          }
         ]
       },
       "post": {
@@ -2625,7 +2702,14 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nfile = openai.containers.files.create(\n    container_id=\"container_abc123\",\n    file=open(\"data.txt\", \"rb\"),\n    file_path=\"data.txt\",\n)\nprint(file.id)"
+          }
+        ]
       }
     },
     "/containers/{container_id}/files/{file_id}": {
@@ -2738,6 +2822,13 @@
         },
         "tags": [
           "Containers"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nfile = openai.containers.files.retrieve(\n    container_id=\"container_abc123\",\n    file_id=\"file_abc123\",\n)\nprint(file.path)"
+          }
         ]
       },
       "delete": {
@@ -2842,6 +2933,13 @@
         },
         "tags": [
           "Containers"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.containers.files.delete(\n    container_id=\"container_abc123\",\n    file_id=\"file_abc123\",\n)"
+          }
         ]
       }
     },
@@ -2955,6 +3053,13 @@
         },
         "tags": [
           "Containers"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\ncontent = openai.containers.files.content(\n    container_id=\"container_abc123\",\n    file_id=\"file_abc123\",\n)\nprint(content.text)"
+          }
         ]
       }
     },
@@ -3060,7 +3165,14 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nconversation = openai.conversations.create(\n    items=[{\"type\": \"message\", \"role\": \"user\", \"content\": \"Hello\"}],\n)\nprint(conversation.id)"
+          }
+        ]
       }
     },
     "/conversations/{conversation_id}": {
@@ -3164,6 +3276,13 @@
         },
         "tags": [
           "Conversations"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nconversation = openai.conversations.retrieve(\"conv_abc123\")\nprint(conversation.id)"
+          }
         ]
       },
       "post": {
@@ -3276,7 +3395,14 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nconversation = openai.conversations.update(\n    \"conv_abc123\",\n    metadata={\"topic\": \"geography\"},\n)\nprint(conversation.id)"
+          }
+        ]
       },
       "delete": {
         "operationId": "deleteConversation",
@@ -3378,6 +3504,13 @@
         },
         "tags": [
           "Conversations"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.conversations.delete(\"conv_abc123\")"
+          }
         ]
       }
     },
@@ -3531,6 +3664,13 @@
         },
         "tags": [
           "Conversations"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nitems = openai.conversations.items.list(\"conv_abc123\")\nfor item in items:\n    print(item.type, item.id)"
+          }
         ]
       },
       "post": {
@@ -3656,7 +3796,14 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.conversations.items.create(\n    conversation_id=\"conv_abc123\",\n    items=[{\"type\": \"message\", \"role\": \"user\", \"content\": \"Follow-up question\"}],\n)"
+          }
+        ]
       }
     },
     "/conversations/{conversation_id}/items/{item_id}": {
@@ -3782,6 +3929,13 @@
         },
         "tags": [
           "Conversations"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nitem = openai.conversations.items.retrieve(\n    conversation_id=\"conv_abc123\",\n    item_id=\"item_abc123\",\n)\nprint(item.type)"
+          }
         ]
       },
       "delete": {
@@ -3893,6 +4047,13 @@
         },
         "tags": [
           "Conversations"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.conversations.items.delete(\n    conversation_id=\"conv_abc123\",\n    item_id=\"item_abc123\",\n)"
+          }
         ]
       }
     },
@@ -5567,7 +5728,14 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nresponse = openai.embeddings.create(\n    model=\"text-embedding-3-large\",\n    input=\"Sample text to embed\",\n)\nprint(response.data[0].embedding[:5])"
+          }
+        ]
       }
     },
     "/evals": {
@@ -5715,6 +5883,13 @@
         },
         "tags": [
           "Evals"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nevals = openai.evals.list()\nfor e in evals:\n    print(e.id, e.name)"
+          }
         ]
       },
       "post": {
@@ -5886,7 +6061,14 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nevaluation = openai.evals.create(\n    name=\"my-eval\",\n    data_source_config={\"type\": \"custom\", \"item_schema\": {}},\n    testing_criteria=[],\n)\nprint(evaluation.id)"
+          }
+        ]
       }
     },
     "/evals/{eval_id}": {
@@ -5991,6 +6173,13 @@
         },
         "tags": [
           "Evals"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nevaluation = openai.evals.retrieve(\"eval_abc123\")\nprint(evaluation.name, evaluation.id)"
+          }
         ]
       },
       "post": {
@@ -6111,7 +6300,14 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nevaluation = openai.evals.update(\n    \"eval_abc123\",\n    name=\"updated-name\",\n)\nprint(evaluation.name)"
+          }
+        ]
       },
       "delete": {
         "operationId": "deleteEval",
@@ -6232,6 +6428,13 @@
         },
         "tags": [
           "Evals"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.evals.delete(\"eval_abc123\")"
+          }
         ]
       }
     },
@@ -6387,6 +6590,13 @@
         },
         "tags": [
           "Evals"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nruns = openai.evals.runs.list(\"eval_abc123\")\nfor run in runs:\n    print(run.id, run.status)"
+          }
         ]
       },
       "post": {
@@ -6499,7 +6709,14 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nrun = openai.evals.runs.create(\n    eval_id=\"eval_abc123\",\n    model=\"gpt-4o\",\n    data_source={\"type\": \"completions\"},\n)\nprint(run.id)"
+          }
+        ]
       }
     },
     "/evals/{eval_id}/runs/{run_id}": {
@@ -6611,6 +6828,13 @@
         },
         "tags": [
           "Evals"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nrun = openai.evals.runs.retrieve(\n    eval_id=\"eval_abc123\",\n    run_id=\"run_abc123\",\n)\nprint(run.status)"
+          }
         ]
       },
       "post": {
@@ -6721,6 +6945,13 @@
         },
         "tags": [
           "Evals"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.evals.runs.cancel(\n    eval_id=\"eval_abc123\",\n    run_id=\"run_abc123\",\n)"
+          }
         ]
       },
       "delete": {
@@ -6850,6 +7081,13 @@
         },
         "tags": [
           "Evals"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.evals.runs.delete(\n    eval_id=\"eval_abc123\",\n    run_id=\"run_abc123\",\n)"
+          }
         ]
       }
     },
@@ -7009,6 +7247,13 @@
         },
         "tags": [
           "Evals"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nitems = openai.evals.runs.output_items.list(\n    eval_id=\"eval_abc123\",\n    run_id=\"run_abc123\",\n)\nfor item in items:\n    print(item.id)"
+          }
         ]
       }
     },
@@ -7129,6 +7374,13 @@
         },
         "tags": [
           "Evals"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nitem = openai.evals.runs.output_items.retrieve(\n    eval_id=\"eval_abc123\",\n    run_id=\"run_abc123\",\n    output_item_id=\"item_abc123\",\n)\nprint(item.id)"
+          }
         ]
       }
     },
@@ -7305,7 +7557,14 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nfile = openai.files.create(\n    file=open(\"data.jsonl\", \"rb\"),\n    purpose=\"fine-tune\",\n)\nprint(file.id)"
+          }
+        ]
       },
       "get": {
         "operationId": "listFiles",
@@ -7438,6 +7697,13 @@
         },
         "tags": [
           "Files"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nfiles = openai.files.list()\nfor f in files:\n    print(f.id, f.filename, f.purpose)"
+          }
         ]
       }
     },
@@ -7613,6 +7879,13 @@
         },
         "tags": [
           "Files"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nfile = openai.files.retrieve(\"file-abc123\")\nprint(file.filename, file.status)"
+          }
         ]
       },
       "delete": {
@@ -7715,6 +7988,13 @@
         },
         "tags": [
           "Files"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.files.delete(\"file-abc123\")"
+          }
         ]
       }
     },
@@ -7819,6 +8099,13 @@
         },
         "tags": [
           "Files"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\ncontent = openai.files.content(\"file-abc123\")\nprint(content.text)"
+          }
         ]
       }
     },
@@ -7916,7 +8203,14 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nresult = openai.fine_tuning.alpha.graders.run(\n    grader={\"type\": \"python\", \"source\": \"return 1.0\"},\n    model_sample=\"Hello world\",\n)\nprint(result)"
+          }
+        ]
       }
     },
     "/fine_tuning/alpha/graders/validate": {
@@ -8037,7 +8331,14 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nresult = openai.fine_tuning.alpha.graders.validate(\n    grader={\"type\": \"python\", \"source\": \"return 1.0\"},\n)\nprint(result)"
+          }
+        ]
       }
     },
     "/fine_tuning/checkpoints/{fine_tuned_model_checkpoint}/permissions": {
@@ -8189,6 +8490,13 @@
         },
         "tags": [
           "Fine-tuning"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\npermissions = openai.fine_tuning.checkpoints.permissions.list(\n    \"ft:gpt-4o:org:suffix:id\",\n)\nfor p in permissions:\n    print(p.id)"
+          }
         ]
       },
       "post": {
@@ -8302,7 +8610,14 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.fine_tuning.checkpoints.permissions.create(\n    \"ft:gpt-4o:org:suffix:id\",\n    project_ids=[\"proj_abc123\"],\n)"
+          }
+        ]
       }
     },
     "/fine_tuning/checkpoints/{fine_tuned_model_checkpoint}/permissions/{permission_id}": {
@@ -8416,6 +8731,13 @@
         },
         "tags": [
           "Fine-tuning"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.fine_tuning.checkpoints.permissions.delete(\n    \"ft:gpt-4o:org:suffix:id\",\n    \"perm_abc123\",\n)"
+          }
         ]
       }
     },
@@ -8522,7 +8844,14 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\njob = openai.fine_tuning.jobs.create(\n    model=\"gpt-4o-mini-2024-07-18\",\n    training_file=\"file-abc123\",\n)\nprint(job.id, job.status)"
+          }
+        ]
       },
       "get": {
         "operationId": "listPaginatedFineTuningJobs",
@@ -8638,6 +8967,13 @@
         },
         "tags": [
           "Fine-tuning"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\njobs = openai.fine_tuning.jobs.list()\nfor job in jobs:\n    print(job.id, job.status)"
+          }
         ]
       }
     },
@@ -8743,6 +9079,13 @@
         },
         "tags": [
           "Fine-tuning"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\njob = openai.fine_tuning.jobs.retrieve(\"ftjob-abc123\")\nprint(job.status, job.trained_tokens)"
+          }
         ]
       }
     },
@@ -8848,6 +9191,13 @@
         },
         "tags": [
           "Fine-tuning"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.fine_tuning.jobs.cancel(\"ftjob-abc123\")"
+          }
         ]
       }
     },
@@ -8975,6 +9325,13 @@
         },
         "tags": [
           "Fine-tuning"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\ncheckpoints = openai.fine_tuning.jobs.checkpoints.list(\"ftjob-abc123\")\nfor cp in checkpoints:\n    print(cp.id, cp.step_number)"
+          }
         ]
       }
     },
@@ -9120,7 +9477,14 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.fine_tuning.jobs.checkpoints.copy(\n    fine_tuning_job_id=\"ftjob-abc123\",\n    fine_tuning_checkpoint_id=\"ftckpt-abc123\",\n)"
+          }
+        ]
       },
       "get": {
         "operationId": "FineTuning_GetCheckpoint",
@@ -9253,6 +9617,13 @@
         },
         "tags": [
           "Fine-tuning"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\ncheckpoint = openai.fine_tuning.jobs.checkpoints.retrieve(\n    fine_tuning_job_id=\"ftjob-abc123\",\n    fine_tuning_checkpoint_id=\"ftckpt-abc123\",\n)\nprint(checkpoint.id)"
+          }
         ]
       }
     },
@@ -9380,6 +9751,13 @@
         },
         "tags": [
           "Fine-tuning"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nevents = openai.fine_tuning.jobs.list_events(\"ftjob-abc123\")\nfor event in events:\n    print(event.message)"
+          }
         ]
       }
     },
@@ -9485,6 +9863,13 @@
         },
         "tags": [
           "Fine-tuning"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.fine_tuning.jobs.pause(\"ftjob-abc123\")"
+          }
         ]
       }
     },
@@ -9590,6 +9975,13 @@
         },
         "tags": [
           "Fine-tuning"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.fine_tuning.jobs.resume(\"ftjob-abc123\")"
+          }
         ]
       }
     },
@@ -9686,6 +10078,13 @@
         },
         "tags": [
           "Models"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nmodels = openai.models.list()\nfor model in models:\n    print(model.id)"
+          }
         ]
       }
     },
@@ -9791,6 +10190,13 @@
         },
         "tags": [
           "Models"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nmodel = openai.models.retrieve(\"gpt-4o\")\nprint(model.id, model.owned_by)"
+          }
         ]
       },
       "delete": {
@@ -9894,6 +10300,13 @@
         },
         "tags": [
           "Models"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.models.delete(\"ft:gpt-4o:your-org:custom-suffix:id\")"
+          }
         ]
       }
     },
@@ -10005,7 +10418,14 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\ncall = openai.realtime.calls.create(\n    model=\"gpt-4o-realtime-preview\",\n    sdp=\"YOUR_SDP_OFFER\",\n)\nprint(call.id, call.sdp)"
+          }
+        ]
       }
     },
     "/realtime/calls/{call_id}/accept": {
@@ -10105,7 +10525,14 @@
             }
           },
           "description": "Session configuration to apply before the caller is bridged to the model."
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.realtime.calls.accept(\n    call_id=\"call_abc123\",\n    model=\"gpt-4o-realtime-preview\",\n)"
+          }
+        ]
       }
     },
     "/realtime/calls/{call_id}/hangup": {
@@ -10194,6 +10621,13 @@
         },
         "tags": [
           "Realtime"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.realtime.calls.hangup(\"call_abc123\")"
+          }
         ]
       }
     },
@@ -10294,7 +10728,14 @@
             }
           },
           "description": "Destination URI for the REFER request."
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.realtime.calls.refer(\n    call_id=\"call_abc123\",\n    refer_to=\"sip:destination@example.com\",\n)"
+          }
+        ]
       }
     },
     "/realtime/calls/{call_id}/reject": {
@@ -10394,7 +10835,14 @@
             }
           },
           "description": "Provide an optional SIP status code. When omitted the API responds with 603 Decline."
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.realtime.calls.reject(\n    call_id=\"call_abc123\",\n    reason=\"busy\",\n)"
+          }
+        ]
       }
     },
     "/realtime/client_secrets": {
@@ -10501,7 +10949,14 @@
             }
           },
           "description": "Create a client secret with the given session configuration."
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nsecret = openai.realtime.client_secrets.create(\n    model=\"gpt-4o-realtime-preview\",\n)\nprint(secret.client_secret.value)"
+          }
+        ]
       }
     },
     "/realtime/sessions": {
@@ -10608,7 +11063,14 @@
             }
           },
           "description": "Create an ephemeral API key with the given session configuration."
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nsession = openai.realtime.sessions.create(\n    model=\"gpt-4o-realtime-preview\",\n)\nprint(session.id, session.client_secret.value)"
+          }
+        ]
       }
     },
     "/realtime/transcription_sessions": {
@@ -10715,7 +11177,14 @@
             }
           },
           "description": "Create an ephemeral API key with the given session configuration."
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nsession = openai.realtime.transcription_sessions.create(\n    model=\"gpt-4o-transcribe\",\n)\nprint(session.id)"
+          }
+        ]
       }
     },
     "/responses": {
@@ -11106,7 +11575,14 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nresponse = openai.responses.create(\n    model=\"gpt-4o\",\n    input=\"What is the capital of France?\",\n)\nprint(response.output_text)"
+          }
+        ]
       }
     },
     "/responses/{response_id}": {
@@ -11539,6 +12015,13 @@
         },
         "tags": [
           "Responses"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nresponse = openai.responses.retrieve(\"resp_abc123\")\nprint(response.status, response.output_text)"
+          }
         ]
       },
       "delete": {
@@ -11663,6 +12146,13 @@
         },
         "tags": [
           "Responses"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.responses.delete(\"resp_abc123\")"
+          }
         ]
       }
     },
@@ -12051,6 +12541,13 @@
         },
         "tags": [
           "Responses"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.responses.cancel(\"resp_abc123\")"
+          }
         ]
       }
     },
@@ -12201,6 +12698,13 @@
         },
         "tags": [
           "Responses"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nitems = openai.responses.input_items.list(\"resp_abc123\")\nfor item in items:\n    print(item.type, item.id)"
+          }
         ]
       }
     },
@@ -12306,7 +12810,14 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nthread = openai.beta.threads.create()\nprint(thread.id)"
+          }
+        ]
       }
     },
     "/threads/runs": {
@@ -12402,7 +12913,14 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nrun = openai.beta.threads.create_and_run(\n    assistant_id=\"asst_abc123\",\n    thread={\"messages\": [{\"role\": \"user\", \"content\": \"Hello\"}]},\n)\nprint(run.id)"
+          }
+        ]
       }
     },
     "/threads/{thread_id}": {
@@ -12505,6 +13023,13 @@
         },
         "tags": [
           "Threads"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.beta.threads.delete(\"thread_abc123\")"
+          }
         ]
       },
       "get": {
@@ -12606,6 +13131,13 @@
         },
         "tags": [
           "Threads"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nthread = openai.beta.threads.retrieve(\"thread_abc123\")\nprint(thread.id)"
+          }
         ]
       },
       "post": {
@@ -12717,7 +13249,14 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nthread = openai.beta.threads.update(\n    \"thread_abc123\",\n    metadata={\"topic\": \"science\"},\n)\nprint(thread.id)"
+          }
+        ]
       }
     },
     "/threads/{thread_id}/messages": {
@@ -12871,6 +13410,13 @@
         },
         "tags": [
           "Threads"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nmessages = openai.beta.threads.messages.list(\"thread_abc123\")\nfor msg in messages:\n    print(msg.role, msg.content[0].text.value)"
+          }
         ]
       },
       "post": {
@@ -12982,7 +13528,14 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nmessage = openai.beta.threads.messages.create(\n    thread_id=\"thread_abc123\",\n    role=\"user\",\n    content=\"What is the capital of France?\",\n)\nprint(message.id)"
+          }
+        ]
       }
     },
     "/threads/{thread_id}/messages/{message_id}": {
@@ -13093,6 +13646,13 @@
         },
         "tags": [
           "Threads"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.beta.threads.messages.delete(\n    thread_id=\"thread_abc123\",\n    message_id=\"msg_abc123\",\n)"
+          }
         ]
       },
       "get": {
@@ -13202,6 +13762,13 @@
         },
         "tags": [
           "Threads"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nmessage = openai.beta.threads.messages.retrieve(\n    thread_id=\"thread_abc123\",\n    message_id=\"msg_abc123\",\n)\nprint(message.content[0].text.value)"
+          }
         ]
       },
       "post": {
@@ -13321,7 +13888,14 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nmessage = openai.beta.threads.messages.update(\n    thread_id=\"thread_abc123\",\n    message_id=\"msg_abc123\",\n    metadata={\"reviewed\": \"true\"},\n)"
+          }
+        ]
       }
     },
     "/threads/{thread_id}/runs": {
@@ -13425,7 +13999,14 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nrun = openai.beta.threads.runs.create(\n    thread_id=\"thread_abc123\",\n    assistant_id=\"asst_abc123\",\n)\nprint(run.id, run.status)"
+          }
+        ]
       },
       "get": {
         "operationId": "listRuns",
@@ -13559,6 +14140,13 @@
         },
         "tags": [
           "Threads"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nruns = openai.beta.threads.runs.list(\"thread_abc123\")\nfor run in runs:\n    print(run.id, run.status)"
+          }
         ]
       }
     },
@@ -13661,6 +14249,13 @@
         },
         "tags": [
           "Threads"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nrun = openai.beta.threads.runs.retrieve(\n    thread_id=\"thread_abc123\",\n    run_id=\"run_abc123\",\n)\nprint(run.status)"
+          }
         ]
       },
       "post": {
@@ -13771,7 +14366,14 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nrun = openai.beta.threads.runs.update(\n    thread_id=\"thread_abc123\",\n    run_id=\"run_abc123\",\n    metadata={\"priority\": \"high\"},\n)"
+          }
+        ]
       }
     },
     "/threads/{thread_id}/runs/{run_id}/cancel": {
@@ -13873,6 +14475,13 @@
         },
         "tags": [
           "Threads"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.beta.threads.runs.cancel(\n    thread_id=\"thread_abc123\",\n    run_id=\"run_abc123\",\n)"
+          }
         ]
       }
     },
@@ -14017,6 +14626,13 @@
         },
         "tags": [
           "Threads"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nsteps = openai.beta.threads.runs.steps.list(\n    thread_id=\"thread_abc123\",\n    run_id=\"run_abc123\",\n)\nfor step in steps:\n    print(step.id, step.type)"
+          }
         ]
       }
     },
@@ -14127,6 +14743,13 @@
         },
         "tags": [
           "Threads"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nstep = openai.beta.threads.runs.steps.retrieve(\n    thread_id=\"thread_abc123\",\n    run_id=\"run_abc123\",\n    step_id=\"step_abc123\",\n)\nprint(step.type, step.status)"
+          }
         ]
       }
     },
@@ -14239,7 +14862,14 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nrun = openai.beta.threads.runs.submit_tool_outputs(\n    thread_id=\"thread_abc123\",\n    run_id=\"run_abc123\",\n    tool_outputs=[{\"tool_call_id\": \"call_abc123\", \"output\": \"result\"}],\n)\nprint(run.status)"
+          }
+        ]
       }
     },
     "/vector_stores": {
@@ -14381,6 +15011,13 @@
         },
         "tags": [
           "Vector Stores"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nstores = openai.vector_stores.list()\nfor store in stores:\n    print(store.id, store.name)"
+          }
         ]
       },
       "post": {
@@ -14485,7 +15122,14 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nstore = openai.vector_stores.create(\n    name=\"my-vector-store\",\n)\nprint(store.id)"
+          }
+        ]
       }
     },
     "/vector_stores/{vector_store_id}": {
@@ -14590,6 +15234,13 @@
         },
         "tags": [
           "Vector Stores"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nstore = openai.vector_stores.retrieve(\"vs_abc123\")\nprint(store.name, store.file_counts)"
+          }
         ]
       },
       "post": {
@@ -14703,7 +15354,14 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nstore = openai.vector_stores.update(\n    \"vs_abc123\",\n    name=\"updated-name\",\n)\nprint(store.name)"
+          }
+        ]
       },
       "delete": {
         "operationId": "deleteVectorStore",
@@ -14806,6 +15464,13 @@
         },
         "tags": [
           "Vector Stores"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.vector_stores.delete(\"vs_abc123\")"
+          }
         ]
       }
     },
@@ -14921,7 +15586,14 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nbatch = openai.vector_stores.file_batches.create(\n    vector_store_id=\"vs_abc123\",\n    file_ids=[\"file_abc123\", \"file_def456\"],\n)\nprint(batch.id, batch.status)"
+          }
+        ]
       }
     },
     "/vector_stores/{vector_store_id}/file_batches/{batch_id}": {
@@ -15035,6 +15707,13 @@
         },
         "tags": [
           "Vector Stores"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nbatch = openai.vector_stores.file_batches.retrieve(\n    vector_store_id=\"vs_abc123\",\n    batch_id=\"vsfb_abc123\",\n)\nprint(batch.status, batch.file_counts)"
+          }
         ]
       }
     },
@@ -15149,6 +15828,13 @@
         },
         "tags": [
           "Vector Stores"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.vector_stores.file_batches.cancel(\n    vector_store_id=\"vs_abc123\",\n    batch_id=\"vsfb_abc123\",\n)"
+          }
         ]
       }
     },
@@ -15325,6 +16011,13 @@
         },
         "tags": [
           "Vector Stores"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nfiles = openai.vector_stores.file_batches.list_files(\n    vector_store_id=\"vs_abc123\",\n    batch_id=\"vsfb_abc123\",\n)\nfor f in files:\n    print(f.id, f.status)"
+          }
         ]
       }
     },
@@ -15492,6 +16185,13 @@
         },
         "tags": [
           "Vector Stores"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nfiles = openai.vector_stores.files.list(\"vs_abc123\")\nfor f in files:\n    print(f.id, f.status)"
+          }
         ]
       },
       "post": {
@@ -15605,7 +16305,14 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nfile = openai.vector_stores.files.create(\n    vector_store_id=\"vs_abc123\",\n    file_id=\"file_abc123\",\n)\nprint(file.id, file.status)"
+          }
+        ]
       }
     },
     "/vector_stores/{vector_store_id}/files/{file_id}": {
@@ -15719,6 +16426,13 @@
         },
         "tags": [
           "Vector Stores"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nfile = openai.vector_stores.files.retrieve(\n    vector_store_id=\"vs_abc123\",\n    file_id=\"file_abc123\",\n)\nprint(file.status)"
+          }
         ]
       },
       "post": {
@@ -15838,7 +16552,14 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nfile = openai.vector_stores.files.update(\n    vector_store_id=\"vs_abc123\",\n    file_id=\"file_abc123\",\n    attributes={\"key\": \"value\"},\n)"
+          }
+        ]
       },
       "delete": {
         "operationId": "deleteVectorStoreFile",
@@ -15950,6 +16671,13 @@
         },
         "tags": [
           "Vector Stores"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.vector_stores.files.delete(\n    vector_store_id=\"vs_abc123\",\n    file_id=\"file_abc123\",\n)"
+          }
         ]
       }
     },
@@ -16064,6 +16792,13 @@
         },
         "tags": [
           "Vector Stores"
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\ncontent = openai.vector_stores.files.content(\n    vector_store_id=\"vs_abc123\",\n    file_id=\"file_abc123\",\n)\nprint(content.text)"
+          }
         ]
       }
     },
@@ -16179,7 +16914,14 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nresults = openai.vector_stores.search(\n    vector_store_id=\"vs_abc123\",\n    query=\"search query\",\n)\nfor result in results:\n    print(result.score, result.content)"
+          }
+        ]
       }
     }
   },

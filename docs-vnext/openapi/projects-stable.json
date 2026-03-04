@@ -151,7 +151,14 @@
         },
         "x-ms-pageable": {
           "nextLinkName": "nextLink"
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\n\nconnections = client.connections.list()\nfor conn in connections:\n    print(conn.name, conn.type)"
+          }
+        ]
       }
     },
     "/connections/{name}": {
@@ -213,7 +220,14 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\n\nconnection = client.connections.get(\"my-connection\")\nprint(connection.name, connection.type)"
+          }
+        ]
       }
     },
     "/connections/{name}/getConnectionWithCredentials": {
@@ -275,7 +289,14 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\n\nconnection = client.connections.get(\n    \"my-connection\",\n    include_credentials=True,\n)\nprint(connection.name, connection.credentials)"
+          }
+        ]
       }
     },
     "/datasets": {
@@ -319,7 +340,14 @@
         },
         "x-ms-pageable": {
           "nextLinkName": "nextLink"
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\n\ndatasets = client.datasets.list()\nfor ds in datasets:\n    print(ds.name, ds.version)"
+          }
+        ]
       }
     },
     "/datasets/{name}/versions": {
@@ -372,7 +400,14 @@
         },
         "x-ms-pageable": {
           "nextLinkName": "nextLink"
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\n\nversions = client.datasets.list_versions(\"my-dataset\")\nfor v in versions:\n    print(v.version, v.created_date)"
+          }
+        ]
       }
     },
     "/datasets/{name}/versions/{version}": {
@@ -431,7 +466,14 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\n\ndataset = client.datasets.get(\n    name=\"my-dataset\",\n    version=\"1\",\n)\nprint(dataset.name, dataset.version)"
+          }
+        ]
       },
       "patch": {
         "operationId": "Datasets_CreateOrUpdateVersion",
@@ -509,7 +551,14 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\n\ndataset = client.datasets.create_or_update(\n    name=\"my-dataset\",\n    version=\"1\",\n    body={\"description\": \"Training data\"},\n)\nprint(dataset.name)"
+          }
+        ]
       },
       "delete": {
         "operationId": "Datasets_DeleteVersion",
@@ -559,7 +608,14 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\n\nclient.datasets.delete(\n    name=\"my-dataset\",\n    version=\"1\",\n)"
+          }
+        ]
       }
     },
     "/datasets/{name}/versions/{version}/credentials": {
@@ -618,7 +674,14 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\n\ncreds = client.datasets.get_credentials(\n    name=\"my-dataset\",\n    version=\"1\",\n)\nprint(creds.credential_type)"
+          }
+        ]
       }
     },
     "/datasets/{name}/versions/{version}/startPendingUpload": {
@@ -688,7 +751,14 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\n\nupload = client.datasets.start_pending_upload(\n    name=\"my-dataset\",\n    version=\"1\",\n    body={\"pending_upload_type\": \"temporary_sas\"},\n)\nprint(upload.blob_reference)"
+          }
+        ]
       }
     },
     "/deployments": {
@@ -785,7 +855,14 @@
         },
         "x-ms-pageable": {
           "nextLinkName": "nextLink"
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\n\ndeployments = client.deployments.list()\nfor d in deployments:\n    print(d.name, d.model)"
+          }
+        ]
       }
     },
     "/deployments/{name}": {
@@ -847,7 +924,14 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\n\ndeployment = client.deployments.get(\"gpt-4o\")\nprint(deployment.name, deployment.model)"
+          }
+        ]
       }
     },
     "/indexes": {
@@ -891,7 +975,14 @@
         },
         "x-ms-pageable": {
           "nextLinkName": "nextLink"
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\n\nindexes = client.indexes.list()\nfor idx in indexes:\n    print(idx.name, idx.version)"
+          }
+        ]
       }
     },
     "/indexes/{name}/versions": {
@@ -944,7 +1035,14 @@
         },
         "x-ms-pageable": {
           "nextLinkName": "nextLink"
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\n\nversions = client.indexes.list_versions(\"my-index\")\nfor v in versions:\n    print(v.version)"
+          }
+        ]
       }
     },
     "/indexes/{name}/versions/{version}": {
@@ -1003,7 +1101,14 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\n\nindex = client.indexes.get(\n    name=\"my-index\",\n    version=\"1\",\n)\nprint(index.name)"
+          }
+        ]
       },
       "patch": {
         "operationId": "Indexes_CreateOrUpdateVersion",
@@ -1081,7 +1186,14 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\n\nindex = client.indexes.create_or_update(\n    name=\"my-index\",\n    version=\"1\",\n    body={\"description\": \"Search index\"},\n)\nprint(index.name)"
+          }
+        ]
       },
       "delete": {
         "operationId": "Indexes_DeleteVersion",
@@ -1131,7 +1243,14 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\n\nclient.indexes.delete(\n    name=\"my-index\",\n    version=\"1\",\n)"
+          }
+        ]
       }
     }
   },
