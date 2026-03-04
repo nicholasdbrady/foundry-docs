@@ -75,12 +75,10 @@ OPENAI_SAMPLES = {
         '    input="What is the capital of France?",\n'
         ')\n'
         'print(response.output_text)\n'
-        '# Output: "The capital of France is Paris."'
     ),
     "getResponse": (
         'response = openai.responses.retrieve("resp_abc123")\n'
         'print(response.status, response.output_text)\n'
-        '# Output: completed The capital of France is Paris.'
     ),
     "deleteResponse": (
         'openai.responses.delete("resp_abc123")'
@@ -101,7 +99,6 @@ OPENAI_SAMPLES = {
         '    messages=[{"role": "user", "content": "Hello!"}],\n'
         ')\n'
         'print(response.choices[0].message.content)\n'
-        '# Output: "Hello! How can I help you today?"'
     ),
 
     # ── Completions (legacy) ───────────────────────────────────────────
@@ -120,7 +117,6 @@ OPENAI_SAMPLES = {
         '    items=[{"type": "message", "role": "user", "content": "Hello"}],\n'
         ')\n'
         'print(conversation.id)\n'
-        '# Output: conv_abc123def456'
     ),
     "retrieveConversation": (
         'conversation = openai.conversations.retrieve("conv_abc123")\n'
@@ -168,7 +164,6 @@ OPENAI_SAMPLES = {
         '    input="Sample text to embed",\n'
         ')\n'
         'print(response.data[0].embedding[:5])\n'
-        '# Output: [-0.0128, -0.0074, -0.0176, -0.0283, -0.0187]'
     ),
 
     # ── Models ─────────────────────────────────────────────────────────
@@ -176,10 +171,6 @@ OPENAI_SAMPLES = {
         'models = openai.models.list()\n'
         'for model in models:\n'
         '    print(model.id)\n'
-        '# Output:\n'
-        '# gpt-4o\n'
-        '# gpt-4o-mini\n'
-        '# text-embedding-3-large'
     ),
     "retrieveModel": (
         'model = openai.models.retrieve("gpt-4o")\n'
@@ -196,7 +187,6 @@ OPENAI_SAMPLES = {
         '    purpose="fine-tune",\n'
         ')\n'
         'print(file.id)\n'
-        '# Output: file-abc123def456'
     ),
     "listFiles": (
         'files = openai.files.list()\n'
@@ -223,7 +213,6 @@ OPENAI_SAMPLES = {
         '    completion_window="24h",\n'
         ')\n'
         'print(batch.id, batch.status)\n'
-        '# Output: batch_abc123 validating'
     ),
     "listBatches": (
         'batches = openai.batches.list()\n'
@@ -245,7 +234,6 @@ OPENAI_SAMPLES = {
         '    training_file="file-abc123",\n'
         ')\n'
         'print(job.id, job.status)\n'
-        '# Output: ftjob-abc123 validating_files'
     ),
     "listPaginatedFineTuningJobs": (
         'jobs = openai.fine_tuning.jobs.list()\n'
@@ -1065,6 +1053,8 @@ def main():
         CSHARP_PROJECTS_PREAMBLE_ENTRA, CSHARP_PROJECTS_PREAMBLE_APIKEY, CSHARP_PROJECTS_SAMPLES,
         JS_OPENAI_PREAMBLE_ENTRA, JS_OPENAI_PREAMBLE_APIKEY, JS_OPENAI_SAMPLES,
         JS_PROJECTS_PREAMBLE_ENTRA, JS_PROJECTS_PREAMBLE_APIKEY, JS_PROJECTS_SAMPLES,
+        JAVA_OPENAI_PREAMBLE_ENTRA, JAVA_OPENAI_PREAMBLE_APIKEY, JAVA_OPENAI_SAMPLES,
+        JAVA_PROJECTS_PREAMBLE_ENTRA, JAVA_PROJECTS_PREAMBLE_APIKEY, JAVA_PROJECTS_SAMPLES,
     )
 
     # Language configs: (lang, label, samples_dict, preamble_entra, preamble_apikey)
@@ -1074,6 +1064,7 @@ def main():
         ("bash", "cURL", CURL_OPENAI_SAMPLES, CURL_OPENAI_PREAMBLE_ENTRA, CURL_OPENAI_PREAMBLE_APIKEY),
         ("csharp", "C#", CSHARP_OPENAI_SAMPLES, CSHARP_OPENAI_PREAMBLE_ENTRA, CSHARP_OPENAI_PREAMBLE_APIKEY),
         ("javascript", "JavaScript", JS_OPENAI_SAMPLES, JS_OPENAI_PREAMBLE_ENTRA, JS_OPENAI_PREAMBLE_APIKEY),
+        ("java", "Java", JAVA_OPENAI_SAMPLES, JAVA_OPENAI_PREAMBLE_ENTRA, JAVA_OPENAI_PREAMBLE_APIKEY),
     ]
 
     # Language configs for Projects specs
@@ -1082,6 +1073,7 @@ def main():
         ("bash", "cURL", CURL_PROJECTS_SAMPLES, CURL_PROJECTS_PREAMBLE_ENTRA, CURL_PROJECTS_PREAMBLE_APIKEY),
         ("csharp", "C#", CSHARP_PROJECTS_SAMPLES, CSHARP_PROJECTS_PREAMBLE_ENTRA, CSHARP_PROJECTS_PREAMBLE_APIKEY),
         ("javascript", "JavaScript", JS_PROJECTS_SAMPLES, JS_PROJECTS_PREAMBLE_ENTRA, JS_PROJECTS_PREAMBLE_APIKEY),
+        ("java", "Java", JAVA_PROJECTS_SAMPLES, JAVA_PROJECTS_PREAMBLE_ENTRA, JAVA_PROJECTS_PREAMBLE_APIKEY),
     ]
 
     total = 0
