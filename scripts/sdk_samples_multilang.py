@@ -8,70 +8,109 @@ in generate_sdk_samples.py, keyed by the same operationId values.
 # Preamble templates
 # ---------------------------------------------------------------------------
 
-CURL_OPENAI_PREAMBLE = """\
-# Set your endpoint and get a token (or use API key)
-# ENDPOINT="https://RESOURCE_NAME.openai.azure.com"
+CURL_OPENAI_PREAMBLE_ENTRA = """\
+# Get a token via Azure CLI
 # TOKEN=$(az account get-access-token --scope https://cognitiveservices.azure.com/.default --query accessToken -o tsv)
-# Or use API key: -H "api-key: YOUR_API_KEY" instead of -H "Authorization: Bearer $TOKEN"
 """
 
-CURL_PROJECTS_PREAMBLE = """\
-# Set your endpoint and get a token (or use API key)
-# ENDPOINT="https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME"
-# TOKEN=$(az account get-access-token --scope https://cognitiveservices.azure.com/.default --query accessToken -o tsv)
-# Or use API key: -H "api-key: YOUR_API_KEY" instead of -H "Authorization: Bearer $TOKEN"
+CURL_OPENAI_PREAMBLE_APIKEY = """\
+# Use your API key from the Azure portal
 """
 
-CSHARP_OPENAI_PREAMBLE = """\
+CURL_PROJECTS_PREAMBLE_ENTRA = """\
+# Get a token via Azure CLI
+# TOKEN=$(az account get-access-token --scope https://cognitiveservices.azure.com/.default --query accessToken -o tsv)
+"""
+
+CURL_PROJECTS_PREAMBLE_APIKEY = """\
+# Use your API key from the Azure portal
+"""
+
+CSHARP_OPENAI_PREAMBLE_ENTRA = """\
 using Azure.AI.Projects;
 using Azure.AI.Projects.OpenAI;
 using Azure.Identity;
-using OpenAI.Responses;
 
-// Entra ID auth (recommended)
 var client = new AIProjectClient(
     new Uri("https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME"),
     new DefaultAzureCredential());
-// Alternative: new AzureKeyCredential("YOUR_API_KEY")
 
 """
 
-CSHARP_PROJECTS_PREAMBLE = """\
+CSHARP_OPENAI_PREAMBLE_APIKEY = """\
+using Azure.AI.Projects;
+using Azure.AI.Projects.OpenAI;
+using Azure;
+
+var client = new AIProjectClient(
+    new Uri("https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME"),
+    new AzureKeyCredential("YOUR_API_KEY"));
+
+"""
+
+CSHARP_PROJECTS_PREAMBLE_ENTRA = """\
 using Azure.AI.Projects;
 using Azure.Identity;
 
-// Entra ID auth (recommended)
 var client = new AIProjectClient(
     new Uri("https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME"),
     new DefaultAzureCredential());
-// Alternative: new AzureKeyCredential("YOUR_API_KEY")
 
 """
 
-JS_OPENAI_PREAMBLE = """\
+CSHARP_PROJECTS_PREAMBLE_APIKEY = """\
+using Azure.AI.Projects;
+using Azure;
+
+var client = new AIProjectClient(
+    new Uri("https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME"),
+    new AzureKeyCredential("YOUR_API_KEY"));
+
+"""
+
+JS_OPENAI_PREAMBLE_ENTRA = """\
 import { AIProjectClient } from "@azure/ai-projects";
 import { DefaultAzureCredential } from "@azure/identity";
 
-// Entra ID auth (recommended)
 const project = new AIProjectClient(
     "https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME",
     new DefaultAzureCredential(),
 );
-// Alternative: new AzureKeyCredential("YOUR_API_KEY")
 const openai = await project.getOpenAIClient();
 
 """
 
-JS_PROJECTS_PREAMBLE = """\
+JS_OPENAI_PREAMBLE_APIKEY = """\
+import { AIProjectClient } from "@azure/ai-projects";
+import { AzureKeyCredential } from "@azure/core-auth";
+
+const project = new AIProjectClient(
+    "https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME",
+    new AzureKeyCredential("YOUR_API_KEY"),
+);
+const openai = await project.getOpenAIClient();
+
+"""
+
+JS_PROJECTS_PREAMBLE_ENTRA = """\
 import { AIProjectClient } from "@azure/ai-projects";
 import { DefaultAzureCredential } from "@azure/identity";
 
-// Entra ID auth (recommended)
 const client = new AIProjectClient(
     "https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME",
     new DefaultAzureCredential(),
 );
-// Alternative: new AzureKeyCredential("YOUR_API_KEY")
+
+"""
+
+JS_PROJECTS_PREAMBLE_APIKEY = """\
+import { AIProjectClient } from "@azure/ai-projects";
+import { AzureKeyCredential } from "@azure/core-auth";
+
+const client = new AIProjectClient(
+    "https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME",
+    new AzureKeyCredential("YOUR_API_KEY"),
+);
 
 """
 

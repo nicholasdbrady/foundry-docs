@@ -17,35 +17,49 @@ from pathlib import Path
 # Preamble templates
 # ---------------------------------------------------------------------------
 
-OPENAI_PREAMBLE = """\
+OPENAI_PREAMBLE_ENTRA = """\
 from azure.ai.projects import AIProjectClient
 from azure.identity import DefaultAzureCredential
 
-# Entra ID auth (recommended)
 project = AIProjectClient(
     endpoint="https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME",
     credential=DefaultAzureCredential(),
 )
-# Alternative: API key auth
-# from azure.core.credentials import AzureKeyCredential
-# project = AIProjectClient(endpoint="...", credential=AzureKeyCredential("YOUR_API_KEY"))
-
 openai = project.get_openai_client()
 
 """
 
-PROJECTS_PREAMBLE = """\
+OPENAI_PREAMBLE_APIKEY = """\
+from azure.ai.projects import AIProjectClient
+from azure.core.credentials import AzureKeyCredential
+
+project = AIProjectClient(
+    endpoint="https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME",
+    credential=AzureKeyCredential("YOUR_API_KEY"),
+)
+openai = project.get_openai_client()
+
+"""
+
+PROJECTS_PREAMBLE_ENTRA = """\
 from azure.ai.projects import AIProjectClient
 from azure.identity import DefaultAzureCredential
 
-# Entra ID auth (recommended)
 client = AIProjectClient(
     endpoint="https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME",
     credential=DefaultAzureCredential(),
 )
-# Alternative: API key auth
-# from azure.core.credentials import AzureKeyCredential
-# client = AIProjectClient(endpoint="...", credential=AzureKeyCredential("YOUR_API_KEY"))
+
+"""
+
+PROJECTS_PREAMBLE_APIKEY = """\
+from azure.ai.projects import AIProjectClient
+from azure.core.credentials import AzureKeyCredential
+
+client = AIProjectClient(
+    endpoint="https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME",
+    credential=AzureKeyCredential("YOUR_API_KEY"),
+)
 
 """
 
@@ -970,20 +984,44 @@ PROJECTS_SAMPLES = {
 
 def _build_code_samples(
     op_id: str,
-    lang_configs: list[tuple[str, str, dict[str, str], str]],
+    lang_configs: list[tuple[str, str, dict[str, str], str, str | None]],
 ) -> list[dict]:
     """Build x-codeSamples array for an operation from multiple languages.
 
-    lang_configs: list of (lang, label, samples_dict, preamble)
+    lang_configs: list of (lang, label, samples_dict, preamble_entra, preamble_apikey)
+    When preamble_apikey is provided, two entries are emitted per language
+    with labels "{label} (Entra ID)" and "{label} (API Key)".
     """
     result = []
-    for lang, label, samples, preamble in lang_configs:
+    for lang, label, samples, preamble_entra, preamble_apikey in lang_configs:
         if op_id in samples:
-            result.append({
-                "lang": lang,
-                "label": label,
-                "source": preamble + samples[op_id],
-            })
+            call = samples[op_id]
+            # For cURL API Key variant, swap the auth header
+            if lang == "bash" and preamble_apikey is not None:
+                call_apikey = call.replace(
+                    '-H "Authorization: Bearer $TOKEN"',
+                    '-H "api-key: YOUR_API_KEY"',
+                )
+            else:
+                call_apikey = call
+
+            if preamble_apikey is not None:
+                result.append({
+                    "lang": lang,
+                    "label": f"{label} (Entra ID)",
+                    "source": preamble_entra + call,
+                })
+                result.append({
+                    "lang": lang,
+                    "label": f"{label} (API Key)",
+                    "source": preamble_apikey + call_apikey,
+                })
+            else:
+                result.append({
+                    "lang": lang,
+                    "label": label,
+                    "source": preamble_entra + call,
+                })
     return result
 
 
@@ -1021,28 +1059,29 @@ def main():
 
     # Import multi-language samples
     from sdk_samples_multilang import (
-        CURL_OPENAI_PREAMBLE, CURL_OPENAI_SAMPLES,
-        CURL_PROJECTS_PREAMBLE, CURL_PROJECTS_SAMPLES,
-        CSHARP_OPENAI_PREAMBLE, CSHARP_OPENAI_SAMPLES,
-        CSHARP_PROJECTS_PREAMBLE, CSHARP_PROJECTS_SAMPLES,
-        JS_OPENAI_PREAMBLE, JS_OPENAI_SAMPLES,
-        JS_PROJECTS_PREAMBLE, JS_PROJECTS_SAMPLES,
+        CURL_OPENAI_PREAMBLE_ENTRA, CURL_OPENAI_PREAMBLE_APIKEY, CURL_OPENAI_SAMPLES,
+        CURL_PROJECTS_PREAMBLE_ENTRA, CURL_PROJECTS_PREAMBLE_APIKEY, CURL_PROJECTS_SAMPLES,
+        CSHARP_OPENAI_PREAMBLE_ENTRA, CSHARP_OPENAI_PREAMBLE_APIKEY, CSHARP_OPENAI_SAMPLES,
+        CSHARP_PROJECTS_PREAMBLE_ENTRA, CSHARP_PROJECTS_PREAMBLE_APIKEY, CSHARP_PROJECTS_SAMPLES,
+        JS_OPENAI_PREAMBLE_ENTRA, JS_OPENAI_PREAMBLE_APIKEY, JS_OPENAI_SAMPLES,
+        JS_PROJECTS_PREAMBLE_ENTRA, JS_PROJECTS_PREAMBLE_APIKEY, JS_PROJECTS_SAMPLES,
     )
 
-    # Language configs for OpenAI v1 specs
+    # Language configs: (lang, label, samples_dict, preamble_entra, preamble_apikey)
+    # preamble_apikey=None means single sample (e.g. cURL has its own auth pattern)
     openai_langs = [
-        ("python", "Python", OPENAI_SAMPLES, OPENAI_PREAMBLE),
-        ("bash", "cURL", CURL_OPENAI_SAMPLES, CURL_OPENAI_PREAMBLE),
-        ("csharp", "C#", CSHARP_OPENAI_SAMPLES, CSHARP_OPENAI_PREAMBLE),
-        ("javascript", "JavaScript", JS_OPENAI_SAMPLES, JS_OPENAI_PREAMBLE),
+        ("python", "Python", OPENAI_SAMPLES, OPENAI_PREAMBLE_ENTRA, OPENAI_PREAMBLE_APIKEY),
+        ("bash", "cURL", CURL_OPENAI_SAMPLES, CURL_OPENAI_PREAMBLE_ENTRA, CURL_OPENAI_PREAMBLE_APIKEY),
+        ("csharp", "C#", CSHARP_OPENAI_SAMPLES, CSHARP_OPENAI_PREAMBLE_ENTRA, CSHARP_OPENAI_PREAMBLE_APIKEY),
+        ("javascript", "JavaScript", JS_OPENAI_SAMPLES, JS_OPENAI_PREAMBLE_ENTRA, JS_OPENAI_PREAMBLE_APIKEY),
     ]
 
     # Language configs for Projects specs
     projects_langs = [
-        ("python", "Python", PROJECTS_SAMPLES, PROJECTS_PREAMBLE),
-        ("bash", "cURL", CURL_PROJECTS_SAMPLES, CURL_PROJECTS_PREAMBLE),
-        ("csharp", "C#", CSHARP_PROJECTS_SAMPLES, CSHARP_PROJECTS_PREAMBLE),
-        ("javascript", "JavaScript", JS_PROJECTS_SAMPLES, JS_PROJECTS_PREAMBLE),
+        ("python", "Python", PROJECTS_SAMPLES, PROJECTS_PREAMBLE_ENTRA, PROJECTS_PREAMBLE_APIKEY),
+        ("bash", "cURL", CURL_PROJECTS_SAMPLES, CURL_PROJECTS_PREAMBLE_ENTRA, CURL_PROJECTS_PREAMBLE_APIKEY),
+        ("csharp", "C#", CSHARP_PROJECTS_SAMPLES, CSHARP_PROJECTS_PREAMBLE_ENTRA, CSHARP_PROJECTS_PREAMBLE_APIKEY),
+        ("javascript", "JavaScript", JS_PROJECTS_SAMPLES, JS_PROJECTS_PREAMBLE_ENTRA, JS_PROJECTS_PREAMBLE_APIKEY),
     ]
 
     total = 0

@@ -155,23 +155,43 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python",
-            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\n# Entra ID auth (recommended)\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n# Alternative: API key auth\n# from azure.core.credentials import AzureKeyCredential\n# client = AIProjectClient(endpoint=\"...\", credential=AzureKeyCredential(\"YOUR_API_KEY\"))\n\nconnections = client.connections.list()\nfor conn in connections:\n    print(conn.name, conn.type)"
+            "label": "Python (Entra ID)",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n\nconnections = client.connections.list()\nfor conn in connections:\n    print(conn.name, conn.type)"
+          },
+          {
+            "lang": "python",
+            "label": "Python (API Key)",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.core.credentials import AzureKeyCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=AzureKeyCredential(\"YOUR_API_KEY\"),\n)\n\nconnections = client.connections.list()\nfor conn in connections:\n    print(conn.name, conn.type)"
           },
           {
             "lang": "bash",
-            "label": "cURL",
-            "source": "# Set your endpoint and get a token (or use API key)\n# ENDPOINT=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"\n# TOKEN=$(az account get-access-token --scope https://cognitiveservices.azure.com/.default --query accessToken -o tsv)\n# Or use API key: -H \"api-key: YOUR_API_KEY\" instead of -H \"Authorization: Bearer $TOKEN\"\ncurl \"$ENDPOINT/connections?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+            "label": "cURL (Entra ID)",
+            "source": "# Get a token via Azure CLI\n# TOKEN=$(az account get-access-token --scope https://cognitiveservices.azure.com/.default --query accessToken -o tsv)\ncurl \"$ENDPOINT/connections?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "bash",
+            "label": "cURL (API Key)",
+            "source": "# Use your API key from the Azure portal\ncurl \"$ENDPOINT/connections?api-version=v1\" \\\n  -H \"api-key: YOUR_API_KEY\""
           },
           {
             "lang": "csharp",
-            "label": "C#",
-            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\n// Entra ID auth (recommended)\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new DefaultAzureCredential());\n// Alternative: new AzureKeyCredential(\"YOUR_API_KEY\")\n\nvar connections = client.GetConnections();\n\nforeach (var conn in connections)\n    Console.WriteLine($\"{conn.Name} {conn.ConnectionType}\");"
+            "label": "C# (Entra ID)",
+            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new DefaultAzureCredential());\n\nvar connections = client.GetConnections();\n\nforeach (var conn in connections)\n    Console.WriteLine($\"{conn.Name} {conn.ConnectionType}\");"
+          },
+          {
+            "lang": "csharp",
+            "label": "C# (API Key)",
+            "source": "using Azure.AI.Projects;\nusing Azure;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new AzureKeyCredential(\"YOUR_API_KEY\"));\n\nvar connections = client.GetConnections();\n\nforeach (var conn in connections)\n    Console.WriteLine($\"{conn.Name} {conn.ConnectionType}\");"
           },
           {
             "lang": "javascript",
-            "label": "JavaScript",
-            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\n// Entra ID auth (recommended)\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new DefaultAzureCredential(),\n);\n// Alternative: new AzureKeyCredential(\"YOUR_API_KEY\")\n\nconst connections = await client.connections.list();\nfor await (const conn of connections) {\n    console.log(conn.name, conn.type);\n}"
+            "label": "JavaScript (Entra ID)",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new DefaultAzureCredential(),\n);\n\nconst connections = await client.connections.list();\nfor await (const conn of connections) {\n    console.log(conn.name, conn.type);\n}"
+          },
+          {
+            "lang": "javascript",
+            "label": "JavaScript (API Key)",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { AzureKeyCredential } from \"@azure/core-auth\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new AzureKeyCredential(\"YOUR_API_KEY\"),\n);\n\nconst connections = await client.connections.list();\nfor await (const conn of connections) {\n    console.log(conn.name, conn.type);\n}"
           }
         ]
       }
@@ -239,23 +259,43 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python",
-            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\n# Entra ID auth (recommended)\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n# Alternative: API key auth\n# from azure.core.credentials import AzureKeyCredential\n# client = AIProjectClient(endpoint=\"...\", credential=AzureKeyCredential(\"YOUR_API_KEY\"))\n\nconnection = client.connections.get(\"my-connection\")\nprint(connection.name, connection.type)"
+            "label": "Python (Entra ID)",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n\nconnection = client.connections.get(\"my-connection\")\nprint(connection.name, connection.type)"
+          },
+          {
+            "lang": "python",
+            "label": "Python (API Key)",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.core.credentials import AzureKeyCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=AzureKeyCredential(\"YOUR_API_KEY\"),\n)\n\nconnection = client.connections.get(\"my-connection\")\nprint(connection.name, connection.type)"
           },
           {
             "lang": "bash",
-            "label": "cURL",
-            "source": "# Set your endpoint and get a token (or use API key)\n# ENDPOINT=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"\n# TOKEN=$(az account get-access-token --scope https://cognitiveservices.azure.com/.default --query accessToken -o tsv)\n# Or use API key: -H \"api-key: YOUR_API_KEY\" instead of -H \"Authorization: Bearer $TOKEN\"\ncurl \"$ENDPOINT/connections/my-connection?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+            "label": "cURL (Entra ID)",
+            "source": "# Get a token via Azure CLI\n# TOKEN=$(az account get-access-token --scope https://cognitiveservices.azure.com/.default --query accessToken -o tsv)\ncurl \"$ENDPOINT/connections/my-connection?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "bash",
+            "label": "cURL (API Key)",
+            "source": "# Use your API key from the Azure portal\ncurl \"$ENDPOINT/connections/my-connection?api-version=v1\" \\\n  -H \"api-key: YOUR_API_KEY\""
           },
           {
             "lang": "csharp",
-            "label": "C#",
-            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\n// Entra ID auth (recommended)\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new DefaultAzureCredential());\n// Alternative: new AzureKeyCredential(\"YOUR_API_KEY\")\n\nvar connection = client.GetConnection(\"my-connection\");\n\nConsole.WriteLine($\"{connection.Name} {connection.ConnectionType}\");"
+            "label": "C# (Entra ID)",
+            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new DefaultAzureCredential());\n\nvar connection = client.GetConnection(\"my-connection\");\n\nConsole.WriteLine($\"{connection.Name} {connection.ConnectionType}\");"
+          },
+          {
+            "lang": "csharp",
+            "label": "C# (API Key)",
+            "source": "using Azure.AI.Projects;\nusing Azure;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new AzureKeyCredential(\"YOUR_API_KEY\"));\n\nvar connection = client.GetConnection(\"my-connection\");\n\nConsole.WriteLine($\"{connection.Name} {connection.ConnectionType}\");"
           },
           {
             "lang": "javascript",
-            "label": "JavaScript",
-            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\n// Entra ID auth (recommended)\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new DefaultAzureCredential(),\n);\n// Alternative: new AzureKeyCredential(\"YOUR_API_KEY\")\n\nconst connection = await client.connections.get(\"my-connection\");\nconsole.log(connection.name, connection.type);"
+            "label": "JavaScript (Entra ID)",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new DefaultAzureCredential(),\n);\n\nconst connection = await client.connections.get(\"my-connection\");\nconsole.log(connection.name, connection.type);"
+          },
+          {
+            "lang": "javascript",
+            "label": "JavaScript (API Key)",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { AzureKeyCredential } from \"@azure/core-auth\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new AzureKeyCredential(\"YOUR_API_KEY\"),\n);\n\nconst connection = await client.connections.get(\"my-connection\");\nconsole.log(connection.name, connection.type);"
           }
         ]
       }
@@ -323,18 +363,33 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python",
-            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\n# Entra ID auth (recommended)\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n# Alternative: API key auth\n# from azure.core.credentials import AzureKeyCredential\n# client = AIProjectClient(endpoint=\"...\", credential=AzureKeyCredential(\"YOUR_API_KEY\"))\n\nconnection = client.connections.get(\n    \"my-connection\",\n    include_credentials=True,\n)\nprint(connection.name, connection.credentials)"
+            "label": "Python (Entra ID)",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n\nconnection = client.connections.get(\n    \"my-connection\",\n    include_credentials=True,\n)\nprint(connection.name, connection.credentials)"
+          },
+          {
+            "lang": "python",
+            "label": "Python (API Key)",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.core.credentials import AzureKeyCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=AzureKeyCredential(\"YOUR_API_KEY\"),\n)\n\nconnection = client.connections.get(\n    \"my-connection\",\n    include_credentials=True,\n)\nprint(connection.name, connection.credentials)"
           },
           {
             "lang": "bash",
-            "label": "cURL",
-            "source": "# Set your endpoint and get a token (or use API key)\n# ENDPOINT=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"\n# TOKEN=$(az account get-access-token --scope https://cognitiveservices.azure.com/.default --query accessToken -o tsv)\n# Or use API key: -H \"api-key: YOUR_API_KEY\" instead of -H \"Authorization: Bearer $TOKEN\"\ncurl -X POST \"$ENDPOINT/connections/my-connection/getConnectionWithCredentials?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+            "label": "cURL (Entra ID)",
+            "source": "# Get a token via Azure CLI\n# TOKEN=$(az account get-access-token --scope https://cognitiveservices.azure.com/.default --query accessToken -o tsv)\ncurl -X POST \"$ENDPOINT/connections/my-connection/getConnectionWithCredentials?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "bash",
+            "label": "cURL (API Key)",
+            "source": "# Use your API key from the Azure portal\ncurl -X POST \"$ENDPOINT/connections/my-connection/getConnectionWithCredentials?api-version=v1\" \\\n  -H \"api-key: YOUR_API_KEY\""
           },
           {
             "lang": "csharp",
-            "label": "C#",
-            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\n// Entra ID auth (recommended)\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new DefaultAzureCredential());\n// Alternative: new AzureKeyCredential(\"YOUR_API_KEY\")\n\nvar connection = client.GetConnectionWithCredentials(\n    \"my-connection\");\n\nConsole.WriteLine(connection.Credentials);"
+            "label": "C# (Entra ID)",
+            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new DefaultAzureCredential());\n\nvar connection = client.GetConnectionWithCredentials(\n    \"my-connection\");\n\nConsole.WriteLine(connection.Credentials);"
+          },
+          {
+            "lang": "csharp",
+            "label": "C# (API Key)",
+            "source": "using Azure.AI.Projects;\nusing Azure;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new AzureKeyCredential(\"YOUR_API_KEY\"));\n\nvar connection = client.GetConnectionWithCredentials(\n    \"my-connection\");\n\nConsole.WriteLine(connection.Credentials);"
           }
         ]
       }
@@ -384,23 +439,43 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python",
-            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\n# Entra ID auth (recommended)\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n# Alternative: API key auth\n# from azure.core.credentials import AzureKeyCredential\n# client = AIProjectClient(endpoint=\"...\", credential=AzureKeyCredential(\"YOUR_API_KEY\"))\n\ndatasets = client.datasets.list()\nfor ds in datasets:\n    print(ds.name, ds.version)"
+            "label": "Python (Entra ID)",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n\ndatasets = client.datasets.list()\nfor ds in datasets:\n    print(ds.name, ds.version)"
+          },
+          {
+            "lang": "python",
+            "label": "Python (API Key)",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.core.credentials import AzureKeyCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=AzureKeyCredential(\"YOUR_API_KEY\"),\n)\n\ndatasets = client.datasets.list()\nfor ds in datasets:\n    print(ds.name, ds.version)"
           },
           {
             "lang": "bash",
-            "label": "cURL",
-            "source": "# Set your endpoint and get a token (or use API key)\n# ENDPOINT=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"\n# TOKEN=$(az account get-access-token --scope https://cognitiveservices.azure.com/.default --query accessToken -o tsv)\n# Or use API key: -H \"api-key: YOUR_API_KEY\" instead of -H \"Authorization: Bearer $TOKEN\"\ncurl \"$ENDPOINT/datasets?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+            "label": "cURL (Entra ID)",
+            "source": "# Get a token via Azure CLI\n# TOKEN=$(az account get-access-token --scope https://cognitiveservices.azure.com/.default --query accessToken -o tsv)\ncurl \"$ENDPOINT/datasets?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "bash",
+            "label": "cURL (API Key)",
+            "source": "# Use your API key from the Azure portal\ncurl \"$ENDPOINT/datasets?api-version=v1\" \\\n  -H \"api-key: YOUR_API_KEY\""
           },
           {
             "lang": "csharp",
-            "label": "C#",
-            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\n// Entra ID auth (recommended)\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new DefaultAzureCredential());\n// Alternative: new AzureKeyCredential(\"YOUR_API_KEY\")\n\nvar datasets = client.GetDatasets();\n\nforeach (var ds in datasets)\n    Console.WriteLine($\"{ds.Name} v{ds.Version}\");"
+            "label": "C# (Entra ID)",
+            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new DefaultAzureCredential());\n\nvar datasets = client.GetDatasets();\n\nforeach (var ds in datasets)\n    Console.WriteLine($\"{ds.Name} v{ds.Version}\");"
+          },
+          {
+            "lang": "csharp",
+            "label": "C# (API Key)",
+            "source": "using Azure.AI.Projects;\nusing Azure;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new AzureKeyCredential(\"YOUR_API_KEY\"));\n\nvar datasets = client.GetDatasets();\n\nforeach (var ds in datasets)\n    Console.WriteLine($\"{ds.Name} v{ds.Version}\");"
           },
           {
             "lang": "javascript",
-            "label": "JavaScript",
-            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\n// Entra ID auth (recommended)\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new DefaultAzureCredential(),\n);\n// Alternative: new AzureKeyCredential(\"YOUR_API_KEY\")\n\nconst datasets = await client.datasets.list();\nfor await (const ds of datasets) {\n    console.log(ds.name, ds.version);\n}"
+            "label": "JavaScript (Entra ID)",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new DefaultAzureCredential(),\n);\n\nconst datasets = await client.datasets.list();\nfor await (const ds of datasets) {\n    console.log(ds.name, ds.version);\n}"
+          },
+          {
+            "lang": "javascript",
+            "label": "JavaScript (API Key)",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { AzureKeyCredential } from \"@azure/core-auth\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new AzureKeyCredential(\"YOUR_API_KEY\"),\n);\n\nconst datasets = await client.datasets.list();\nfor await (const ds of datasets) {\n    console.log(ds.name, ds.version);\n}"
           }
         ]
       }
@@ -459,13 +534,23 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python",
-            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\n# Entra ID auth (recommended)\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n# Alternative: API key auth\n# from azure.core.credentials import AzureKeyCredential\n# client = AIProjectClient(endpoint=\"...\", credential=AzureKeyCredential(\"YOUR_API_KEY\"))\n\nversions = client.datasets.list_versions(\"my-dataset\")\nfor v in versions:\n    print(v.version, v.created_date)"
+            "label": "Python (Entra ID)",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n\nversions = client.datasets.list_versions(\"my-dataset\")\nfor v in versions:\n    print(v.version, v.created_date)"
+          },
+          {
+            "lang": "python",
+            "label": "Python (API Key)",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.core.credentials import AzureKeyCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=AzureKeyCredential(\"YOUR_API_KEY\"),\n)\n\nversions = client.datasets.list_versions(\"my-dataset\")\nfor v in versions:\n    print(v.version, v.created_date)"
           },
           {
             "lang": "bash",
-            "label": "cURL",
-            "source": "# Set your endpoint and get a token (or use API key)\n# ENDPOINT=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"\n# TOKEN=$(az account get-access-token --scope https://cognitiveservices.azure.com/.default --query accessToken -o tsv)\n# Or use API key: -H \"api-key: YOUR_API_KEY\" instead of -H \"Authorization: Bearer $TOKEN\"\ncurl \"$ENDPOINT/datasets/my-dataset/versions?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+            "label": "cURL (Entra ID)",
+            "source": "# Get a token via Azure CLI\n# TOKEN=$(az account get-access-token --scope https://cognitiveservices.azure.com/.default --query accessToken -o tsv)\ncurl \"$ENDPOINT/datasets/my-dataset/versions?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "bash",
+            "label": "cURL (API Key)",
+            "source": "# Use your API key from the Azure portal\ncurl \"$ENDPOINT/datasets/my-dataset/versions?api-version=v1\" \\\n  -H \"api-key: YOUR_API_KEY\""
           }
         ]
       }
@@ -530,23 +615,43 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python",
-            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\n# Entra ID auth (recommended)\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n# Alternative: API key auth\n# from azure.core.credentials import AzureKeyCredential\n# client = AIProjectClient(endpoint=\"...\", credential=AzureKeyCredential(\"YOUR_API_KEY\"))\n\ndataset = client.datasets.get(\n    name=\"my-dataset\",\n    version=\"1\",\n)\nprint(dataset.name, dataset.version)"
+            "label": "Python (Entra ID)",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n\ndataset = client.datasets.get(\n    name=\"my-dataset\",\n    version=\"1\",\n)\nprint(dataset.name, dataset.version)"
+          },
+          {
+            "lang": "python",
+            "label": "Python (API Key)",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.core.credentials import AzureKeyCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=AzureKeyCredential(\"YOUR_API_KEY\"),\n)\n\ndataset = client.datasets.get(\n    name=\"my-dataset\",\n    version=\"1\",\n)\nprint(dataset.name, dataset.version)"
           },
           {
             "lang": "bash",
-            "label": "cURL",
-            "source": "# Set your endpoint and get a token (or use API key)\n# ENDPOINT=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"\n# TOKEN=$(az account get-access-token --scope https://cognitiveservices.azure.com/.default --query accessToken -o tsv)\n# Or use API key: -H \"api-key: YOUR_API_KEY\" instead of -H \"Authorization: Bearer $TOKEN\"\ncurl \"$ENDPOINT/datasets/my-dataset/versions/1?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+            "label": "cURL (Entra ID)",
+            "source": "# Get a token via Azure CLI\n# TOKEN=$(az account get-access-token --scope https://cognitiveservices.azure.com/.default --query accessToken -o tsv)\ncurl \"$ENDPOINT/datasets/my-dataset/versions/1?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "bash",
+            "label": "cURL (API Key)",
+            "source": "# Use your API key from the Azure portal\ncurl \"$ENDPOINT/datasets/my-dataset/versions/1?api-version=v1\" \\\n  -H \"api-key: YOUR_API_KEY\""
           },
           {
             "lang": "csharp",
-            "label": "C#",
-            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\n// Entra ID auth (recommended)\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new DefaultAzureCredential());\n// Alternative: new AzureKeyCredential(\"YOUR_API_KEY\")\n\nvar dataset = client.GetDataset(\"my-dataset\", \"1\");\n\nConsole.WriteLine($\"{dataset.Name} v{dataset.Version}\");"
+            "label": "C# (Entra ID)",
+            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new DefaultAzureCredential());\n\nvar dataset = client.GetDataset(\"my-dataset\", \"1\");\n\nConsole.WriteLine($\"{dataset.Name} v{dataset.Version}\");"
+          },
+          {
+            "lang": "csharp",
+            "label": "C# (API Key)",
+            "source": "using Azure.AI.Projects;\nusing Azure;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new AzureKeyCredential(\"YOUR_API_KEY\"));\n\nvar dataset = client.GetDataset(\"my-dataset\", \"1\");\n\nConsole.WriteLine($\"{dataset.Name} v{dataset.Version}\");"
           },
           {
             "lang": "javascript",
-            "label": "JavaScript",
-            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\n// Entra ID auth (recommended)\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new DefaultAzureCredential(),\n);\n// Alternative: new AzureKeyCredential(\"YOUR_API_KEY\")\n\nconst dataset = await client.datasets.get(\"my-dataset\", \"1\");\nconsole.log(dataset.name, dataset.version);"
+            "label": "JavaScript (Entra ID)",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new DefaultAzureCredential(),\n);\n\nconst dataset = await client.datasets.get(\"my-dataset\", \"1\");\nconsole.log(dataset.name, dataset.version);"
+          },
+          {
+            "lang": "javascript",
+            "label": "JavaScript (API Key)",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { AzureKeyCredential } from \"@azure/core-auth\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new AzureKeyCredential(\"YOUR_API_KEY\"),\n);\n\nconst dataset = await client.datasets.get(\"my-dataset\", \"1\");\nconsole.log(dataset.name, dataset.version);"
           }
         ]
       },
@@ -630,13 +735,23 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python",
-            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\n# Entra ID auth (recommended)\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n# Alternative: API key auth\n# from azure.core.credentials import AzureKeyCredential\n# client = AIProjectClient(endpoint=\"...\", credential=AzureKeyCredential(\"YOUR_API_KEY\"))\n\ndataset = client.datasets.create_or_update(\n    name=\"my-dataset\",\n    version=\"1\",\n    body={\"description\": \"Training data\"},\n)\nprint(dataset.name)"
+            "label": "Python (Entra ID)",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n\ndataset = client.datasets.create_or_update(\n    name=\"my-dataset\",\n    version=\"1\",\n    body={\"description\": \"Training data\"},\n)\nprint(dataset.name)"
+          },
+          {
+            "lang": "python",
+            "label": "Python (API Key)",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.core.credentials import AzureKeyCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=AzureKeyCredential(\"YOUR_API_KEY\"),\n)\n\ndataset = client.datasets.create_or_update(\n    name=\"my-dataset\",\n    version=\"1\",\n    body={\"description\": \"Training data\"},\n)\nprint(dataset.name)"
           },
           {
             "lang": "bash",
-            "label": "cURL",
-            "source": "# Set your endpoint and get a token (or use API key)\n# ENDPOINT=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"\n# TOKEN=$(az account get-access-token --scope https://cognitiveservices.azure.com/.default --query accessToken -o tsv)\n# Or use API key: -H \"api-key: YOUR_API_KEY\" instead of -H \"Authorization: Bearer $TOKEN\"\ncurl -X PATCH \"$ENDPOINT/datasets/my-dataset/versions/1?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"description\": \"Training data\"}'"
+            "label": "cURL (Entra ID)",
+            "source": "# Get a token via Azure CLI\n# TOKEN=$(az account get-access-token --scope https://cognitiveservices.azure.com/.default --query accessToken -o tsv)\ncurl -X PATCH \"$ENDPOINT/datasets/my-dataset/versions/1?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"description\": \"Training data\"}'"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL (API Key)",
+            "source": "# Use your API key from the Azure portal\ncurl -X PATCH \"$ENDPOINT/datasets/my-dataset/versions/1?api-version=v1\" \\\n  -H \"api-key: YOUR_API_KEY\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"description\": \"Training data\"}'"
           }
         ]
       },
@@ -692,23 +807,43 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python",
-            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\n# Entra ID auth (recommended)\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n# Alternative: API key auth\n# from azure.core.credentials import AzureKeyCredential\n# client = AIProjectClient(endpoint=\"...\", credential=AzureKeyCredential(\"YOUR_API_KEY\"))\n\nclient.datasets.delete(\n    name=\"my-dataset\",\n    version=\"1\",\n)"
+            "label": "Python (Entra ID)",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n\nclient.datasets.delete(\n    name=\"my-dataset\",\n    version=\"1\",\n)"
+          },
+          {
+            "lang": "python",
+            "label": "Python (API Key)",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.core.credentials import AzureKeyCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=AzureKeyCredential(\"YOUR_API_KEY\"),\n)\n\nclient.datasets.delete(\n    name=\"my-dataset\",\n    version=\"1\",\n)"
           },
           {
             "lang": "bash",
-            "label": "cURL",
-            "source": "# Set your endpoint and get a token (or use API key)\n# ENDPOINT=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"\n# TOKEN=$(az account get-access-token --scope https://cognitiveservices.azure.com/.default --query accessToken -o tsv)\n# Or use API key: -H \"api-key: YOUR_API_KEY\" instead of -H \"Authorization: Bearer $TOKEN\"\ncurl -X DELETE \"$ENDPOINT/datasets/my-dataset/versions/1?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+            "label": "cURL (Entra ID)",
+            "source": "# Get a token via Azure CLI\n# TOKEN=$(az account get-access-token --scope https://cognitiveservices.azure.com/.default --query accessToken -o tsv)\ncurl -X DELETE \"$ENDPOINT/datasets/my-dataset/versions/1?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "bash",
+            "label": "cURL (API Key)",
+            "source": "# Use your API key from the Azure portal\ncurl -X DELETE \"$ENDPOINT/datasets/my-dataset/versions/1?api-version=v1\" \\\n  -H \"api-key: YOUR_API_KEY\""
           },
           {
             "lang": "csharp",
-            "label": "C#",
-            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\n// Entra ID auth (recommended)\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new DefaultAzureCredential());\n// Alternative: new AzureKeyCredential(\"YOUR_API_KEY\")\n\nclient.DeleteDataset(\"my-dataset\", \"1\");"
+            "label": "C# (Entra ID)",
+            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new DefaultAzureCredential());\n\nclient.DeleteDataset(\"my-dataset\", \"1\");"
+          },
+          {
+            "lang": "csharp",
+            "label": "C# (API Key)",
+            "source": "using Azure.AI.Projects;\nusing Azure;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new AzureKeyCredential(\"YOUR_API_KEY\"));\n\nclient.DeleteDataset(\"my-dataset\", \"1\");"
           },
           {
             "lang": "javascript",
-            "label": "JavaScript",
-            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\n// Entra ID auth (recommended)\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new DefaultAzureCredential(),\n);\n// Alternative: new AzureKeyCredential(\"YOUR_API_KEY\")\n\nawait client.datasets.delete(\"my-dataset\", \"1\");"
+            "label": "JavaScript (Entra ID)",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new DefaultAzureCredential(),\n);\n\nawait client.datasets.delete(\"my-dataset\", \"1\");"
+          },
+          {
+            "lang": "javascript",
+            "label": "JavaScript (API Key)",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { AzureKeyCredential } from \"@azure/core-auth\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new AzureKeyCredential(\"YOUR_API_KEY\"),\n);\n\nawait client.datasets.delete(\"my-dataset\", \"1\");"
           }
         ]
       }
@@ -773,13 +908,23 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python",
-            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\n# Entra ID auth (recommended)\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n# Alternative: API key auth\n# from azure.core.credentials import AzureKeyCredential\n# client = AIProjectClient(endpoint=\"...\", credential=AzureKeyCredential(\"YOUR_API_KEY\"))\n\ncreds = client.datasets.get_credentials(\n    name=\"my-dataset\",\n    version=\"1\",\n)\nprint(creds.credential_type)"
+            "label": "Python (Entra ID)",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n\ncreds = client.datasets.get_credentials(\n    name=\"my-dataset\",\n    version=\"1\",\n)\nprint(creds.credential_type)"
+          },
+          {
+            "lang": "python",
+            "label": "Python (API Key)",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.core.credentials import AzureKeyCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=AzureKeyCredential(\"YOUR_API_KEY\"),\n)\n\ncreds = client.datasets.get_credentials(\n    name=\"my-dataset\",\n    version=\"1\",\n)\nprint(creds.credential_type)"
           },
           {
             "lang": "bash",
-            "label": "cURL",
-            "source": "# Set your endpoint and get a token (or use API key)\n# ENDPOINT=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"\n# TOKEN=$(az account get-access-token --scope https://cognitiveservices.azure.com/.default --query accessToken -o tsv)\n# Or use API key: -H \"api-key: YOUR_API_KEY\" instead of -H \"Authorization: Bearer $TOKEN\"\ncurl -X POST \"$ENDPOINT/datasets/my-dataset/versions/1/credentials?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+            "label": "cURL (Entra ID)",
+            "source": "# Get a token via Azure CLI\n# TOKEN=$(az account get-access-token --scope https://cognitiveservices.azure.com/.default --query accessToken -o tsv)\ncurl -X POST \"$ENDPOINT/datasets/my-dataset/versions/1/credentials?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "bash",
+            "label": "cURL (API Key)",
+            "source": "# Use your API key from the Azure portal\ncurl -X POST \"$ENDPOINT/datasets/my-dataset/versions/1/credentials?api-version=v1\" \\\n  -H \"api-key: YOUR_API_KEY\""
           }
         ]
       }
@@ -855,13 +1000,23 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python",
-            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\n# Entra ID auth (recommended)\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n# Alternative: API key auth\n# from azure.core.credentials import AzureKeyCredential\n# client = AIProjectClient(endpoint=\"...\", credential=AzureKeyCredential(\"YOUR_API_KEY\"))\n\nupload = client.datasets.start_pending_upload(\n    name=\"my-dataset\",\n    version=\"1\",\n    body={\"pending_upload_type\": \"temporary_sas\"},\n)\nprint(upload.blob_reference)"
+            "label": "Python (Entra ID)",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n\nupload = client.datasets.start_pending_upload(\n    name=\"my-dataset\",\n    version=\"1\",\n    body={\"pending_upload_type\": \"temporary_sas\"},\n)\nprint(upload.blob_reference)"
+          },
+          {
+            "lang": "python",
+            "label": "Python (API Key)",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.core.credentials import AzureKeyCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=AzureKeyCredential(\"YOUR_API_KEY\"),\n)\n\nupload = client.datasets.start_pending_upload(\n    name=\"my-dataset\",\n    version=\"1\",\n    body={\"pending_upload_type\": \"temporary_sas\"},\n)\nprint(upload.blob_reference)"
           },
           {
             "lang": "bash",
-            "label": "cURL",
-            "source": "# Set your endpoint and get a token (or use API key)\n# ENDPOINT=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"\n# TOKEN=$(az account get-access-token --scope https://cognitiveservices.azure.com/.default --query accessToken -o tsv)\n# Or use API key: -H \"api-key: YOUR_API_KEY\" instead of -H \"Authorization: Bearer $TOKEN\"\ncurl -X POST \"$ENDPOINT/datasets/my-dataset/versions/1/startPendingUpload?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"pending_upload_type\": \"temporary_sas\"}'"
+            "label": "cURL (Entra ID)",
+            "source": "# Get a token via Azure CLI\n# TOKEN=$(az account get-access-token --scope https://cognitiveservices.azure.com/.default --query accessToken -o tsv)\ncurl -X POST \"$ENDPOINT/datasets/my-dataset/versions/1/startPendingUpload?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"pending_upload_type\": \"temporary_sas\"}'"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL (API Key)",
+            "source": "# Use your API key from the Azure portal\ncurl -X POST \"$ENDPOINT/datasets/my-dataset/versions/1/startPendingUpload?api-version=v1\" \\\n  -H \"api-key: YOUR_API_KEY\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"pending_upload_type\": \"temporary_sas\"}'"
           }
         ]
       }
@@ -964,23 +1119,43 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python",
-            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\n# Entra ID auth (recommended)\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n# Alternative: API key auth\n# from azure.core.credentials import AzureKeyCredential\n# client = AIProjectClient(endpoint=\"...\", credential=AzureKeyCredential(\"YOUR_API_KEY\"))\n\ndeployments = client.deployments.list()\nfor d in deployments:\n    print(d.name, d.model)"
+            "label": "Python (Entra ID)",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n\ndeployments = client.deployments.list()\nfor d in deployments:\n    print(d.name, d.model)"
+          },
+          {
+            "lang": "python",
+            "label": "Python (API Key)",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.core.credentials import AzureKeyCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=AzureKeyCredential(\"YOUR_API_KEY\"),\n)\n\ndeployments = client.deployments.list()\nfor d in deployments:\n    print(d.name, d.model)"
           },
           {
             "lang": "bash",
-            "label": "cURL",
-            "source": "# Set your endpoint and get a token (or use API key)\n# ENDPOINT=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"\n# TOKEN=$(az account get-access-token --scope https://cognitiveservices.azure.com/.default --query accessToken -o tsv)\n# Or use API key: -H \"api-key: YOUR_API_KEY\" instead of -H \"Authorization: Bearer $TOKEN\"\ncurl \"$ENDPOINT/deployments?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+            "label": "cURL (Entra ID)",
+            "source": "# Get a token via Azure CLI\n# TOKEN=$(az account get-access-token --scope https://cognitiveservices.azure.com/.default --query accessToken -o tsv)\ncurl \"$ENDPOINT/deployments?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "bash",
+            "label": "cURL (API Key)",
+            "source": "# Use your API key from the Azure portal\ncurl \"$ENDPOINT/deployments?api-version=v1\" \\\n  -H \"api-key: YOUR_API_KEY\""
           },
           {
             "lang": "csharp",
-            "label": "C#",
-            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\n// Entra ID auth (recommended)\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new DefaultAzureCredential());\n// Alternative: new AzureKeyCredential(\"YOUR_API_KEY\")\n\nvar deployments = client.GetDeployments();\n\nforeach (var d in deployments)\n    Console.WriteLine($\"{d.Name} {d.Model}\");"
+            "label": "C# (Entra ID)",
+            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new DefaultAzureCredential());\n\nvar deployments = client.GetDeployments();\n\nforeach (var d in deployments)\n    Console.WriteLine($\"{d.Name} {d.Model}\");"
+          },
+          {
+            "lang": "csharp",
+            "label": "C# (API Key)",
+            "source": "using Azure.AI.Projects;\nusing Azure;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new AzureKeyCredential(\"YOUR_API_KEY\"));\n\nvar deployments = client.GetDeployments();\n\nforeach (var d in deployments)\n    Console.WriteLine($\"{d.Name} {d.Model}\");"
           },
           {
             "lang": "javascript",
-            "label": "JavaScript",
-            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\n// Entra ID auth (recommended)\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new DefaultAzureCredential(),\n);\n// Alternative: new AzureKeyCredential(\"YOUR_API_KEY\")\n\nconst deployments = await client.deployments.list();\nfor await (const d of deployments) {\n    console.log(d.name, d.model);\n}"
+            "label": "JavaScript (Entra ID)",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new DefaultAzureCredential(),\n);\n\nconst deployments = await client.deployments.list();\nfor await (const d of deployments) {\n    console.log(d.name, d.model);\n}"
+          },
+          {
+            "lang": "javascript",
+            "label": "JavaScript (API Key)",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { AzureKeyCredential } from \"@azure/core-auth\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new AzureKeyCredential(\"YOUR_API_KEY\"),\n);\n\nconst deployments = await client.deployments.list();\nfor await (const d of deployments) {\n    console.log(d.name, d.model);\n}"
           }
         ]
       }
@@ -1048,23 +1223,43 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python",
-            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\n# Entra ID auth (recommended)\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n# Alternative: API key auth\n# from azure.core.credentials import AzureKeyCredential\n# client = AIProjectClient(endpoint=\"...\", credential=AzureKeyCredential(\"YOUR_API_KEY\"))\n\ndeployment = client.deployments.get(\"gpt-4o\")\nprint(deployment.name, deployment.model)"
+            "label": "Python (Entra ID)",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n\ndeployment = client.deployments.get(\"gpt-4o\")\nprint(deployment.name, deployment.model)"
+          },
+          {
+            "lang": "python",
+            "label": "Python (API Key)",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.core.credentials import AzureKeyCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=AzureKeyCredential(\"YOUR_API_KEY\"),\n)\n\ndeployment = client.deployments.get(\"gpt-4o\")\nprint(deployment.name, deployment.model)"
           },
           {
             "lang": "bash",
-            "label": "cURL",
-            "source": "# Set your endpoint and get a token (or use API key)\n# ENDPOINT=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"\n# TOKEN=$(az account get-access-token --scope https://cognitiveservices.azure.com/.default --query accessToken -o tsv)\n# Or use API key: -H \"api-key: YOUR_API_KEY\" instead of -H \"Authorization: Bearer $TOKEN\"\ncurl \"$ENDPOINT/deployments/gpt-4o?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+            "label": "cURL (Entra ID)",
+            "source": "# Get a token via Azure CLI\n# TOKEN=$(az account get-access-token --scope https://cognitiveservices.azure.com/.default --query accessToken -o tsv)\ncurl \"$ENDPOINT/deployments/gpt-4o?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "bash",
+            "label": "cURL (API Key)",
+            "source": "# Use your API key from the Azure portal\ncurl \"$ENDPOINT/deployments/gpt-4o?api-version=v1\" \\\n  -H \"api-key: YOUR_API_KEY\""
           },
           {
             "lang": "csharp",
-            "label": "C#",
-            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\n// Entra ID auth (recommended)\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new DefaultAzureCredential());\n// Alternative: new AzureKeyCredential(\"YOUR_API_KEY\")\n\nvar deployment = client.GetDeployment(\"gpt-4o\");\n\nConsole.WriteLine($\"{deployment.Name} {deployment.Model}\");"
+            "label": "C# (Entra ID)",
+            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new DefaultAzureCredential());\n\nvar deployment = client.GetDeployment(\"gpt-4o\");\n\nConsole.WriteLine($\"{deployment.Name} {deployment.Model}\");"
+          },
+          {
+            "lang": "csharp",
+            "label": "C# (API Key)",
+            "source": "using Azure.AI.Projects;\nusing Azure;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new AzureKeyCredential(\"YOUR_API_KEY\"));\n\nvar deployment = client.GetDeployment(\"gpt-4o\");\n\nConsole.WriteLine($\"{deployment.Name} {deployment.Model}\");"
           },
           {
             "lang": "javascript",
-            "label": "JavaScript",
-            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\n// Entra ID auth (recommended)\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new DefaultAzureCredential(),\n);\n// Alternative: new AzureKeyCredential(\"YOUR_API_KEY\")\n\nconst deployment = await client.deployments.get(\"gpt-4o\");\nconsole.log(deployment.name, deployment.model);"
+            "label": "JavaScript (Entra ID)",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new DefaultAzureCredential(),\n);\n\nconst deployment = await client.deployments.get(\"gpt-4o\");\nconsole.log(deployment.name, deployment.model);"
+          },
+          {
+            "lang": "javascript",
+            "label": "JavaScript (API Key)",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { AzureKeyCredential } from \"@azure/core-auth\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new AzureKeyCredential(\"YOUR_API_KEY\"),\n);\n\nconst deployment = await client.deployments.get(\"gpt-4o\");\nconsole.log(deployment.name, deployment.model);"
           }
         ]
       }
@@ -1114,23 +1309,43 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python",
-            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\n# Entra ID auth (recommended)\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n# Alternative: API key auth\n# from azure.core.credentials import AzureKeyCredential\n# client = AIProjectClient(endpoint=\"...\", credential=AzureKeyCredential(\"YOUR_API_KEY\"))\n\nindexes = client.indexes.list()\nfor idx in indexes:\n    print(idx.name, idx.version)"
+            "label": "Python (Entra ID)",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n\nindexes = client.indexes.list()\nfor idx in indexes:\n    print(idx.name, idx.version)"
+          },
+          {
+            "lang": "python",
+            "label": "Python (API Key)",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.core.credentials import AzureKeyCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=AzureKeyCredential(\"YOUR_API_KEY\"),\n)\n\nindexes = client.indexes.list()\nfor idx in indexes:\n    print(idx.name, idx.version)"
           },
           {
             "lang": "bash",
-            "label": "cURL",
-            "source": "# Set your endpoint and get a token (or use API key)\n# ENDPOINT=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"\n# TOKEN=$(az account get-access-token --scope https://cognitiveservices.azure.com/.default --query accessToken -o tsv)\n# Or use API key: -H \"api-key: YOUR_API_KEY\" instead of -H \"Authorization: Bearer $TOKEN\"\ncurl \"$ENDPOINT/indexes?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+            "label": "cURL (Entra ID)",
+            "source": "# Get a token via Azure CLI\n# TOKEN=$(az account get-access-token --scope https://cognitiveservices.azure.com/.default --query accessToken -o tsv)\ncurl \"$ENDPOINT/indexes?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "bash",
+            "label": "cURL (API Key)",
+            "source": "# Use your API key from the Azure portal\ncurl \"$ENDPOINT/indexes?api-version=v1\" \\\n  -H \"api-key: YOUR_API_KEY\""
           },
           {
             "lang": "csharp",
-            "label": "C#",
-            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\n// Entra ID auth (recommended)\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new DefaultAzureCredential());\n// Alternative: new AzureKeyCredential(\"YOUR_API_KEY\")\n\nvar indexes = client.GetIndexes();\n\nforeach (var idx in indexes)\n    Console.WriteLine($\"{idx.Name} v{idx.Version}\");"
+            "label": "C# (Entra ID)",
+            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new DefaultAzureCredential());\n\nvar indexes = client.GetIndexes();\n\nforeach (var idx in indexes)\n    Console.WriteLine($\"{idx.Name} v{idx.Version}\");"
+          },
+          {
+            "lang": "csharp",
+            "label": "C# (API Key)",
+            "source": "using Azure.AI.Projects;\nusing Azure;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new AzureKeyCredential(\"YOUR_API_KEY\"));\n\nvar indexes = client.GetIndexes();\n\nforeach (var idx in indexes)\n    Console.WriteLine($\"{idx.Name} v{idx.Version}\");"
           },
           {
             "lang": "javascript",
-            "label": "JavaScript",
-            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\n// Entra ID auth (recommended)\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new DefaultAzureCredential(),\n);\n// Alternative: new AzureKeyCredential(\"YOUR_API_KEY\")\n\nconst indexes = await client.indexes.list();\nfor await (const idx of indexes) {\n    console.log(idx.name, idx.version);\n}"
+            "label": "JavaScript (Entra ID)",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new DefaultAzureCredential(),\n);\n\nconst indexes = await client.indexes.list();\nfor await (const idx of indexes) {\n    console.log(idx.name, idx.version);\n}"
+          },
+          {
+            "lang": "javascript",
+            "label": "JavaScript (API Key)",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { AzureKeyCredential } from \"@azure/core-auth\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new AzureKeyCredential(\"YOUR_API_KEY\"),\n);\n\nconst indexes = await client.indexes.list();\nfor await (const idx of indexes) {\n    console.log(idx.name, idx.version);\n}"
           }
         ]
       }
@@ -1189,13 +1404,23 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python",
-            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\n# Entra ID auth (recommended)\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n# Alternative: API key auth\n# from azure.core.credentials import AzureKeyCredential\n# client = AIProjectClient(endpoint=\"...\", credential=AzureKeyCredential(\"YOUR_API_KEY\"))\n\nversions = client.indexes.list_versions(\"my-index\")\nfor v in versions:\n    print(v.version)"
+            "label": "Python (Entra ID)",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n\nversions = client.indexes.list_versions(\"my-index\")\nfor v in versions:\n    print(v.version)"
+          },
+          {
+            "lang": "python",
+            "label": "Python (API Key)",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.core.credentials import AzureKeyCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=AzureKeyCredential(\"YOUR_API_KEY\"),\n)\n\nversions = client.indexes.list_versions(\"my-index\")\nfor v in versions:\n    print(v.version)"
           },
           {
             "lang": "bash",
-            "label": "cURL",
-            "source": "# Set your endpoint and get a token (or use API key)\n# ENDPOINT=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"\n# TOKEN=$(az account get-access-token --scope https://cognitiveservices.azure.com/.default --query accessToken -o tsv)\n# Or use API key: -H \"api-key: YOUR_API_KEY\" instead of -H \"Authorization: Bearer $TOKEN\"\ncurl \"$ENDPOINT/indexes/my-index/versions?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+            "label": "cURL (Entra ID)",
+            "source": "# Get a token via Azure CLI\n# TOKEN=$(az account get-access-token --scope https://cognitiveservices.azure.com/.default --query accessToken -o tsv)\ncurl \"$ENDPOINT/indexes/my-index/versions?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "bash",
+            "label": "cURL (API Key)",
+            "source": "# Use your API key from the Azure portal\ncurl \"$ENDPOINT/indexes/my-index/versions?api-version=v1\" \\\n  -H \"api-key: YOUR_API_KEY\""
           }
         ]
       }
@@ -1260,23 +1485,43 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python",
-            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\n# Entra ID auth (recommended)\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n# Alternative: API key auth\n# from azure.core.credentials import AzureKeyCredential\n# client = AIProjectClient(endpoint=\"...\", credential=AzureKeyCredential(\"YOUR_API_KEY\"))\n\nindex = client.indexes.get(\n    name=\"my-index\",\n    version=\"1\",\n)\nprint(index.name)"
+            "label": "Python (Entra ID)",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n\nindex = client.indexes.get(\n    name=\"my-index\",\n    version=\"1\",\n)\nprint(index.name)"
+          },
+          {
+            "lang": "python",
+            "label": "Python (API Key)",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.core.credentials import AzureKeyCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=AzureKeyCredential(\"YOUR_API_KEY\"),\n)\n\nindex = client.indexes.get(\n    name=\"my-index\",\n    version=\"1\",\n)\nprint(index.name)"
           },
           {
             "lang": "bash",
-            "label": "cURL",
-            "source": "# Set your endpoint and get a token (or use API key)\n# ENDPOINT=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"\n# TOKEN=$(az account get-access-token --scope https://cognitiveservices.azure.com/.default --query accessToken -o tsv)\n# Or use API key: -H \"api-key: YOUR_API_KEY\" instead of -H \"Authorization: Bearer $TOKEN\"\ncurl \"$ENDPOINT/indexes/my-index/versions/1?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+            "label": "cURL (Entra ID)",
+            "source": "# Get a token via Azure CLI\n# TOKEN=$(az account get-access-token --scope https://cognitiveservices.azure.com/.default --query accessToken -o tsv)\ncurl \"$ENDPOINT/indexes/my-index/versions/1?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "bash",
+            "label": "cURL (API Key)",
+            "source": "# Use your API key from the Azure portal\ncurl \"$ENDPOINT/indexes/my-index/versions/1?api-version=v1\" \\\n  -H \"api-key: YOUR_API_KEY\""
           },
           {
             "lang": "csharp",
-            "label": "C#",
-            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\n// Entra ID auth (recommended)\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new DefaultAzureCredential());\n// Alternative: new AzureKeyCredential(\"YOUR_API_KEY\")\n\nvar index = client.GetIndex(\"my-index\", \"1\");\n\nConsole.WriteLine(index.Name);"
+            "label": "C# (Entra ID)",
+            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new DefaultAzureCredential());\n\nvar index = client.GetIndex(\"my-index\", \"1\");\n\nConsole.WriteLine(index.Name);"
+          },
+          {
+            "lang": "csharp",
+            "label": "C# (API Key)",
+            "source": "using Azure.AI.Projects;\nusing Azure;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new AzureKeyCredential(\"YOUR_API_KEY\"));\n\nvar index = client.GetIndex(\"my-index\", \"1\");\n\nConsole.WriteLine(index.Name);"
           },
           {
             "lang": "javascript",
-            "label": "JavaScript",
-            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\n// Entra ID auth (recommended)\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new DefaultAzureCredential(),\n);\n// Alternative: new AzureKeyCredential(\"YOUR_API_KEY\")\n\nconst index = await client.indexes.get(\"my-index\", \"1\");\nconsole.log(index.name);"
+            "label": "JavaScript (Entra ID)",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new DefaultAzureCredential(),\n);\n\nconst index = await client.indexes.get(\"my-index\", \"1\");\nconsole.log(index.name);"
+          },
+          {
+            "lang": "javascript",
+            "label": "JavaScript (API Key)",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { AzureKeyCredential } from \"@azure/core-auth\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new AzureKeyCredential(\"YOUR_API_KEY\"),\n);\n\nconst index = await client.indexes.get(\"my-index\", \"1\");\nconsole.log(index.name);"
           }
         ]
       },
@@ -1360,13 +1605,23 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python",
-            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\n# Entra ID auth (recommended)\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n# Alternative: API key auth\n# from azure.core.credentials import AzureKeyCredential\n# client = AIProjectClient(endpoint=\"...\", credential=AzureKeyCredential(\"YOUR_API_KEY\"))\n\nindex = client.indexes.create_or_update(\n    name=\"my-index\",\n    version=\"1\",\n    body={\"description\": \"Search index\"},\n)\nprint(index.name)"
+            "label": "Python (Entra ID)",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n\nindex = client.indexes.create_or_update(\n    name=\"my-index\",\n    version=\"1\",\n    body={\"description\": \"Search index\"},\n)\nprint(index.name)"
+          },
+          {
+            "lang": "python",
+            "label": "Python (API Key)",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.core.credentials import AzureKeyCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=AzureKeyCredential(\"YOUR_API_KEY\"),\n)\n\nindex = client.indexes.create_or_update(\n    name=\"my-index\",\n    version=\"1\",\n    body={\"description\": \"Search index\"},\n)\nprint(index.name)"
           },
           {
             "lang": "bash",
-            "label": "cURL",
-            "source": "# Set your endpoint and get a token (or use API key)\n# ENDPOINT=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"\n# TOKEN=$(az account get-access-token --scope https://cognitiveservices.azure.com/.default --query accessToken -o tsv)\n# Or use API key: -H \"api-key: YOUR_API_KEY\" instead of -H \"Authorization: Bearer $TOKEN\"\ncurl -X PATCH \"$ENDPOINT/indexes/my-index/versions/1?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"description\": \"Search index\"}'"
+            "label": "cURL (Entra ID)",
+            "source": "# Get a token via Azure CLI\n# TOKEN=$(az account get-access-token --scope https://cognitiveservices.azure.com/.default --query accessToken -o tsv)\ncurl -X PATCH \"$ENDPOINT/indexes/my-index/versions/1?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"description\": \"Search index\"}'"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL (API Key)",
+            "source": "# Use your API key from the Azure portal\ncurl -X PATCH \"$ENDPOINT/indexes/my-index/versions/1?api-version=v1\" \\\n  -H \"api-key: YOUR_API_KEY\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"description\": \"Search index\"}'"
           }
         ]
       },
@@ -1422,23 +1677,43 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python",
-            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\n# Entra ID auth (recommended)\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n# Alternative: API key auth\n# from azure.core.credentials import AzureKeyCredential\n# client = AIProjectClient(endpoint=\"...\", credential=AzureKeyCredential(\"YOUR_API_KEY\"))\n\nclient.indexes.delete(\n    name=\"my-index\",\n    version=\"1\",\n)"
+            "label": "Python (Entra ID)",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n\nclient.indexes.delete(\n    name=\"my-index\",\n    version=\"1\",\n)"
+          },
+          {
+            "lang": "python",
+            "label": "Python (API Key)",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.core.credentials import AzureKeyCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=AzureKeyCredential(\"YOUR_API_KEY\"),\n)\n\nclient.indexes.delete(\n    name=\"my-index\",\n    version=\"1\",\n)"
           },
           {
             "lang": "bash",
-            "label": "cURL",
-            "source": "# Set your endpoint and get a token (or use API key)\n# ENDPOINT=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"\n# TOKEN=$(az account get-access-token --scope https://cognitiveservices.azure.com/.default --query accessToken -o tsv)\n# Or use API key: -H \"api-key: YOUR_API_KEY\" instead of -H \"Authorization: Bearer $TOKEN\"\ncurl -X DELETE \"$ENDPOINT/indexes/my-index/versions/1?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+            "label": "cURL (Entra ID)",
+            "source": "# Get a token via Azure CLI\n# TOKEN=$(az account get-access-token --scope https://cognitiveservices.azure.com/.default --query accessToken -o tsv)\ncurl -X DELETE \"$ENDPOINT/indexes/my-index/versions/1?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "bash",
+            "label": "cURL (API Key)",
+            "source": "# Use your API key from the Azure portal\ncurl -X DELETE \"$ENDPOINT/indexes/my-index/versions/1?api-version=v1\" \\\n  -H \"api-key: YOUR_API_KEY\""
           },
           {
             "lang": "csharp",
-            "label": "C#",
-            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\n// Entra ID auth (recommended)\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new DefaultAzureCredential());\n// Alternative: new AzureKeyCredential(\"YOUR_API_KEY\")\n\nclient.DeleteIndex(\"my-index\", \"1\");"
+            "label": "C# (Entra ID)",
+            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new DefaultAzureCredential());\n\nclient.DeleteIndex(\"my-index\", \"1\");"
+          },
+          {
+            "lang": "csharp",
+            "label": "C# (API Key)",
+            "source": "using Azure.AI.Projects;\nusing Azure;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new AzureKeyCredential(\"YOUR_API_KEY\"));\n\nclient.DeleteIndex(\"my-index\", \"1\");"
           },
           {
             "lang": "javascript",
-            "label": "JavaScript",
-            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\n// Entra ID auth (recommended)\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new DefaultAzureCredential(),\n);\n// Alternative: new AzureKeyCredential(\"YOUR_API_KEY\")\n\nawait client.indexes.delete(\"my-index\", \"1\");"
+            "label": "JavaScript (Entra ID)",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new DefaultAzureCredential(),\n);\n\nawait client.indexes.delete(\"my-index\", \"1\");"
+          },
+          {
+            "lang": "javascript",
+            "label": "JavaScript (API Key)",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { AzureKeyCredential } from \"@azure/core-auth\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new AzureKeyCredential(\"YOUR_API_KEY\"),\n);\n\nawait client.indexes.delete(\"my-index\", \"1\");"
           }
         ]
       }
