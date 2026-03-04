@@ -141,6 +141,12 @@ def main():
     for section in manifest.get("toc_hierarchy", []):
         group = build_nav_group(section, docs_dir)
         if group:
+            # Inject SDK & API Reference page into API & SDK section
+            if group["group"] == "API & SDK":
+                ref_page = "api-sdk/sdk-api-reference"
+                ref_mdx = docs_dir / f"{ref_page}.mdx"
+                if ref_mdx.exists() and ref_page not in group["pages"]:
+                    group["pages"].append(ref_page)
             navigation.append(group)
 
     # Merge into existing docs.json template if it exists

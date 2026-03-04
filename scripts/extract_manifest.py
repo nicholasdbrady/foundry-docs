@@ -65,18 +65,49 @@ def resolve_path(href: str, toc_dir: str) -> str:
     return '/'.join(parts)
 
 
+# Absolute MS Learn paths that map to directories within this repo.
+# /azure/ai-services/... → articles/ai-services/...
+# These are referenced via absolute paths in the toc.yml but live in the
+# same GitHub repo under a different articles/ subdirectory.
+IN_REPO_ABSOLUTE_PREFIXES = (
+    '/azure/ai-services/',
+)
+
+
 def categorize_href(href: str) -> str:
     """Categorize an href as in-repo-md, in-repo-yml, external, or cross-repo."""
     if href.startswith('http://') or href.startswith('https://'):
         return 'external'
-    clean = re.sub(r'\?.*$', '', href)
+    clean = re.sub(r'[?#].*$', '', href)  # strip query params AND anchors
+    # Check if this is an absolute MS Learn path that lives in the same repo
+    for prefix in IN_REPO_ABSOLUTE_PREFIXES:
+        if clean.startswith(prefix):
+            return 'in-repo-md'
     if clean.startswith('/azure/') or clean.startswith('/rest/'):
         return 'cross-repo'
     if clean.endswith('.md'):
         return 'in-repo-md'
     if clean.endswith('.yml') or clean.endswith('.yaml'):
         return 'in-repo-yml'
+    # SDK/API reference paths (e.g. /dotnet/api/, /python/api/, /cli/azure/)
+    if clean.startswith('/'):
+        return 'external'
     return 'external'
+
+
+def resolve_absolute_href(href: str) -> str:
+    """Resolve an absolute MS Learn href to a repo-relative path.
+
+    /azure/ai-services/language-service/foo → articles/ai-services/language-service/foo.md
+    """
+    clean = re.sub(r'[?#].*$', '', href)
+    # /azure/X → articles/X
+    if clean.startswith('/azure/'):
+        repo_path = 'articles/' + clean[len('/azure/'):]
+        if not repo_path.endswith('.md'):
+            repo_path += '.md'
+        return repo_path
+    return clean
 
 
 def parse_toc_items(items: list, toc_dir: str, section: str, hierarchy: list) -> list:
@@ -91,7 +122,12 @@ def parse_toc_items(items: list, toc_dir: str, section: str, hierarchy: list) ->
         if href:
             cat = categorize_href(href)
             if cat == 'in-repo-md' or cat == 'in-repo-yml':
-                resolved = resolve_path(href, toc_dir)
+                # Resolve path: relative hrefs use toc_dir, absolute use resolve_absolute_href
+                clean_href = re.sub(r'[?#].*$', '', href)
+                if clean_href.startswith('/'):
+                    resolved = resolve_absolute_href(clean_href)
+                else:
+                    resolved = resolve_path(clean_href, toc_dir)
                 entries.append({
                     'name': name,
                     'source_path': resolved,
@@ -100,7 +136,7 @@ def parse_toc_items(items: list, toc_dir: str, section: str, hierarchy: list) ->
                     'hierarchy': current_hierarchy,
                 })
             elif cat == 'cross-repo':
-                clean_href = re.sub(r'\?.*$', '', href)
+                clean_href = re.sub(r'[?#].*$', '', href)
                 entries.append({
                     'name': name,
                     'source_path': clean_href,
