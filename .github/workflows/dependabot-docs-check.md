@@ -116,6 +116,10 @@ Add a brief comment: "✅ No documentation impact detected for this dependency u
 
 Add label `no-docs-impact`.
 
+### If This Is Not a Dependabot PR
+
+If the PR was not created by Dependabot (check the PR author), call `noop` immediately — this workflow only applies to Dependabot dependency update PRs. You **must** call `noop` explicitly; do not end your turn without producing at least one safe-output.
+
 ## Guidelines
 
 - Be fast — Dependabot PRs should be merged quickly

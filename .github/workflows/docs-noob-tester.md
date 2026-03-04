@@ -10,6 +10,7 @@ permissions:
   contents: read
   issues: read
   pull-requests: read
+  discussions: write
 engine: copilot
 timeout-minutes: 15
 tools:
