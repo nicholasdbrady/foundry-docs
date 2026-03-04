@@ -155,8 +155,23 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\n\nconnections = client.connections.list()\nfor conn in connections:\n    print(conn.name, conn.type)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/connections?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "csharp",
+            "label": "C#",
+            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\nvar client = new AIProjectClient(\n    new Uri(\"YOUR_ENDPOINT\"),\n    new DefaultAzureCredential());\n\nvar connections = client.GetConnections();\n\nforeach (var conn in connections)\n    Console.WriteLine($\"{conn.Name} {conn.ConnectionType}\");"
+          },
+          {
+            "lang": "javascript",
+            "label": "JavaScript",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst client = new AIProjectClient(\n    \"YOUR_ENDPOINT\",\n    new DefaultAzureCredential(),\n);\n\nconst connections = await client.connections.list();\nfor await (const conn of connections) {\n    console.log(conn.name, conn.type);\n}"
           }
         ]
       }
@@ -224,8 +239,23 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\n\nconnection = client.connections.get(\"my-connection\")\nprint(connection.name, connection.type)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/connections/my-connection?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "csharp",
+            "label": "C#",
+            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\nvar client = new AIProjectClient(\n    new Uri(\"YOUR_ENDPOINT\"),\n    new DefaultAzureCredential());\n\nvar connection = client.GetConnection(\"my-connection\");\n\nConsole.WriteLine($\"{connection.Name} {connection.ConnectionType}\");"
+          },
+          {
+            "lang": "javascript",
+            "label": "JavaScript",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst client = new AIProjectClient(\n    \"YOUR_ENDPOINT\",\n    new DefaultAzureCredential(),\n);\n\nconst connection = await client.connections.get(\"my-connection\");\nconsole.log(connection.name, connection.type);"
           }
         ]
       }
@@ -293,8 +323,18 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\n\nconnection = client.connections.get(\n    \"my-connection\",\n    include_credentials=True,\n)\nprint(connection.name, connection.credentials)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/connections/my-connection/getConnectionWithCredentials?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "csharp",
+            "label": "C#",
+            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\nvar client = new AIProjectClient(\n    new Uri(\"YOUR_ENDPOINT\"),\n    new DefaultAzureCredential());\n\nvar connection = client.GetConnectionWithCredentials(\n    \"my-connection\");\n\nConsole.WriteLine(connection.Credentials);"
           }
         ]
       }
@@ -344,8 +384,23 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\n\ndatasets = client.datasets.list()\nfor ds in datasets:\n    print(ds.name, ds.version)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/datasets?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "csharp",
+            "label": "C#",
+            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\nvar client = new AIProjectClient(\n    new Uri(\"YOUR_ENDPOINT\"),\n    new DefaultAzureCredential());\n\nvar datasets = client.GetDatasets();\n\nforeach (var ds in datasets)\n    Console.WriteLine($\"{ds.Name} v{ds.Version}\");"
+          },
+          {
+            "lang": "javascript",
+            "label": "JavaScript",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst client = new AIProjectClient(\n    \"YOUR_ENDPOINT\",\n    new DefaultAzureCredential(),\n);\n\nconst datasets = await client.datasets.list();\nfor await (const ds of datasets) {\n    console.log(ds.name, ds.version);\n}"
           }
         ]
       }
@@ -404,8 +459,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\n\nversions = client.datasets.list_versions(\"my-dataset\")\nfor v in versions:\n    print(v.version, v.created_date)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/datasets/my-dataset/versions?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       }
@@ -470,8 +530,23 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\n\ndataset = client.datasets.get(\n    name=\"my-dataset\",\n    version=\"1\",\n)\nprint(dataset.name, dataset.version)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/datasets/my-dataset/versions/1?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "csharp",
+            "label": "C#",
+            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\nvar client = new AIProjectClient(\n    new Uri(\"YOUR_ENDPOINT\"),\n    new DefaultAzureCredential());\n\nvar dataset = client.GetDataset(\"my-dataset\", \"1\");\n\nConsole.WriteLine($\"{dataset.Name} v{dataset.Version}\");"
+          },
+          {
+            "lang": "javascript",
+            "label": "JavaScript",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst client = new AIProjectClient(\n    \"YOUR_ENDPOINT\",\n    new DefaultAzureCredential(),\n);\n\nconst dataset = await client.datasets.get(\"my-dataset\", \"1\");\nconsole.log(dataset.name, dataset.version);"
           }
         ]
       },
@@ -555,8 +630,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\n\ndataset = client.datasets.create_or_update(\n    name=\"my-dataset\",\n    version=\"1\",\n    body={\"description\": \"Training data\"},\n)\nprint(dataset.name)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X PATCH \"$ENDPOINT/datasets/my-dataset/versions/1?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"description\": \"Training data\"}'"
           }
         ]
       },
@@ -612,8 +692,23 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\n\nclient.datasets.delete(\n    name=\"my-dataset\",\n    version=\"1\",\n)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X DELETE \"$ENDPOINT/datasets/my-dataset/versions/1?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "csharp",
+            "label": "C#",
+            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\nvar client = new AIProjectClient(\n    new Uri(\"YOUR_ENDPOINT\"),\n    new DefaultAzureCredential());\n\nclient.DeleteDataset(\"my-dataset\", \"1\");"
+          },
+          {
+            "lang": "javascript",
+            "label": "JavaScript",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst client = new AIProjectClient(\n    \"YOUR_ENDPOINT\",\n    new DefaultAzureCredential(),\n);\n\nawait client.datasets.delete(\"my-dataset\", \"1\");"
           }
         ]
       }
@@ -678,8 +773,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\n\ncreds = client.datasets.get_credentials(\n    name=\"my-dataset\",\n    version=\"1\",\n)\nprint(creds.credential_type)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/datasets/my-dataset/versions/1/credentials?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       }
@@ -755,8 +855,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\n\nupload = client.datasets.start_pending_upload(\n    name=\"my-dataset\",\n    version=\"1\",\n    body={\"pending_upload_type\": \"temporary_sas\"},\n)\nprint(upload.blob_reference)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/datasets/my-dataset/versions/1/startPendingUpload?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"pending_upload_type\": \"temporary_sas\"}'"
           }
         ]
       }
@@ -859,8 +964,23 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\n\ndeployments = client.deployments.list()\nfor d in deployments:\n    print(d.name, d.model)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/deployments?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "csharp",
+            "label": "C#",
+            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\nvar client = new AIProjectClient(\n    new Uri(\"YOUR_ENDPOINT\"),\n    new DefaultAzureCredential());\n\nvar deployments = client.GetDeployments();\n\nforeach (var d in deployments)\n    Console.WriteLine($\"{d.Name} {d.Model}\");"
+          },
+          {
+            "lang": "javascript",
+            "label": "JavaScript",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst client = new AIProjectClient(\n    \"YOUR_ENDPOINT\",\n    new DefaultAzureCredential(),\n);\n\nconst deployments = await client.deployments.list();\nfor await (const d of deployments) {\n    console.log(d.name, d.model);\n}"
           }
         ]
       }
@@ -928,8 +1048,23 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\n\ndeployment = client.deployments.get(\"gpt-4o\")\nprint(deployment.name, deployment.model)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/deployments/gpt-4o?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "csharp",
+            "label": "C#",
+            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\nvar client = new AIProjectClient(\n    new Uri(\"YOUR_ENDPOINT\"),\n    new DefaultAzureCredential());\n\nvar deployment = client.GetDeployment(\"gpt-4o\");\n\nConsole.WriteLine($\"{deployment.Name} {deployment.Model}\");"
+          },
+          {
+            "lang": "javascript",
+            "label": "JavaScript",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst client = new AIProjectClient(\n    \"YOUR_ENDPOINT\",\n    new DefaultAzureCredential(),\n);\n\nconst deployment = await client.deployments.get(\"gpt-4o\");\nconsole.log(deployment.name, deployment.model);"
           }
         ]
       }
@@ -991,8 +1126,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\n\nruns = client.beta.evaluations.list()\nfor run in runs:\n    print(run.name, run.status)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/evaluations/runs?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       }
@@ -1060,8 +1200,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\n\nrun = client.beta.evaluations.get(\"my-eval-run\")\nprint(run.name, run.status)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/evaluations/runs/my-eval-run?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       },
@@ -1120,8 +1265,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\n\nclient.beta.evaluations.delete(\"my-eval-run\")"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X DELETE \"$ENDPOINT/evaluations/runs/my-eval-run?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       }
@@ -1182,8 +1332,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\n\nclient.beta.evaluations.cancel(\"my-eval-run\")"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/evaluations/runs/my-eval-run:cancel?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       }
@@ -1241,8 +1396,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\n\nrun = client.beta.evaluations.create(\n    body={\n        \"display_name\": \"my-eval-run\",\n        \"evaluators\": {\"relevance\": {\"id\": \"relevance\"}},\n        \"data\": {\"type\": \"dataset\", \"id\": \"my-dataset:1\"},\n    },\n)\nprint(run.name)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/evaluations/runs:run?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"display_name\": \"my-eval\", \"evaluators\": {}, \"data\": {}}'"
           }
         ]
       }
@@ -1300,8 +1460,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\n\nrun = client.beta.evaluations.create_agent(\n    body={\n        \"display_name\": \"agent-eval\",\n        \"evaluators\": {\"relevance\": {\"id\": \"relevance\"}},\n        \"target\": {\"agent_id\": \"my-agent:1\"},\n    },\n)\nprint(run.name)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/evaluations/runs:runAgent?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"display_name\": \"agent-eval\", \"evaluators\": {}, \"target\": {\"agent_id\": \"my-agent:1\"}}'"
           }
         ]
       }
@@ -1351,8 +1516,23 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\n\nindexes = client.indexes.list()\nfor idx in indexes:\n    print(idx.name, idx.version)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/indexes?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "csharp",
+            "label": "C#",
+            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\nvar client = new AIProjectClient(\n    new Uri(\"YOUR_ENDPOINT\"),\n    new DefaultAzureCredential());\n\nvar indexes = client.GetIndexes();\n\nforeach (var idx in indexes)\n    Console.WriteLine($\"{idx.Name} v{idx.Version}\");"
+          },
+          {
+            "lang": "javascript",
+            "label": "JavaScript",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst client = new AIProjectClient(\n    \"YOUR_ENDPOINT\",\n    new DefaultAzureCredential(),\n);\n\nconst indexes = await client.indexes.list();\nfor await (const idx of indexes) {\n    console.log(idx.name, idx.version);\n}"
           }
         ]
       }
@@ -1411,8 +1591,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\n\nversions = client.indexes.list_versions(\"my-index\")\nfor v in versions:\n    print(v.version)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/indexes/my-index/versions?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       }
@@ -1477,8 +1662,23 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\n\nindex = client.indexes.get(\n    name=\"my-index\",\n    version=\"1\",\n)\nprint(index.name)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/indexes/my-index/versions/1?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "csharp",
+            "label": "C#",
+            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\nvar client = new AIProjectClient(\n    new Uri(\"YOUR_ENDPOINT\"),\n    new DefaultAzureCredential());\n\nvar index = client.GetIndex(\"my-index\", \"1\");\n\nConsole.WriteLine(index.Name);"
+          },
+          {
+            "lang": "javascript",
+            "label": "JavaScript",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst client = new AIProjectClient(\n    \"YOUR_ENDPOINT\",\n    new DefaultAzureCredential(),\n);\n\nconst index = await client.indexes.get(\"my-index\", \"1\");\nconsole.log(index.name);"
           }
         ]
       },
@@ -1562,8 +1762,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\n\nindex = client.indexes.create_or_update(\n    name=\"my-index\",\n    version=\"1\",\n    body={\"description\": \"Search index\"},\n)\nprint(index.name)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X PATCH \"$ENDPOINT/indexes/my-index/versions/1?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"description\": \"Search index\"}'"
           }
         ]
       },
@@ -1619,8 +1824,23 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\n\nclient.indexes.delete(\n    name=\"my-index\",\n    version=\"1\",\n)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X DELETE \"$ENDPOINT/indexes/my-index/versions/1?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "csharp",
+            "label": "C#",
+            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\nvar client = new AIProjectClient(\n    new Uri(\"YOUR_ENDPOINT\"),\n    new DefaultAzureCredential());\n\nclient.DeleteIndex(\"my-index\", \"1\");"
+          },
+          {
+            "lang": "javascript",
+            "label": "JavaScript",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst client = new AIProjectClient(\n    \"YOUR_ENDPOINT\",\n    new DefaultAzureCredential(),\n);\n\nawait client.indexes.delete(\"my-index\", \"1\");"
           }
         ]
       }
@@ -1682,8 +1902,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\n\nruns = client.beta.red_teams.list()\nfor run in runs:\n    print(run.name, run.status)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/redTeams/runs?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       }
@@ -1751,8 +1976,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\n\nrun = client.beta.red_teams.get(\"my-redteam-run\")\nprint(run.name, run.status)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/redTeams/runs/my-run?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       }
@@ -1810,8 +2040,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\n\nrun = client.beta.red_teams.create(\n    body={\n        \"display_name\": \"my-redteam\",\n        \"target\": {\"agent_id\": \"my-agent:1\"},\n        \"risk_categories\": [\"violence\", \"hate\"],\n    },\n)\nprint(run.name)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/redTeams/runs:run?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"display_name\": \"my-redteam\", \"target\": {\"agent_id\": \"my-agent:1\"}, \"risk_categories\": [\"violence\"]}'"
           }
         ]
       }

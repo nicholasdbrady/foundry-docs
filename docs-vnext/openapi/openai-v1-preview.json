@@ -224,8 +224,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nresponse = openai.audio.speech.create(\n    model=\"tts-1\",\n    voice=\"alloy\",\n    input=\"Hello, how are you today?\",\n)\nresponse.stream_to_file(\"output.mp3\")"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/audio/speech\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"model\": \"tts-1\", \"voice\": \"alloy\", \"input\": \"Hello!\"}' \\\n  --output output.mp3"
           }
         ]
       }
@@ -400,8 +405,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\ntranscription = openai.audio.transcriptions.create(\n    model=\"whisper-1\",\n    file=open(\"audio.mp3\", \"rb\"),\n)\nprint(transcription.text)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/audio/transcriptions\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -F model=\"whisper-1\" \\\n  -F file=\"@audio.mp3\""
           }
         ]
       }
@@ -553,8 +563,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\ntranslation = openai.audio.translations.create(\n    model=\"whisper-1\",\n    file=open(\"audio_foreign.mp3\", \"rb\"),\n)\nprint(translation.text)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/audio/translations\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -F model=\"whisper-1\" \\\n  -F file=\"@audio.mp3\""
           }
         ]
       }
@@ -915,8 +930,23 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nbatch = openai.batches.create(\n    input_file_id=\"file-abc123\",\n    endpoint=\"/v1/chat/completions\",\n    completion_window=\"24h\",\n)\nprint(batch.id, batch.status)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/batches\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"input_file_id\": \"file-abc123\", \"endpoint\": \"/v1/chat/completions\", \"completion_window\": \"24h\"}'"
+          },
+          {
+            "lang": "csharp",
+            "label": "C#",
+            "source": "using Azure.AI.Projects;\nusing Azure.AI.Projects.OpenAI;\nusing Azure.Identity;\nusing OpenAI.Responses;\n\nvar client = new AIProjectClient(\n    new Uri(\"YOUR_ENDPOINT\"),\n    new DefaultAzureCredential());\n\nvar batchClient = client.OpenAI.GetBatchClient();\n\nvar batch = await batchClient.CreateBatchAsync(\n    \"file-abc123\", \"/v1/chat/completions\", \"24h\");\n\nConsole.WriteLine(batch.Value.Id);"
+          },
+          {
+            "lang": "javascript",
+            "label": "JavaScript",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst project = new AIProjectClient(\n    \"YOUR_ENDPOINT\",\n    new DefaultAzureCredential(),\n);\nconst openai = await project.getOpenAIClient();\n\nconst batch = await openai.batches.create({\n    input_file_id: \"file-abc123\",\n    endpoint: \"/v1/chat/completions\",\n    completion_window: \"24h\",\n});\nconsole.log(batch.id, batch.status);"
           }
         ]
       },
@@ -1069,8 +1099,18 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nbatches = openai.batches.list()\nfor b in batches:\n    print(b.id, b.status)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/openai/v1/batches\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "javascript",
+            "label": "JavaScript",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst project = new AIProjectClient(\n    \"YOUR_ENDPOINT\",\n    new DefaultAzureCredential(),\n);\nconst openai = await project.getOpenAIClient();\n\nconst batches = await openai.batches.list();\nfor await (const b of batches) {\n    console.log(b.id, b.status);\n}"
           }
         ]
       }
@@ -1362,8 +1402,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nbatch = openai.batches.retrieve(\"batch_abc123\")\nprint(batch.status, batch.request_counts)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/openai/v1/batches/batch_abc123\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       }
@@ -1655,8 +1700,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.batches.cancel(\"batch_abc123\")"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/batches/batch_abc123/cancel\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       }
@@ -2213,8 +2263,23 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nresponse = openai.chat.completions.create(\n    model=\"gpt-4o\",\n    messages=[{\"role\": \"user\", \"content\": \"Hello!\"}],\n)\nprint(response.choices[0].message.content)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/chat/completions\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"model\": \"gpt-4o\", \"messages\": [{\"role\": \"user\", \"content\": \"Hello!\"}]}'"
+          },
+          {
+            "lang": "csharp",
+            "label": "C#",
+            "source": "using Azure.AI.Projects;\nusing Azure.AI.Projects.OpenAI;\nusing Azure.Identity;\nusing OpenAI.Responses;\n\nvar client = new AIProjectClient(\n    new Uri(\"YOUR_ENDPOINT\"),\n    new DefaultAzureCredential());\n\nvar chatClient = client.OpenAI\n    .GetProjectChatClientForModel(\"gpt-4o\");\n\nvar response = await chatClient.CompleteChatAsync(\n    new ChatMessage[] {\n        new UserChatMessage(\"Hello!\"),\n    });\n\nConsole.WriteLine(response.Value.Content[0].Text);"
+          },
+          {
+            "lang": "javascript",
+            "label": "JavaScript",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst project = new AIProjectClient(\n    \"YOUR_ENDPOINT\",\n    new DefaultAzureCredential(),\n);\nconst openai = await project.getOpenAIClient();\n\nconst response = await openai.chat.completions.create({\n    model: \"gpt-4o\",\n    messages: [{ role: \"user\", content: \"Hello!\" }],\n});\nconsole.log(response.choices[0].message.content);"
           }
         ]
       }
@@ -2588,8 +2653,18 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nresponse = openai.completions.create(\n    model=\"gpt-4o\",\n    prompt=\"Say hello\",\n    max_tokens=100,\n)\nprint(response.choices[0].text)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/completions\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"model\": \"gpt-4o\", \"prompt\": \"Say hello\", \"max_tokens\": 100}'"
+          },
+          {
+            "lang": "javascript",
+            "label": "JavaScript",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst project = new AIProjectClient(\n    \"YOUR_ENDPOINT\",\n    new DefaultAzureCredential(),\n);\nconst openai = await project.getOpenAIClient();\n\nconst response = await openai.completions.create({\n    model: \"gpt-4o\",\n    prompt: \"Say hello\",\n    max_tokens: 100,\n});\nconsole.log(response.choices[0].text);"
           }
         ]
       }
@@ -2736,8 +2811,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\ncontainers = openai.containers.list()\nfor c in containers:\n    print(c.id, c.name)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/openai/v1/containers\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       },
@@ -2846,8 +2926,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\ncontainer = openai.containers.create(\n    name=\"my-container\",\n)\nprint(container.id)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/containers\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"name\": \"my-container\"}'"
           }
         ]
       }
@@ -2957,8 +3042,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\ncontainer = openai.containers.retrieve(\"container_abc123\")\nprint(container.name)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/openai/v1/containers/container_abc123\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       },
@@ -3059,8 +3149,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.containers.delete(\"container_abc123\")"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X DELETE \"$ENDPOINT/openai/v1/containers/container_abc123\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       }
@@ -3216,8 +3311,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nfiles = openai.containers.files.list(\"container_abc123\")\nfor f in files:\n    print(f.id, f.path)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/openai/v1/containers/container_abc123/files\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       },
@@ -3335,8 +3435,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nfile = openai.containers.files.create(\n    container_id=\"container_abc123\",\n    file=open(\"data.txt\", \"rb\"),\n    file_path=\"data.txt\",\n)\nprint(file.id)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/containers/container_abc123/files\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -F file=\"@data.txt\" \\\n  -F file_path=\"data.txt\""
           }
         ]
       }
@@ -3455,8 +3560,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nfile = openai.containers.files.retrieve(\n    container_id=\"container_abc123\",\n    file_id=\"file_abc123\",\n)\nprint(file.path)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/openai/v1/containers/container_abc123/files/file_abc123\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       },
@@ -3566,8 +3676,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.containers.files.delete(\n    container_id=\"container_abc123\",\n    file_id=\"file_abc123\",\n)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X DELETE \"$ENDPOINT/openai/v1/containers/container_abc123/files/file_abc123\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       }
@@ -3686,8 +3801,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\ncontent = openai.containers.files.content(\n    container_id=\"container_abc123\",\n    file_id=\"file_abc123\",\n)\nprint(content.text)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/openai/v1/containers/container_abc123/files/file_abc123/content\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       }
@@ -3798,8 +3918,23 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nconversation = openai.conversations.create(\n    items=[{\"type\": \"message\", \"role\": \"user\", \"content\": \"Hello\"}],\n)\nprint(conversation.id)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/conversations\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"items\": [{\"type\": \"message\", \"role\": \"user\", \"content\": \"Hello\"}]}'"
+          },
+          {
+            "lang": "csharp",
+            "label": "C#",
+            "source": "using Azure.AI.Projects;\nusing Azure.AI.Projects.OpenAI;\nusing Azure.Identity;\nusing OpenAI.Responses;\n\nvar client = new AIProjectClient(\n    new Uri(\"YOUR_ENDPOINT\"),\n    new DefaultAzureCredential());\n\nvar conversation = client.OpenAI.Conversations\n    .CreateProjectConversation();\n\nConsole.WriteLine(conversation.Id);"
+          },
+          {
+            "lang": "javascript",
+            "label": "JavaScript",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst project = new AIProjectClient(\n    \"YOUR_ENDPOINT\",\n    new DefaultAzureCredential(),\n);\nconst openai = await project.getOpenAIClient();\n\nconst conversation = await openai.conversations.create({\n    items: [{ type: \"message\", role: \"user\", content: \"Hello\" }],\n});\nconsole.log(conversation.id);"
           }
         ]
       }
@@ -3909,8 +4044,18 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nconversation = openai.conversations.retrieve(\"conv_abc123\")\nprint(conversation.id)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/openai/v1/conversations/conv_abc123\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "javascript",
+            "label": "JavaScript",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst project = new AIProjectClient(\n    \"YOUR_ENDPOINT\",\n    new DefaultAzureCredential(),\n);\nconst openai = await project.getOpenAIClient();\n\nconst conversation = await openai.conversations.retrieve(\"conv_abc123\");\nconsole.log(conversation.id);"
           }
         ]
       },
@@ -4028,8 +4173,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nconversation = openai.conversations.update(\n    \"conv_abc123\",\n    metadata={\"topic\": \"geography\"},\n)\nprint(conversation.id)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/conversations/conv_abc123\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"metadata\": {\"topic\": \"geography\"}}'"
           }
         ]
       },
@@ -4137,8 +4287,18 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.conversations.delete(\"conv_abc123\")"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X DELETE \"$ENDPOINT/openai/v1/conversations/conv_abc123\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "javascript",
+            "label": "JavaScript",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst project = new AIProjectClient(\n    \"YOUR_ENDPOINT\",\n    new DefaultAzureCredential(),\n);\nconst openai = await project.getOpenAIClient();\n\nawait openai.conversations.delete(\"conv_abc123\");"
           }
         ]
       }
@@ -4297,8 +4457,18 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nitems = openai.conversations.items.list(\"conv_abc123\")\nfor item in items:\n    print(item.type, item.id)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/openai/v1/conversations/conv_abc123/items\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "javascript",
+            "label": "JavaScript",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst project = new AIProjectClient(\n    \"YOUR_ENDPOINT\",\n    new DefaultAzureCredential(),\n);\nconst openai = await project.getOpenAIClient();\n\nconst items = await openai.conversations.items.list(\"conv_abc123\");\nfor await (const item of items) {\n    console.log(item.type, item.id);\n}"
           }
         ]
       },
@@ -4429,8 +4599,18 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.conversations.items.create(\n    conversation_id=\"conv_abc123\",\n    items=[{\"type\": \"message\", \"role\": \"user\", \"content\": \"Follow-up question\"}],\n)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/conversations/conv_abc123/items\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"items\": [{\"type\": \"message\", \"role\": \"user\", \"content\": \"Follow-up\"}]}'"
+          },
+          {
+            "lang": "javascript",
+            "label": "JavaScript",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst project = new AIProjectClient(\n    \"YOUR_ENDPOINT\",\n    new DefaultAzureCredential(),\n);\nconst openai = await project.getOpenAIClient();\n\nawait openai.conversations.items.create(\"conv_abc123\", {\n    items: [{ type: \"message\", role: \"user\", content: \"Follow-up\" }],\n});"
           }
         ]
       }
@@ -4562,8 +4742,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nitem = openai.conversations.items.retrieve(\n    conversation_id=\"conv_abc123\",\n    item_id=\"item_abc123\",\n)\nprint(item.type)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/openai/v1/conversations/conv_abc123/items/item_abc123\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       },
@@ -4680,8 +4865,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.conversations.items.delete(\n    conversation_id=\"conv_abc123\",\n    item_id=\"item_abc123\",\n)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X DELETE \"$ENDPOINT/openai/v1/conversations/conv_abc123/items/item_abc123\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       }
@@ -4793,8 +4983,23 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nresponse = openai.embeddings.create(\n    model=\"text-embedding-3-large\",\n    input=\"Sample text to embed\",\n)\nprint(response.data[0].embedding[:5])"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/embeddings\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"model\": \"text-embedding-3-large\", \"input\": \"Sample text\"}'"
+          },
+          {
+            "lang": "csharp",
+            "label": "C#",
+            "source": "using Azure.AI.Projects;\nusing Azure.AI.Projects.OpenAI;\nusing Azure.Identity;\nusing OpenAI.Responses;\n\nvar client = new AIProjectClient(\n    new Uri(\"YOUR_ENDPOINT\"),\n    new DefaultAzureCredential());\n\nvar embeddingClient = client.OpenAI\n    .GetProjectEmbeddingClientForModel(\"text-embedding-3-large\");\n\nvar response = await embeddingClient\n    .GenerateEmbeddingAsync(\"Sample text to embed\");\n\nConsole.WriteLine(response.Value.Vector.Length);"
+          },
+          {
+            "lang": "javascript",
+            "label": "JavaScript",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst project = new AIProjectClient(\n    \"YOUR_ENDPOINT\",\n    new DefaultAzureCredential(),\n);\nconst openai = await project.getOpenAIClient();\n\nconst response = await openai.embeddings.create({\n    model: \"text-embedding-3-large\",\n    input: \"Sample text to embed\",\n});\nconsole.log(response.data[0].embedding.slice(0, 5));"
           }
         ]
       }
@@ -4948,8 +5153,18 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nevals = openai.evals.list()\nfor e in evals:\n    print(e.id, e.name)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/openai/v1/evals\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "javascript",
+            "label": "JavaScript",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst project = new AIProjectClient(\n    \"YOUR_ENDPOINT\",\n    new DefaultAzureCredential(),\n);\nconst openai = await project.getOpenAIClient();\n\nconst evals = await openai.evals.list();\nfor await (const e of evals) {\n    console.log(e.id, e.name);\n}"
           }
         ]
       },
@@ -5126,8 +5341,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nevaluation = openai.evals.create(\n    name=\"my-eval\",\n    data_source_config={\"type\": \"custom\", \"item_schema\": {}},\n    testing_criteria=[],\n)\nprint(evaluation.id)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/evals\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"name\": \"my-eval\", \"data_source_config\": {\"type\": \"custom\", \"item_schema\": {}}, \"testing_criteria\": []}'"
           }
         ]
       }
@@ -5238,8 +5458,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nevaluation = openai.evals.retrieve(\"eval_abc123\")\nprint(evaluation.name, evaluation.id)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/openai/v1/evals/eval_abc123\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       },
@@ -5365,8 +5590,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nevaluation = openai.evals.update(\n    \"eval_abc123\",\n    name=\"updated-name\",\n)\nprint(evaluation.name)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/evals/eval_abc123\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"name\": \"updated-name\"}'"
           }
         ]
       },
@@ -5493,8 +5723,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.evals.delete(\"eval_abc123\")"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X DELETE \"$ENDPOINT/openai/v1/evals/eval_abc123\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       }
@@ -5655,8 +5890,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nruns = openai.evals.runs.list(\"eval_abc123\")\nfor run in runs:\n    print(run.id, run.status)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/openai/v1/evals/eval_abc123/runs\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       },
@@ -5774,8 +6014,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nrun = openai.evals.runs.create(\n    eval_id=\"eval_abc123\",\n    model=\"gpt-4o\",\n    data_source={\"type\": \"completions\"},\n)\nprint(run.id)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/evals/eval_abc123/runs\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"model\": \"gpt-4o\", \"data_source\": {\"type\": \"completions\"}}'"
           }
         ]
       }
@@ -5893,8 +6138,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nrun = openai.evals.runs.retrieve(\n    eval_id=\"eval_abc123\",\n    run_id=\"run_abc123\",\n)\nprint(run.status)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/openai/v1/evals/eval_abc123/runs/run_abc123\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       },
@@ -6010,8 +6260,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.evals.runs.cancel(\n    eval_id=\"eval_abc123\",\n    run_id=\"run_abc123\",\n)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/evals/eval_abc123/runs/run_abc123\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       },
@@ -6146,8 +6401,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.evals.runs.delete(\n    eval_id=\"eval_abc123\",\n    run_id=\"run_abc123\",\n)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X DELETE \"$ENDPOINT/openai/v1/evals/eval_abc123/runs/run_abc123\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       }
@@ -6312,8 +6572,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nitems = openai.evals.runs.output_items.list(\n    eval_id=\"eval_abc123\",\n    run_id=\"run_abc123\",\n)\nfor item in items:\n    print(item.id)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/openai/v1/evals/eval_abc123/runs/run_abc123/output_items\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       }
@@ -6439,8 +6704,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nitem = openai.evals.runs.output_items.retrieve(\n    eval_id=\"eval_abc123\",\n    run_id=\"run_abc123\",\n    output_item_id=\"item_abc123\",\n)\nprint(item.id)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/openai/v1/evals/eval_abc123/runs/run_abc123/output_items/item_abc123\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       }
@@ -6622,8 +6892,23 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nfile = openai.files.create(\n    file=open(\"data.jsonl\", \"rb\"),\n    purpose=\"fine-tune\",\n)\nprint(file.id)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/files\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -F purpose=\"fine-tune\" \\\n  -F file=\"@data.jsonl\""
+          },
+          {
+            "lang": "csharp",
+            "label": "C#",
+            "source": "using Azure.AI.Projects;\nusing Azure.AI.Projects.OpenAI;\nusing Azure.Identity;\nusing OpenAI.Responses;\n\nvar client = new AIProjectClient(\n    new Uri(\"YOUR_ENDPOINT\"),\n    new DefaultAzureCredential());\n\nvar fileClient = client.OpenAI.GetOpenAIFileClient();\n\nvar file = await fileClient.UploadFileAsync(\n    \"data.jsonl\", FileUploadPurpose.FineTune);\n\nConsole.WriteLine(file.Value.Id);"
+          },
+          {
+            "lang": "javascript",
+            "label": "JavaScript",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst project = new AIProjectClient(\n    \"YOUR_ENDPOINT\",\n    new DefaultAzureCredential(),\n);\nconst openai = await project.getOpenAIClient();\n\nconst file = await openai.files.create({\n    file: fs.createReadStream(\"data.jsonl\"),\n    purpose: \"fine-tune\",\n});\nconsole.log(file.id);"
           }
         ]
       },
@@ -6762,8 +7047,23 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nfiles = openai.files.list()\nfor f in files:\n    print(f.id, f.filename, f.purpose)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/openai/v1/files\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "csharp",
+            "label": "C#",
+            "source": "using Azure.AI.Projects;\nusing Azure.AI.Projects.OpenAI;\nusing Azure.Identity;\nusing OpenAI.Responses;\n\nvar client = new AIProjectClient(\n    new Uri(\"YOUR_ENDPOINT\"),\n    new DefaultAzureCredential());\n\nvar fileClient = client.OpenAI.GetOpenAIFileClient();\nvar files = await fileClient.GetFilesAsync();\n\nforeach (var f in files.Value)\n    Console.WriteLine($\"{f.Id} {f.Filename}\");"
+          },
+          {
+            "lang": "javascript",
+            "label": "JavaScript",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst project = new AIProjectClient(\n    \"YOUR_ENDPOINT\",\n    new DefaultAzureCredential(),\n);\nconst openai = await project.getOpenAIClient();\n\nconst files = await openai.files.list();\nfor await (const f of files) {\n    console.log(f.id, f.filename);\n}"
           }
         ]
       }
@@ -6944,8 +7244,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nfile = openai.files.retrieve(\"file-abc123\")\nprint(file.filename, file.status)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/openai/v1/files/file-abc123\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       },
@@ -7053,8 +7358,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.files.delete(\"file-abc123\")"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X DELETE \"$ENDPOINT/openai/v1/files/file-abc123\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       }
@@ -7164,8 +7474,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\ncontent = openai.files.content(\"file-abc123\")\nprint(content.text)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/openai/v1/files/file-abc123/content\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       }
@@ -7268,8 +7583,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nresult = openai.fine_tuning.alpha.graders.run(\n    grader={\"type\": \"python\", \"source\": \"return 1.0\"},\n    model_sample=\"Hello world\",\n)\nprint(result)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/fine_tuning/alpha/graders/run\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"grader\": {\"type\": \"python\", \"source\": \"return 1.0\"}, \"model_sample\": \"Hello\"}'"
           }
         ]
       }
@@ -7396,8 +7716,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nresult = openai.fine_tuning.alpha.graders.validate(\n    grader={\"type\": \"python\", \"source\": \"return 1.0\"},\n)\nprint(result)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/fine_tuning/alpha/graders/validate\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"grader\": {\"type\": \"python\", \"source\": \"return 1.0\"}}'"
           }
         ]
       }
@@ -7555,8 +7880,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\npermissions = openai.fine_tuning.checkpoints.permissions.list(\n    \"ft:gpt-4o:org:suffix:id\",\n)\nfor p in permissions:\n    print(p.id)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/openai/v1/fine_tuning/checkpoints/ft:gpt-4o:org:suffix:id/permissions\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       },
@@ -7675,8 +8005,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.fine_tuning.checkpoints.permissions.create(\n    \"ft:gpt-4o:org:suffix:id\",\n    project_ids=[\"proj_abc123\"],\n)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/fine_tuning/checkpoints/ft:gpt-4o:org:suffix:id/permissions\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"project_ids\": [\"proj_abc123\"]}'"
           }
         ]
       }
@@ -7796,8 +8131,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.fine_tuning.checkpoints.permissions.delete(\n    \"ft:gpt-4o:org:suffix:id\",\n    \"perm_abc123\",\n)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X DELETE \"$ENDPOINT/openai/v1/fine_tuning/checkpoints/ft:gpt-4o:org:suffix:id/permissions/perm_abc123\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       }
@@ -7909,8 +8249,23 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\njob = openai.fine_tuning.jobs.create(\n    model=\"gpt-4o-mini-2024-07-18\",\n    training_file=\"file-abc123\",\n)\nprint(job.id, job.status)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/fine_tuning/jobs\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"model\": \"gpt-4o-mini-2024-07-18\", \"training_file\": \"file-abc123\"}'"
+          },
+          {
+            "lang": "csharp",
+            "label": "C#",
+            "source": "using Azure.AI.Projects;\nusing Azure.AI.Projects.OpenAI;\nusing Azure.Identity;\nusing OpenAI.Responses;\n\nvar client = new AIProjectClient(\n    new Uri(\"YOUR_ENDPOINT\"),\n    new DefaultAzureCredential());\n\nvar ftClient = client.OpenAI.GetFineTuningClient();\n\nvar job = await ftClient.CreateJobAsync(\n    \"gpt-4o-mini-2024-07-18\", \"file-abc123\");\n\nConsole.WriteLine(job.Value.Id);"
+          },
+          {
+            "lang": "javascript",
+            "label": "JavaScript",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst project = new AIProjectClient(\n    \"YOUR_ENDPOINT\",\n    new DefaultAzureCredential(),\n);\nconst openai = await project.getOpenAIClient();\n\nconst job = await openai.fineTuning.jobs.create({\n    model: \"gpt-4o-mini-2024-07-18\",\n    training_file: \"file-abc123\",\n});\nconsole.log(job.id, job.status);"
           }
         ]
       },
@@ -8032,8 +8387,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\njobs = openai.fine_tuning.jobs.list()\nfor job in jobs:\n    print(job.id, job.status)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/openai/v1/fine_tuning/jobs\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       }
@@ -8144,8 +8504,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\njob = openai.fine_tuning.jobs.retrieve(\"ftjob-abc123\")\nprint(job.status, job.trained_tokens)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/openai/v1/fine_tuning/jobs/ftjob-abc123\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       }
@@ -8256,8 +8621,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.fine_tuning.jobs.cancel(\"ftjob-abc123\")"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/fine_tuning/jobs/ftjob-abc123/cancel\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       }
@@ -8390,8 +8760,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\ncheckpoints = openai.fine_tuning.jobs.checkpoints.list(\"ftjob-abc123\")\nfor cp in checkpoints:\n    print(cp.id, cp.step_number)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/openai/v1/fine_tuning/jobs/ftjob-abc123/checkpoints\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       }
@@ -8542,8 +8917,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.fine_tuning.jobs.checkpoints.copy(\n    fine_tuning_job_id=\"ftjob-abc123\",\n    fine_tuning_checkpoint_id=\"ftckpt-abc123\",\n)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/fine_tuning/jobs/ftjob-abc123/checkpoints/ftckpt-abc123/copy\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       },
@@ -8682,8 +9062,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\ncheckpoint = openai.fine_tuning.jobs.checkpoints.retrieve(\n    fine_tuning_job_id=\"ftjob-abc123\",\n    fine_tuning_checkpoint_id=\"ftckpt-abc123\",\n)\nprint(checkpoint.id)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/openai/v1/fine_tuning/jobs/ftjob-abc123/checkpoints/ftckpt-abc123/copy\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       }
@@ -8816,8 +9201,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nevents = openai.fine_tuning.jobs.list_events(\"ftjob-abc123\")\nfor event in events:\n    print(event.message)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/openai/v1/fine_tuning/jobs/ftjob-abc123/events\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       }
@@ -8928,8 +9318,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.fine_tuning.jobs.pause(\"ftjob-abc123\")"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/fine_tuning/jobs/ftjob-abc123/pause\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       }
@@ -9040,8 +9435,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.fine_tuning.jobs.resume(\"ftjob-abc123\")"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/fine_tuning/jobs/ftjob-abc123/resume\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       }
@@ -9152,8 +9552,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nresponse = openai.images.edit(\n    image=open(\"image.png\", \"rb\"),\n    prompt=\"Add a sunset in the background\",\n    n=1,\n    size=\"1024x1024\",\n)\nprint(response.data[0].url)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/images/edits\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -F image=\"@image.png\" \\\n  -F prompt=\"Add a sunset\" \\\n  -F n=1 \\\n  -F size=\"1024x1024\""
           }
         ]
       }
@@ -9264,8 +9669,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nresponse = openai.images.generate(\n    model=\"dall-e-3\",\n    prompt=\"A white cat sitting on a windowsill\",\n    n=1,\n    size=\"1024x1024\",\n)\nprint(response.data[0].url)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/images/generations\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"model\": \"dall-e-3\", \"prompt\": \"A white cat on a windowsill\", \"n\": 1, \"size\": \"1024x1024\"}'"
           }
         ]
       }
@@ -9376,8 +9786,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nresponse = openai.images.create_variation(\n    image=open(\"image.png\", \"rb\"),\n    n=1,\n    size=\"1024x1024\",\n)\nprint(response.data[0].url)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/images/variations\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -F image=\"@image.png\" \\\n  -F n=1 \\\n  -F size=\"1024x1024\""
           }
         ]
       }
@@ -9479,8 +9894,23 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nmodels = openai.models.list()\nfor model in models:\n    print(model.id)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/openai/v1/models\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "csharp",
+            "label": "C#",
+            "source": "using Azure.AI.Projects;\nusing Azure.AI.Projects.OpenAI;\nusing Azure.Identity;\nusing OpenAI.Responses;\n\nvar client = new AIProjectClient(\n    new Uri(\"YOUR_ENDPOINT\"),\n    new DefaultAzureCredential());\n\nvar models = client.OpenAI.GetOpenAIModelClient()\n    .GetModels();\n\nforeach (var model in models.Value)\n    Console.WriteLine(model.Id);"
+          },
+          {
+            "lang": "javascript",
+            "label": "JavaScript",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst project = new AIProjectClient(\n    \"YOUR_ENDPOINT\",\n    new DefaultAzureCredential(),\n);\nconst openai = await project.getOpenAIClient();\n\nconst models = await openai.models.list();\nfor await (const model of models) {\n    console.log(model.id);\n}"
           }
         ]
       }
@@ -9591,8 +10021,18 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nmodel = openai.models.retrieve(\"gpt-4o\")\nprint(model.id, model.owned_by)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/openai/v1/models/gpt-4o\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "javascript",
+            "label": "JavaScript",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst project = new AIProjectClient(\n    \"YOUR_ENDPOINT\",\n    new DefaultAzureCredential(),\n);\nconst openai = await project.getOpenAIClient();\n\nconst model = await openai.models.retrieve(\"gpt-4o\");\nconsole.log(model.id, model.owned_by);"
           }
         ]
       },
@@ -9701,8 +10141,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.models.delete(\"ft:gpt-4o:your-org:custom-suffix:id\")"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X DELETE \"$ENDPOINT/openai/v1/models/ft:gpt-4o:org:suffix:id\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       }
@@ -9819,8 +10264,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\ncall = openai.realtime.calls.create(\n    model=\"gpt-4o-realtime-preview\",\n    sdp=\"YOUR_SDP_OFFER\",\n)\nprint(call.id, call.sdp)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/realtime/calls\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"model\": \"gpt-4o-realtime-preview\", \"sdp\": \"YOUR_SDP_OFFER\"}'"
           }
         ]
       }
@@ -9926,8 +10376,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.realtime.calls.accept(\n    call_id=\"call_abc123\",\n    model=\"gpt-4o-realtime-preview\",\n)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/realtime/calls/call_abc123/accept\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"model\": \"gpt-4o-realtime-preview\"}'"
           }
         ]
       }
@@ -10022,8 +10477,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.realtime.calls.hangup(\"call_abc123\")"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/realtime/calls/call_abc123/hangup\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       }
@@ -10129,8 +10589,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.realtime.calls.refer(\n    call_id=\"call_abc123\",\n    refer_to=\"sip:destination@example.com\",\n)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/realtime/calls/call_abc123/refer\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"refer_to\": \"sip:dest@example.com\"}'"
           }
         ]
       }
@@ -10236,8 +10701,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.realtime.calls.reject(\n    call_id=\"call_abc123\",\n    reason=\"busy\",\n)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/realtime/calls/call_abc123/reject\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"reason\": \"busy\"}'"
           }
         ]
       }
@@ -10350,8 +10820,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nsecret = openai.realtime.client_secrets.create(\n    model=\"gpt-4o-realtime-preview\",\n)\nprint(secret.client_secret.value)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/realtime/client_secrets\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"model\": \"gpt-4o-realtime-preview\"}'"
           }
         ]
       }
@@ -10464,8 +10939,18 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nsession = openai.realtime.sessions.create(\n    model=\"gpt-4o-realtime-preview\",\n)\nprint(session.id, session.client_secret.value)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/realtime/sessions\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"model\": \"gpt-4o-realtime-preview\"}'"
+          },
+          {
+            "lang": "javascript",
+            "label": "JavaScript",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst project = new AIProjectClient(\n    \"YOUR_ENDPOINT\",\n    new DefaultAzureCredential(),\n);\nconst openai = await project.getOpenAIClient();\n\nconst session = await openai.realtime.sessions.create({\n    model: \"gpt-4o-realtime-preview\",\n});\nconsole.log(session.id, session.client_secret.value);"
           }
         ]
       }
@@ -10578,8 +11063,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nsession = openai.realtime.transcription_sessions.create(\n    model=\"gpt-4o-transcribe\",\n)\nprint(session.id)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/realtime/transcription_sessions\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"model\": \"gpt-4o-transcribe\"}'"
           }
         ]
       }
@@ -10976,8 +11466,23 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nresponse = openai.responses.create(\n    model=\"gpt-4o\",\n    input=\"What is the capital of France?\",\n)\nprint(response.output_text)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/responses\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"model\": \"gpt-4o\", \"input\": \"What is the capital of France?\"}'"
+          },
+          {
+            "lang": "csharp",
+            "label": "C#",
+            "source": "using Azure.AI.Projects;\nusing Azure.AI.Projects.OpenAI;\nusing Azure.Identity;\nusing OpenAI.Responses;\n\nvar client = new AIProjectClient(\n    new Uri(\"YOUR_ENDPOINT\"),\n    new DefaultAzureCredential());\n\nvar responsesClient = client.OpenAI\n    .GetProjectResponsesClientForModel(\"gpt-4o\");\n\nvar response = await responsesClient\n    .CreateResponseAsync(\"What is the capital of France?\");\n\nConsole.WriteLine(response.GetOutputText());"
+          },
+          {
+            "lang": "javascript",
+            "label": "JavaScript",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst project = new AIProjectClient(\n    \"YOUR_ENDPOINT\",\n    new DefaultAzureCredential(),\n);\nconst openai = await project.getOpenAIClient();\n\nconst response = await openai.responses.create({\n    model: \"gpt-4o\",\n    input: \"What is the capital of France?\",\n});\nconsole.log(response.output_text);"
           }
         ]
       }
@@ -11416,8 +11921,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nresponse = openai.responses.retrieve(\"resp_abc123\")\nprint(response.status, response.output_text)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/openai/v1/responses/resp_abc123\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       },
@@ -11547,8 +12057,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.responses.delete(\"resp_abc123\")"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X DELETE \"$ENDPOINT/openai/v1/responses/resp_abc123\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       }
@@ -11942,8 +12457,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.responses.cancel(\"resp_abc123\")"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/responses/resp_abc123/cancel\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       }
@@ -12099,8 +12619,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nitems = openai.responses.input_items.list(\"resp_abc123\")\nfor item in items:\n    print(item.type, item.id)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/openai/v1/responses/resp_abc123/input_items\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       }
@@ -12211,8 +12736,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nthread = openai.beta.threads.create()\nprint(thread.id)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/threads\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{}'"
           }
         ]
       }
@@ -12314,8 +12844,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nrun = openai.beta.threads.create_and_run(\n    assistant_id=\"asst_abc123\",\n    thread={\"messages\": [{\"role\": \"user\", \"content\": \"Hello\"}]},\n)\nprint(run.id)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/threads/runs\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"assistant_id\": \"asst_abc123\", \"thread\": {\"messages\": [{\"role\": \"user\", \"content\": \"Hello\"}]}}'"
           }
         ]
       }
@@ -12424,8 +12959,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.beta.threads.delete(\"thread_abc123\")"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X DELETE \"$ENDPOINT/openai/v1/threads/thread_abc123\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       },
@@ -12532,8 +13072,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nthread = openai.beta.threads.retrieve(\"thread_abc123\")\nprint(thread.id)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/openai/v1/threads/thread_abc123\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       },
@@ -12650,8 +13195,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nthread = openai.beta.threads.update(\n    \"thread_abc123\",\n    metadata={\"topic\": \"science\"},\n)\nprint(thread.id)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/threads/thread_abc123\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"metadata\": {\"topic\": \"science\"}}'"
           }
         ]
       }
@@ -12811,8 +13361,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nmessages = openai.beta.threads.messages.list(\"thread_abc123\")\nfor msg in messages:\n    print(msg.role, msg.content[0].text.value)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/openai/v1/threads/thread_abc123/messages\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       },
@@ -12929,8 +13484,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nmessage = openai.beta.threads.messages.create(\n    thread_id=\"thread_abc123\",\n    role=\"user\",\n    content=\"What is the capital of France?\",\n)\nprint(message.id)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/threads/thread_abc123/messages\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"role\": \"user\", \"content\": \"What is the capital of France?\"}'"
           }
         ]
       }
@@ -13047,8 +13607,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.beta.threads.messages.delete(\n    thread_id=\"thread_abc123\",\n    message_id=\"msg_abc123\",\n)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X DELETE \"$ENDPOINT/openai/v1/threads/thread_abc123/messages/msg_abc123\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       },
@@ -13163,8 +13728,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nmessage = openai.beta.threads.messages.retrieve(\n    thread_id=\"thread_abc123\",\n    message_id=\"msg_abc123\",\n)\nprint(message.content[0].text.value)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/openai/v1/threads/thread_abc123/messages/msg_abc123\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       },
@@ -13289,8 +13859,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nmessage = openai.beta.threads.messages.update(\n    thread_id=\"thread_abc123\",\n    message_id=\"msg_abc123\",\n    metadata={\"reviewed\": \"true\"},\n)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/threads/thread_abc123/messages/msg_abc123\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"metadata\": {\"reviewed\": \"true\"}}'"
           }
         ]
       }
@@ -13400,8 +13975,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nrun = openai.beta.threads.runs.create(\n    thread_id=\"thread_abc123\",\n    assistant_id=\"asst_abc123\",\n)\nprint(run.id, run.status)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/threads/thread_abc123/runs\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"assistant_id\": \"asst_abc123\"}'"
           }
         ]
       },
@@ -13541,8 +14121,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nruns = openai.beta.threads.runs.list(\"thread_abc123\")\nfor run in runs:\n    print(run.id, run.status)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/openai/v1/threads/thread_abc123/runs\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       }
@@ -13650,8 +14235,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nrun = openai.beta.threads.runs.retrieve(\n    thread_id=\"thread_abc123\",\n    run_id=\"run_abc123\",\n)\nprint(run.status)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/openai/v1/threads/thread_abc123/runs/run_abc123\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       },
@@ -13767,8 +14357,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nrun = openai.beta.threads.runs.update(\n    thread_id=\"thread_abc123\",\n    run_id=\"run_abc123\",\n    metadata={\"priority\": \"high\"},\n)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/threads/thread_abc123/runs/run_abc123\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"metadata\": {\"priority\": \"high\"}}'"
           }
         ]
       }
@@ -13876,8 +14471,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.beta.threads.runs.cancel(\n    thread_id=\"thread_abc123\",\n    run_id=\"run_abc123\",\n)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/threads/thread_abc123/runs/run_abc123/cancel\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       }
@@ -14027,8 +14627,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nsteps = openai.beta.threads.runs.steps.list(\n    thread_id=\"thread_abc123\",\n    run_id=\"run_abc123\",\n)\nfor step in steps:\n    print(step.id, step.type)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/openai/v1/threads/thread_abc123/runs/run_abc123/steps\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       }
@@ -14144,8 +14749,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nstep = openai.beta.threads.runs.steps.retrieve(\n    thread_id=\"thread_abc123\",\n    run_id=\"run_abc123\",\n    step_id=\"step_abc123\",\n)\nprint(step.type, step.status)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/openai/v1/threads/thread_abc123/runs/run_abc123/steps/step_abc123\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       }
@@ -14263,8 +14873,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nrun = openai.beta.threads.runs.submit_tool_outputs(\n    thread_id=\"thread_abc123\",\n    run_id=\"run_abc123\",\n    tool_outputs=[{\"tool_call_id\": \"call_abc123\", \"output\": \"result\"}],\n)\nprint(run.status)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/threads/thread_abc123/runs/run_abc123/submit_tool_outputs\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"tool_outputs\": [{\"tool_call_id\": \"call_abc123\", \"output\": \"result\"}]}'"
           }
         ]
       }
@@ -14412,8 +15027,18 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nstores = openai.vector_stores.list()\nfor store in stores:\n    print(store.id, store.name)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/openai/v1/vector_stores\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "javascript",
+            "label": "JavaScript",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst project = new AIProjectClient(\n    \"YOUR_ENDPOINT\",\n    new DefaultAzureCredential(),\n);\nconst openai = await project.getOpenAIClient();\n\nconst stores = await openai.vectorStores.list();\nfor await (const store of stores) {\n    console.log(store.id, store.name);\n}"
           }
         ]
       },
@@ -14523,8 +15148,23 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nstore = openai.vector_stores.create(\n    name=\"my-vector-store\",\n)\nprint(store.id)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/vector_stores\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"name\": \"my-vector-store\"}'"
+          },
+          {
+            "lang": "csharp",
+            "label": "C#",
+            "source": "using Azure.AI.Projects;\nusing Azure.AI.Projects.OpenAI;\nusing Azure.Identity;\nusing OpenAI.Responses;\n\nvar client = new AIProjectClient(\n    new Uri(\"YOUR_ENDPOINT\"),\n    new DefaultAzureCredential());\n\nvar vsClient = client.OpenAI.GetVectorStoreClient();\n\nvar store = await vsClient.CreateVectorStoreAsync(\n    new VectorStoreCreationOptions { Name = \"my-store\" });\n\nConsole.WriteLine(store.Value.Id);"
+          },
+          {
+            "lang": "javascript",
+            "label": "JavaScript",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst project = new AIProjectClient(\n    \"YOUR_ENDPOINT\",\n    new DefaultAzureCredential(),\n);\nconst openai = await project.getOpenAIClient();\n\nconst store = await openai.vectorStores.create({\n    name: \"my-vector-store\",\n});\nconsole.log(store.id);"
           }
         ]
       }
@@ -14635,8 +15275,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nstore = openai.vector_stores.retrieve(\"vs_abc123\")\nprint(store.name, store.file_counts)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/openai/v1/vector_stores/vs_abc123\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       },
@@ -14755,8 +15400,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nstore = openai.vector_stores.update(\n    \"vs_abc123\",\n    name=\"updated-name\",\n)\nprint(store.name)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/vector_stores/vs_abc123\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"name\": \"updated-name\"}'"
           }
         ]
       },
@@ -14865,8 +15515,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.vector_stores.delete(\"vs_abc123\")"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X DELETE \"$ENDPOINT/openai/v1/vector_stores/vs_abc123\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       }
@@ -14987,8 +15642,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nbatch = openai.vector_stores.file_batches.create(\n    vector_store_id=\"vs_abc123\",\n    file_ids=[\"file_abc123\", \"file_def456\"],\n)\nprint(batch.id, batch.status)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/vector_stores/vs_abc123/file_batches\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"file_ids\": [\"file_abc123\", \"file_def456\"]}'"
           }
         ]
       }
@@ -15108,8 +15768,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nbatch = openai.vector_stores.file_batches.retrieve(\n    vector_store_id=\"vs_abc123\",\n    batch_id=\"vsfb_abc123\",\n)\nprint(batch.status, batch.file_counts)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/openai/v1/vector_stores/vs_abc123/file_batches/vsfb_abc123\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       }
@@ -15229,8 +15894,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.vector_stores.file_batches.cancel(\n    vector_store_id=\"vs_abc123\",\n    batch_id=\"vsfb_abc123\",\n)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/vector_stores/vs_abc123/file_batches/vsfb_abc123/cancel\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       }
@@ -15412,8 +16082,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nfiles = openai.vector_stores.file_batches.list_files(\n    vector_store_id=\"vs_abc123\",\n    batch_id=\"vsfb_abc123\",\n)\nfor f in files:\n    print(f.id, f.status)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/openai/v1/vector_stores/vs_abc123/file_batches/vsfb_abc123/files\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       }
@@ -15586,8 +16261,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nfiles = openai.vector_stores.files.list(\"vs_abc123\")\nfor f in files:\n    print(f.id, f.status)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/openai/v1/vector_stores/vs_abc123/files\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       },
@@ -15706,8 +16386,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nfile = openai.vector_stores.files.create(\n    vector_store_id=\"vs_abc123\",\n    file_id=\"file_abc123\",\n)\nprint(file.id, file.status)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/vector_stores/vs_abc123/files\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"file_id\": \"file_abc123\"}'"
           }
         ]
       }
@@ -15827,8 +16512,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nfile = openai.vector_stores.files.retrieve(\n    vector_store_id=\"vs_abc123\",\n    file_id=\"file_abc123\",\n)\nprint(file.status)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/openai/v1/vector_stores/vs_abc123/files/file_abc123\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       },
@@ -15953,8 +16643,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nfile = openai.vector_stores.files.update(\n    vector_store_id=\"vs_abc123\",\n    file_id=\"file_abc123\",\n    attributes={\"key\": \"value\"},\n)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/vector_stores/vs_abc123/files/file_abc123\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"attributes\": {\"key\": \"value\"}}'"
           }
         ]
       },
@@ -16072,8 +16767,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.vector_stores.files.delete(\n    vector_store_id=\"vs_abc123\",\n    file_id=\"file_abc123\",\n)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X DELETE \"$ENDPOINT/openai/v1/vector_stores/vs_abc123/files/file_abc123\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       }
@@ -16193,8 +16893,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\ncontent = openai.vector_stores.files.content(\n    vector_store_id=\"vs_abc123\",\n    file_id=\"file_abc123\",\n)\nprint(content.text)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/openai/v1/vector_stores/vs_abc123/files/file_abc123/content\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       }
@@ -16315,8 +17020,18 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nresults = openai.vector_stores.search(\n    vector_store_id=\"vs_abc123\",\n    query=\"search query\",\n)\nfor result in results:\n    print(result.score, result.content)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/vector_stores/vs_abc123/search\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"query\": \"search query\"}'"
+          },
+          {
+            "lang": "javascript",
+            "label": "JavaScript",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst project = new AIProjectClient(\n    \"YOUR_ENDPOINT\",\n    new DefaultAzureCredential(),\n);\nconst openai = await project.getOpenAIClient();\n\nconst results = await openai.vectorStores.search(\"vs_abc123\", {\n    query: \"search query\",\n});\nfor await (const result of results) {\n    console.log(result.score, result.content);\n}"
           }
         ]
       }
@@ -16400,8 +17115,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\njob = openai.videos.create(\n    model=\"sora\",\n    prompt=\"A serene mountain landscape at sunset\",\n)\nprint(job.id, job.status)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/videos\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"model\": \"sora\", \"prompt\": \"A mountain landscape at sunset\"}'"
           }
         ]
       },
@@ -16487,8 +17207,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\njobs = openai.videos.list()\nfor job in jobs:\n    print(job.id, job.status)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/openai/v1/videos\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       }
@@ -16549,8 +17274,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\njob = openai.videos.retrieve(\"video_abc123\")\nprint(job.status)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/openai/v1/videos/video_abc123\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       },
@@ -16609,8 +17339,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\nopenai.videos.delete(\"video_abc123\")"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X DELETE \"$ENDPOINT/openai/v1/videos/video_abc123\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       }
@@ -16697,8 +17432,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\ncontent = openai.videos.content(\"video_abc123\")\nprint(content.url)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl \"$ENDPOINT/openai/v1/videos/video_abc123/content\" \\\n  -H \"Authorization: Bearer $TOKEN\""
           }
         ]
       }
@@ -16768,8 +17508,13 @@
         "x-codeSamples": [
           {
             "lang": "python",
-            "label": "Python SDK",
+            "label": "Python",
             "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nproject = AIProjectClient(\n    endpoint=\"YOUR_ENDPOINT\",\n    credential=DefaultAzureCredential(),\n)\nopenai = project.get_openai_client()\n\njob = openai.videos.remix(\n    video_id=\"video_abc123\",\n    prompt=\"Make it a night scene\",\n)\nprint(job.id)"
+          },
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values\ncurl -X POST \"$ENDPOINT/openai/v1/videos/video_abc123/remix\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"prompt\": \"Make it a night scene\"}'"
           }
         ]
       }

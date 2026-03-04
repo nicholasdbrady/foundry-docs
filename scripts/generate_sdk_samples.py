@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Generate Python SDK x-codeSamples for OpenAPI specs.
+"""Generate multi-language SDK x-codeSamples for OpenAPI specs.
 
-Injects minimal, idiomatic Python snippets using azure-ai-projects
+Injects minimal, idiomatic code snippets (Python, cURL, C#, JS/TS)
 into each OpenAPI operation's x-codeSamples extension for Mintlify.
 
 Usage:
@@ -947,10 +947,28 @@ PROJECTS_SAMPLES = {
 # Injection logic
 # ---------------------------------------------------------------------------
 
+def _build_code_samples(
+    op_id: str,
+    lang_configs: list[tuple[str, str, dict[str, str], str]],
+) -> list[dict]:
+    """Build x-codeSamples array for an operation from multiple languages.
+
+    lang_configs: list of (lang, label, samples_dict, preamble)
+    """
+    result = []
+    for lang, label, samples, preamble in lang_configs:
+        if op_id in samples:
+            result.append({
+                "lang": lang,
+                "label": label,
+                "source": preamble + samples[op_id],
+            })
+    return result
+
+
 def inject_samples(
     spec_path: Path,
-    samples: dict[str, str],
-    preamble: str,
+    lang_configs: list[tuple[str, str, dict[str, str], str]],
 ) -> int:
     """Inject x-codeSamples into an OpenAPI spec. Returns count of injected ops."""
     spec = json.load(spec_path.open())
@@ -960,14 +978,9 @@ def inject_samples(
             if not isinstance(details, dict):
                 continue
             op_id = details.get("operationId", "")
-            if op_id in samples:
-                details["x-codeSamples"] = [
-                    {
-                        "lang": "python",
-                        "label": "Python SDK",
-                        "source": preamble + samples[op_id],
-                    }
-                ]
+            samples = _build_code_samples(op_id, lang_configs)
+            if samples:
+                details["x-codeSamples"] = samples
                 injected += 1
     with spec_path.open("w") as f:
         json.dump(spec, f, indent=2)
@@ -985,22 +998,48 @@ def main():
     args = parser.parse_args()
     spec_dir = Path(args.spec_dir)
 
+    # Import multi-language samples
+    from sdk_samples_multilang import (
+        CURL_OPENAI_PREAMBLE, CURL_OPENAI_SAMPLES,
+        CURL_PROJECTS_PREAMBLE, CURL_PROJECTS_SAMPLES,
+        CSHARP_OPENAI_PREAMBLE, CSHARP_OPENAI_SAMPLES,
+        CSHARP_PROJECTS_PREAMBLE, CSHARP_PROJECTS_SAMPLES,
+        JS_OPENAI_PREAMBLE, JS_OPENAI_SAMPLES,
+        JS_PROJECTS_PREAMBLE, JS_PROJECTS_SAMPLES,
+    )
+
+    # Language configs for OpenAI v1 specs
+    openai_langs = [
+        ("python", "Python", OPENAI_SAMPLES, OPENAI_PREAMBLE),
+        ("bash", "cURL", CURL_OPENAI_SAMPLES, CURL_OPENAI_PREAMBLE),
+        ("csharp", "C#", CSHARP_OPENAI_SAMPLES, CSHARP_OPENAI_PREAMBLE),
+        ("javascript", "JavaScript", JS_OPENAI_SAMPLES, JS_OPENAI_PREAMBLE),
+    ]
+
+    # Language configs for Projects specs
+    projects_langs = [
+        ("python", "Python", PROJECTS_SAMPLES, PROJECTS_PREAMBLE),
+        ("bash", "cURL", CURL_PROJECTS_SAMPLES, CURL_PROJECTS_PREAMBLE),
+        ("csharp", "C#", CSHARP_PROJECTS_SAMPLES, CSHARP_PROJECTS_PREAMBLE),
+        ("javascript", "JavaScript", JS_PROJECTS_SAMPLES, JS_PROJECTS_PREAMBLE),
+    ]
+
     total = 0
-    for spec_file, samples, preamble in [
-        ("openai-v1-stable.json", OPENAI_SAMPLES, OPENAI_PREAMBLE),
-        ("openai-v1-preview.json", OPENAI_SAMPLES, OPENAI_PREAMBLE),
-        ("projects-stable.json", PROJECTS_SAMPLES, PROJECTS_PREAMBLE),
-        ("projects-preview.json", PROJECTS_SAMPLES, PROJECTS_PREAMBLE),
+    for spec_file, langs in [
+        ("openai-v1-stable.json", openai_langs),
+        ("openai-v1-preview.json", openai_langs),
+        ("projects-stable.json", projects_langs),
+        ("projects-preview.json", projects_langs),
     ]:
         path = spec_dir / spec_file
         if not path.exists():
             print(f"  SKIP: {spec_file} (not found)", file=sys.stderr)
             continue
-        n = inject_samples(path, samples, preamble)
+        n = inject_samples(path, langs)
         total += n
-        print(f"  {spec_file}: {n} operations with Python samples", file=sys.stderr)
+        print(f"  {spec_file}: {n} operations with code samples", file=sys.stderr)
 
-    print(f"\nTotal: {total} x-codeSamples injected", file=sys.stderr)
+    print(f"\nTotal: {total} operations with x-codeSamples injected", file=sys.stderr)
 
 
 if __name__ == "__main__":
