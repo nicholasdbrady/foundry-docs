@@ -9,11 +9,17 @@ in generate_sdk_samples.py, keyed by the same operationId values.
 # ---------------------------------------------------------------------------
 
 CURL_OPENAI_PREAMBLE = """\
-# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values
+# Set your endpoint and get a token (or use API key)
+# ENDPOINT="https://RESOURCE_NAME.openai.azure.com"
+# TOKEN=$(az account get-access-token --scope https://cognitiveservices.azure.com/.default --query accessToken -o tsv)
+# Or use API key: -H "api-key: YOUR_API_KEY" instead of -H "Authorization: Bearer $TOKEN"
 """
 
 CURL_PROJECTS_PREAMBLE = """\
-# Replace YOUR_ENDPOINT and YOUR_TOKEN with your values
+# Set your endpoint and get a token (or use API key)
+# ENDPOINT="https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME"
+# TOKEN=$(az account get-access-token --scope https://cognitiveservices.azure.com/.default --query accessToken -o tsv)
+# Or use API key: -H "api-key: YOUR_API_KEY" instead of -H "Authorization: Bearer $TOKEN"
 """
 
 CSHARP_OPENAI_PREAMBLE = """\
@@ -22,9 +28,11 @@ using Azure.AI.Projects.OpenAI;
 using Azure.Identity;
 using OpenAI.Responses;
 
+// Entra ID auth (recommended)
 var client = new AIProjectClient(
-    new Uri("YOUR_ENDPOINT"),
+    new Uri("https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME"),
     new DefaultAzureCredential());
+// Alternative: new AzureKeyCredential("YOUR_API_KEY")
 
 """
 
@@ -32,9 +40,11 @@ CSHARP_PROJECTS_PREAMBLE = """\
 using Azure.AI.Projects;
 using Azure.Identity;
 
+// Entra ID auth (recommended)
 var client = new AIProjectClient(
-    new Uri("YOUR_ENDPOINT"),
+    new Uri("https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME"),
     new DefaultAzureCredential());
+// Alternative: new AzureKeyCredential("YOUR_API_KEY")
 
 """
 
@@ -42,10 +52,12 @@ JS_OPENAI_PREAMBLE = """\
 import { AIProjectClient } from "@azure/ai-projects";
 import { DefaultAzureCredential } from "@azure/identity";
 
+// Entra ID auth (recommended)
 const project = new AIProjectClient(
-    "YOUR_ENDPOINT",
+    "https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME",
     new DefaultAzureCredential(),
 );
+// Alternative: new AzureKeyCredential("YOUR_API_KEY")
 const openai = await project.getOpenAIClient();
 
 """
@@ -54,10 +66,12 @@ JS_PROJECTS_PREAMBLE = """\
 import { AIProjectClient } from "@azure/ai-projects";
 import { DefaultAzureCredential } from "@azure/identity";
 
+// Entra ID auth (recommended)
 const client = new AIProjectClient(
-    "YOUR_ENDPOINT",
+    "https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME",
     new DefaultAzureCredential(),
 );
+// Alternative: new AzureKeyCredential("YOUR_API_KEY")
 
 """
 

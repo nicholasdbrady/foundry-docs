@@ -21,10 +21,15 @@ OPENAI_PREAMBLE = """\
 from azure.ai.projects import AIProjectClient
 from azure.identity import DefaultAzureCredential
 
+# Entra ID auth (recommended)
 project = AIProjectClient(
-    endpoint="YOUR_ENDPOINT",
+    endpoint="https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME",
     credential=DefaultAzureCredential(),
 )
+# Alternative: API key auth
+# from azure.core.credentials import AzureKeyCredential
+# project = AIProjectClient(endpoint="...", credential=AzureKeyCredential("YOUR_API_KEY"))
+
 openai = project.get_openai_client()
 
 """
@@ -33,10 +38,14 @@ PROJECTS_PREAMBLE = """\
 from azure.ai.projects import AIProjectClient
 from azure.identity import DefaultAzureCredential
 
+# Entra ID auth (recommended)
 client = AIProjectClient(
-    endpoint="YOUR_ENDPOINT",
+    endpoint="https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME",
     credential=DefaultAzureCredential(),
 )
+# Alternative: API key auth
+# from azure.core.credentials import AzureKeyCredential
+# client = AIProjectClient(endpoint="...", credential=AzureKeyCredential("YOUR_API_KEY"))
 
 """
 
@@ -51,11 +60,13 @@ OPENAI_SAMPLES = {
         '    model="gpt-4o",\n'
         '    input="What is the capital of France?",\n'
         ')\n'
-        'print(response.output_text)'
+        'print(response.output_text)\n'
+        '# Output: "The capital of France is Paris."'
     ),
     "getResponse": (
         'response = openai.responses.retrieve("resp_abc123")\n'
-        'print(response.status, response.output_text)'
+        'print(response.status, response.output_text)\n'
+        '# Output: completed The capital of France is Paris.'
     ),
     "deleteResponse": (
         'openai.responses.delete("resp_abc123")'
@@ -75,7 +86,8 @@ OPENAI_SAMPLES = {
         '    model="gpt-4o",\n'
         '    messages=[{"role": "user", "content": "Hello!"}],\n'
         ')\n'
-        'print(response.choices[0].message.content)'
+        'print(response.choices[0].message.content)\n'
+        '# Output: "Hello! How can I help you today?"'
     ),
 
     # ── Completions (legacy) ───────────────────────────────────────────
@@ -93,7 +105,8 @@ OPENAI_SAMPLES = {
         'conversation = openai.conversations.create(\n'
         '    items=[{"type": "message", "role": "user", "content": "Hello"}],\n'
         ')\n'
-        'print(conversation.id)'
+        'print(conversation.id)\n'
+        '# Output: conv_abc123def456'
     ),
     "retrieveConversation": (
         'conversation = openai.conversations.retrieve("conv_abc123")\n'
@@ -140,14 +153,19 @@ OPENAI_SAMPLES = {
         '    model="text-embedding-3-large",\n'
         '    input="Sample text to embed",\n'
         ')\n'
-        'print(response.data[0].embedding[:5])'
+        'print(response.data[0].embedding[:5])\n'
+        '# Output: [-0.0128, -0.0074, -0.0176, -0.0283, -0.0187]'
     ),
 
     # ── Models ─────────────────────────────────────────────────────────
     "listModels": (
         'models = openai.models.list()\n'
         'for model in models:\n'
-        '    print(model.id)'
+        '    print(model.id)\n'
+        '# Output:\n'
+        '# gpt-4o\n'
+        '# gpt-4o-mini\n'
+        '# text-embedding-3-large'
     ),
     "retrieveModel": (
         'model = openai.models.retrieve("gpt-4o")\n'
@@ -163,7 +181,8 @@ OPENAI_SAMPLES = {
         '    file=open("data.jsonl", "rb"),\n'
         '    purpose="fine-tune",\n'
         ')\n'
-        'print(file.id)'
+        'print(file.id)\n'
+        '# Output: file-abc123def456'
     ),
     "listFiles": (
         'files = openai.files.list()\n'
@@ -189,7 +208,8 @@ OPENAI_SAMPLES = {
         '    endpoint="/v1/chat/completions",\n'
         '    completion_window="24h",\n'
         ')\n'
-        'print(batch.id, batch.status)'
+        'print(batch.id, batch.status)\n'
+        '# Output: batch_abc123 validating'
     ),
     "listBatches": (
         'batches = openai.batches.list()\n'
@@ -210,7 +230,8 @@ OPENAI_SAMPLES = {
         '    model="gpt-4o-mini-2024-07-18",\n'
         '    training_file="file-abc123",\n'
         ')\n'
-        'print(job.id, job.status)'
+        'print(job.id, job.status)\n'
+        '# Output: ftjob-abc123 validating_files'
     ),
     "listPaginatedFineTuningJobs": (
         'jobs = openai.fine_tuning.jobs.list()\n'
