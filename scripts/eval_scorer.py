@@ -168,7 +168,7 @@ def _parse_args() -> argparse.Namespace:
         description="Score documentation evaluation results"
     )
     parser.add_argument(
-        "input", help="Path to raw evaluation results JSON"
+        "input", nargs="+", help="Path(s) to raw evaluation results JSON file(s)"
     )
     parser.add_argument(
         "--output", default=None,
@@ -179,26 +179,50 @@ def _parse_args() -> argparse.Namespace:
 
 def main():
     args = _parse_args()
-    input_path = Path(args.input)
 
-    if not input_path.exists():
-        print(f"Error: {input_path} not found", file=sys.stderr)
+    all_results = []
+    merged_metadata = {}
+
+    for input_file in args.input:
+        input_path = Path(input_file)
+        if not input_path.exists():
+            print(f"Warning: {input_path} not found, skipping", file=sys.stderr)
+            continue
+
+        with open(input_path) as f:
+            data = json.load(f)
+
+        file_meta = data.get("metadata", {})
+        all_results.extend(data.get("results", []))
+
+        # Merge metadata: keep first run_id, union servers/models, sum counts
+        if not merged_metadata:
+            merged_metadata = dict(file_meta)
+            merged_metadata["servers"] = list(file_meta.get("servers", []))
+            merged_metadata["models"] = list(file_meta.get("models", []))
+        else:
+            for s in file_meta.get("servers", []):
+                if s not in merged_metadata["servers"]:
+                    merged_metadata["servers"].append(s)
+            for m in file_meta.get("models", []):
+                if m not in merged_metadata["models"]:
+                    merged_metadata["models"].append(m)
+
+    if not all_results:
+        print("Error: no results found in input files", file=sys.stderr)
         raise SystemExit(1)
 
-    with open(input_path) as f:
-        data = json.load(f)
+    merged_metadata["total_evaluations"] = len(all_results)
+    merged_metadata["input_files"] = len(args.input)
 
-    metadata = data.get("metadata", {})
-    raw_results = data.get("results", [])
+    print(f"Scoring {len(all_results)} evaluation results from {len(args.input)} file(s)...")
 
-    print(f"Scoring {len(raw_results)} evaluation results...")
-
-    scored_results = [score_result(r) for r in raw_results]
+    scored_results = [score_result(r) for r in all_results]
     aggregates = aggregate_scores(scored_results)
 
     output_data = {
         "metadata": {
-            **metadata,
+            **merged_metadata,
             "scoring_version": "1.0",
         },
         "aggregates": aggregates,
@@ -208,8 +232,8 @@ def main():
     if args.output:
         output_path = Path(args.output)
     else:
-        run_id = metadata.get("run_id", "unknown")
-        output_path = input_path.parent / f"scored-{run_id}.json"
+        run_id = merged_metadata.get("run_id", "unknown")
+        output_path = Path(args.input[0]).parent / f"scored-{run_id}.json"
 
     with open(output_path, "w") as f:
         json.dump(output_data, f, indent=2)
@@ -218,10 +242,10 @@ def main():
 
     # Print summary
     print("\n=== Server Averages ===")
-    for server, avg in sorted(
+    for server, avg_val in sorted(
         aggregates["server_averages"].items(), key=lambda x: -x[1]
     ):
-        print(f"  {server}: {avg:.3f}")
+        print(f"  {server}: {avg_val:.3f}")
 
     print("\n=== Server × Model Matrix ===")
     matrix = aggregates["server_model_matrix"]

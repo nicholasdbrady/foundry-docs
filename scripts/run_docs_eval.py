@@ -219,6 +219,10 @@ def _parse_args() -> argparse.Namespace:
         help="Directory to save results"
     )
     parser.add_argument(
+        "--server", type=str, default=None,
+        help="Run evals for a single server (used by matrix CI jobs)"
+    )
+    parser.add_argument(
         "--servers", nargs="*", default=None,
         help="Specific servers to evaluate (default: all)"
     )
@@ -244,7 +248,12 @@ def main():
     print(f"Loaded {len(scenarios)} scenarios from {args.scenarios}")
 
     servers = MCP_SERVERS
-    if args.servers:
+    if args.server:
+        if args.server not in MCP_SERVERS:
+            print(f"Error: unknown server '{args.server}'. Available: {list(MCP_SERVERS.keys())}", file=sys.stderr)
+            raise SystemExit(1)
+        servers = {args.server: MCP_SERVERS[args.server]}
+    elif args.servers:
         servers = {k: v for k, v in MCP_SERVERS.items() if k in args.servers}
 
     models = args.models or MODELS
@@ -263,7 +272,8 @@ def main():
     output_dir.mkdir(parents=True, exist_ok=True)
 
     run_id = output["metadata"]["run_id"]
-    output_path = output_dir / f"run-{run_id}.json"
+    suffix = f"-{args.server}" if args.server else ""
+    output_path = output_dir / f"run-{run_id}{suffix}.json"
 
     with open(output_path, "w") as f:
         json.dump(output, f, indent=2)

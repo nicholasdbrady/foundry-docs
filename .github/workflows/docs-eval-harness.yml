@@ -37,7 +37,15 @@ jobs:
       github.event_name != 'workflow_run' ||
       github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        server:
+          - microsoft-learn
+          - mintlify-hosted
+          - foundry-docs
+          - foundry-docs-vnext
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
@@ -59,56 +67,80 @@ jobs:
         env:
           COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
 
-      - name: Parse inputs
+      - name: Parse model inputs
         id: inputs
         run: |
-          SERVERS="${{ inputs.servers || 'all' }}"
           MODELS="${{ inputs.models || 'all' }}"
-
-          if [ "$SERVERS" = "all" ]; then
-            echo "server_args=" >> "$GITHUB_OUTPUT"
-          else
-            echo "server_args=--servers $(echo $SERVERS | tr ',' ' ')" >> "$GITHUB_OUTPUT"
-          fi
-
           if [ "$MODELS" = "all" ]; then
             echo "model_args=" >> "$GITHUB_OUTPUT"
           else
             echo "model_args=--models $(echo $MODELS | tr ',' ' ')" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Run evaluation
+      - name: Run evaluation for ${{ matrix.server }}
         run: |
           python scripts/run_docs_eval.py \
-            ${{ steps.inputs.outputs.server_args }} \
+            --server ${{ matrix.server }} \
             ${{ steps.inputs.outputs.model_args }} \
             --output-dir tests/eval_results
 
-      - name: Find latest results
-        id: results
-        run: |
-          LATEST=$(ls -t tests/eval_results/run-*.json | head -1)
-          echo "raw=$LATEST" >> "$GITHUB_OUTPUT"
-          echo "Latest raw results: $LATEST"
+      - name: Upload partial results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: eval-partial-${{ matrix.server }}
+          path: tests/eval_results/
+          retention-days: 7
 
-      - name: Score results
-        run: |
-          python scripts/eval_scorer.py "${{ steps.results.outputs.raw }}"
+  merge-and-report:
+    needs: [evaluate]
+    if: always() && !cancelled()
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
-      - name: Find scored results
-        id: scored
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -e .
+
+      - name: Download all partial results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: eval-partial-*
+          path: tests/eval_results/partials
+          merge-multiple: false
+
+      - name: Collect result files
+        id: collect
         run: |
-          LATEST=$(ls -t tests/eval_results/scored-*.json | head -1)
-          echo "scored=$LATEST" >> "$GITHUB_OUTPUT"
+          echo "=== Downloaded artifacts ==="
+          find tests/eval_results/partials -name "run-*.json" -type f | sort
+          FILES=$(find tests/eval_results/partials -name "run-*.json" -type f | sort | tr '\n' ' ')
+          echo "files=$FILES" >> "$GITHUB_OUTPUT"
+          echo "Found $(echo $FILES | wc -w) result files"
+
+      - name: Score merged results
+        run: |
+          mkdir -p tests/eval_results
+          python scripts/eval_scorer.py \
+            ${{ steps.collect.outputs.files }} \
+            --output tests/eval_results/scored-merged.json
 
       - name: Generate report
-        id: report
         run: |
-          python scripts/eval_report.py "${{ steps.scored.outputs.scored }}" \
+          python scripts/eval_report.py tests/eval_results/scored-merged.json \
             --output tests/eval_results/report.md
           cat tests/eval_results/report.md
 
-      - name: Upload results artifact
+      - name: Upload combined results
         uses: actions/upload-artifact@v4
         with:
           name: eval-results-${{ github.run_id }}
@@ -143,10 +175,9 @@ jobs:
 
       - name: Check for regression
         run: |
-          # Simple regression check: if any server avg drops below 0.3
           python3 -c "
           import json, sys
-          with open('${{ steps.scored.outputs.scored }}') as f:
+          with open('tests/eval_results/scored-merged.json') as f:
               data = json.load(f)
           avgs = data.get('aggregates', {}).get('server_averages', {})
           regressions = {s: v for s, v in avgs.items() if v < 0.3}
