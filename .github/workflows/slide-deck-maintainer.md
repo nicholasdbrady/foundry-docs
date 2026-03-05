@@ -100,6 +100,42 @@ echo "=== Source Code ===" && find foundry_docs_mcp -name '*.py' | wc -l
 echo "=== Scripts ===" && find scripts -name '*.py' | wc -l
 ```
 
+### Gather Eval Harness Results
+
+Fetch the latest evaluation report from the most recent `eval-report` issue:
+
+```bash
+gh issue list --repo ${{ github.repository }} --label eval-report --state open --json number,title,body --limit 1 | python3 -c "
+import json, sys
+issues = json.loads(sys.stdin.read())
+if issues:
+    print('=== Latest Eval Report ===')
+    print(f'Issue: #{issues[0][\"number\"]} - {issues[0][\"title\"]}')
+    body = issues[0]['body']
+    # Extract the scoreboard table
+    in_scoreboard = False
+    for line in body.split('\n'):
+        if 'Server' in line and 'Model' in line and 'Average' in line:
+            in_scoreboard = True
+        if in_scoreboard:
+            print(line)
+            if line.strip() == '' or (in_scoreboard and line.startswith('---')):
+                pass
+            if '|' not in line and in_scoreboard and line.strip():
+                break
+        if 'Category Breakdown' in line:
+            in_scoreboard = True
+        if 'Methodology' in line:
+            in_scoreboard = False
+    # Also extract hypothesis results
+    for line in body.split('\n'):
+        if 'H1:' in line or 'H2:' in line or 'H3:' in line or 'H4:' in line or 'MARGINAL' in line or 'REJECTED' in line or 'SUPPORTED' in line:
+            print(line)
+else:
+    print('No eval report found')
+"
+```
+
 Use bash commands to explore docs structure:
 - `find docs-vnext -name '*.mdx' | head -30` — browse available pages
 - `cat docs-vnext/overview/*.mdx` — read overview content
@@ -117,10 +153,11 @@ Write a Node.js script at `/tmp/build-slides.js` that uses PptxGenJS to generate
 5. **Agentic Workflows** — count, categories (monitoring, testing, updating, slash commands)
 6. **Trigger Coverage** — event-driven triggers in use (schedule, push, PR, issues, dispatch, etc.)
 7. **Quality Pipeline** — auditor, noob tester, multi-device tester, PR reviewer
-8. **Community Integration** — microsoft-foundry/discussions dispatch, foundry-samples monitoring
-9. **SDK Monitoring** — 4 SDK repos tracked, changelog detection, docs impact assessment
-10. **Key Metrics** — live numbers: MDX docs, workflows, slash commands, docs-vnext improvements
-11. **What's Next** — roadmap items, planned improvements
+8. **Evaluation Harness Results** — 4-server × 3-model comparison matrix from the latest eval report (Issue data). Show the scoreboard table, hypothesis results (H1-H4), and category breakdown. Highlight where docs-vnext outperforms docs/ (agent-development, getting-started).
+9. **Community Integration** — microsoft-foundry/discussions dispatch, foundry-samples monitoring
+10. **SDK Monitoring** — 4 SDK repos tracked, changelog detection, docs impact assessment
+11. **Key Metrics** — live numbers: MDX docs, workflows, slash commands, docs-vnext improvements, eval scores
+12. **What's Next** — roadmap items, planned improvements
 
 ### Design Guidelines (from PPTX skill)
 
