@@ -100,6 +100,33 @@ Using Playwright, navigate the deployed docs site as a complete beginner:
 - Good explanations
 - Logical flow
 
+## Step 2B: Multi-Device Viewport Testing
+
+Test the documentation site across different device viewports to catch responsive layout issues:
+
+### Mobile (375×812)
+```
+Navigate to the home page at 375×812 viewport. Take a screenshot.
+Check: Is the navigation menu accessible? Is text readable? Do code blocks scroll horizontally?
+```
+
+### Tablet (768×1024)
+```
+Navigate to the quickstart page at 768×1024 viewport. Take a screenshot.
+Check: Is the sidebar visible or collapsed? Do tables render properly? Are images sized correctly?
+```
+
+### Desktop (1440×900)
+```
+Navigate to the agent development overview at 1440×900 viewport. Take a screenshot.
+Check: Is the full layout visible? Is the sidebar navigation working? Are code examples properly formatted?
+```
+
+For each viewport, note:
+- 🔴 Layout breaks (overlapping elements, cut-off text)
+- 🟡 Usability issues (too-small tap targets, unreadable text)
+- 🟢 What works well
+
 ## Step 3: Create Issue Report
 
 Create a GitHub issue titled "📚 Foundry Docs Noob Test Report - [Date]" with:

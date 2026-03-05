@@ -112,6 +112,44 @@ Use GitHub tools to:
 - Review commits from the last 24 hours using `list_commits`
 - Get detailed commit information using `get_commit` for significant changes
 
+## Step 3B: Scan External Signal Sources
+
+In addition to internal PRs and commits, scan these external sources for documentation gaps the updater may have missed:
+
+### Community Discussions (microsoft-foundry/discussions)
+
+Search for recent discussions with documentation-relevant labels:
+
+```
+repo:microsoft-foundry/discussions is:open label:documentation OR label:python-sdk OR label:dotnet-sdk OR label:javascript-sdk OR label:java-sdk OR label:bug OR label:mcp OR label:ai-agents OR label:observability
+```
+
+### Public Docs Issues (MicrosoftDocs/azure-ai-docs)
+
+Search for open issues mentioning Foundry:
+
+```
+repo:MicrosoftDocs/azure-ai-docs is:issue is:open foundry OR ai-foundry OR ai-projects OR "hosted agent"
+```
+
+### Samples Repo Issues (microsoft-foundry/foundry-samples)
+
+Search for documentation-related issues:
+
+```
+repo:microsoft-foundry/foundry-samples is:issue is:open documentation OR docs OR "learn.microsoft.com"
+```
+
+### Internal Signals
+
+Search for open issues created by community or Reddit monitors:
+
+```
+repo:${{ github.repository }} is:issue is:open in:title "[community]" OR in:title "[reddit-community]"
+```
+
+For each signal found, cross-reference against docs-vnext content to verify the gap exists before proposing a fix.
+
 ## Step 4: Analyze Changes for Documentation Impact
 
 For each merged PR and commit, analyze:
