@@ -49,6 +49,11 @@ jobs:
       - name: Install dependencies
         run: pip install -e .
 
+      - name: Install Copilot CLI
+        uses: github/gh-aw/actions/setup-cli@v0.53.3
+        with:
+          copilot-github-token: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+
       - name: Parse inputs
         id: inputs
         run: |
@@ -125,7 +130,11 @@ jobs:
             --repo "${{ github.repository }}" \
             --title "$TITLE" \
             --body-file tests/eval_results/report.md \
-            --label "eval-report,automation"
+            --label "eval-report" --label "automation" || \
+          gh issue create \
+            --repo "${{ github.repository }}" \
+            --title "$TITLE" \
+            --body-file tests/eval_results/report.md
 
       - name: Check for regression
         run: |
