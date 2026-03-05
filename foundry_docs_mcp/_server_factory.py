@@ -356,10 +356,10 @@ def build_server(cfg: ServerConfig) -> FastMCP:
                 return index.docs[doc_path]["content"]
 
         await _log(ctx, "warning", f"Document not found: {path}")
-        return json.dumps({
-            "error": f"Document not found: {path}",
-            "hint": "Use search_docs or list_sections to find available docs",
-        })
+        raise ValueError(
+            f"Document not found: {path}. "
+            "Use search_docs to find pages by keyword, or list_sections to browse."
+        )
 
     @mcp.tool(
         tags={"navigation", "discovery"},
@@ -378,14 +378,18 @@ def build_server(cfg: ServerConfig) -> FastMCP:
         nav = _get_nav(ctx)
         sections = []
 
+        def count_pages(items) -> int:
+            total = 0
+            for p in items:
+                if isinstance(p, str):
+                    total += 1
+                elif isinstance(p, dict) and "pages" in p:
+                    total += count_pages(p["pages"])
+            return total
+
         for tab in nav.get("navigation", {}).get("tabs", []):
             for group in tab.get("groups", []):
-                pages = group.get("pages", [])
-                page_count = sum(
-                    len(p["pages"]) if isinstance(p, dict) and "pages" in p else 1
-                    for p in pages
-                )
-                sections.append({"name": group["group"], "page_count": page_count})
+                sections.append({"name": group["group"], "page_count": count_pages(group.get("pages", []))})
 
         await _log(ctx, "info", f"Returning {len(sections)} sections")
         return json.dumps(sections, indent=2)
@@ -399,43 +403,72 @@ def build_server(cfg: ServerConfig) -> FastMCP:
         },
     )
     async def get_section(
-        section: Annotated[str, "Section name (e.g. 'Agent development', 'Get started', 'Model capabilities')"],
+        section: Annotated[str, "Section name or keyword (e.g. 'agents', 'models', 'Get started', 'safety')"],
         *,
         ctx: Context,
     ) -> str:
         """List all pages in a specific documentation section.
 
         Returns page paths and titles. Pass any path to get_doc to read the full content.
+        Supports partial matching: 'agents' matches 'Foundry Agent Service'.
         """
         nav = _get_nav(ctx)
         index: SearchIndex = _get_index(ctx)
         section_lower = section.lower()
 
+        all_groups = []
         for tab in nav.get("navigation", {}).get("tabs", []):
             for group in tab.get("groups", []):
-                if group["group"].lower() == section_lower:
-                    pages = []
-                    for p in group.get("pages", []):
-                        if isinstance(p, str):
-                            doc = index.docs.get(p)
-                            pages.append({"path": p, "title": doc["title"] if doc else p})
-                        elif isinstance(p, dict):
-                            sub_group = p.get("group", "")
-                            for sp in p.get("pages", []):
-                                doc = index.docs.get(sp)
-                                pages.append({
-                                    "path": sp,
-                                    "title": doc["title"] if doc else sp,
-                                    "group": sub_group,
-                                })
-                    await _log(ctx, "info", f"Section '{section}': {len(pages)} pages")
-                    return json.dumps(pages, indent=2)
+                all_groups.append(group)
 
+        # Exact match, then substring, then word-prefix match
+        matched_group = None
+        for group in all_groups:
+            if group["group"].lower() == section_lower:
+                matched_group = group
+                break
+        if matched_group is None:
+            for group in all_groups:
+                if section_lower in group["group"].lower():
+                    matched_group = group
+                    break
+        if matched_group is None:
+            section_words = set(section_lower.split())
+            for group in all_groups:
+                group_words = set(group["group"].lower().split())
+                # Match if any query word is a prefix of any group word (or vice versa)
+                if any(
+                    gw.startswith(sw) or sw.startswith(gw)
+                    for sw in section_words
+                    for gw in group_words
+                ):
+                    matched_group = group
+                    break
+
+        if matched_group is not None:
+            pages = []
+
+            def collect_pages(items, parent_group=""):
+                for p in items:
+                    if isinstance(p, str):
+                        doc = index.docs.get(p)
+                        entry = {"path": p, "title": doc["title"] if doc else p}
+                        if parent_group:
+                            entry["group"] = parent_group
+                        pages.append(entry)
+                    elif isinstance(p, dict) and "pages" in p:
+                        collect_pages(p["pages"], p.get("group", parent_group))
+
+            collect_pages(matched_group.get("pages", []))
+            await _log(ctx, "info", f"Section '{matched_group['group']}': {len(pages)} pages")
+            return json.dumps(pages, indent=2)
+
+        available = [g["group"] for g in all_groups]
         await _log(ctx, "warning", f"Section not found: {section}")
-        return json.dumps({
-            "error": f"Section not found: {section}",
-            "hint": "Use list_sections to see available sections",
-        })
+        raise ValueError(
+            f"Section not found: {section}. "
+            f"Available sections: {', '.join(available)}"
+        )
 
     # --- Resources ---
 
