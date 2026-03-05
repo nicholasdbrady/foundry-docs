@@ -21,6 +21,10 @@ on:
       - foundry_docs_mcp/foundry_client.py
       - scripts/ingest_to_azure_search.py
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
 
@@ -52,6 +56,7 @@ jobs:
           test -n "$AZURE_SEARCH_API_KEY" || { echo "Missing AZURE_SEARCH_API_KEY"; exit 1; }
           test -n "$AZURE_AI_PROJECT_ENDPOINT" || { echo "Missing AZURE_AI_PROJECT_ENDPOINT"; exit 1; }
           test -n "$AZURE_OPENAI_EMBEDDING_DEPLOYMENT" || { echo "Missing AZURE_OPENAI_EMBEDDING_DEPLOYMENT"; exit 1; }
+          test -n "$AZURE_SEARCH_INDEX_NAME" || { echo "Missing AZURE_SEARCH_INDEX_NAME"; exit 1; }
           test -n "$FOUNDRY_INGEST_MAX_CONCURRENCY" || { echo "Missing FOUNDRY_INGEST_MAX_CONCURRENCY"; exit 1; }
 
       - name: Incremental sync

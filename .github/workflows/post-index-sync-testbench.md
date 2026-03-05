@@ -56,6 +56,14 @@ You run automatically after the "Incremental Index Sync" workflow completes. You
 - **Repository**: ${{ github.repository }}
 - **Trigger**: Index sync just completed
 
+## Step 0: Verify Parent Workflow Succeeded
+
+If this was triggered by a `workflow_run` event, check the parent workflow's conclusion:
+
+- The conclusion is available at: `${{ github.event.workflow_run.conclusion }}`
+- If the conclusion is NOT `success` (e.g., `failure`, `cancelled`), immediately call `noop` with message: "Parent workflow did not succeed (conclusion: [conclusion]). Skipping."
+- If triggered by `workflow_dispatch` (manual), skip this check and proceed normally.
+
 ## Step 1: Install Dependencies
 
 ```bash

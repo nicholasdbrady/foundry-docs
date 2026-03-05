@@ -4,7 +4,7 @@ description: Validates docs-vnext documentation accuracy, code examples, and ext
 on:
   workflow_dispatch:
   schedule: weekly on wednesday around 12:00
-  skip-if-match: 'is:discussion is:open in:title "[audit]"'
+  skip-if-match: 'is:issue is:open in:title "[audit]"'
 permissions:
   contents: read
   issues: read
@@ -30,11 +30,12 @@ tools:
     - "test *"
 safe-outputs:
   upload-asset:
-  create-discussion:
+  create-issue:
     title-prefix: "[audit] "
-    category: "audits"
+    labels: [documentation, automation, audit]
     max: 1
-    close-older-discussions: true
+    close-older-issues: true
+    expires: 14d
   noop:
 timeout-minutes: 25
 imports:

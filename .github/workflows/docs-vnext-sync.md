@@ -2,8 +2,7 @@
 name: Docs-vnext Baseline Sync
 description: Refreshes docs-vnext from canonical docs as a weekly baseline
 on:
-  schedule:
-    - cron: "0 18 * * 0"
+  schedule: weekly on sunday
   workflow_dispatch:
   skip-if-match: 'is:pr is:open in:title "[docs-vnext-sync]"'
 

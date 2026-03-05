@@ -7,6 +7,8 @@ on:
   reaction: "rocket"
   skip-bots: [github-actions, copilot, dependabot]
 
+if: github.event.pull_request.merged == true
+
 permissions:
   contents: read
   issues: read

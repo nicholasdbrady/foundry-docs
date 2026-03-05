@@ -16,6 +16,9 @@ permissions:
 tracker-id: daily-doc-healer
 engine: copilot
 strict: true
+concurrency:
+  group: "gh-aw-${{ github.workflow }}"
+  cancel-in-progress: true
 
 network:
   allowed:

@@ -10,7 +10,7 @@ on:
         required: false
         default: 'mobile,tablet,desktop'
   skip-if-match: 'is:issue is:open in:title "Multi-Device Docs Testing"'
-  stop-after: "+30d"
+  stop-after: "+180d"
 permissions:
   contents: read
   issues: read
@@ -18,6 +18,9 @@ permissions:
 tracker-id: daily-multi-device-docs-tester
 engine: copilot
 strict: true
+concurrency:
+  group: "gh-aw-${{ github.workflow }}"
+  cancel-in-progress: true
 timeout-minutes: 20
 tools:
   playwright:

@@ -7,7 +7,7 @@ on:
     name: unbloat
     events: [pull_request_comment]
   workflow_dispatch:
-  skip-if-match: 'is:pr is:open in:title "[docs-vnext]" label:unbloat'
+  skip-if-match: 'is:pr is:open in:title "[docs-vnext]" label:automation'
 
 permissions:
   contents: read
@@ -17,6 +17,9 @@ permissions:
 strict: true
 
 engine: copilot
+concurrency:
+  group: "gh-aw-${{ github.workflow }}"
+  cancel-in-progress: true
 
 imports:
   - shared/mood.md
@@ -50,7 +53,7 @@ safe-outputs:
     title-prefix: "[docs-vnext] "
     labels: [documentation, automation, docs-vnext, unbloat]
     reviewers: [copilot]
-    draft: true
+    draft: false
     auto-merge: true
     fallback-as-issue: false
   add-comment:

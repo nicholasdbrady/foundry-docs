@@ -9,6 +9,7 @@ on:
 permissions:
   contents: read
   issues: read
+  pull-requests: read
 
 tracker-id: docs-vnext-diff-report
 engine: copilot

@@ -1,0 +1,143 @@
+name: Documentation Evaluation Harness
+
+on:
+  workflow_run:
+    workflows: ["Post-Merge Documentation Verification"]
+    types: [completed]
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * 0"  # Weekly Sunday 06:00 UTC
+  workflow_dispatch:
+    inputs:
+      servers:
+        description: "Servers to evaluate (comma-separated, or 'all')"
+        required: false
+        default: "all"
+        type: string
+      models:
+        description: "Models to use (comma-separated, or 'all')"
+        required: false
+        default: "all"
+        type: string
+
+concurrency:
+  group: docs-eval
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  issues: write
+
+env:
+  COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+
+jobs:
+  evaluate:
+    if: >-
+      github.event_name != 'workflow_run' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -e .
+
+      - name: Parse inputs
+        id: inputs
+        run: |
+          SERVERS="${{ inputs.servers || 'all' }}"
+          MODELS="${{ inputs.models || 'all' }}"
+
+          if [ "$SERVERS" = "all" ]; then
+            echo "server_args=" >> "$GITHUB_OUTPUT"
+          else
+            echo "server_args=--servers $(echo $SERVERS | tr ',' ' ')" >> "$GITHUB_OUTPUT"
+          fi
+
+          if [ "$MODELS" = "all" ]; then
+            echo "model_args=" >> "$GITHUB_OUTPUT"
+          else
+            echo "model_args=--models $(echo $MODELS | tr ',' ' ')" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run evaluation
+        run: |
+          python scripts/run_docs_eval.py \
+            ${{ steps.inputs.outputs.server_args }} \
+            ${{ steps.inputs.outputs.model_args }} \
+            --output-dir tests/eval_results
+
+      - name: Find latest results
+        id: results
+        run: |
+          LATEST=$(ls -t tests/eval_results/run-*.json | head -1)
+          echo "raw=$LATEST" >> "$GITHUB_OUTPUT"
+          echo "Latest raw results: $LATEST"
+
+      - name: Score results
+        run: |
+          python scripts/eval_scorer.py "${{ steps.results.outputs.raw }}"
+
+      - name: Find scored results
+        id: scored
+        run: |
+          LATEST=$(ls -t tests/eval_results/scored-*.json | head -1)
+          echo "scored=$LATEST" >> "$GITHUB_OUTPUT"
+
+      - name: Generate report
+        id: report
+        run: |
+          python scripts/eval_report.py "${{ steps.scored.outputs.scored }}" \
+            --output tests/eval_results/report.md
+          cat tests/eval_results/report.md
+
+      - name: Upload results artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-results-${{ github.run_id }}
+          path: tests/eval_results/
+          retention-days: 90
+
+      - name: Close previous eval report issues
+        env:
+          GH_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+        run: |
+          gh issue list --repo "${{ github.repository }}" \
+            --label "eval-report" --state open --json number -q '.[].number' \
+          | while read -r num; do
+              gh issue close "$num" --repo "${{ github.repository }}" \
+                --comment "Superseded by newer evaluation run." 2>/dev/null || true
+            done
+
+      - name: Create issue with results
+        env:
+          GH_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+        run: |
+          TITLE="📊 Docs Eval Report - $(date -u +%Y-%m-%d)"
+          gh issue create \
+            --repo "${{ github.repository }}" \
+            --title "$TITLE" \
+            --body-file tests/eval_results/report.md \
+            --label "eval-report,automation"
+
+      - name: Check for regression
+        run: |
+          # Simple regression check: if any server avg drops below 0.3
+          python3 -c "
+          import json, sys
+          with open('${{ steps.scored.outputs.scored }}') as f:
+              data = json.load(f)
+          avgs = data.get('aggregates', {}).get('server_averages', {})
+          regressions = {s: v for s, v in avgs.items() if v < 0.3}
+          if regressions:
+              print('⚠️ Regression detected:', regressions)
+              sys.exit(1)
+          print('✅ No regressions detected')
+          " || echo "regression_detected=true" >> "$GITHUB_OUTPUT"

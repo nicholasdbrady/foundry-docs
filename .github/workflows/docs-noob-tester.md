@@ -5,13 +5,15 @@ on:
   schedule: daily
   workflow_dispatch:
   skip-if-match: 'is:discussion is:open in:title "Noob Test Report"'
-  stop-after: "+30d"
+  stop-after: "+180d"
 permissions:
   contents: read
   issues: read
   pull-requests: read
-  discussions: write
 engine: copilot
+concurrency:
+  group: "gh-aw-${{ github.workflow }}"
+  cancel-in-progress: true
 timeout-minutes: 15
 tools:
   playwright:
@@ -21,9 +23,11 @@ tools:
     - "ls*"
 safe-outputs:
   upload-asset:
-  create-discussion:
-    category: "audits"
-    close-older-discussions: true
+  create-issue:
+    title-prefix: "[noob-test] "
+    labels: [documentation, automation, noob-test]
+    close-older-issues: true
+    expires: 14d
   noop:
 
 network:
@@ -96,9 +100,9 @@ Using Playwright, navigate the deployed docs site as a complete beginner:
 - Good explanations
 - Logical flow
 
-## Step 3: Create Discussion Report
+## Step 3: Create Issue Report
 
-Create a GitHub discussion titled "📚 Foundry Docs Noob Test Report - [Date]" with:
+Create a GitHub issue titled "📚 Foundry Docs Noob Test Report - [Date]" with:
 
 ### Summary
 - Pages visited, overall impression as a new user

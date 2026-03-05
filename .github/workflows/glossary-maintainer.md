@@ -14,6 +14,9 @@ permissions:
   actions: read
 
 engine: copilot
+concurrency:
+  group: "gh-aw-${{ github.workflow }}"
+  cancel-in-progress: true
 
 network:
   allowed:

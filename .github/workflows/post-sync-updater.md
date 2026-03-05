@@ -69,6 +69,14 @@ You run automatically after the "Sync and Convert Docs" workflow completes. Your
 - **Documentation directory**: `docs-vnext/` (Mintlify MDX format)
 - **Canonical docs**: `docs/` (just synced from upstream)
 
+## Step 0: Verify Parent Workflow Succeeded
+
+If this was triggered by a `workflow_run` event, check the parent workflow's conclusion:
+
+- The conclusion is available at: `${{ github.event.workflow_run.conclusion }}`
+- If the conclusion is NOT `success` (e.g., `failure`, `cancelled`), immediately call `noop` with message: "Parent workflow did not succeed (conclusion: [conclusion]). Skipping."
+- If triggered by `workflow_dispatch` (manual), skip this check and proceed normally.
+
 ## Step 1: Analyze What Changed
 
 Check the most recent sync commit to understand what upstream changes arrived:

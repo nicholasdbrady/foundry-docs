@@ -49,7 +49,7 @@ safe-outputs:
     title-prefix: "[docs-vnext] "
     labels: [documentation, automation, docs-vnext, unbloat]
     reviewers: [copilot]
-    draft: true
+    draft: false
     auto-merge: true
     fallback-as-issue: false
   noop:
@@ -65,6 +65,14 @@ You run automatically after the "Docs-vnext Baseline Sync" workflow completes. T
 
 - **Repository**: ${{ github.repository }}
 - **Trigger**: docs-vnext baseline sync just completed
+
+## Step 0: Verify Parent Workflow Succeeded
+
+If this was triggered by a `workflow_run` event, check the parent workflow's conclusion:
+
+- The conclusion is available at: `${{ github.event.workflow_run.conclusion }}`
+- If the conclusion is NOT `success` (e.g., `failure`, `cancelled`), immediately call `noop` with message: "Parent workflow did not succeed (conclusion: [conclusion]). Skipping."
+- If triggered by `workflow_dispatch` (manual), skip this check and proceed normally.
 
 ## Step 1: Identify New Content from Sync
 
