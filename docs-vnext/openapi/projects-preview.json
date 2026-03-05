@@ -7,7 +7,8 @@
       {
         "emitter": "@azure-tools/typespec-autorest"
       }
-    ]
+    ],
+    "description": "The Azure AI Foundry Projects API provides management capabilities for AI projects including connections, datasets, deployments, evaluations, indexes, and red teaming."
   },
   "security": [
     {
@@ -16,7 +17,32 @@
       ]
     }
   ],
-  "tags": [],
+  "tags": [
+    {
+      "name": "Connections",
+      "description": "Manage connections to external services and data sources."
+    },
+    {
+      "name": "Datasets",
+      "description": "Manage datasets for training, evaluation, and fine-tuning."
+    },
+    {
+      "name": "Deployments",
+      "description": "Manage model deployments and endpoints."
+    },
+    {
+      "name": "Indexes",
+      "description": "Manage search indexes for retrieval-augmented generation."
+    },
+    {
+      "name": "Evaluations",
+      "description": "Run and manage evaluations to measure model performance."
+    },
+    {
+      "name": "Red Teaming",
+      "description": "Run and manage red teaming exercises to test model safety."
+    }
+  ],
   "paths": {
     "/connections": {
       "get": {
@@ -225,7 +251,11 @@
             "label": "API Key",
             "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.core.credential.AzureKeyCredential;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new AzureKeyCredential(\"YOUR_API_KEY\"))\n    .buildClient();\n\nPagedIterable<Connection> connections = client.getConnections();\n\nfor (Connection conn : connections) {\n    System.out.printf(\"%s %s%n\", conn.getName(), conn.getConnectionType());\n}"
           }
-        ]
+        ],
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Returns a list of connections."
       }
     },
     "/connections/{name}": {
@@ -357,7 +387,11 @@
             "label": "API Key",
             "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.core.credential.AzureKeyCredential;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new AzureKeyCredential(\"YOUR_API_KEY\"))\n    .buildClient();\n\nConnection connection = client.getConnection(\"my-connection\");\n\nSystem.out.printf(\"%s %s%n\", connection.getName(), connection.getConnectionType());"
           }
-        ]
+        ],
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Retrieves a connection by name."
       }
     },
     "/connections/{name}/getConnectionWithCredentials": {
@@ -492,7 +526,11 @@
             "label": "API Key",
             "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.core.credential.AzureKeyCredential;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new AzureKeyCredential(\"YOUR_API_KEY\"))\n    .buildClient();\n\nConnection connection = client.getConnectionWithCredentials(\n    \"my-connection\");\n\nSystem.out.println(connection.getCredentials());"
           }
-        ]
+        ],
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Retrieves a connection with credentials."
       }
     },
     "/datasets": {
@@ -609,7 +647,11 @@
             "label": "API Key",
             "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.core.credential.AzureKeyCredential;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new AzureKeyCredential(\"YOUR_API_KEY\"))\n    .buildClient();\n\nPagedIterable<Dataset> datasets = client.getDatasets();\n\nfor (Dataset ds : datasets) {\n    System.out.printf(\"%s v%s%n\", ds.getName(), ds.getVersion());\n}"
           }
-        ]
+        ],
+        "tags": [
+          "Datasets"
+        ],
+        "summary": "Returns a list of datasets."
       }
     },
     "/datasets/{name}/versions": {
@@ -738,7 +780,11 @@
             "label": "API Key",
             "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.core.credential.AzureKeyCredential;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new AzureKeyCredential(\"YOUR_API_KEY\"))\n    .buildClient();\n\nPagedIterable<Dataset> versions = client.getDatasetVersions(\"my-dataset\");\n\nfor (Dataset v : versions) {\n    System.out.printf(\"v%s %s%n\", v.getVersion(), v.getCreatedDate());\n}"
           }
-        ]
+        ],
+        "tags": [
+          "Datasets"
+        ],
+        "summary": "Returns a list of dataset versions."
       }
     },
     "/datasets/{name}/versions/{version}": {
@@ -866,7 +912,11 @@
             "label": "API Key",
             "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.core.credential.AzureKeyCredential;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new AzureKeyCredential(\"YOUR_API_KEY\"))\n    .buildClient();\n\nDataset dataset = client.getDataset(\"my-dataset\", \"1\");\n\nSystem.out.printf(\"%s v%s%n\", dataset.getName(), dataset.getVersion());"
           }
-        ]
+        ],
+        "tags": [
+          "Datasets"
+        ],
+        "summary": "Retrieves a specific dataset version."
       },
       "patch": {
         "operationId": "Datasets_CreateOrUpdateVersion",
@@ -1022,6 +1072,9 @@
             "label": "API Key",
             "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.core.credential.AzureKeyCredential;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new AzureKeyCredential(\"YOUR_API_KEY\"))\n    .buildClient();\n\nDataset dataset = client.createOrUpdateDataset(\n    \"my-dataset\", \"1\",\n    new DatasetVersionOptions().setDescription(\"Training data\"));\n\nSystem.out.println(dataset.getName());"
           }
+        ],
+        "tags": [
+          "Datasets"
         ]
       },
       "delete": {
@@ -1139,6 +1192,9 @@
             "label": "API Key",
             "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.core.credential.AzureKeyCredential;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new AzureKeyCredential(\"YOUR_API_KEY\"))\n    .buildClient();\n\nclient.deleteDataset(\"my-dataset\", \"1\");"
           }
+        ],
+        "tags": [
+          "Datasets"
         ]
       }
     },
@@ -1263,7 +1319,11 @@
             "label": "API Key",
             "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.core.credential.AzureKeyCredential;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new AzureKeyCredential(\"YOUR_API_KEY\"))\n    .buildClient();\n\nDatasetCredentials creds = client.getDatasetCredentials(\n    \"my-dataset\", \"1\");\n\nSystem.out.println(creds.getCredentialType());"
           }
-        ]
+        ],
+        "tags": [
+          "Datasets"
+        ],
+        "summary": "Retrieves credentials for a dataset version."
       }
     },
     "/datasets/{name}/versions/{version}/startPendingUpload": {
@@ -1401,7 +1461,11 @@
             "label": "API Key",
             "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.core.credential.AzureKeyCredential;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new AzureKeyCredential(\"YOUR_API_KEY\"))\n    .buildClient();\n\nPendingUpload upload = client.startPendingDatasetUpload(\n    \"my-dataset\", \"1\",\n    new PendingUploadOptions().setPendingUploadType(\"temporary_sas\"));\n\nSystem.out.println(upload.getBlobReference());"
           }
-        ]
+        ],
+        "tags": [
+          "Datasets"
+        ],
+        "summary": "Starts a pending upload for a dataset version."
       }
     },
     "/deployments": {
@@ -1586,7 +1650,11 @@
             "label": "API Key",
             "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.core.credential.AzureKeyCredential;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new AzureKeyCredential(\"YOUR_API_KEY\"))\n    .buildClient();\n\nPagedIterable<Deployment> deployments = client.getDeployments();\n\nfor (Deployment d : deployments) {\n    System.out.printf(\"%s %s%n\", d.getName(), d.getModel());\n}"
           }
-        ]
+        ],
+        "tags": [
+          "Deployments"
+        ],
+        "summary": "Returns a list of deployments."
       }
     },
     "/deployments/{name}": {
@@ -1720,7 +1788,11 @@
             "label": "API Key",
             "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.core.credential.AzureKeyCredential;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new AzureKeyCredential(\"YOUR_API_KEY\"))\n    .buildClient();\n\nDeployment deployment = client.getDeployment(\"gpt-4o\");\n\nSystem.out.printf(\"%s %s%n\", deployment.getName(), deployment.getModel());"
           }
-        ]
+        ],
+        "tags": [
+          "Deployments"
+        ],
+        "summary": "Retrieves a deployment by name."
       }
     },
     "/evaluations/runs": {
@@ -1848,7 +1920,11 @@
             "label": "API Key",
             "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.core.credential.AzureKeyCredential;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new AzureKeyCredential(\"YOUR_API_KEY\"))\n    .buildClient();\n\nPagedIterable<EvaluationRun> runs = client.getEvaluations();\n\nfor (EvaluationRun run : runs) {\n    System.out.printf(\"%s %s%n\", run.getName(), run.getStatus());\n}"
           }
-        ]
+        ],
+        "tags": [
+          "Evaluations"
+        ],
+        "summary": "Returns a list of evaluation runs."
       }
     },
     "/evaluations/runs/{name}": {
@@ -1978,7 +2054,11 @@
             "label": "API Key",
             "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.core.credential.AzureKeyCredential;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new AzureKeyCredential(\"YOUR_API_KEY\"))\n    .buildClient();\n\nEvaluationRun run = client.getEvaluation(\"my-eval-run\");\n\nSystem.out.printf(\"%s %s%n\", run.getName(), run.getStatus());"
           }
-        ]
+        ],
+        "tags": [
+          "Evaluations"
+        ],
+        "summary": "Retrieves an evaluation run by name."
       },
       "delete": {
         "operationId": "Evaluations_Delete",
@@ -2091,6 +2171,9 @@
             "label": "API Key",
             "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.core.credential.AzureKeyCredential;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new AzureKeyCredential(\"YOUR_API_KEY\"))\n    .buildClient();\n\nclient.deleteEvaluation(\"my-eval-run\");"
           }
+        ],
+        "tags": [
+          "Evaluations"
         ]
       }
     },
@@ -2206,7 +2289,11 @@
             "label": "API Key",
             "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.core.credential.AzureKeyCredential;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new AzureKeyCredential(\"YOUR_API_KEY\"))\n    .buildClient();\n\nclient.cancelEvaluation(\"my-eval-run\");"
           }
-        ]
+        ],
+        "tags": [
+          "Evaluations"
+        ],
+        "summary": "Cancels an evaluation run."
       }
     },
     "/evaluations/runs:run": {
@@ -2326,7 +2413,11 @@
             "label": "API Key",
             "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.core.credential.AzureKeyCredential;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new AzureKeyCredential(\"YOUR_API_KEY\"))\n    .buildClient();\n\nEvaluationRun run = client.createEvaluation(\n    new EvaluationOptions()\n        .setDisplayName(\"my-eval-run\")\n        .setEvaluators(Map.of(\"relevance\",\n            new EvaluatorConfig(\"relevance\")))\n        .setData(new DatasetConfig(\"my-dataset:1\")));\n\nSystem.out.println(run.getName());"
           }
-        ]
+        ],
+        "tags": [
+          "Evaluations"
+        ],
+        "summary": "Creates and starts an evaluation run."
       }
     },
     "/evaluations/runs:runAgent": {
@@ -2443,7 +2534,11 @@
             "label": "API Key",
             "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.core.credential.AzureKeyCredential;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new AzureKeyCredential(\"YOUR_API_KEY\"))\n    .buildClient();\n\nEvaluationRun run = client.createAgentEvaluation(\n    new AgentEvaluationOptions()\n        .setDisplayName(\"agent-eval\")\n        .setEvaluators(Map.of(\"relevance\",\n            new EvaluatorConfig(\"relevance\")))\n        .setTarget(new AgentTarget(\"my-agent:1\")));\n\nSystem.out.println(run.getName());"
           }
-        ]
+        ],
+        "tags": [
+          "Evaluations"
+        ],
+        "summary": "Creates and starts an agent evaluation run."
       }
     },
     "/indexes": {
@@ -2559,7 +2654,11 @@
             "label": "API Key",
             "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.core.credential.AzureKeyCredential;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new AzureKeyCredential(\"YOUR_API_KEY\"))\n    .buildClient();\n\nPagedIterable<Index> indexes = client.getIndexes();\n\nfor (Index idx : indexes) {\n    System.out.printf(\"%s v%s%n\", idx.getName(), idx.getVersion());\n}"
           }
-        ]
+        ],
+        "tags": [
+          "Indexes"
+        ],
+        "summary": "Returns a list of indexes."
       }
     },
     "/indexes/{name}/versions": {
@@ -2686,7 +2785,11 @@
             "label": "API Key",
             "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.core.credential.AzureKeyCredential;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new AzureKeyCredential(\"YOUR_API_KEY\"))\n    .buildClient();\n\nPagedIterable<Index> versions = client.getIndexVersions(\"my-index\");\n\nfor (Index v : versions) {\n    System.out.println(v.getVersion());\n}"
           }
-        ]
+        ],
+        "tags": [
+          "Indexes"
+        ],
+        "summary": "Returns a list of index versions."
       }
     },
     "/indexes/{name}/versions/{version}": {
@@ -2813,7 +2916,11 @@
             "label": "API Key",
             "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.core.credential.AzureKeyCredential;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new AzureKeyCredential(\"YOUR_API_KEY\"))\n    .buildClient();\n\nIndex index = client.getIndex(\"my-index\", \"1\");\n\nSystem.out.println(index.getName());"
           }
-        ]
+        ],
+        "tags": [
+          "Indexes"
+        ],
+        "summary": "Retrieves a specific index version."
       },
       "patch": {
         "operationId": "Indexes_CreateOrUpdateVersion",
@@ -2967,6 +3074,9 @@
             "label": "API Key",
             "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.core.credential.AzureKeyCredential;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new AzureKeyCredential(\"YOUR_API_KEY\"))\n    .buildClient();\n\nIndex index = client.createOrUpdateIndex(\n    \"my-index\", \"1\",\n    new IndexVersionOptions().setDescription(\"Search index\"));\n\nSystem.out.println(index.getName());"
           }
+        ],
+        "tags": [
+          "Indexes"
         ]
       },
       "delete": {
@@ -3084,6 +3194,9 @@
             "label": "API Key",
             "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.core.credential.AzureKeyCredential;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new AzureKeyCredential(\"YOUR_API_KEY\"))\n    .buildClient();\n\nclient.deleteIndex(\"my-index\", \"1\");"
           }
+        ],
+        "tags": [
+          "Indexes"
         ]
       }
     },
@@ -3209,7 +3322,11 @@
             "label": "API Key",
             "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.core.credential.AzureKeyCredential;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new AzureKeyCredential(\"YOUR_API_KEY\"))\n    .buildClient();\n\nPagedIterable<RedTeamRun> runs = client.getRedTeams();\n\nfor (RedTeamRun run : runs) {\n    System.out.printf(\"%s %s%n\", run.getName(), run.getStatus());\n}"
           }
-        ]
+        ],
+        "tags": [
+          "Red Teaming"
+        ],
+        "summary": "Returns a list of red teaming runs."
       }
     },
     "/redTeams/runs/{name}": {
@@ -3336,7 +3453,11 @@
             "label": "API Key",
             "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.core.credential.AzureKeyCredential;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new AzureKeyCredential(\"YOUR_API_KEY\"))\n    .buildClient();\n\nRedTeamRun run = client.getRedTeam(\"my-redteam-run\");\n\nSystem.out.printf(\"%s %s%n\", run.getName(), run.getStatus());"
           }
-        ]
+        ],
+        "tags": [
+          "Red Teaming"
+        ],
+        "summary": "Retrieves a red teaming run by name."
       }
     },
     "/redTeams/runs:run": {
@@ -3453,7 +3574,11 @@
             "label": "API Key",
             "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.core.credential.AzureKeyCredential;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new AzureKeyCredential(\"YOUR_API_KEY\"))\n    .buildClient();\n\nRedTeamRun run = client.createRedTeam(\n    new RedTeamOptions()\n        .setDisplayName(\"my-redteam\")\n        .setTarget(new AgentTarget(\"my-agent:1\"))\n        .setRiskCategories(List.of(\"violence\", \"hate\")));\n\nSystem.out.println(run.getName());"
           }
-        ]
+        ],
+        "tags": [
+          "Red Teaming"
+        ],
+        "summary": "Creates and starts a red teaming run."
       }
     }
   },
