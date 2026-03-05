@@ -100,6 +100,51 @@ echo "=== Source Code ===" && find foundry_docs_mcp -name '*.py' | wc -l
 echo "=== Scripts ===" && find scripts -name '*.py' | wc -l
 ```
 
+### Gather Historical docs-vnext Activity
+
+Pull merged PRs, closed issues, and commit history to build the narrative:
+
+```bash
+echo "=== MERGED docs-vnext PRs ==="
+gh pr list --repo ${{ github.repository }} --state merged --search "docs-vnext" --json number,title,mergedAt,author,labels --limit 30
+
+echo "=== CLOSED AUTOMATION ISSUES ==="
+gh issue list --repo ${{ github.repository }} --state closed --label automation --json number,title,closedAt,labels --limit 30
+
+echo "=== AGENTIC vs HUMAN COMMITS ==="
+echo "Agentic:" && git log --all --format='%ae' -- docs-vnext/ | grep -c 'github-actions'
+echo "Human:" && git log --all --format='%ae' -- docs-vnext/ | grep -vc 'github-actions'
+echo "Total:" && git log --all --oneline -- docs-vnext/ | wc -l
+
+echo "=== docs-vnext FILE DELTA vs docs/ ==="
+echo "Files only in docs-vnext:" && comm -23 <(find docs-vnext -name '*.mdx' -printf '%f\n' | sort) <(find docs -name '*.mdx' -printf '%f\n' | sort) | wc -l
+echo "Files in both:" && comm -12 <(find docs-vnext -name '*.mdx' -printf '%f\n' | sort) <(find docs -name '*.mdx' -printf '%f\n' | sort) | wc -l
+
+echo "=== OPEN docs-vnext PRs ==="
+gh pr list --repo ${{ github.repository }} --state open --label docs-vnext --json number,title,author --limit 10
+```
+
+### Gather Deep-Dive Chain Examples
+
+Pull specific agentic workflow chains for the narrative slides:
+
+```bash
+echo "=== DEEP DIVE 1: Upstream Sync Chain ==="
+echo "Latest upstream-docs issues:"
+gh issue list --repo ${{ github.repository }} --label upstream-sync --json number,title,createdAt --limit 3
+echo "Latest sync-and-convert runs:"
+gh run list --repo ${{ github.repository }} --workflow=sync-and-convert.yml --limit 3 --json displayTitle,conclusion,createdAt
+
+echo "=== DEEP DIVE 2: Glossary Creation (PR #28) ==="
+gh pr view 28 --repo ${{ github.repository }} --json title,body,mergedAt,additions,deletions 2>/dev/null || echo "PR #28 not accessible"
+
+echo "=== DEEP DIVE 3: Unbloat Improvement (PR #23) ==="
+gh pr view 23 --repo ${{ github.repository }} --json title,body,mergedAt,additions,deletions 2>/dev/null || echo "PR #23 not accessible"
+
+echo "=== SDK RELEASE DETECTION ==="
+gh issue list --repo ${{ github.repository }} --label sdk-update --json number,title,createdAt --limit 3
+```
+
 ### Gather Eval Harness Results
 
 Fetch the latest evaluation report from the most recent `eval-report` issue:
@@ -150,14 +195,17 @@ Write a Node.js script at `/tmp/build-slides.js` that uses PptxGenJS to generate
 2. **What is Foundry-Docs** — MCP server serving Foundry documentation, agentic workflow approach
 3. **Architecture** — docs/ → docs-vnext pipeline, upstream sync, agent improvements
 4. **Documentation Coverage** — section breakdown with page counts (from live data)
-5. **Agentic Workflows** — count, categories (monitoring, testing, updating, slash commands)
+5. **Agentic Workflows** — count (post-consolidation), categories (monitoring, testing, updating, slash commands)
 6. **Trigger Coverage** — event-driven triggers in use (schedule, push, PR, issues, dispatch, etc.)
-7. **Quality Pipeline** — auditor, noob tester, multi-device tester, PR reviewer
-8. **Evaluation Harness Results** — 4-server × 3-model comparison matrix from the latest eval report (Issue data). Show the scoreboard table, hypothesis results (H1-H4), and category breakdown. Highlight where docs-vnext outperforms docs/ (agent-development, getting-started).
-9. **Community Integration** — microsoft-foundry/discussions dispatch, foundry-samples monitoring
-10. **SDK Monitoring** — 4 SDK repos tracked, changelog detection, docs impact assessment
-11. **Key Metrics** — live numbers: MDX docs, workflows, slash commands, docs-vnext improvements, eval scores
-12. **What's Next** — roadmap items, planned improvements
+7. **Quality Pipeline** — auditor, noob tester (with multi-device viewport testing), PR reviewer
+8. **docs-vnext History & Impact** — Show the narrative arc: how many merged PRs (agentic vs human split), automation issues created and resolved (upstream-docs detections, SDK release alerts, community signals), key milestones timeline (first agentic PR, glossary creation, nav reflow, eval harness launch), and docs-vnext file delta vs canonical docs/ (new files created by agents, total files)
+9. **Deep Dive: Agentic Chain in Action** — Walk through a real trigger-to-result pipeline. Show the chain: Upstream Docs Monitor detects a commit in MicrosoftDocs/azure-ai-docs-pr → creates an issue (e.g., #54) → dispatches sync-and-convert → post-sync-updater analyzes changes → creates a docs-vnext PR (or noops). Include the actual workflow names, run durations, and outcomes. Also show the SDK release chain: SDK Release Monitor detects Java 2.0.0-beta.2 → creates Issue #53 with breaking changes and docs impact assessment.
+10. **Deep Dive: Content Improvements** — Show concrete before/after examples of agentic content improvements. Include: (a) Glossary creation from zero — PR #28, glossary-maintainer scanned the codebase and created a 35-term glossary in one run. (b) Unbloat of cloud-evaluation.mdx — PR #23, unbloat-docs removed duplicate paragraphs and repetitive tip boxes. Show the PR descriptions and the types of bloat removed.
+11. **Evaluation Harness Results** — 4-server × 3-model comparison matrix from the latest eval report (Issue data). Show the scoreboard table, hypothesis results (H1-H4), and category breakdown. Highlight where docs-vnext outperforms docs/ (agent-development, getting-started).
+12. **Community Integration** — microsoft-foundry/discussions dispatch, foundry-samples monitoring, Reddit community signals
+13. **SDK Monitoring** — 4 SDK repos tracked, changelog detection, docs impact assessment, example: Java 2.0.0-beta.2 breaking changes detected
+14. **Key Metrics** — live numbers: MDX docs, workflows, slash commands, docs-vnext improvements, eval scores, merged agentic PRs
+15. **What's Next** — roadmap items: improve observability docs coverage (eval weak spot), increase agentic PR merge rate, expand eval scenarios
 
 ### Design Guidelines (from PPTX skill)
 
