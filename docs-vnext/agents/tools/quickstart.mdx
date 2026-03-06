@@ -1,0 +1,1036 @@
+---
+title: "Quickstart: Detect the language of text"
+description: "Use Azure Language in Foundry Tools to detect the language of text with client libraries, the REST API, or the Microsoft Foundry portal."
+sidebarTitle: "Quickstart: Detect the language of text"
+---
+
+In this quickstart, you use the Azure Language in Foundry Tools language detection feature to identify the language of input text. You can get started using your preferred client library, the REST API, or the Microsoft Foundry portal.
+
+If you don't have an Azure subscription, create a [free account](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn) before you begin.
+
+[Reference documentation](https://learn.microsoft.com/dotnet/api/azure.ai.textanalytics) | [More samples](https://github.com/Azure/azure-sdk-for-net/tree/master/sdk/textanalytics/Azure.AI.TextAnalytics/samples) | [Package (NuGet)](https://www.nuget.org/packages/Azure.AI.TextAnalytics/5.2.0) | [Library source code](https://github.com/Azure/azure-sdk-for-net/tree/master/sdk/textanalytics/Azure.AI.TextAnalytics)
+
+Use this quickstart to create a language detection application with the client library for .NET. In the following example, you create a C# application that can identify the language a text sample was written in.
+
+## Prerequisites
+
+* Azure subscription - [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn)
+* The [Visual Studio IDE](https://visualstudio.microsoft.com/vs/)
+
+## Setting up
+
+### Create an Azure resource
+
+To use the code sample below, you need to deploy an Azure resource. This resource will contain a key and endpoint you use to authenticate the API calls you send to Azure Language.
+
+1. Use the following link to <a href="https://portal.azure.com/#create/Microsoft.CognitiveServicesTextAnalytics" target="_blank">create a language resource</a> using the Azure portal. You need to sign in using your Azure subscription.
+1. On the **Select additional features** screen that appears, select **Continue to create your resource**.
+
+<Frame>
+<img src="/images/portal-resource-additional-features.png" alt="A screenshot showing additional feature options in the Azure portal." />
+</Frame>
+
+1. In the **Create language** screen, provide the following information:
+
+    |Detail  |Description  | 
+    |---------|---------|
+    |Subscription     | The subscription account that your resource will be associated with. Select your Azure subscription from the drop-down menu.         |
+    |Resource group   | A resource group is a container that stores the resources you create. Select **Create new** to create a new resource group.         |
+    |Region     | The location of your Language resource. Different regions may introduce latency depending on your physical location, but have no impact on the runtime availability of your resource. For this quickstart, either select an available region near you, or choose **East US**.        |
+    |Name     | The name for your Language resource. This name will also be used to create an endpoint URL that your applications will use to send API requests.         |
+    |Pricing tier     | The [pricing tier](https://azure.microsoft.com/pricing/details/cognitive-services/language-service/) for your Language resource. You can use the **Free F0** tier to try the service and upgrade later to a paid tier for production.       |
+     
+<Frame>
+<img src="/images/portal-resource-creation-details.png" alt="A screenshot showing resource creation details in the Azure portal." />
+</Frame>
+
+1. Make sure the **Responsible AI Notice** checkbox is checked.
+1. Select **Review + Create** at the bottom of the page.
+
+1. In the screen that appears, make sure the validation has passed, and that you entered your information correctly. Then select **Create**.
+
+### Get your key and endpoint
+
+Next you will need the key and endpoint from the resource to connect your application to the API. You'll paste your key and endpoint into the code later in the quickstart.
+
+1. After Azure Language resource deploys successfully, click the **Go to Resource** button under **Next Steps**.
+
+<Frame>
+<img src="/images/portal-resource-next-steps.png" alt="A screenshot showing the next steps after a resource has deployed." />
+</Frame>
+
+1. On the screen for your resource, select **Keys and endpoint** on the left pane. You will use one of your keys and your endpoint in the steps below. 
+
+<Frame>
+<img src="/images/azure-portal-resource-credentials.png" alt="A screenshot showing the keys and endpoint section for a resource." />
+</Frame>
+
+### Create environment variables 
+
+Your application must be authenticated to send API requests. For production, use a secure way of storing and accessing your credentials. In this example, you will write your credentials to environment variables on the local machine running the application.
+
+To set the environment variable for your Language resource key, open a console window, and follow the instructions for your operating system and development environment. 
+
+- To set the `LANGUAGE_KEY` environment variable, replace `your-key` with one of the keys for your resource.
+- To set the `LANGUAGE_ENDPOINT` environment variable, replace `your-endpoint` with the endpoint for your resource.
+
+<Tabs>
+  <Tab title="Windows">
+
+    ```console
+    setx LANGUAGE_KEY your-key
+    ```
+
+    ```console
+    setx LANGUAGE_ENDPOINT your-endpoint
+    ```
+
+    <Note>
+    If you only need to access the environment variables in the current running console, you can set the environment variable with `set` instead of `setx`.
+    </Note>
+
+    After you add the environment variables, you might need to restart any running programs that will need to read the environment variables, including the console window. For example, if you're using Visual Studio as your editor, restart Visual Studio before running the example.
+
+  </Tab>
+  <Tab title="Linux">
+
+    ```bash
+    export LANGUAGE_KEY=your-key
+    ```
+
+    ```bash
+    export LANGUAGE_ENDPOINT=your-endpoint
+    ```
+
+    After you add the environment variables, run `source ~/.bashrc` from your console window to make the changes effective.
+
+  </Tab>
+  <Tab title="macOS">
+
+    ##### Bash
+
+    ```bash
+    export LANGUAGE_KEY=your-key
+    ```
+
+    ```bash
+    export LANGUAGE_ENDPOINT=your-endpoint
+    ```
+
+    After you add the environment variables, run `source ~/.bash_profile` from your console window to make the changes effective.
+
+    ##### Xcode
+
+    For iOS and macOS development, you set the environment variables in Xcode. For example, follow these steps to set the environment variable in Xcode 13.4.1.
+
+    1. Select **Product** > **Scheme** > **Edit scheme**
+    1. Select **Arguments** on the **Run** (Debug Run) page
+    1. Under **Environment Variables** select the plus (+) sign to add a new environment variable. 
+    1. Enter `LANGUAGE_KEY` for the **Name** and enter your Language resource key for the **Value**.
+    1. Perform these steps for your resource endpoint. Name the new environment variable `LANGUAGE_ENDPOINT`.
+
+    For more configuration options, see the [Xcode documentation](https://help.apple.com/xcode/#/dev745c5c974).
+
+  </Tab>
+</Tabs>
+
+### Create a new .NET Core application
+
+Using the Visual Studio IDE, create a new .NET Core console app. This creates a "Hello World" project with a single C# source file: *program.cs*.
+
+Install the client library by right-clicking the solution in the **Solution Explorer** and selecting **Manage NuGet Packages**. In the package manager that opens select **Browse** and search for `Azure.AI.TextAnalytics`. Select version `5.2.0`, and then **Install**. You can also use the [Package Manager Console](/nuget/consume-packages/install-use-packages-powershell#find-and-install-a-package).
+
+## Code example
+
+Copy the following code into your *program.cs* file. Then run the code.  
+
+```csharp
+using Azure;
+using System;
+using Azure.AI.TextAnalytics;
+
+namespace LanguageDetectionExample
+{
+    class Program
+    {
+        // This example requires environment variables named "LANGUAGE_KEY" and "LANGUAGE_ENDPOINT".
+        static void LanguageDetectionExample(TextAnalyticsClient client)
+        {
+            DetectedLanguage detectedLanguage = client.DetectLanguage("Ce document est rédigé en Français.");
+            Console.WriteLine("Language:");
+            Console.WriteLine($"\t{detectedLanguage.Name},\tISO-6391: {detectedLanguage.Iso6391Name}\n");
+        }
+
+        static void Main(string[] args)
+        {
+            string languageKey = Environment.GetEnvironmentVariable("LANGUAGE_KEY");
+            string languageEndpoint = Environment.GetEnvironmentVariable("LANGUAGE_ENDPOINT");
+
+            if (string.IsNullOrWhiteSpace(languageKey) || string.IsNullOrWhiteSpace(languageEndpoint))
+            {
+                Console.WriteLine("Set the LANGUAGE_KEY and LANGUAGE_ENDPOINT environment variables before running this sample.");
+                return;
+            }
+
+            var endpoint = new Uri(languageEndpoint);
+            var credentials = new AzureKeyCredential(languageKey);
+            var client = new TextAnalyticsClient(endpoint, credentials);
+
+            LanguageDetectionExample(client);
+
+            Console.Write("Press any key to exit.");
+            Console.ReadKey();
+        }
+
+    }
+}
+
+```
+
+### Output
+
+```console
+Language:
+    French, ISO-6391: fr
+```
+
+[Reference documentation](https://learn.microsoft.com/java/api/overview/azure/ai-textanalytics-readme) | [More samples](https://github.com/Azure/azure-sdk-for-java/tree/main/sdk/textanalytics/azure-ai-textanalytics/src/samples) | [Package (Maven)](https://mvnrepository.com/artifact/com.azure/azure-ai-textanalytics/5.2.0) | [Library source code](https://github.com/Azure/azure-sdk-for-java/tree/main/sdk/textanalytics/azure-ai-textanalytics)
+
+Use this quickstart to create a language detection application with the client library for Java. In the following example, you create a Java application that can identify the language a text sample was written in.
+
+## Prerequisites
+
+* Azure subscription - [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn)
+* [Java Development Kit (JDK)](https://www.oracle.com/technetwork/java/javase/downloads/index.html) with version 8 or above
+
+## Setting up
+
+### Create an Azure resource
+
+To use the code sample below, you need to deploy an Azure resource. This resource will contain a key and endpoint you use to authenticate the API calls you send to Azure Language.
+
+1. Use the following link to <a href="https://portal.azure.com/#create/Microsoft.CognitiveServicesTextAnalytics" target="_blank">create a language resource</a> using the Azure portal. You need to sign in using your Azure subscription.
+1. On the **Select additional features** screen that appears, select **Continue to create your resource**.
+
+<Frame>
+<img src="/images/portal-resource-additional-features.png" alt="A screenshot showing additional feature options in the Azure portal." />
+</Frame>
+
+1. In the **Create language** screen, provide the following information:
+
+    |Detail  |Description  | 
+    |---------|---------|
+    |Subscription     | The subscription account that your resource will be associated with. Select your Azure subscription from the drop-down menu.         |
+    |Resource group   | A resource group is a container that stores the resources you create. Select **Create new** to create a new resource group.         |
+    |Region     | The location of your Language resource. Different regions may introduce latency depending on your physical location, but have no impact on the runtime availability of your resource. For this quickstart, either select an available region near you, or choose **East US**.        |
+    |Name     | The name for your Language resource. This name will also be used to create an endpoint URL that your applications will use to send API requests.         |
+    |Pricing tier     | The [pricing tier](https://azure.microsoft.com/pricing/details/cognitive-services/language-service/) for your Language resource. You can use the **Free F0** tier to try the service and upgrade later to a paid tier for production.       |
+     
+<Frame>
+<img src="/images/portal-resource-creation-details.png" alt="A screenshot showing resource creation details in the Azure portal." />
+</Frame>
+
+1. Make sure the **Responsible AI Notice** checkbox is checked.
+1. Select **Review + Create** at the bottom of the page.
+
+1. In the screen that appears, make sure the validation has passed, and that you entered your information correctly. Then select **Create**.
+
+### Get your key and endpoint
+
+Next you will need the key and endpoint from the resource to connect your application to the API. You'll paste your key and endpoint into the code later in the quickstart.
+
+1. After Azure Language resource deploys successfully, click the **Go to Resource** button under **Next Steps**.
+
+<Frame>
+<img src="/images/portal-resource-next-steps.png" alt="A screenshot showing the next steps after a resource has deployed." />
+</Frame>
+
+1. On the screen for your resource, select **Keys and endpoint** on the left pane. You will use one of your keys and your endpoint in the steps below. 
+
+<Frame>
+<img src="/images/azure-portal-resource-credentials.png" alt="A screenshot showing the keys and endpoint section for a resource." />
+</Frame>
+
+### Create environment variables 
+
+Your application must be authenticated to send API requests. For production, use a secure way of storing and accessing your credentials. In this example, you will write your credentials to environment variables on the local machine running the application.
+
+To set the environment variable for your Language resource key, open a console window, and follow the instructions for your operating system and development environment. 
+
+- To set the `LANGUAGE_KEY` environment variable, replace `your-key` with one of the keys for your resource.
+- To set the `LANGUAGE_ENDPOINT` environment variable, replace `your-endpoint` with the endpoint for your resource.
+
+<Tabs>
+  <Tab title="Windows">
+
+    ```console
+    setx LANGUAGE_KEY your-key
+    ```
+
+    ```console
+    setx LANGUAGE_ENDPOINT your-endpoint
+    ```
+
+    <Note>
+    If you only need to access the environment variables in the current running console, you can set the environment variable with `set` instead of `setx`.
+    </Note>
+
+    After you add the environment variables, you might need to restart any running programs that will need to read the environment variables, including the console window. For example, if you're using Visual Studio as your editor, restart Visual Studio before running the example.
+
+  </Tab>
+  <Tab title="Linux">
+
+    ```bash
+    export LANGUAGE_KEY=your-key
+    ```
+
+    ```bash
+    export LANGUAGE_ENDPOINT=your-endpoint
+    ```
+
+    After you add the environment variables, run `source ~/.bashrc` from your console window to make the changes effective.
+
+  </Tab>
+  <Tab title="macOS">
+
+    ##### Bash
+
+    ```bash
+    export LANGUAGE_KEY=your-key
+    ```
+
+    ```bash
+    export LANGUAGE_ENDPOINT=your-endpoint
+    ```
+
+    After you add the environment variables, run `source ~/.bash_profile` from your console window to make the changes effective.
+
+    ##### Xcode
+
+    For iOS and macOS development, you set the environment variables in Xcode. For example, follow these steps to set the environment variable in Xcode 13.4.1.
+
+    1. Select **Product** > **Scheme** > **Edit scheme**
+    1. Select **Arguments** on the **Run** (Debug Run) page
+    1. Under **Environment Variables** select the plus (+) sign to add a new environment variable. 
+    1. Enter `LANGUAGE_KEY` for the **Name** and enter your Language resource key for the **Value**.
+    1. Perform these steps for your resource endpoint. Name the new environment variable `LANGUAGE_ENDPOINT`.
+
+    For more configuration options, see the [Xcode documentation](https://help.apple.com/xcode/#/dev745c5c974).
+
+  </Tab>
+</Tabs>
+
+### Add the client library
+
+Create a Maven project in your preferred IDE or development environment. Then add the following dependency to your project's *pom.xml* file. You can find the implementation syntax [for other build tools](https://mvnrepository.com/artifact/com.azure/azure-ai-textanalytics/5.2.0) online.
+
+```xml
+<dependencies>
+     <dependency>
+        <groupId>com.azure</groupId>
+        <artifactId>azure-ai-textanalytics</artifactId>
+        <version>5.2.0</version>
+     </dependency>
+</dependencies>
+```
+
+## Code example
+
+Create a Java file named `Example.java`. Open the file and copy the below code. Then run the code.
+
+```java
+import com.azure.core.credential.AzureKeyCredential;
+import com.azure.ai.textanalytics.models.*;
+import com.azure.ai.textanalytics.TextAnalyticsClientBuilder;
+import com.azure.ai.textanalytics.TextAnalyticsClient;
+
+public class Example {
+
+    // This example requires environment variables named "LANGUAGE_KEY" and "LANGUAGE_ENDPOINT"
+    private static String languageKey = System.getenv("LANGUAGE_KEY");
+    private static String languageEndpoint = System.getenv("LANGUAGE_ENDPOINT");
+
+    public static void main(String[] args) {
+        if (languageKey == null || languageKey.isBlank() || languageEndpoint == null || languageEndpoint.isBlank()) {
+            throw new IllegalArgumentException("Missing LANGUAGE_KEY or LANGUAGE_ENDPOINT environment variables");
+        }
+        TextAnalyticsClient client = authenticateClient(languageKey, languageEndpoint);
+        detectLanguageExample(client);
+    }
+    // Method to authenticate the client object with your key and endpoint
+    static TextAnalyticsClient authenticateClient(String key, String endpoint) {
+        return new TextAnalyticsClientBuilder()
+                .credential(new AzureKeyCredential(key))
+                .endpoint(endpoint)
+                .buildClient();
+    }
+    // Example method for detecting the language of text
+    static void detectLanguageExample(TextAnalyticsClient client)
+    {
+        // The text to be analyzed.
+        String text = "Ce document est rédigé en Français.";
+
+        DetectedLanguage detectedLanguage = client.detectLanguage(text);
+        System.out.printf("Detected primary language: %s, ISO 6391 name: %s, score: %.2f.%n",
+                detectedLanguage.getName(),
+                detectedLanguage.getIso6391Name(),
+                detectedLanguage.getConfidenceScore());
+    }
+}
+
+```
+
+### Output
+
+```console
+Detected primary language: French, ISO 6391 name: fr, score: 1.00.
+```
+
+[Reference documentation](https://learn.microsoft.com/javascript/api/overview/azure/ai-language-text-readme) | [More samples](https://github.com/Azure/azure-sdk-for-js/tree/main/sdk/cognitivelanguage/ai-language-text/samples/v1) | [Package (npm)](https://www.npmjs.com/package/@azure/ai-language-text) | [Library source code](https://github.com/Azure/azure-sdk-for-js/tree/main/sdk/cognitivelanguage/ai-language-text)
+
+Use this quickstart to create a language detection application with the client library for Node.js. In the following example, you create a JavaScript application that can identify the language a text sample was written in.
+
+## Prerequisites
+
+* Azure subscription - [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn)
+* [Node.js](https://nodejs.org/) v14 LTS or later
+
+## Setting up
+
+### Create an Azure resource
+
+To use the code sample below, you need to deploy an Azure resource. This resource will contain a key and endpoint you use to authenticate the API calls you send to Azure Language.
+
+1. Use the following link to <a href="https://portal.azure.com/#create/Microsoft.CognitiveServicesTextAnalytics" target="_blank">create a language resource</a> using the Azure portal. You need to sign in using your Azure subscription.
+1. On the **Select additional features** screen that appears, select **Continue to create your resource**.
+
+<Frame>
+<img src="/images/portal-resource-additional-features.png" alt="A screenshot showing additional feature options in the Azure portal." />
+</Frame>
+
+1. In the **Create language** screen, provide the following information:
+
+    |Detail  |Description  | 
+    |---------|---------|
+    |Subscription     | The subscription account that your resource will be associated with. Select your Azure subscription from the drop-down menu.         |
+    |Resource group   | A resource group is a container that stores the resources you create. Select **Create new** to create a new resource group.         |
+    |Region     | The location of your Language resource. Different regions may introduce latency depending on your physical location, but have no impact on the runtime availability of your resource. For this quickstart, either select an available region near you, or choose **East US**.        |
+    |Name     | The name for your Language resource. This name will also be used to create an endpoint URL that your applications will use to send API requests.         |
+    |Pricing tier     | The [pricing tier](https://azure.microsoft.com/pricing/details/cognitive-services/language-service/) for your Language resource. You can use the **Free F0** tier to try the service and upgrade later to a paid tier for production.       |
+     
+<Frame>
+<img src="/images/portal-resource-creation-details.png" alt="A screenshot showing resource creation details in the Azure portal." />
+</Frame>
+
+1. Make sure the **Responsible AI Notice** checkbox is checked.
+1. Select **Review + Create** at the bottom of the page.
+
+1. In the screen that appears, make sure the validation has passed, and that you entered your information correctly. Then select **Create**.
+
+### Get your key and endpoint
+
+Next you will need the key and endpoint from the resource to connect your application to the API. You'll paste your key and endpoint into the code later in the quickstart.
+
+1. After Azure Language resource deploys successfully, click the **Go to Resource** button under **Next Steps**.
+
+<Frame>
+<img src="/images/portal-resource-next-steps.png" alt="A screenshot showing the next steps after a resource has deployed." />
+</Frame>
+
+1. On the screen for your resource, select **Keys and endpoint** on the left pane. You will use one of your keys and your endpoint in the steps below. 
+
+<Frame>
+<img src="/images/azure-portal-resource-credentials.png" alt="A screenshot showing the keys and endpoint section for a resource." />
+</Frame>
+
+### Create environment variables 
+
+Your application must be authenticated to send API requests. For production, use a secure way of storing and accessing your credentials. In this example, you will write your credentials to environment variables on the local machine running the application.
+
+To set the environment variable for your Language resource key, open a console window, and follow the instructions for your operating system and development environment. 
+
+- To set the `LANGUAGE_KEY` environment variable, replace `your-key` with one of the keys for your resource.
+- To set the `LANGUAGE_ENDPOINT` environment variable, replace `your-endpoint` with the endpoint for your resource.
+
+<Tabs>
+  <Tab title="Windows">
+
+    ```console
+    setx LANGUAGE_KEY your-key
+    ```
+
+    ```console
+    setx LANGUAGE_ENDPOINT your-endpoint
+    ```
+
+    <Note>
+    If you only need to access the environment variables in the current running console, you can set the environment variable with `set` instead of `setx`.
+    </Note>
+
+    After you add the environment variables, you might need to restart any running programs that will need to read the environment variables, including the console window. For example, if you're using Visual Studio as your editor, restart Visual Studio before running the example.
+
+  </Tab>
+  <Tab title="Linux">
+
+    ```bash
+    export LANGUAGE_KEY=your-key
+    ```
+
+    ```bash
+    export LANGUAGE_ENDPOINT=your-endpoint
+    ```
+
+    After you add the environment variables, run `source ~/.bashrc` from your console window to make the changes effective.
+
+  </Tab>
+  <Tab title="macOS">
+
+    ##### Bash
+
+    ```bash
+    export LANGUAGE_KEY=your-key
+    ```
+
+    ```bash
+    export LANGUAGE_ENDPOINT=your-endpoint
+    ```
+
+    After you add the environment variables, run `source ~/.bash_profile` from your console window to make the changes effective.
+
+    ##### Xcode
+
+    For iOS and macOS development, you set the environment variables in Xcode. For example, follow these steps to set the environment variable in Xcode 13.4.1.
+
+    1. Select **Product** > **Scheme** > **Edit scheme**
+    1. Select **Arguments** on the **Run** (Debug Run) page
+    1. Under **Environment Variables** select the plus (+) sign to add a new environment variable. 
+    1. Enter `LANGUAGE_KEY` for the **Name** and enter your Language resource key for the **Value**.
+    1. Perform these steps for your resource endpoint. Name the new environment variable `LANGUAGE_ENDPOINT`.
+
+    For more configuration options, see the [Xcode documentation](https://help.apple.com/xcode/#/dev745c5c974).
+
+  </Tab>
+</Tabs>
+
+### Create a new Node.js application
+
+In a console window (such as cmd, PowerShell, or Bash), create a new directory for your app, and navigate to it. 
+
+```console
+mkdir myapp 
+
+cd myapp
+```
+
+Run the `npm init` command to create a node application with a `package.json` file. 
+
+```console
+npm init
+```
+
+### Install the client library
+
+Install the npm package:
+
+```console
+npm install @azure/ai-language-text
+```
+
+## Code example
+
+Open the file and copy the below code. Then run the code. 
+
+```javascript
+"use strict";
+
+const { AzureKeyCredential, TextAnalysisClient } = require("@azure/ai-language-text");
+
+// This example requires environment variables named "LANGUAGE_KEY" and "LANGUAGE_ENDPOINT"
+const key = process.env.LANGUAGE_KEY;
+const endpoint = process.env.LANGUAGE_ENDPOINT;
+
+if (!key || !endpoint) {
+  throw new Error(
+    "Missing LANGUAGE_KEY or LANGUAGE_ENDPOINT environment variables."
+  );
+}
+
+//Example sentences in different languages to be analyzed
+const documents = [
+    "This document is written in English.",
+    "这是一个用中文写的文件",
+];
+
+//Example of how to use the client library to detect language
+async function main() {
+    console.log("== Language detection sample ==");
+  
+    const client = new TextAnalysisClient(endpoint, new AzureKeyCredential(key));
+  
+    const result = await client.analyze("LanguageDetection", documents);
+  
+    for (const doc of result) {
+      if (!doc.error) {
+        console.log(
+          `ID ${doc.id} - Primary language: ${doc.primaryLanguage.name} (iso6391 name: ${doc.primaryLanguage.iso6391Name})`
+        );
+      }
+    }
+}
+
+main().catch((err) => {
+    console.error("The sample encountered an error:", err);
+});
+```
+
+### Output
+
+```console
+== Language detection sample ==
+ID 0 - Primary language: English (iso6391 name: en)
+ID 1 - Primary language: Chinese_Simplified (iso6391 name: zh_chs)
+```
+
+{/* markdownlint-disable MD041 */}
+[Reference documentation](https://learn.microsoft.com/python/api/azure-ai-textanalytics/azure.ai.textanalytics) | [More samples](https://github.com/Azure/azure-sdk-for-python/tree/main/sdk/textanalytics/azure-ai-textanalytics/samples) | [Package (PyPi)](https://pypi.org/project/azure-ai-textanalytics/5.2.0/) | [Library source code](https://github.com/Azure/azure-sdk-for-python/tree/main/sdk/textanalytics/azure-ai-textanalytics)
+
+Use this quickstart to create a language detection application with the client library for Python. In the following example, you create a Python application that can identify the language a text sample was written in.
+<Tip>
+You can use [**Microsoft Foundry**](https://ai.azure.com/) to try Azure Language features without needing to write code.
+</Tip>
+
+## Prerequisites
+
+* Azure subscription - [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn)
+* [Python 3.8 or later](https://www.python.org/)
+
+## Setting up
+
+### Create an Azure resource
+
+To use the code sample below, you need to deploy an Azure resource. This resource will contain a key and endpoint you use to authenticate the API calls you send to Azure Language.
+
+1. Use the following link to <a href="https://portal.azure.com/#create/Microsoft.CognitiveServicesTextAnalytics" target="_blank">create a language resource</a> using the Azure portal. You need to sign in using your Azure subscription.
+1. On the **Select additional features** screen that appears, select **Continue to create your resource**.
+
+<Frame>
+<img src="/images/portal-resource-additional-features.png" alt="A screenshot showing additional feature options in the Azure portal." />
+</Frame>
+
+1. In the **Create language** screen, provide the following information:
+
+    |Detail  |Description  | 
+    |---------|---------|
+    |Subscription     | The subscription account that your resource will be associated with. Select your Azure subscription from the drop-down menu.         |
+    |Resource group   | A resource group is a container that stores the resources you create. Select **Create new** to create a new resource group.         |
+    |Region     | The location of your Language resource. Different regions may introduce latency depending on your physical location, but have no impact on the runtime availability of your resource. For this quickstart, either select an available region near you, or choose **East US**.        |
+    |Name     | The name for your Language resource. This name will also be used to create an endpoint URL that your applications will use to send API requests.         |
+    |Pricing tier     | The [pricing tier](https://azure.microsoft.com/pricing/details/cognitive-services/language-service/) for your Language resource. You can use the **Free F0** tier to try the service and upgrade later to a paid tier for production.       |
+     
+<Frame>
+<img src="/images/portal-resource-creation-details.png" alt="A screenshot showing resource creation details in the Azure portal." />
+</Frame>
+
+1. Make sure the **Responsible AI Notice** checkbox is checked.
+1. Select **Review + Create** at the bottom of the page.
+
+1. In the screen that appears, make sure the validation has passed, and that you entered your information correctly. Then select **Create**.
+
+### Get your key and endpoint
+
+Next you will need the key and endpoint from the resource to connect your application to the API. You'll paste your key and endpoint into the code later in the quickstart.
+
+1. After Azure Language resource deploys successfully, click the **Go to Resource** button under **Next Steps**.
+
+<Frame>
+<img src="/images/portal-resource-next-steps.png" alt="A screenshot showing the next steps after a resource has deployed." />
+</Frame>
+
+1. On the screen for your resource, select **Keys and endpoint** on the left pane. You will use one of your keys and your endpoint in the steps below. 
+
+<Frame>
+<img src="/images/azure-portal-resource-credentials.png" alt="A screenshot showing the keys and endpoint section for a resource." />
+</Frame>
+
+### Create environment variables 
+
+Your application must be authenticated to send API requests. For production, use a secure way of storing and accessing your credentials. In this example, you will write your credentials to environment variables on the local machine running the application.
+
+To set the environment variable for your Language resource key, open a console window, and follow the instructions for your operating system and development environment. 
+
+- To set the `LANGUAGE_KEY` environment variable, replace `your-key` with one of the keys for your resource.
+- To set the `LANGUAGE_ENDPOINT` environment variable, replace `your-endpoint` with the endpoint for your resource.
+
+<Tabs>
+  <Tab title="Windows">
+
+    ```console
+    setx LANGUAGE_KEY your-key
+    ```
+
+    ```console
+    setx LANGUAGE_ENDPOINT your-endpoint
+    ```
+
+    <Note>
+    If you only need to access the environment variables in the current running console, you can set the environment variable with `set` instead of `setx`.
+    </Note>
+
+    After you add the environment variables, you might need to restart any running programs that will need to read the environment variables, including the console window. For example, if you're using Visual Studio as your editor, restart Visual Studio before running the example.
+
+  </Tab>
+  <Tab title="Linux">
+
+    ```bash
+    export LANGUAGE_KEY=your-key
+    ```
+
+    ```bash
+    export LANGUAGE_ENDPOINT=your-endpoint
+    ```
+
+    After you add the environment variables, run `source ~/.bashrc` from your console window to make the changes effective.
+
+  </Tab>
+  <Tab title="macOS">
+
+    ##### Bash
+
+    ```bash
+    export LANGUAGE_KEY=your-key
+    ```
+
+    ```bash
+    export LANGUAGE_ENDPOINT=your-endpoint
+    ```
+
+    After you add the environment variables, run `source ~/.bash_profile` from your console window to make the changes effective.
+
+    ##### Xcode
+
+    For iOS and macOS development, you set the environment variables in Xcode. For example, follow these steps to set the environment variable in Xcode 13.4.1.
+
+    1. Select **Product** > **Scheme** > **Edit scheme**
+    1. Select **Arguments** on the **Run** (Debug Run) page
+    1. Under **Environment Variables** select the plus (+) sign to add a new environment variable. 
+    1. Enter `LANGUAGE_KEY` for the **Name** and enter your Language resource key for the **Value**.
+    1. Perform these steps for your resource endpoint. Name the new environment variable `LANGUAGE_ENDPOINT`.
+
+    For more configuration options, see the [Xcode documentation](https://help.apple.com/xcode/#/dev745c5c974).
+
+  </Tab>
+</Tabs>
+
+### Install the client library
+
+After installing Python, you can install the client library with:
+
+```console
+pip install azure-ai-textanalytics==5.2.0
+```
+
+## Code example
+
+Create a new Python file and copy the below code. Then run the code.
+
+```python
+# This example requires environment variables named "LANGUAGE_KEY" and "LANGUAGE_ENDPOINT"
+import os
+
+from azure.ai.textanalytics import TextAnalyticsClient
+from azure.core.credentials import AzureKeyCredential
+
+language_key = os.environ.get("LANGUAGE_KEY")
+language_endpoint = os.environ.get("LANGUAGE_ENDPOINT")
+
+if not language_key or not language_endpoint:
+    raise ValueError("Missing LANGUAGE_KEY or LANGUAGE_ENDPOINT environment variables")
+
+# Authenticate the client using your key and endpoint
+def authenticate_client():
+    ta_credential = AzureKeyCredential(language_key)
+    text_analytics_client = TextAnalyticsClient(
+            endpoint=language_endpoint,
+            credential=ta_credential)
+    return text_analytics_client
+
+client = authenticate_client()
+
+# Example method for detecting the language of text
+def language_detection_example(client):
+    try:
+        documents = ["Ce document est rédigé en Français."]
+        response = client.detect_language(documents = documents, country_hint = 'us')[0]
+        print("Language: ", response.primary_language.name)
+
+    except Exception as err:
+        print("Encountered exception. {}".format(err))
+language_detection_example(client)
+```
+
+### Output
+
+```console
+Language:  French
+```
+
+[Reference documentation](https://go.microsoft.com/fwlink/?linkid=2239169)
+
+Use this quickstart to send language detection requests using the REST API. In the following example, you use cURL to identify the language that a text sample was written in.
+
+## Prerequisites
+
+* Azure subscription - [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn)
+
+## Setting up
+
+### Create an Azure resource
+
+To use the code sample below, you need to deploy an Azure resource. This resource will contain a key and endpoint you use to authenticate the API calls you send to Azure Language.
+
+1. Use the following link to <a href="https://portal.azure.com/#create/Microsoft.CognitiveServicesTextAnalytics" target="_blank">create a language resource</a> using the Azure portal. You need to sign in using your Azure subscription.
+1. On the **Select additional features** screen that appears, select **Continue to create your resource**.
+
+<Frame>
+<img src="/images/portal-resource-additional-features.png" alt="A screenshot showing additional feature options in the Azure portal." />
+</Frame>
+
+1. In the **Create language** screen, provide the following information:
+
+    |Detail  |Description  | 
+    |---------|---------|
+    |Subscription     | The subscription account that your resource will be associated with. Select your Azure subscription from the drop-down menu.         |
+    |Resource group   | A resource group is a container that stores the resources you create. Select **Create new** to create a new resource group.         |
+    |Region     | The location of your Language resource. Different regions may introduce latency depending on your physical location, but have no impact on the runtime availability of your resource. For this quickstart, either select an available region near you, or choose **East US**.        |
+    |Name     | The name for your Language resource. This name will also be used to create an endpoint URL that your applications will use to send API requests.         |
+    |Pricing tier     | The [pricing tier](https://azure.microsoft.com/pricing/details/cognitive-services/language-service/) for your Language resource. You can use the **Free F0** tier to try the service and upgrade later to a paid tier for production.       |
+     
+<Frame>
+<img src="/images/portal-resource-creation-details.png" alt="A screenshot showing resource creation details in the Azure portal." />
+</Frame>
+
+1. Make sure the **Responsible AI Notice** checkbox is checked.
+1. Select **Review + Create** at the bottom of the page.
+
+1. In the screen that appears, make sure the validation has passed, and that you entered your information correctly. Then select **Create**.
+
+### Get your key and endpoint
+
+Next you will need the key and endpoint from the resource to connect your application to the API. You'll paste your key and endpoint into the code later in the quickstart.
+
+1. After Azure Language resource deploys successfully, click the **Go to Resource** button under **Next Steps**.
+
+<Frame>
+<img src="/images/portal-resource-next-steps.png" alt="A screenshot showing the next steps after a resource has deployed." />
+</Frame>
+
+1. On the screen for your resource, select **Keys and endpoint** on the left pane. You will use one of your keys and your endpoint in the steps below. 
+
+<Frame>
+<img src="/images/azure-portal-resource-credentials.png" alt="A screenshot showing the keys and endpoint section for a resource." />
+</Frame>
+
+### Create environment variables 
+
+Your application must be authenticated to send API requests. For production, use a secure way of storing and accessing your credentials. In this example, you will write your credentials to environment variables on the local machine running the application.
+
+To set the environment variable for your Language resource key, open a console window, and follow the instructions for your operating system and development environment. 
+
+- To set the `LANGUAGE_KEY` environment variable, replace `your-key` with one of the keys for your resource.
+- To set the `LANGUAGE_ENDPOINT` environment variable, replace `your-endpoint` with the endpoint for your resource.
+
+<Tabs>
+  <Tab title="Windows">
+
+    ```console
+    setx LANGUAGE_KEY your-key
+    ```
+
+    ```console
+    setx LANGUAGE_ENDPOINT your-endpoint
+    ```
+
+    <Note>
+    If you only need to access the environment variables in the current running console, you can set the environment variable with `set` instead of `setx`.
+    </Note>
+
+    After you add the environment variables, you might need to restart any running programs that will need to read the environment variables, including the console window. For example, if you're using Visual Studio as your editor, restart Visual Studio before running the example.
+
+  </Tab>
+  <Tab title="Linux">
+
+    ```bash
+    export LANGUAGE_KEY=your-key
+    ```
+
+    ```bash
+    export LANGUAGE_ENDPOINT=your-endpoint
+    ```
+
+    After you add the environment variables, run `source ~/.bashrc` from your console window to make the changes effective.
+
+  </Tab>
+  <Tab title="macOS">
+
+    ##### Bash
+
+    ```bash
+    export LANGUAGE_KEY=your-key
+    ```
+
+    ```bash
+    export LANGUAGE_ENDPOINT=your-endpoint
+    ```
+
+    After you add the environment variables, run `source ~/.bash_profile` from your console window to make the changes effective.
+
+    ##### Xcode
+
+    For iOS and macOS development, you set the environment variables in Xcode. For example, follow these steps to set the environment variable in Xcode 13.4.1.
+
+    1. Select **Product** > **Scheme** > **Edit scheme**
+    1. Select **Arguments** on the **Run** (Debug Run) page
+    1. Under **Environment Variables** select the plus (+) sign to add a new environment variable. 
+    1. Enter `LANGUAGE_KEY` for the **Name** and enter your Language resource key for the **Value**.
+    1. Perform these steps for your resource endpoint. Name the new environment variable `LANGUAGE_ENDPOINT`.
+
+    For more configuration options, see the [Xcode documentation](https://help.apple.com/xcode/#/dev745c5c974).
+
+  </Tab>
+</Tabs>
+
+## Create a JSON file with the example request body
+
+In a code editor, create a new file named `test_languagedetection_payload.json` and copy the following JSON example. This example request will be sent to the API in the next step.
+
+```json
+{
+    "kind": "LanguageDetection",
+    "parameters": {
+        "modelVersion": "latest"
+    },
+    "analysisInput":{
+        "documents":[
+            {
+                "id":"1",
+                "text": "This is a document written in English."
+            }
+        ]
+    }
+}
+```
+Save `test_languagedetection_payload.json` somewhere on your computer. For example, your desktop.
+
+## Send a language detection request
+
+Use the following commands to send the API request using the program you're using. Copy the command into your terminal, and run it.
+
+|Parameter  |Description  |
+|---------|---------|
+|`-X POST <endpoint>`     | Specifies your endpoint for accessing the API.        |
+|`-H Content-Type: application/json`     | The content type for sending JSON data.          |
+|`-H "Ocp-Apim-Subscription-Key:<key>`    | Specifies the key for accessing the API.        |
+|`-d <documents>`     | The JSON containing the documents you want to send.         |
+
+<Tabs>
+  <Tab title="Windows">
+
+     Replace `C:\Users\<myaccount>\Desktop\test_languagedetection_payload.json` with the location of the example JSON request file you created in the previous step.
+
+    ### Command prompt
+
+    ```terminal
+    curl -X POST "%LANGUAGE_ENDPOINT%/language/:analyze-text?api-version=2023-11-15-preview" ^
+    -H "Content-Type: application/json" ^
+    -H "Ocp-Apim-Subscription-Key: %LANGUAGE_KEY%" ^
+    -d "@C:\Users\<myaccount>\Desktop\test_languagedetection_payload.json"
+    ```
+
+    ### PowerShell
+
+    ```terminal
+    curl.exe -X POST $env:LANGUAGE_ENDPOINT/language/:analyze-text?api-version=2023-11-15-preview `
+    -H "Content-Type: application/json" `
+    -H "Ocp-Apim-Subscription-Key: $env:LANGUAGE_KEY" `
+    -d "@C:\Users\<myaccount>\Desktop\test_languagedetection_payload.json"
+    ```
+
+  </Tab>
+  <Tab title="Linux">
+
+    Use the following commands to send the API request using the program you're using. Replace `/home/mydir/test_languagedetection_payload.json` with the location of the example JSON request file you created in the previous step.
+
+    ```terminal
+    curl -X POST $LANGUAGE_ENDPOINT/language/:analyze-text?api-version=2023-11-15-preview \
+    -H "Content-Type: application/json" \
+    -H "Ocp-Apim-Subscription-Key: $LANGUAGE_KEY" \
+    -d "@/home/mydir/test_languagedetection_payload.json"
+    ```
+
+  </Tab>
+  <Tab title="macOS">
+
+    Use the following commands to send the API request using the program you're using. Replace `/home/mydir/test_languagedetection_payload.json` with the location of the example JSON request file you created in the previous step.
+
+    ```terminal
+    curl -X POST $LANGUAGE_ENDPOINT/language/:analyze-text?api-version=2023-11-15-preview \
+    -H "Content-Type: application/json" \
+    -H "Ocp-Apim-Subscription-Key: $LANGUAGE_KEY" \
+    -d "@/home/mydir/test_languagedetection_payload.json"
+    ```
+
+  </Tab>
+</Tabs>
+
+## JSON response
+
+```json
+{
+    "kind": "LanguageDetectionResults",
+    "results": {
+        "documents": [
+            {
+                "id": "1",
+                "detectedLanguage": {
+                    "name": "English",
+                    "iso6391Name": "en",
+                    "confidenceScore": 1.0,
+                    "script": "Latin",
+                    "scriptCode": "Latn"
+                },
+                "warnings": []
+            }
+        ],
+        "errors": [],
+        "modelVersion": "2023-12-01"
+    }
+}
+```
+
+Use the following commands to delete the environment variables you created for this quickstart.
+
+<CodeGroup>
+```console Windows
+    reg delete "HKCU\Environment" /v LANGUAGE_KEY /f
+    ```
+
+```console Windows
+    reg delete "HKCU\Environment" /v LANGUAGE_ENDPOINT /f
+    ```
+
+```bash Linux
+    unset LANGUAGE_KEY
+    ```
+
+```bash Linux
+    unset LANGUAGE_ENDPOINT
+    ```
+
+```bash macOS
+    unset LANGUAGE_KEY
+    ```
+
+```bash macOS
+    unset LANGUAGE_ENDPOINT
+    ```
+</CodeGroup>
