@@ -4,7 +4,7 @@ description: Automatically fixes documentation issues when an issue is labeled d
 on:
   issues:
     types: [labeled]
-    names: [docs-fix-needed]
+    names: [docs-fix-needed, sdk-update]
   reaction: "rocket"
 
 permissions:
@@ -53,7 +53,9 @@ timeout-minutes: 30
 
 # Label-Ops Documentation Fixer
 
-You are triggered when a human labels an issue with `docs-fix-needed`. Your job is to read the issue, understand the documentation problem described, find the affected files in `docs-vnext/`, and create a fix PR.
+You are triggered when an issue is labeled `docs-fix-needed` or `sdk-update`. Your job is to read the issue, understand the documentation problem described, find the affected files in `docs-vnext/`, and create a fix PR.
+
+When the triggering label is `sdk-update`, the issue was created by the SDK Release Monitor and contains structured sections: **Breaking Changes**, **New Features**, **Documentation Impact Assessment**, and **Recommended Actions**. Treat the recommended actions as your task list and apply each change systematically across all affected files in `docs-vnext/`.
 
 ## Context
 
@@ -66,6 +68,26 @@ Read the issue title and body from the activation context. Extract:
 1. What documentation problem is described (missing content, incorrect info, broken example, etc.)
 2. Which topic area is affected (agents, models, setup, API, etc.)
 3. Any specific file paths or URLs mentioned
+
+### SDK Release Issues (label: `sdk-update`)
+
+If the issue title starts with `[sdk-release]`, this is an automated SDK release notification. Parse these sections from the issue body:
+- **Release Summary** table — identify which languages have new versions
+- **Breaking Changes** — extract class renames, method signature changes, removed APIs
+- **New Features** — identify what needs new documentation
+- **Documentation Impact Assessment** — use the impact table to prioritize
+- **Recommended Actions** — treat each checkbox item as a task
+
+For breaking changes, build a mapping of old name → new name, then search `docs-vnext/` for every occurrence and apply the rename. Common patterns:
+- Tool class renames (e.g., `AzureAISearchAgentTool` → `AzureAISearchTool`)
+- Method renames (e.g., `.agents.create()` → `.agents.create_version()`)
+- Subclient path changes (e.g., `project_client.memory_stores` → `project_client.beta.memory_stores`)
+- Tracing attribute renames
+- API version string updates
+- Import path changes
+- Package version bumps in install commands (e.g., `pip install azure-ai-projects==2.0.0b4` → `2.0.0`)
+
+Search broadly — breaking changes can appear in code blocks, prose descriptions, and frontmatter across many files.
 
 ## Step 2: Read Documentation Guidelines
 
@@ -93,6 +115,7 @@ Based on the issue analysis:
 - **Broken example**: Fix the code example
 - **Broken link**: Update the link
 - **Style issue**: Fix formatting per documentation guidelines
+- **SDK breaking changes**: Apply renames/updates systematically across ALL affected files — use `grep` to find every occurrence before editing, and verify no instances are missed after editing
 
 Follow Mintlify MDX conventions strictly.
 

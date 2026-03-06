@@ -29,13 +29,14 @@
 #     - shared/mcp/mintlify-docs.md
 #     - shared/mood.md
 #
-# gh-aw-metadata: {"schema_version":"v1","frontmatter_hash":"683dba70438393d0dd4743c604cedf3a828e024cf3030d973c4c2e3d1ec19f3a","compiler_version":"v0.53.3"}
+# gh-aw-metadata: {"schema_version":"v1","frontmatter_hash":"5b3309794b07015555537bd916b1bcff5a9f008b0bb6c1a1ee2a1ec6f2f29da1","compiler_version":"v0.53.3"}
 
 name: "Label-Ops Documentation Fixer"
 "on":
   issues:
     # names: # Label filtering applied via job conditions
     # - docs-fix-needed # Label filtering applied via job conditions
+    # - sdk-update # Label filtering applied via job conditions
     types:
     - labeled
 
@@ -51,7 +52,7 @@ jobs:
     needs: pre_activation
     if: >
       (needs.pre_activation.outputs.activated == 'true') && ((github.event_name != 'issues') || ((github.event.action != 'labeled') ||
-      (github.event.label.name == 'docs-fix-needed')))
+      (github.event.label.name == 'docs-fix-needed' || github.event.label.name == 'sdk-update')))
     runs-on: ubuntu-slim
     permissions:
       contents: read
@@ -1222,7 +1223,8 @@ jobs:
 
   pre_activation:
     if: >
-      (github.event_name != 'issues') || ((github.event.action != 'labeled') || (github.event.label.name == 'docs-fix-needed'))
+      (github.event_name != 'issues') || ((github.event.action != 'labeled') || (github.event.label.name == 'docs-fix-needed' ||
+      github.event.label.name == 'sdk-update'))
     runs-on: ubuntu-slim
     outputs:
       activated: ${{ steps.check_membership.outputs.is_team_member == 'true' }}
