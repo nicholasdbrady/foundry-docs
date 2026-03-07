@@ -32,7 +32,7 @@ Azure OpenAI is powered by a diverse set of models with different capabilities a
 
 | Models | Description |
 |--|--|
-| [GPT-5.4 series](/models/catalog/models-sold-directly-by-azure#gpt-53) | **NEW** `gpt-5.4` |
+| [GPT-5.4 series](/models/catalog/models-sold-directly-by-azure#gpt-54) | **NEW** `gpt-5.4`, `gpt-5.4-pro` |
 | [GPT-5.3 series](/models/catalog/models-sold-directly-by-azure#gpt-53) | **NEW** `gpt-5.3-codex` |
 | [GPT-5.2 series](/models/catalog/models-sold-directly-by-azure#gpt-52) | **NEW** `gpt-5.2-codex`, `gpt-5.2`, `gpt-5.2-chat` (**Preview**)|
 | [GPT-5.1 series](/models/catalog/models-sold-directly-by-azure#gpt-51) | **NEW** `gpt-5.1`, `gpt-5.1-chat`, `gpt-5.1-codex`, `gpt-5.1-codex-mini`|
@@ -53,13 +53,15 @@ Azure OpenAI is powered by a diverse set of models with different capabilities a
 
 | Model | Region |
 |---|---|
-| `gpt-5.4` | East US2 (Global Standard & Datazone Standard) <br /> Sweden Central (Global Standard) |
+| `gpt-5.4` | East US2 (Global Standard & Datazone Standard) <br /> Sweden Central (Global Standard) <br /> Poland Central (Global Standard) <br /> South Central US (Global Standard) |
+| `gpt-5.4-pro` | East US2 (Global Standard) <br /> Sweden Central (Global Standard)  |
 
-- **[Registration is required for access to gpt-5.4](https://aka.ms/OAI/gpt53codexaccess).**
+- **[Registration is required for access to gpt-5.4 & gpt-5.4-pro](https://aka.ms/OAI/gpt53codexaccess).**
 
 |  Model ID  | Description | Context Window | Max Output Tokens | Training Data (up to)  |
 |  --- |  :--- |:--- |:---|:---: |
 | `gpt-5.4` (2026-03-05) |  - [Reasoning](../how-to/reasoning.md) <br /> - [Responses API](../how-to/responses.md). <br />- Chat Completions API. <br /> - Structured outputs.<br /> - Text and image processing. <br /> - Functions, tools, and parallel tool calling. <br /> - Computer use (Coming Soon!) <br /> - [Full summary of capabilities](../how-to/reasoning.md).  | 400,000<br /><br />Input: 272,000<br />Output: 128,000 <br /><br />1,050,000 Context Window (Coming Soon!)   | 128,000 | August 2025 |
+| `gpt-5.4-pro` (2026-03-05) |  - [Reasoning](../how-to/reasoning.md) <br /> - [Responses API](../how-to/responses.md). <br /> - Text and image processing. <br /> - Functions & tools <br /> - Computer use (Coming Soon!) <br /> - [Full summary of capabilities](../how-to/reasoning.md).  | 400,000<br /><br />Input: 272,000<br />Output: 128,000 <br /><br />1,050,000 Context Window (Coming Soon!)   | 128,000 | August 2025 |
 
 ## GPT-5.3
 
@@ -735,20 +737,27 @@ When you send an array of inputs for embedding, the maximum number of input item
 
 ## Fine-tuning models
 
-<Note>
-The supported regions for fine-tuning might vary if you use Azure OpenAI models in a Microsoft Foundry project versus outside a project.
-</Note>
+The following models are supported for fine-tuning:
 
-|  Model ID  | Standard regions | Global | Developer | Max request (tokens) | Training data (up to) | Modality |
+|  Model ID  | Standard regions | Global | Developer | Methods | Status | Modality |
 |  --- | --- | :---: | :---: | :---: | --- |
-| `gpt-4o-mini` <br /> (2024-07-18) | North Central US <br /> Sweden Central | ✅ | ✅ | Input: 128,000 <br /> Output: 16,384  <br /> Training example context length: 65,536 | Oct 2023 | Text to text |
-| `gpt-4o` <br /> (2024-08-06) | East US2 <br /> North Central US <br /> Sweden Central | ✅ | ✅ | Input: 128,000 <br /> Output: 16,384  <br /> Training example context length: 65,536 | Oct 2023 | Text and vision to text |
-| `gpt-4.1` <br /> (2025-04-14) | North Central US <br /> Sweden Central | ✅ | ✅ | Input: 128,000 <br /> Output: 16,384 <br /> Training example context length: 65,536 | May 2024 | Text and vision to text |
-| `gpt-4.1-mini` <br /> (2025-04-14) | North Central US <br /> Sweden Central | ✅ | ✅ | Input: 128,000 <br /> Output: 16,384 <br /> Training example context length: 65,536 | May 2024 | Text to text |
-| `gpt-4.1-nano` (2025-04-14) | North Central US <br /> Sweden Central | ✅ | ✅ | Input: 128,000 <br /> Output: 16,384 <br /> Training example context length: 32,768 | May 2024 | Text to text |
-| `o4-mini` <br /> (2025-04-16) | East US2 <br /> Sweden Central | ✅ | ❌ | Input: 128,000 <br /> Output: 16,384 <br /> Training example context length: 65,536 | May 2024 | Text to text |
-| `Ministral-3B` (preview) <br /> (2411) | Not supported | ✅ | ❌ | Input: 128,000 <br /> Output: Unknown <br /> Training example context length: Unknown | Unknown | Text to text |
-| `Qwen-32B` (preview) | Not supported | ✅ | ❌ | Input: 8,000 <br /> Output: 32,000 <br /> Training example context length: 8192 | July 2024 | Text to text |
+| `gpt-4o-mini` <br /> (2024-07-18) | North Central US <br /> Sweden Central | ✅ | ✅ | SFT | GA | Text to text |
+| `gpt-4o` <br /> (2024-08-06) | East US2 <br /> North Central US <br /> Sweden Central | ✅ | ✅ | SFT, DPO | GA | Text and vision to text |
+| `gpt-4.1` <br /> (2025-04-14) | North Central US <br /> Sweden Central | ✅ | ✅ | SFT, DPO | GA | Text and vision to text |
+| `gpt-4.1-mini` <br /> (2025-04-14) | North Central US <br /> Sweden Central | ✅ | ✅ | SFT, DPO | GA | Text to text |
+| `gpt-4.1-nano` (2025-04-14) | North Central US <br /> Sweden Central | ✅ | ✅ | SFT, DPO | GA | Text to text |
+| `o4-mini` <br /> (2025-04-16) | East US2 <br /> Sweden Central | ✅ | ❌ | RFT | GA | Text to text |
+| `gpt-5` <br /> (2025-08-07) | North Central US <br /> Sweden Central | ✅ | ✅ | RFT | Private preview | Text to text |
+| `Ministral-3B` <br /> (2411) | Not supported | ✅ | ❌ | SFT | Public preview | Text to text |
+| `Qwen-32B` | Not supported | ✅ | ❌ | SFT | Public preview | Text to text |
+| `Llama-3.3-70B-Instruct` | Not supported | ✅ | ❌ | SFT | Public preview | Text to text |
+| `gpt-oss-20b` | Not supported | ✅ | ❌ | SFT | Public preview | Text to text |
+
+Or you can fine-tune a previously fine-tuned model, formatted as `base-model.ft-{jobid}`.
+
+<Note>
+Open-source models (Ministral-3B, Qwen-32B, Llama-3.3-70B-Instruct, gpt-oss-20b) are only supported on Foundry resources and in the new Foundry UI.
+</Note>
 
 <Note>
 Global training provides [more affordable](https://aka.ms/aoai-pricing) training per token, but doesn't offer [data residency](https://aka.ms/data-residency). It's currently available to Foundry resources in the following regions:

@@ -43,6 +43,15 @@ To configure a CMK for Foundry, you need:
 
 Before you configure a CMK, be sure to deploy your resources in a supported region. For more information on regional support for Foundry features, see [Microsoft Foundry feature availability across cloud regions](/operate/region-support).
 
+## Key Vault networking configurations
+
+When you use private networking with your Foundry resource, the customer-provided Azure Key Vault that hosts the CMK supports the following configurations:
+
+- **Private link endpoint with "Allow trusted Microsoft services" enabled**: The key vault uses a private endpoint for connectivity and also permits access from trusted Microsoft services. This is the recommended configuration for environments that require private connectivity.
+- **"Allow trusted Microsoft services" enabled (without a private endpoint)**: The key vault allows access from trusted Microsoft services over the public endpoint. Enable this setting to ensure that the Foundry resource can access the key vault for encryption operations.
+
+To configure trusted services access on your key vault, see [Configure Azure Key Vault firewalls and virtual networks](https://learn.microsoft.com/azure/key-vault/general/network-security).
+
 ## Steps to configure a CMK
 
 ### Step 1: Create or import a key in the key vault
