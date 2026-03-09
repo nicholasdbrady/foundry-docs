@@ -3,7 +3,6 @@ title: "Glossary"
 description: "Definitions of key terms used in Microsoft Foundry documentation"
 ---
 
-
 Key terms and concepts used throughout the Microsoft Foundry documentation.
 
 ## A
@@ -11,20 +10,78 @@ Key terms and concepts used throughout the Microsoft Foundry documentation.
 ### Agent
 An AI-powered entity that can perform tasks autonomously using tools, models, and instructions. In Microsoft Foundry, agents are created via the Azure AI Projects SDK and can use tools like Code Interpreter, File Search, and Function Calling.
 
+### Agentic Retrieval
+A multi-query retrieval pipeline in Foundry IQ that decomposes complex questions into subqueries, executes them in parallel, semantically reranks results, and returns unified responses with citations. Uses an optional large language model for query planning.
+
+### AIProjectClient
+The primary Azure SDK client class (`azure.ai.projects.AIProjectClient`) used to authenticate and interact with Azure AI Foundry project endpoints. Provides access to OpenAI-compatible clients, agent management, and other Foundry services.
+
 ### Azure AI Search
-A cloud search service providing keyword, vector, and semantic search capabilities. Used for hybrid document retrieval in RAG patterns.
+A cloud search service providing keyword, vector, and semantic search capabilities. Used for hybrid document retrieval in RAG patterns and as the underlying indexing infrastructure for Foundry IQ knowledge bases.
+
+## C
+
+### Code Interpreter
+An agent tool that allows Foundry agents to write and execute Python code in a sandboxed environment. Useful for data analysis, file processing, and generating charts or outputs programmatically.
+
+## E
+
+### Entra ID
+See **Microsoft Entra ID**.
 
 ## F
 
 ### FastMCP
 A Python framework for building Model Context Protocol (MCP) servers. The foundry-docs MCP server is built on FastMCP 3.x.
 
+### File Search
+An agent tool that enables Foundry agents to query uploaded files using vector search. Files are chunked, embedded, and stored in a vector store, then retrieved at query time to ground agent responses.
+
+### Foundry Agent Service
+The core Microsoft Foundry service for building, deploying, and hosting AI agents. Provides the agents API, tool integrations (Code Interpreter, File Search, Function Calling, and web grounding), and agent lifecycle management.
+
+### Foundry Control Plane
+A management layer in Microsoft Foundry that provides unified visibility, governance, and lifecycle operations for AI agents, models, and tools across an enterprise. Supports agent inventory, fleet health monitoring, and compliance tracking.
+
+### Foundry IQ
+A managed knowledge layer in Microsoft Foundry that turns enterprise data into reusable, permission-aware knowledge bases for AI agents. Connects to data sources such as Azure Blob Storage, SharePoint, and OneLake; automates chunking, embedding, and indexing; and enforces permissions at query time via Microsoft Purview and Entra ID.
+
+### Function Calling
+An agent tool that allows Foundry agents to invoke user-defined functions based on model-generated parameters. The model determines which function to call and provides structured arguments; the application executes the function and returns the result.
+
+## H
+
+### Hybrid Search
+A search strategy that combines keyword-based (BM25) and vector-based (semantic) retrieval to improve result relevance. Azure AI Search supports hybrid search by running both query types in parallel and merging ranked results.
+
 ## M
 
 ### MCP (Model Context Protocol)
 An open protocol that enables AI assistants to connect to external data sources and tools through a standardized interface. MCP servers expose tools, resources, and prompts.
 
+### Microsoft Entra ID
+Microsoft's cloud identity and access management platform. Used throughout Microsoft Foundry for authenticating users and service principals, enforcing RBAC policies, and enabling identity passthrough for permission-aware data access.
+
+## O
+
+### OpenTelemetry
+An open-source observability framework for collecting distributed traces, metrics, and logs. Microsoft Foundry agent tracing is built on OpenTelemetry and exports spans to Application Insights when configured.
+
 ## R
 
 ### RAG (Retrieval Augmented Generation)
 A pattern that combines information retrieval with language model generation to produce grounded, accurate responses using external knowledge sources.
+
+### RBAC (Role-Based Access Control)
+A security model that grants access to resources based on assigned roles rather than individual identities. Microsoft Foundry uses Azure RBAC (via Microsoft Entra ID) to control access to agents, models, and project resources.
+
+### Responses API
+An OpenAI-compatible API endpoint available in Microsoft Foundry Models. Accepts a system instruction and user input and returns a single response. Used in the foundry-docs MCP server for query rewriting to improve search retrieval quality.
+
+## V
+
+### Vector Store
+A storage resource that holds vector embeddings of document chunks. In Foundry Agent Service, vector stores back the File Search tool — files are ingested, chunked, embedded, and stored so agents can run semantic queries against them at runtime.
+
+### Voice Live
+A real-time voice capability in Microsoft Foundry that enables low-latency, turn-by-turn voice conversations between users and Foundry Agent Service agents. Supports integration via WebRTC or WebSocket transports.
