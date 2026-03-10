@@ -1,0 +1,369 @@
+---
+title: "Use LangGraph with the Agent Service"
+description: "Learn how to build practical LangGraph and LangChain applications with Foundry Agent Service."
+---
+
+Use the `langchain-azure-ai` package to connect LangGraph and LangChain
+applications to Foundry Agent Service. This article walks through practical
+scenarios, from basic prompt agents to tool-enabled workflows, human-in-the-
+loop approvals, and tracing.
+
+## Prerequisites
+
+- An Azure subscription. [Create one for free](https://azure.microsoft.com/free/).
+- A [Foundry project](/setup/create-projects).
+- A deployed chat model (for example, `gpt-4.1`) in your project.
+- Python 3.10 or later.
+- Azure CLI signed in (`az login`) so `DefaultAzureCredential` can authenticate.
+
+### Configure your environment
+
+Install the package `langchain-azure-ai` to use Microsoft Foundry capabilities in LangGraph and LangChain.
+
+```bash
+pip install langchain-azure-ai[tools,opentelemetry] azure-identity
+```
+
+<Tip>
+Install the extras `[tools]` to use tools like Document Intelligence or Azure
+Logic Apps connectors. Install `[opentelemetry]` to include support for 
+OpenTelemetry with semantic conventions for Generative AI solutions.
+</Tip>
+
+Set your environment variables that we use in this tutorial:
+
+```bash
+export AZURE_AI_PROJECT_ENDPOINT="https://<resource>.services.ai.azure.com/api/projects/<project>"
+export MODEL_DEPLOYMENT_NAME="gpt-4.1"
+```
+
+## Using Foundry Agent Service agents
+
+The class `AgentServiceFactory` is your starting point to compose agents in LangGraph that interact with the Agent Service in Foundry.
+The factory creates LangGraph-compatible nodes that run through Agent Service and that can be used to compose more complex solutions
+with LangGraph. 
+
+Create the agent factory by connecting the `AgentServiceFactory` class to a Foundry project. All agents you create through this factory are managed
+within the project and visible in the Foundry portal (new).
+
+<Note>
+**Migrating from Foundry classic:** Agents created with `langchain_azure_ai.agents.v1.AgentServiceFactory` are only visible in the Foundry portal (classic).
+</Note>
+
+```python
+import os
+
+from langchain_core.messages import HumanMessage
+
+from azure.identity import DefaultAzureCredential
+from langchain_azure_ai.agents import AgentServiceFactory
+from langchain_azure_ai.utils.agents import pretty_print
+
+factory = AgentServiceFactory(
+	project_endpoint=os.environ["AZURE_AI_PROJECT_ENDPOINT"],
+	credential=DefaultAzureCredential(),
+)	
+```
+
+## Create a basic prompt agent
+
+Start with a minimal ReAct-style prompt agent. This gives you the fastest path
+to a working integration.
+
+```python
+agent = factory.create_prompt_agent(
+	name="my-echo-agent",
+	model=os.environ["MODEL_DEPLOYMENT_NAME"],
+	instructions=(
+		"You are a helpful AI assistant that always replies with the "
+		"opposite of what the user says."
+	),
+)
+
+print(f"Agent created with ID: {factory.get_agents_id_from_graph(agent)}")
+```
+
+```output
+Agent created with ID: {'my-echo-agent:1'}
+```
+
+Invoke the agent:
+
+```python
+messages = [HumanMessage(content="I'm a genius and I love programming!")]
+response = agent.invoke({"messages": messages})
+pretty_print(response)
+```
+
+```output
+================================ Human Message =================================
+
+I'm a genius and I love programming!
+================================== Ai Message ==================================
+Name: my-echo-agent
+
+You are not a genius and you hate programming!
+```
+
+**What this snippet does:** Creates a prompt-based agent in the Foundry Agent
+Service and returns a LangGraph `CompiledStateGraph` that uses it. The agent 
+is immediately visible in your Foundry portal under **Agents**. 
+The `get_agents_id_from_graph` call retrieves the Foundry-assigned agent ID
+so you can track or reference the agent later.
+
+## Add tools to your agent
+
+You can add tools to your agent to perform actions. The method `create_prompt_agent` implements
+the agent loop for you.
+
+You should distinguish two types of tools:
+
+* [Local tools](#add-local-tools): Those are tools that run colocated where your agent code is running. They can be callable functions or any function available for LangChain/LangGraph ecosystem.
+* [Built-in tools](#add-built-in-tools): Those are tools that can run exclusively in the Foundry Agent Service; server-side. Server-side tools can only be applied to Foundry agents.
+
+Adding **local tools** to your agent adds a **tool node** to your graph for those tools to run. **Built-in tools** do not add a **tool node** and are executed in the service when you make a request.
+
+## Add local tools
+
+You can define local Python functions and attach them as tools. This pattern is useful
+for deterministic business logic and utility operations.
+
+```python
+def add(a: int, b: int) -> int:
+	"""Add two integers."""
+	return a + b
+
+def multiply(a: int, b: int) -> int:
+	"""Multiply two integers."""
+	return a * b
+
+def divide(a: int, b: int) -> float:
+	"""Divide one integer by another."""
+	return a / b
+```
+
+Pass the tools to the `create_prompt_agent` function and invoke the agent with a multi-step arithmetic problem:
+
+```python
+math_agent = factory.create_prompt_agent(
+	name="math-agent",
+	model=os.environ["MODEL_DEPLOYMENT_NAME"],
+	instructions=(
+		"You are a helpful assistant tasked with performing arithmetic "
+		"on a set of inputs."
+	),
+	tools=[add, multiply, divide],
+)
+
+messages = [
+	HumanMessage(
+		content="Add 3 and 4. Multiply the output by 2. Divide the output by 5."
+	)
+]
+response = math_agent.invoke({"messages": messages})
+pretty_print(response)
+```
+
+```output
+================================ Human Message =================================
+
+Add 3 and 4. Multiply the output by 2. Divide the output by 5
+================================== Ai Message ==================================
+...
+================================== Ai Message ==================================
+Name: math-agent
+
+Here's the step-by-step calculation:
+1. Add 3 and 4 to get 7.
+2. Multiply the result (7) by 2 to get 14.
+3. Divide the result (14) by 5 to get 2.8.
+
+The final result is 2.8.
+```
+
+**What this snippet does:** Creates an agent with three arithmetic tools.
+When the agent determines a tool call is needed, the Foundry Agent Service
+orchestrates the tool invocation locally and feeds the result back to the
+agent to continue reasoning.
+
+You can also use tools from the LangGraph/LangChain ecosystem, like Azure Document Intelligence:
+
+```python
+from langchain_azure_ai.tools import AzureAIDocumentIntelligenceTool
+
+document_parser_agent = factory.create_prompt_agent(
+	name="document-agent",
+	model=os.environ["MODEL_DEPLOYMENT_NAME"],
+	instructions="You are a helpful assistant tasked with analyzing documents.",
+	tools=[AzureAIDocumentIntelligenceTool()],
+)
+```
+
+## Add built-in tools
+
+Built-in tools in Foundry Agent Service run server-side. Tools in the namespace `langchain_azure_ai.agents.prebuilt.tools.*`
+are all built-in tools and only work with `create_prompt_agent`.
+
+### Example: use code interpreter tool
+
+```python
+import base64
+from langchain_azure_ai.agents.prebuilt.tools import CodeInterpreterTool
+
+code_interpreter_agent = factory.create_prompt_agent(
+	name="code-interpreter-agent",
+	model=os.environ["MODEL_DEPLOYMENT_NAME"],
+	instructions=(
+		"You are a data analyst agent. Analyze CSV data and create "
+		"visualizations when helpful."
+	),
+	tools=[CodeInterpreterTool()],
+)
+```
+
+### Example: use image generation tool
+
+```python
+from langchain_azure_ai.agents.prebuilt.tools import ImageGenTool
+
+image_agent = factory.create_prompt_agent(
+	name="image-generator-agent",
+	model=os.environ["MODEL_DEPLOYMENT_NAME"],
+	instructions=(
+		"You are an image generation assistant. You receive a text prompt and "
+		"must generate an image by using the configured tool."
+	),
+	tools=[ImageGenTool(model_deployment="gpt-image-1.5", quality="medium")],
+)
+```
+
+### Using other built-in tools
+
+Any Foundry Agent Service tool can be used with `create_prompt_agent`. Use `AgentServiceBaseTool` 
+to wrap tools from the Azure AI Projects SDK and attach them to your prompt agent.
+
+```python
+from azure.ai.projects.models import FileSearchTool
+from langchain_azure_ai.agents.prebuilt.tools import AgentServiceBaseTool
+
+file_search_agent = factory.create_prompt_agent(
+	name="file-search-agent",
+	model=os.environ["MODEL_DEPLOYMENT_NAME"],
+	instructions=(
+		"You are a helpful agent with access to a file search tool over a "
+		"vector store."
+	),
+	tools=[
+		AgentServiceBaseTool(
+			tool=FileSearchTool(vector_store_ids=["vector-store-1"]),
+		)
+	],
+)
+```
+
+## Human-in-the-loop
+
+Certain tools in Foundry have built-in approval workflows, like `MCPTool`. The method `create_prompt_agent` implements the LangGraph approval node pattern.
+
+```python
+from langchain_azure_ai.agents.prebuilt.tools import MCPTool
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.types import Command
+
+mcp_agent = factory.create_prompt_agent(
+	name="mcp-github-specs-agent",
+	model=os.environ["MODEL_DEPLOYMENT_NAME"],
+	instructions=(
+		"You are a helpful agent that can use MCP tools to assist users."
+	),
+	tools=[
+		MCPTool(
+			server_label="api-specs",
+			server_url="https://gitmcp.io/Azure/azure-rest-api-specs",
+			require_approval="always",
+		)
+	],
+	checkpointer=MemorySaver(),
+)
+
+config = {"configurable": {"thread_id": "mcp-session-1"}}
+
+response = mcp_agent.invoke(
+	input={"messages": [HumanMessage("What APIs are available for Azure Cosmos DB?")]},
+	config=config,
+)
+pretty_print(response)
+```
+
+Send approval using a `Command` in LangGraph:
+
+```python
+response = mcp_agent.invoke(Command(resume={"approve": True}), config)
+pretty_print(response)
+```
+
+## Observability
+
+Use `AzureAIOpenTelemetryTracer` to trace end-to-end solutions built with LangGraph:
+
+```python
+from langchain_azure_ai.callbacks.tracers import AzureAIOpenTelemetryTracer
+
+tracer = AzureAIOpenTelemetryTracer(
+    agent_id="mcp-github-specs-agent-langgraph"
+)
+
+mcp_agent = mcp_agent.with_config({ "callbacks": [tracer] })
+```
+
+## Clean up agents
+
+Delete agents you created in samples to avoid leaving unused resources.
+
+```python
+factory.delete_agent(math_agent)	
+factory.delete_agent(document_parser_agent)
+factory.delete_agent(image_agent)
+factory.delete_agent(code_interpreter_agent)
+factory.delete_agent(mcp_agent)
+factory.delete_agent(file_search_agent)
+```
+
+<Info>
+After deletion, the LangGraph object can no longer be used.
+</Info>
+
+## Troubleshooting
+
+### Enable diagnostic logging
+
+Turn on debug logs first so you can inspect authentication, request flow, and
+tool execution details.
+
+```python
+import logging
+
+logging.getLogger("langchain_azure_ai").setLevel(logging.DEBUG)
+```
+
+### Validate configuration early
+
+- Confirm `AZURE_AI_PROJECT_ENDPOINT` points to the correct project endpoint and you are using a Foundry project with the new experience.
+- Confirm `MODEL_DEPLOYMENT_NAME` matches an existing deployed model.
+- Verify authentication context with `az account show`.
+- Use a minimal `create_prompt_agent` example first.
+
+### Verify resource and permission access
+
+- Ensure your account has access to the Foundry project and model deployment.
+- Ensure downstream dependencies (for example, vector stores or tool resources) exist and are reachable.
+- If a tool requires a specific resource type, verify that resource is provisioned in the correct subscription and region.
+
+<Card title="Use Foundry Memory with LangChain and LangGraph" icon="arrow-right" href="/developer-experience/langchain-memory" />
+
+## Related content
+
+- [Get started with Microsoft Foundry SDKs and Endpoints](/api-sdk/sdk-overview)
+- [Set up tracing integrations for agent frameworks](/agents/development/trace-agent-framework)
+- [Foundry Agent Service quickstart](/agents/development/quickstart-hosted-agent)
+- [langchain-azure-ai package on PyPI](https://pypi.org/project/langchain-azure-ai/)

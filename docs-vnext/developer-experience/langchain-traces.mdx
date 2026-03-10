@@ -1,0 +1,252 @@
+---
+title: "Trace LangChain and LangGraph apps with Microsoft Foundry and Azure Monitor"
+description: "Learn how to trace LangChain and LangGraph applications in Foundry with the AzureAIOpenTelemetryTracer callback handler."
+---
+
+Use the `langchain-azure-ai` integration package to emit OpenTelemetry traces from LangChain and
+LangGraph applications and sink them in Azure Application Insights. In this article, you configure
+`AzureAIOpenTelemetryTracer`, attach it to your runnable, and inspect traces in
+Azure Monitor.
+
+The tracer emits spans for agent execution, model calls, tool execution, and
+retrieval operations. You can use it for apps that run fully local, hybrid
+flows that call Foundry Agent Service, or multi-agent LangGraph solutions.
+
+## Prerequisites
+
+- An Azure subscription. [Create one for free](https://azure.microsoft.com/free/).
+- A [Foundry project](/setup/create-projects).
+- A deployed Azure OpenAI chat model (for example, `gpt-4.1`).
+- Python 3.10 or later.
+- Azure CLI signed in (`az login`) so `DefaultAzureCredential` can
+  authenticate.
+
+### Configure your environment
+
+Install required packages:
+
+```bash
+pip install -U "langchain-azure-ai[opentelemetry]" azure-identity
+```
+
+Set the environment variables used in this article:
+
+```bash
+export AZURE_AI_PROJECT_ENDPOINT="https://<resource>.services.ai.azure.com/api/projects/<project>"
+export AZURE_OPENAI_ENDPOINT="https://<resource>.openai.azure.com/openai/v1"
+export AZURE_OPENAI_DEPLOYMENT="gpt-4.1"
+```
+
+<Tip>
+Set `enable_content_recording=False` in the `AzureAIOpenTelemetryTracer` constructor
+to redact message content and tool call arguments from traces.
+</Tip>
+
+## Create the tracer
+
+Create one tracer instance and reuse it across your workflow.
+
+```python
+import os
+
+from azure.identity import DefaultAzureCredential
+from langchain_azure_ai.callbacks.tracers import AzureAIOpenTelemetryTracer
+
+tracer = AzureAIOpenTelemetryTracer(
+	project_endpoint=os.environ["AZURE_AI_PROJECT_ENDPOINT"],
+	credential=DefaultAzureCredential(),
+	name="langchain-tracing-sample",
+	agent_id="support-bot",
+	trace_all_langgraph_nodes=True,
+)
+```
+
+**What this snippet does:** Configures a tracer that resolves the associated
+Application Insights connection string from your Foundry project endpoint and
+enables tracing for LangGraph nodes.
+
+The tracer supports common controls for production workflows:
+
+- Pass `connection_string` to target a specific Application Insights resource.
+- Set `trace_all_langgraph_nodes=True` to trace all nodes by default.
+- Use node metadata like `otel_trace: True` or `otel_trace: False` to include
+  or skip specific nodes.
+
+Reference:
+- [AzureAIOpenTelemetryTracer](https://python.langchain.com/api_reference/azure_ai/callbacks/langchain_azure_ai.callbacks.tracers.inference_tracing.AzureAIOpenTelemetryTracer.html)
+
+## Trace a LangChain runnable
+
+Start with a minimal LangChain flow so you can verify tracing quickly.
+
+```python
+import os
+
+from azure.identity import DefaultAzureCredential
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_azure_ai.chat_models import AzureAIChatCompletionsModel
+
+model = AzureAIChatCompletionsModel(
+	endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
+	credential=DefaultAzureCredential(),
+	model=os.environ["AZURE_OPENAI_DEPLOYMENT"],
+)
+
+prompt = ChatPromptTemplate.from_template(
+	"You are concise. Answer in one sentence: {question}"
+)
+chain = prompt | model
+
+response = chain.invoke(
+	{"question": "What does OpenTelemetry help me do?"},
+	config={"callbacks": [tracer]},
+)
+
+print(response.content)
+```
+
+```output
+OpenTelemetry helps you observe requests, latency, dependencies, and failures across your AI workflow.
+```
+
+## Trace a LangGraph graph
+
+For LangGraph, attach the tracer with `with_config` on the compiled graph.
+
+```python
+from langgraph.graph import END, START, MessagesState, StateGraph
+from langgraph.prebuilt import ToolNode
+from langgraph.checkpoint.memory import MemorySaver
+from langchain_core.tools import tool
+from langchain_azure_ai.utils.agents import pretty_print
+
+@tool
+def play_song_on_spotify(song: str):
+    """Play a song on Spotify"""
+    return f"Successfully played {song} on Spotify!"
+
+@tool
+def play_song_on_apple(song: str):
+    """Play a song on Apple Music"""
+    return f"Successfully played {song} on Apple Music!"
+
+tool_node = ToolNode([play_song_on_apple, play_song_on_spotify])
+model_with_tools = model.bind_tools([play_song_on_apple, play_song_on_spotify])
+
+def should_continue(state: MessagesState):
+    messages = state["messages"]
+    last_message = messages[-1]
+    return "continue" if getattr(last_message, "tool_calls", None) else "end"
+
+def call_model(state: MessagesState):
+    messages = state["messages"]
+    response = model_with_tools.invoke(messages)
+    return {"messages": [response]}
+
+memory = MemorySaver()
+workflow = (
+    StateGraph(MessagesState)
+    .add_node("agent", call_model)
+    .add_node("action", tool_node)
+    .add_edge(START, "agent")
+    .add_conditional_edges(
+        "agent",
+        should_continue,
+        {
+            "continue": "action",
+            "end": END,
+        },
+    )
+    .add_edge("action", "agent")
+    .compile(checkpointer=memory)
+)
+```
+
+Then run the graph:
+
+```python
+from langchain_core.messages import HumanMessage
+
+config = {"configurable": {"thread_id": "1"}, "callbacks": [tracer]}
+message = HumanMessage(content="Can you play Taylor Swift's most popular song?")
+
+result = workflow.invoke({"messages": [message]}, config)
+pretty_print(result)
+```
+
+## Understand trace structure
+
+The tracer emits spans that follow the [OpenTelemetry GenAI semantic conventions](https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-agent-spans/).
+Each span type uses a specific `gen_ai.operation.name` value:
+
+| Span type | `gen_ai.operation.name` | Description |
+|---|---|---|
+| Agent/chain invocation | `invoke_agent` | Each LangGraph node or chain step. |
+| Chat model call | `chat` | LLM inference requests. |
+| Tool execution | `execute_tool` | Tool calls triggered by the model. |
+| Retriever | `execute_tool` | Retrieval operations from vector stores or search. |
+
+### Customize attributes with node metadata
+
+You can set `agent_name`, `agent_id`, and `agent_description` per node using
+LangGraph metadata:
+
+```python
+config = {
+    "callbacks": [tracer],
+    "metadata": {
+        "agent_name": "support-bot",
+        "agent_id": "support-bot-v2",
+        "agent_description": "Handles customer support requests",
+        "thread_id": "session-abc-123",
+    },
+}
+result = graph.invoke({"messages": [message]}, config)
+```
+
+When using LangGraph, you can also set metadata per node in the graph definition:
+
+```python
+workflow = StateGraph(MessagesState)
+workflow.add_node(
+    "planner",
+    planner_fn,
+    metadata={
+        "agent_name": "PlannerAgent",
+        "agent_id": "planner-v1",
+        "otel_agent_span": True,
+    },
+)
+```
+
+## View traces in Azure Monitor
+
+1. Go to the [Azure portal](https://portal.azure.com).
+2. Navigate to the Azure Application Insights you configured.
+3. Using the left navigation bar, select **Investigate** > **Agents (Preview)**.
+4. You see a dashboard showing agent, model, and tool executions.
+5. Select **View Traces with Agent Runs** to see individual traces.
+
+## View traces in Foundry Control Plane
+
+If you deployed your LangGraph or LangChain solution, you can [register it in Foundry Control Plane](/manage/register-custom-agent)
+to gain visibility and governance.
+
+When configuring `AzureAIOpenTelemetryTracer`, use the project's endpoint you want the agent registered at and ensure you configure `agent_id`.
+
+## Troubleshoot
+
+- If no traces appear, verify that either `connection_string` is configured or
+  your project endpoint exposes telemetry.
+- If message content appears redacted, set
+  `enable_content_recording=True` in the `AzureAIOpenTelemetryTracer` constructor.
+- If some LangGraph nodes are missing, set `trace_all_langgraph_nodes=True` or
+  add node metadata `otel_trace: True`.
+
+<Card title="Use Foundry Memory with LangChain and LangGraph" icon="arrow-right" href="/developer-experience/langchain-memory" />
+
+## Related content
+
+- [Get started with langchain-azure-ai](/developer-experience/langchain)
+- [Use LangGraph with the Agent Service](/developer-experience/langchain-agents)
+- [Set up tracing integrations for agent frameworks](/agents/development/trace-agent-framework)
