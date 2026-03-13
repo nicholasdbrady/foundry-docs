@@ -61,10 +61,10 @@ Evaluators are functions that assess your agent's responses. Some evaluators use
 
 For more built-in evaluators, see:
 
-- [Agent evaluators](/observability/agent-evaluators) - Tool Call Accuracy, Intent Resolution
-- [Quality evaluators](/observability/general-purpose-evaluators) - Fluency, Relevance, Groundedness
-- [Text similarity evaluators](/observability/textual-similarity-evaluators) - F1 Score, BLEU, ROUGE
-- [Safety evaluators](/observability/risk-safety-evaluators) - Hate, Self-Harm, Sexual Content
+- [Agent evaluators](/observability/agent-evaluators) — Evaluate how effectively agents handle tasks, tools, and user intent.
+- [Quality evaluators](/observability/general-purpose-evaluators) — Measure the overall quality of generated responses.
+- [Text similarity evaluators](/observability/textual-similarity-evaluators) — Compare generated text against reference answers using NLP metrics.
+- [Safety evaluators](/observability/risk-safety-evaluators) — Identify potential content and security risks in generated output.
 
 To build your own evaluators, see [Custom evaluators](/observability/custom-evaluators).
 
@@ -117,7 +117,7 @@ testing_criteria = [
         "evaluator_name": "builtin.coherence",
         "data_mapping": {
             "query": "{{item.query}}",
-            "response": "{{sample.output_items}}",
+            "response": "{{sample.output_text}}",
         },
         "initialization_parameters": {"deployment_name": model_deployment},
     },
@@ -127,7 +127,7 @@ testing_criteria = [
         "evaluator_name": "builtin.violence",
         "data_mapping": {
             "query": "{{item.query}}",
-            "response": "{{sample.output_items}}",
+            "response": "{{sample.output_text}}",
         },
     },
 ]
