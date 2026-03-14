@@ -1,0 +1,831 @@
+---
+title: "How to generate embeddings with Microsoft Foundry Models service (classic)"
+description: "Learn how to generate embeddings with Microsoft Foundry Models (classic)"
+---
+
+**Applies only to:** <img src="/images/yes-icon.svg" /> **Foundry (classic) portal**. This article isn't available for the new Foundry portal. [Learn more about the new portal](../../foundry/what-is-foundry.md).
+
+<Info>
+Azure AI Inference beta SDK is deprecated and will be retired on May 30, 2026. Switch to the generally available [OpenAI/v1 API](https://aka.ms/openai/v1) with a stable OpenAI SDK. Follow the [migration guide](../how-to/model-inference-to-openai-migration.md) to switch to OpenAI/v1, using the SDK for your preferred programming language.
+</Info>
+
+This article explains how to use embeddings API with models deployed in Microsoft Foundry Models.
+
+## Prerequisites
+
+To use embedding models in your application, you need:
+
+- An Azure subscription. If you're using GitHub Models, you can upgrade your experience and create an Azure subscription in the process. Read [Upgrade from GitHub Models to Microsoft Foundry Models](../how-to/quickstart-github-models.md) if that's your case.
+
+- A Foundry project. This kind of project is managed under a Foundry resource. If you don't have a Foundry project, see [Create a project for Foundry (Foundry projects)](../../how-to/create-projects.md).
+
+- The endpoint's URL.
+
+- The endpoint's key (if you choose to use API key for authentication).
+
+* Install the [Azure AI inference package for Python](https://aka.ms/azsdk/azure-ai-inference/python/reference) with the following command:
+
+  ```bash
+  pip install -U azure-ai-inference
+  ```
+
+* An embeddings model deployment. If you don't have one read [Add and configure Foundry Models](../../how-to/create-model-deployments.md) to add an embeddings model to your resource.
+
+## Use embeddings
+
+First, create the client to consume the model. The following code uses an endpoint URL and key that are stored in environment variables.
+
+```python
+import os
+from azure.ai.inference import EmbeddingsClient
+from azure.core.credentials import AzureKeyCredential
+
+model = EmbeddingsClient(
+    endpoint="https://<resource>.services.ai.azure.com/models",
+    credential=AzureKeyCredential(os.environ["AZURE_INFERENCE_CREDENTIAL"]),
+    model="text-embedding-3-small"
+)
+```
+
+If you have configured the resource to with **Microsoft Entra ID** support, you can use the following code snippet to create a client.
+
+```python
+import os
+from azure.ai.inference import EmbeddingsClient
+from azure.identity import DefaultAzureCredential
+
+model = EmbeddingsClient(
+    endpoint="https://<resource>.services.ai.azure.com/models",
+    credential=DefaultAzureCredential(),
+    model="text-embedding-3-small"
+)
+```
+
+### Create embeddings
+
+Create an embedding request to see the output of the model.
+
+```python
+response = model.embed(
+    input=["The ultimate answer to the question of life"],
+)
+```
+
+<Tip>
+When creating a request, take into account the token's input limit for the model. If you need to embed larger portions of text, you would need a chunking strategy.
+</Tip>
+
+The response is as follows, where you can see the model's usage statistics:
+
+```python
+import numpy as np
+
+for embed in response.data:
+    print("Embedding of size:", np.asarray(embed.embedding).shape)
+
+print("Model:", response.model)
+print("Usage:", response.usage)
+```
+
+It can be useful to compute embeddings in input batches. The parameter `inputs` can be a list of strings, where each string is a different input. In turn the response is a list of embeddings, where each embedding corresponds to the input in the same position.
+
+```python
+response = model.embed(
+    input=[
+        "The ultimate answer to the question of life", 
+        "The largest planet in our solar system is Jupiter",
+    ],
+)
+```
+
+The response is as follows, where you can see the model's usage statistics:
+
+```python
+import numpy as np
+
+for embed in response.data:
+    print("Embedding of size:", np.asarray(embed.embedding).shape)
+
+print("Model:", response.model)
+print("Usage:", response.usage)
+```
+
+<Tip>
+When creating batches of request, take into account the batch limit for each of the models. Most models have a 1024 batch limit.
+</Tip>
+
+#### Specify embeddings dimensions
+
+You can specify the number of dimensions for the embeddings. The following example code shows how to create embeddings with 1024 dimensions. Notice that not all the embedding models support indicating the number of dimensions in the request and on those cases a 422 error is returned.
+
+```python
+response = model.embed(
+    input=["The ultimate answer to the question of life"],
+    dimensions=1024,
+)
+```
+
+#### Create different types of embeddings
+
+Some models can generate multiple embeddings for the same input depending on how you plan to use them. This capability allows you to retrieve more accurate embeddings for RAG patterns. 
+
+The following example shows how to create embeddings that are used to create an embedding for a document that will be stored in a vector database:
+
+```python
+from azure.ai.inference.models import EmbeddingInputType
+
+response = model.embed(
+    input=["The answer to the ultimate question of life, the universe, and everything is 42"],
+    input_type=EmbeddingInputType.DOCUMENT,
+)
+```
+
+When you work on a query to retrieve such a document, you can use the following code snippet to create the embeddings for the query and maximize the retrieval performance.
+
+```python
+from azure.ai.inference.models import EmbeddingInputType
+
+response = model.embed(
+    input=["What's the ultimate meaning of life?"],
+    input_type=EmbeddingInputType.QUERY,
+)
+```
+
+Notice that not all the embedding models support indicating the input type in the request and on those cases a 422 error is returned. By default, embeddings of type `Text` are returned.
+
+This article explains how to use embeddings API with models deployed in Microsoft Foundry Models.
+
+## Prerequisites
+
+To use embedding models in your application, you need:
+
+- An Azure subscription. If you're using GitHub Models, you can upgrade your experience and create an Azure subscription in the process. Read [Upgrade from GitHub Models to Microsoft Foundry Models](../how-to/quickstart-github-models.md) if that's your case.
+
+- A Foundry project. This kind of project is managed under a Foundry resource. If you don't have a Foundry project, see [Create a project for Foundry (Foundry projects)](../../how-to/create-projects.md).
+
+- The endpoint's URL.
+
+- The endpoint's key (if you choose to use API key for authentication).
+
+* Install the [Azure Inference library for JavaScript](https://aka.ms/azsdk/azure-ai-inference/javascript/reference) with the following command:
+
+  ```bash
+  npm install @azure-rest/ai-inference
+  npm install @azure/core-auth
+  npm install @azure/identity
+  ```
+
+  If you are using Node.js, you can configure the dependencies in **package.json**:
+
+  __package.json__
+
+  ```json
+  {
+    "name": "main_app",
+    "version": "1.0.0",
+    "description": "",
+    "main": "app.js",
+    "type": "module",
+    "dependencies": {
+      "@azure-rest/ai-inference": "1.0.0-beta.6",
+      "@azure/core-auth": "1.9.0",
+      "@azure/core-sse": "2.2.0",
+      "@azure/identity": "4.8.0"
+    }
+  }
+  ```
+
+* Import the following:
+
+  ```javascript
+  import ModelClient from "@azure-rest/ai-inference";
+  import { isUnexpected } from "@azure-rest/ai-inference";
+  import { createSseStream } from "@azure/core-sse";
+  import { AzureKeyCredential } from "@azure/core-auth";
+  import { DefaultAzureCredential } from "@azure/identity";
+  ```
+
+* An embeddings model deployment. If you don't have one read [Add and configure Foundry Models](../../how-to/create-model-deployments.md) to add an embeddings model to your resource.
+
+## Use embeddings
+
+First, create the client to consume the model. The following code uses an endpoint URL and key that are stored in environment variables.
+
+```javascript
+const client = ModelClient(
+    "https://<resource>.services.ai.azure.com/models", 
+    new AzureKeyCredential(process.env.AZURE_INFERENCE_CREDENTIAL)
+);
+```
+
+If you've configured the resource with **Microsoft Entra ID** support, you can use the following code snippet to create a client.
+
+```javascript
+const clientOptions = { credentials: { "https://cognitiveservices.azure.com" } };
+
+const client = ModelClient(
+    "https://<resource>.services.ai.azure.com/models", 
+    new DefaultAzureCredential()
+    clientOptions,
+);
+```
+
+### Create embeddings
+
+Create an embedding request to see the output of the model.
+
+```javascript
+var response = await client.path("/embeddings").post({
+    body: {
+        model: "text-embedding-3-small",
+        input: ["The ultimate answer to the question of life"],
+    }
+});
+```
+
+<Tip>
+When creating a request, take into account the token's input limit for the model. If you need to embed larger portions of text, you would need a chunking strategy.
+</Tip>
+
+The response is as follows, where you can see the model's usage statistics:
+
+```javascript
+if (isUnexpected(response)) {
+    throw response.body.error;
+}
+
+console.log(response.embedding);
+console.log(response.body.model);
+console.log(response.body.usage);
+```
+
+It can be useful to compute embeddings in input batches. The parameter `inputs` can be a list of strings, where each string is a different input. In turn the response is a list of embeddings, where each embedding corresponds to the input in the same position.
+
+```javascript
+var response = await client.path("/embeddings").post({
+    body: {
+        model: "text-embedding-3-small",
+        input: [
+            "The ultimate answer to the question of life", 
+            "The largest planet in our solar system is Jupiter",
+        ],
+    }
+});
+```
+
+The response is as follows, where you can see the model's usage statistics:
+
+```javascript
+if (isUnexpected(response)) {
+    throw response.body.error;
+}
+
+console.log(response.embedding);
+console.log(response.body.model);
+console.log(response.body.usage);
+```
+
+<Tip>
+When creating batches of request, take into account the batch limit for each of the models. Most models have a 1024 batch limit.
+</Tip>
+
+#### Specify embeddings dimensions
+
+You can specify the number of dimensions for the embeddings. The following example code shows how to create embeddings with 1024 dimensions. Notice that not all the embedding models support indicating the number of dimensions in the request and on those cases a 422 error is returned.
+
+```javascript
+var response = await client.path("/embeddings").post({
+    body: {
+        model: "text-embedding-3-small",
+        input: ["The ultimate answer to the question of life"],
+        dimensions: 1024,
+    }
+});
+```
+
+#### Create different types of embeddings
+
+Some models can generate multiple embeddings for the same input depending on how you plan to use them. This capability allows you to retrieve more accurate embeddings for RAG patterns. 
+
+The following example shows how to create embeddings that are used to create an embedding for a document that will be stored in a vector database:
+
+```javascript
+var response = await client.path("/embeddings").post({
+    body: {
+        model: "text-embedding-3-small",
+        input: ["The answer to the ultimate question of life, the universe, and everything is 42"],
+        input_type: "document",
+    }
+});
+```
+
+When you work on a query to retrieve such a document, you can use the following code snippet to create the embeddings for the query and maximize the retrieval performance.
+
+```javascript
+var response = await client.path("/embeddings").post({
+    body: {
+        model: "text-embedding-3-small",
+        input: ["What's the ultimate meaning of life?"],
+        input_type: "query",
+    }
+});
+```
+
+Notice that not all the embedding models support indicating the input type in the request and on those cases a 422 error is returned. By default, embeddings of type `Text` are returned.
+
+This article explains how to use embeddings API with models deployed in Microsoft Foundry Models.
+
+## Prerequisites
+
+To use embedding models in your application, you need:
+
+- An Azure subscription. If you're using GitHub Models, you can upgrade your experience and create an Azure subscription in the process. Read [Upgrade from GitHub Models to Microsoft Foundry Models](../how-to/quickstart-github-models.md) if that's your case.
+
+- A Foundry project. This kind of project is managed under a Foundry resource. If you don't have a Foundry project, see [Create a project for Foundry (Foundry projects)](../../how-to/create-projects.md).
+
+- The endpoint's URL.
+
+- The endpoint's key (if you choose to use API key for authentication).
+
+* Add the [Azure AI inference package](https://aka.ms/azsdk/azure-ai-inference/java/reference) to your project:
+
+  ```xml
+  <dependency>
+      <groupId>com.azure</groupId>
+      <artifactId>azure-ai-inference</artifactId>
+      <version>1.0.0-beta.4</version>
+  </dependency>
+  ```
+  
+* If you are using Entra ID, you also need the following package:
+
+  ```xml
+  <dependency>
+      <groupId>com.azure</groupId>
+      <artifactId>azure-identity</artifactId>
+      <version>1.15.3</version>
+  </dependency>
+  ```
+
+* Import the following namespace:
+  
+  ```java
+  package com.azure.ai.inference.usage;
+  
+  import com.azure.ai.inference.EmbeddingsClient;
+  import com.azure.ai.inference.EmbeddingsClientBuilder;
+  import com.azure.ai.inference.ChatCompletionsClient;
+  import com.azure.ai.inference.ChatCompletionsClientBuilder;
+  import com.azure.ai.inference.models.EmbeddingsResult;
+  import com.azure.ai.inference.models.EmbeddingItem;
+  import com.azure.ai.inference.models.ChatCompletions;
+  import com.azure.core.credential.AzureKeyCredential;
+  import com.azure.core.util.Configuration;
+  
+  import java.util.ArrayList;
+  import java.util.List;
+  ```
+
+* Import the following namespace:
+  
+  ```java
+  package com.azure.ai.inference.usage;
+  
+  import com.azure.ai.inference.EmbeddingsClient;
+  import com.azure.ai.inference.EmbeddingsClientBuilder;
+  import com.azure.ai.inference.models.EmbeddingsResult;
+  import com.azure.ai.inference.models.EmbeddingItem;
+  import com.azure.core.credential.AzureKeyCredential;
+  import com.azure.core.util.Configuration;
+  
+  import java.util.ArrayList;
+  import java.util.List;
+  ```
+
+* An embeddings model deployment. If you don't have one read [Add and configure Foundry Models](../../how-to/create-model-deployments.md) to add an embeddings model to your resource.
+
+## Use embeddings
+
+First, create the client to consume the model. The following code uses an endpoint URL and key that are stored in environment variables.
+
+```java
+EmbeddingsClient client = new EmbeddingsClient(
+    URI.create(System.getProperty("AZURE_INFERENCE_ENDPOINT")),
+    new AzureKeyCredential(System.getProperty("AZURE_INFERENCE_CREDENTIAL")),
+    "text-embedding-3-small"
+);
+```
+
+If you have configured the resource to with **Microsoft Entra ID** support, you can use the following code snippet to create a client.
+
+```java
+client = new EmbeddingsClient(
+    URI.create(System.getProperty("AZURE_INFERENCE_ENDPOINT")),
+    new DefaultAzureCredential(),
+    "text-embedding-3-small"
+);
+```
+
+### Create embeddings
+
+Create an embedding request to see the output of the model.
+
+```java
+EmbeddingsOptions requestOptions = new EmbeddingsOptions()
+    .setInput(Arrays.asList("The ultimate answer to the question of life"));
+
+Response<EmbeddingsResult> response = client.embed(requestOptions);
+```
+
+<Tip>
+When creating a request, take into account the token's input limit for the model. If you need to embed larger portions of text, you would need a chunking strategy.
+</Tip>
+
+The response is as follows, where you can see the model's usage statistics:
+
+```java
+System.out.println("Embedding: " + response.getValue().getData());
+System.out.println("Model: " + response.getValue().getModel());
+System.out.println("Usage:");
+System.out.println("\tPrompt tokens: " + response.getValue().getUsage().getPromptTokens());
+System.out.println("\tTotal tokens: " + response.getValue().getUsage().getTotalTokens());
+```
+
+It can be useful to compute embeddings in input batches. The parameter `inputs` can be a list of strings, where each string is a different input. In turn the response is a list of embeddings, where each embedding corresponds to the input in the same position.
+
+```java
+requestOptions = new EmbeddingsOptions()
+    .setInput(Arrays.asList(
+        "The ultimate answer to the question of life", 
+        "The largest planet in our solar system is Jupiter"
+    ));
+
+response = client.embed(requestOptions);
+```
+
+The response is as follows, where you can see the model's usage statistics:
+
+<Tip>
+When creating batches of request, take into account the batch limit for each of the models. Most models have a 1024 batch limit.
+</Tip>
+
+#### Specify embeddings dimensions
+
+You can specify the number of dimensions for the embeddings. The following example code shows how to create embeddings with 1024 dimensions. Notice that not all the embedding models support indicating the number of dimensions in the request and on those cases a 422 error is returned.
+
+#### Create different types of embeddings
+
+Some models can generate multiple embeddings for the same input depending on how you plan to use them. This capability allows you to retrieve more accurate embeddings for RAG patterns. 
+
+The following example shows how to create embeddings that are used to create an embedding for a document that will be stored in a vector database:
+
+```java
+List<String> input = Arrays.asList("The answer to the ultimate question of life, the universe, and everything is 42");
+requestOptions = new EmbeddingsOptions(input, EmbeddingInputType.DOCUMENT);
+
+response = client.embed(requestOptions);
+```
+
+When you work on a query to retrieve such a document, you can use the following code snippet to create the embeddings for the query and maximize the retrieval performance.
+
+```java
+input = Arrays.asList("What's the ultimate meaning of life?");
+requestOptions = new EmbeddingsOptions(input, EmbeddingInputType.QUERY);
+
+response = client.embed(requestOptions);
+```
+
+Notice that not all the embedding models support indicating the input type in the request and on those cases a 422 error is returned. By default, embeddings of type `Text` are returned.
+
+This article explains how to use embeddings API with models deployed in Microsoft Foundry Models.
+
+## Prerequisites
+
+To use embedding models in your application, you need:
+
+- An Azure subscription. If you're using GitHub Models, you can upgrade your experience and create an Azure subscription in the process. Read [Upgrade from GitHub Models to Microsoft Foundry Models](../how-to/quickstart-github-models.md) if that's your case.
+
+- A Foundry project. This kind of project is managed under a Foundry resource. If you don't have a Foundry project, see [Create a project for Foundry (Foundry projects)](../../how-to/create-projects.md).
+
+- The endpoint's URL.
+
+- The endpoint's key (if you choose to use API key for authentication).
+
+* Install the [Azure AI inference package](https://aka.ms/azsdk/azure-ai-inference/python/reference) with the following command:
+
+    ```bash
+    dotnet add package Azure.AI.Inference --prerelease
+    ```
+    
+* If you are using Entra ID, you also need the following package:
+
+    ```bash
+    dotnet add package Azure.Identity
+    ```
+
+* An embeddings model deployment. If you don't have one read [Add and configure Foundry Models](../../how-to/create-model-deployments.md) to add an embeddings model to your resource.
+
+## Use embeddings
+
+First, create the client to consume the model. The following code uses an endpoint URL and key that are stored in environment variables.
+
+```csharp
+EmbeddingsClient client = new EmbeddingsClient(
+    new Uri(Environment.GetEnvironmentVariable("AZURE_INFERENCE_ENDPOINT")),
+    new AzureKeyCredential(Environment.GetEnvironmentVariable("AZURE_INFERENCE_CREDENTIAL"))
+);
+```
+
+If you configured the resource to with **Microsoft Entra ID** support, you can use the following code snippet to create a client. Note that here `includeInteractiveCredentials` is set to `true` only for demonstration purposes so authentication can happen using the web browser. On production workloads, you should remove such parameter.
+
+```csharp
+TokenCredential credential = new DefaultAzureCredential(includeInteractiveCredentials: true);
+AzureAIInferenceClientOptions clientOptions = new AzureAIInferenceClientOptions();
+BearerTokenAuthenticationPolicy tokenPolicy = new BearerTokenAuthenticationPolicy(credential, new string[] { "https://cognitiveservices.azure.com/.default" });
+
+clientOptions.AddPolicy(tokenPolicy, HttpPipelinePosition.PerRetry);
+
+client = new EmbeddingsClient(
+    new Uri("https://<resource>.services.ai.azure.com/models"),
+    credential,
+    clientOptions,
+);
+```
+
+### Create embeddings
+
+Create an embedding request to see the output of the model.
+
+```csharp
+EmbeddingsOptions requestOptions = new EmbeddingsOptions()
+{
+    Input = {
+        "The ultimate answer to the question of life"
+    },
+    Model = "text-embedding-3-small"
+};
+
+Response<EmbeddingsResult> response = client.Embed(requestOptions);
+```
+
+<Tip>
+When creating a request, take into account the token's input limit for the model. If you need to embed larger portions of text, you would need a chunking strategy.
+</Tip>
+
+The response is as follows, where you can see the model's usage statistics:
+
+```csharp
+Console.WriteLine($"Embedding: {response.Value.Data}");
+Console.WriteLine($"Model: {response.Value.Model}");
+Console.WriteLine("Usage:");
+Console.WriteLine($"\tPrompt tokens: {response.Value.Usage.PromptTokens}");
+Console.WriteLine($"\tTotal tokens: {response.Value.Usage.TotalTokens}");
+```
+
+It can be useful to compute embeddings in input batches. The parameter `inputs` can be a list of strings, where each string is a different input. In turn the response is a list of embeddings, where each embedding corresponds to the input in the same position.
+
+```csharp
+EmbeddingsOptions requestOptions = new EmbeddingsOptions()
+{
+    Input = {
+        "The ultimate answer to the question of life", 
+        "The largest planet in our solar system is Jupiter"
+    },
+    Model = "text-embedding-3-small"
+};
+
+Response<EmbeddingsResult> response = client.Embed(requestOptions);
+```
+
+The response is as follows, where you can see the model's usage statistics:
+
+<Tip>
+When creating batches of request, take into account the batch limit for each of the models. Most models have a 1024 batch limit.
+</Tip>
+
+#### Specify embeddings dimensions
+
+You can specify the number of dimensions for the embeddings. The following example code shows how to create embeddings with 1024 dimensions. Notice that not all the embedding models support indicating the number of dimensions in the request and on those cases a 422 error is returned.
+
+#### Create different types of embeddings
+
+Some models can generate multiple embeddings for the same input depending on how you plan to use them. This capability allows you to retrieve more accurate embeddings for RAG patterns. 
+
+The following example shows how to create embeddings that are used to create an embedding for a document that will be stored in a vector database:
+
+```csharp
+var input = new List<string> { 
+    "The answer to the ultimate question of life, the universe, and everything is 42"
+};
+var requestOptions = new EmbeddingsOptions()
+{
+    Input = input,
+    InputType = EmbeddingInputType.DOCUMENT, 
+    Model = "text-embedding-3-small"
+};
+
+Response<EmbeddingsResult> response = client.Embed(requestOptions);
+```
+
+When you work on a query to retrieve such a document, you can use the following code snippet to create the embeddings for the query and maximize the retrieval performance.
+
+```csharp
+var input = new List<string> { 
+    "What's the ultimate meaning of life?"
+};
+var requestOptions = new EmbeddingsOptions()
+{
+    Input = input,
+    InputType = EmbeddingInputType.QUERY,
+    Model = "text-embedding-3-small"
+};
+
+Response<EmbeddingsResult> response = client.Embed(requestOptions);
+```
+
+Notice that not all the embedding models support indicating the input type in the request and on those cases a 422 error is returned. By default, embeddings of type `Text` are returned.
+
+This article explains how to use embeddings API with models deployed in Microsoft Foundry Models.
+
+## Prerequisites
+
+To use embedding models in your application, you need:
+
+- An Azure subscription. If you're using GitHub Models, you can upgrade your experience and create an Azure subscription in the process. Read [Upgrade from GitHub Models to Microsoft Foundry Models](../how-to/quickstart-github-models.md) if that's your case.
+
+- A Foundry project. This kind of project is managed under a Foundry resource. If you don't have a Foundry project, see [Create a project for Foundry (Foundry projects)](../../how-to/create-projects.md).
+
+- The endpoint's URL.
+
+- The endpoint's key (if you choose to use API key for authentication).
+
+* An embeddings model deployment. If you don't have one read [Add and configure Foundry Models](../../how-to/create-model-deployments.md) to add an embeddings model to your resource.
+
+## Use embeddings
+
+To use the text embeddings, use the route `/embeddings` appended to the base URL along with your credential indicated in `api-key`. `Authorization` header is also supported with the format `Bearer <key>`.
+
+```http
+POST https://<resource>.services.ai.azure.com/models/embeddings?api-version=2024-05-01-preview
+Content-Type: application/json
+api-key: <key>
+```
+
+If you have configured the resource with **Microsoft Entra ID** support, pass you token in the `Authorization` header with the format `Bearer <token>`. Use scope `https://ai.azure.com/.default`. 
+
+```http
+POST https://<resource>.services.ai.azure.com/models/embeddings?api-version=2024-05-01-preview
+Content-Type: application/json
+Authorization: Bearer <token>
+```
+
+Using Microsoft Entra ID may require additional configuration in your resource to grant access. Learn how to [configure key-less authentication with Microsoft Entra ID](../../how-to/configure-entra-id.md).
+
+### Create embeddings
+
+Create an embedding request to see the output of the model.
+
+```json
+{
+    "model": "text-embedding-3-small",
+    "input": [
+        "The ultimate answer to the question of life"
+    ]
+}
+```
+
+<Tip>
+When creating a request, take into account the token's input limit for the model. If you need to embed larger portions of text, you would need a chunking strategy.
+</Tip>
+
+The response is as follows, where you can see the model's usage statistics:
+
+```json
+{
+    "id": "0ab1234c-d5e6-7fgh-i890-j1234k123456",
+    "object": "list",
+    "data": [
+        {
+            "index": 0,
+            "object": "embedding",
+            "embedding": [
+                0.017196655,
+                // ...
+                -0.000687122,
+                -0.025054932,
+                -0.015777588
+            ]
+        }
+    ],
+    "model": "text-embedding-3-small",
+    "usage": {
+        "prompt_tokens": 9,
+        "completion_tokens": 0,
+        "total_tokens": 9
+    }
+}
+```
+
+It can be useful to compute embeddings in input batches. The parameter `inputs` can be a list of strings, where each string is a different input. In turn the response is a list of embeddings, where each embedding corresponds to the input in the same position.
+
+```json
+{
+    "model": "text-embedding-3-small",
+    "input": [
+        "The ultimate answer to the question of life", 
+        "The largest planet in our solar system is Jupiter"
+    ]
+}
+```
+
+The response is as follows, where you can see the model's usage statistics:
+
+```json
+{
+    "id": "0ab1234c-d5e6-7fgh-i890-j1234k123456",
+    "object": "list",
+    "data": [
+        {
+            "index": 0,
+            "object": "embedding",
+            "embedding": [
+                0.017196655,
+                // ...
+                -0.000687122,
+                -0.025054932,
+                -0.015777588
+            ]
+        },
+        {
+            "index": 1,
+            "object": "embedding",
+            "embedding": [
+                0.017196655,
+                // ...
+                -0.000687122,
+                -0.025054932,
+                -0.015777588
+            ]
+        }
+    ],
+    "model": "text-embedding-3-small",
+    "usage": {
+        "prompt_tokens": 19,
+        "completion_tokens": 0,
+        "total_tokens": 19
+    }
+}
+```
+
+<Tip>
+When creating batches of request, take into account the batch limit for each of the models. Most models have a 1024 batch limit.
+</Tip>
+
+#### Specify embeddings dimensions
+
+You can specify the number of dimensions for the embeddings. The following example code shows how to create embeddings with 1024 dimensions. Notice that not all the embedding models support indicating the number of dimensions in the request and on those cases a 422 error is returned.
+
+```json
+{
+    "model": "text-embedding-3-small",
+    "input": [
+        "The ultimate answer to the question of life"
+    ],
+    "dimensions": 1024
+}
+```
+
+#### Create different types of embeddings
+
+Some models can generate multiple embeddings for the same input depending on how you plan to use them. This capability allows you to retrieve more accurate embeddings for RAG patterns. 
+
+The following example shows how to create embeddings that are used to create an embedding for a document that will be stored in a vector database. Since `text-embedding-3-small` doesn't support this capability, we are using an embedding model from Cohere in the following example:
+
+```json
+{
+    "model": "cohere-embed-v3-english",
+    "input": [
+        "The answer to the ultimate question of life, the universe, and everything is 42"
+    ],
+    "input_type": "document"
+}
+```
+
+When you work on a query to retrieve such a document, you can use the following code snippet to create the embeddings for the query and maximize the retrieval performance. Since `text-embedding-3-small` doesn't support this capability, we are using an embedding model from Cohere in the following example:
+
+```json
+{
+    "model": "cohere-embed-v3-english",
+    "input": [
+        "What's the ultimate meaning of life?"
+    ],
+    "input_type": "query"
+}
+```
+
+Notice that not all the embedding models support indicating the input type in the request and on those cases a 422 error is returned. By default, embeddings of type `Text` are returned.
+
+## Related content
+
+* [Use image embeddings models](./use-image-embeddings.md)
+* [Azure AI Model Inference API](https://learn.microsoft.com/rest/api/aifoundry/modelinference)

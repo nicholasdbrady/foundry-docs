@@ -8,7 +8,7 @@ This article explains how to configure keyless authentication with Microsoft Ent
 
 To complete this article, you need:
 
-- An Azure subscription. If you're using GitHub Models, you can upgrade your experience and create an Azure subscription in the process. Read [Upgrade from GitHub Models to Microsoft Foundry Models](/models/capabilities/quickstart-github-models) if that's your case.
+- An Azure subscription. If you're using GitHub Models, you can upgrade your experience and create an Azure subscription in the process. Read [Upgrade from GitHub Models to Microsoft Foundry Models](/foundry-models/quickstart-github-models) if that's your case.
 
 - A Foundry project. This kind of project is managed under a Foundry resource. If you don't have a Foundry project, see [Create a project for Foundry (Foundry projects)](/setup/create-projects)
 
@@ -141,7 +141,7 @@ After you configure Microsoft Entra ID in your resource, update your code to use
 
     token_provider = get_bearer_token_provider(
         DefaultAzureCredential(), 
-        "https://cognitiveservices.azure.com/.default"
+        "https://ai.azure.com/.default"
     )
 
     client = OpenAI(
@@ -201,7 +201,7 @@ After you configure Microsoft Entra ID in your resource, update your code to use
 
     BearerTokenPolicy tokenPolicy = new(
         new DefaultAzureCredential(),
-        "https://cognitiveservices.azure.com/.default"
+        "https://ai.azure.com/.default"
     );
 
     ChatClient client = new(
@@ -253,7 +253,7 @@ After you configure Microsoft Entra ID in your resource, update your code to use
 
     const tokenProvider = getBearerTokenProvider(
         new DefaultAzureCredential(),
-        'https://cognitiveservices.azure.com/.default'
+        'https://ai.azure.com/.default'
     );
 
     const client = new OpenAI({
@@ -313,7 +313,7 @@ After you configure Microsoft Entra ID in your resource, update your code to use
         .credential(BearerTokenCredential.create(
             AuthenticationUtil.getBearerTokenSupplier(
                 tokenCredential, 
-                "https://cognitiveservices.azure.com/.default"
+                "https://ai.azure.com/.default"
             )
         ))
         .build();
@@ -394,7 +394,7 @@ After you configure Microsoft Entra ID in your resource, update your code to use
     }
     ```
 
-    Tokens must be issued with scope `https://cognitiveservices.azure.com/.default`.
+    Tokens must be issued with scope `https://ai.azure.com/.default`.
 
     For testing purposes, the easiest way to get a valid token for your user account is to use the Azure CLI. In a console, run the following Azure CLI command:
 
@@ -548,7 +548,7 @@ After you configure Microsoft Entra ID in your resource, update your code to use
 
     token_provider = get_bearer_token_provider(
         DefaultAzureCredential(), 
-        "https://cognitiveservices.azure.com/.default"
+        "https://ai.azure.com/.default"
     )
 
     client = OpenAI(
@@ -608,7 +608,7 @@ After you configure Microsoft Entra ID in your resource, update your code to use
 
     BearerTokenPolicy tokenPolicy = new(
         new DefaultAzureCredential(),
-        "https://cognitiveservices.azure.com/.default"
+        "https://ai.azure.com/.default"
     );
 
     ChatClient client = new(
@@ -660,7 +660,7 @@ After you configure Microsoft Entra ID in your resource, update your code to use
 
     const tokenProvider = getBearerTokenProvider(
         new DefaultAzureCredential(),
-        'https://cognitiveservices.azure.com/.default'
+        'https://ai.azure.com/.default'
     );
 
     const client = new OpenAI({
@@ -720,7 +720,7 @@ After you configure Microsoft Entra ID in your resource, update your code to use
         .credential(BearerTokenCredential.create(
             AuthenticationUtil.getBearerTokenSupplier(
                 tokenCredential, 
-                "https://cognitiveservices.azure.com/.default"
+                "https://ai.azure.com/.default"
             )
         ))
         .build();
@@ -801,7 +801,7 @@ After you configure Microsoft Entra ID in your resource, update your code to use
     }
     ```
 
-    Tokens must be issued with scope `https://cognitiveservices.azure.com/.default`.
+    Tokens must be issued with scope `https://ai.azure.com/.default`.
 
     For testing purposes, the easiest way to get a valid token for your user account is to use the Azure CLI. In a console, run the following Azure CLI command:
 
@@ -976,7 +976,7 @@ After you configure Microsoft Entra ID in your resource, update your code to use
 
     token_provider = get_bearer_token_provider(
         DefaultAzureCredential(), 
-        "https://cognitiveservices.azure.com/.default"
+        "https://ai.azure.com/.default"
     )
 
     client = OpenAI(
@@ -1036,7 +1036,7 @@ After you configure Microsoft Entra ID in your resource, update your code to use
 
     BearerTokenPolicy tokenPolicy = new(
         new DefaultAzureCredential(),
-        "https://cognitiveservices.azure.com/.default"
+        "https://ai.azure.com/.default"
     );
 
     ChatClient client = new(
@@ -1088,7 +1088,7 @@ After you configure Microsoft Entra ID in your resource, update your code to use
 
     const tokenProvider = getBearerTokenProvider(
         new DefaultAzureCredential(),
-        'https://cognitiveservices.azure.com/.default'
+        'https://ai.azure.com/.default'
     );
 
     const client = new OpenAI({
@@ -1148,7 +1148,7 @@ After you configure Microsoft Entra ID in your resource, update your code to use
         .credential(BearerTokenCredential.create(
             AuthenticationUtil.getBearerTokenSupplier(
                 tokenCredential, 
-                "https://cognitiveservices.azure.com/.default"
+                "https://ai.azure.com/.default"
             )
         ))
         .build();
@@ -1229,7 +1229,7 @@ After you configure Microsoft Entra ID in your resource, update your code to use
     }
     ```
 
-    Tokens must be issued with scope `https://cognitiveservices.azure.com/.default`.
+    Tokens must be issued with scope `https://ai.azure.com/.default`.
 
     For testing purposes, the easiest way to get a valid token for your user account is to use the Azure CLI. In a console, run the following Azure CLI command:
 
@@ -1316,8 +1316,8 @@ The following table contains multiple scenarios that can help you troubleshoot M
 | You're using an SDK | Known issues | Before you troubleshoot further, install the latest version of the software you're using to connect to the service. Authentication bugs might already be fixed in a newer version of the software you're using. |
 | `401 Principal does not have access to API/Operation` | The request indicates authentication in the correct way, but the user principal doesn't have the required permissions to use the inference endpoint. | Ensure you have: <br /> 1. Assigned the role **Cognitive Services User** to your principal to the Foundry resource. Notice that **Cognitive Services OpenAI User** grants only access to OpenAI models. **Owner** or **Contributor** don't provide access either.<br /> 1. Waited at least 5 minutes before making the first call. |
 | `401 HTTP/1.1 401 PermissionDenied` | The request indicates authentication in the correct way, but the user principal doesn't have the required permissions to use the inference endpoint. | Assigned the role **Cognitive Services User** to your principal in the Foundry resource. Roles like **Administrator** or **Contributor** don't grant inference access. Wait at least 5 minutes before making the first call. |
-| You're using REST API calls and you get `401 Unauthorized. Access token is missing, invalid, audience is incorrect, or have expired.` | The request fails to authenticate with Microsoft Entra ID. | Ensure the `Authentication` header contains a valid token with a scope `https://cognitiveservices.azure.com/.default`. |
+| You're using REST API calls and you get `401 Unauthorized. Access token is missing, invalid, audience is incorrect, or have expired.` | The request fails to authenticate with Microsoft Entra ID. | Ensure the `Authentication` header contains a valid token with a scope `https://ai.azure.com/.default`. |
 
 ## Next step
 
-- [Azure OpenAI supported programming languages](/models/capabilities/supported-languages)
+- [Azure OpenAI supported programming languages](/foundry-models/supported-languages)

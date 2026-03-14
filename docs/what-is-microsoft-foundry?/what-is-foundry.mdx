@@ -1,0 +1,111 @@
+---
+title: "What is Microsoft Foundry?"
+description: "Microsoft Foundry is a trusted platform that empowers developers to drive innovation and shape the future with AI in a safe, secure, and responsible way."
+---
+
+**Microsoft Foundry** is a unified Azure platform-as-a-service offering for enterprise AI operations, model builders, and application development. This foundation combines production-grade infrastructure with friendly interfaces, enabling developers to focus on building applications rather than managing infrastructure.
+
+Microsoft Foundry unifies agents, models, and tools under a single management grouping with built-in enterprise-readiness capabilities including tracing, monitoring, evaluations, and customizable enterprise setup configurations. The platform provides streamlined management through unified role-based access control (RBAC), networking, and policies under one Azure resource provider namespace.
+
+<Tip>
+* Coming from Azure OpenAI? [Upgrade your Azure OpenAI resource to a Foundry resource](/setup/upgrade-azure-openai) while preserving your endpoint, API keys, and existing state. 
+* Using hub-based projects? Hub-based projects are accessible in the [Foundry (classic) portal](../foundry-classic/what-is-foundry.md). New investments are focused on Foundry projects in the new portal.
+</Tip>
+
+## Evolution of Foundry
+
+Foundry consolidates several previous Azure AI services and tools into a unified platform. The following table maps previous concepts to their current equivalents.
+
+| Dimension | Previous | Current |
+|-----------|---------|-----|
+| Brand | Azure AI Studio / Azure AI Foundry | Microsoft Foundry |
+| Brand | Azure AI Services | Foundry Tools |
+| Portal | [Foundry (classic)](https://learn.microsoft.com/azure/foundry-classic/) | [Foundry](https://learn.microsoft.com/azure/foundry) |
+| Agent API | Assistants API (Agents v0.5/v1) | Responses API (Agents v2) |
+| API versioning | Monthly `api-version` params | v1 stable routes (`/openai/v1/`) |
+| Resource model | Hub + Azure OpenAI + Azure AI Services | Foundry resource (single, with projects) |
+| SDKs & endpoints | Multiple packages (`azure-ai-inference`, `azure-ai-generative`, `azure-ai-ml`, `AzureOpenAI()`) against 5+ endpoints | Unified project client (`azure-ai-projects` 2.x) + `OpenAI()` against one project endpoint. |
+| Terminology | Threads, Messages, Runs, Assistants | Conversations, Items, Responses, Agent Versions |
+
+## Who is Foundry for?
+
+Microsoft Foundry serves three primary audiences:
+* Application developers building AI-powered products with agents, models, and tools. Start with the [quickstart](/get-started/get-started-code)
+* ML engineers and data scientists who [fine-tune models](/foundry-models/fine-tuning-considerations), [run evaluations](/agent-service/trace-agent-concept), and [manage model deployments](/observability/monitor-models). 
+* IT administrators and platform engineers who govern AI resources, enforce policies, and manage access across teams. See [security](/security/architecture#security-driven-separation-of-concerns) and governance and [Foundry Control Plane](/manage/overview).
+
+## Key capabilities
+
+### Build agents
+
+* **[Multi-agent orchestration and workflows](/agent-service/workflow)** – Build collaborative agent behavior and complex workflow execution using SDKs for C# and Python.
+* **[Tool catalog](/agent-service/tool-catalog)** – Connect over 1,400 tools through public and private catalogs.
+* **[Memory](/agent-service/what-is-memory)** – Retain and recall contextual information across interactions without requiring repeated input.
+* **[Foundry IQ knowledge integration](/agent-service/what-is-foundry-iq)** – Ground agent responses in enterprise or web content with citation-backed answers.
+* **[Publishing](/agent-service/publish-copilot)** – Publish agents to Microsoft 365, Teams, BizChat, or containerized deployments.
+
+### Operate and govern
+
+* **[Real-time observability](/agent-service/how-to-monitor-agents-dashboard#set-up-continuous-evaluation)** – Monitor performance and governance with built-in metrics and model tracking.
+* **Centralized AI asset management** – Manage all agents, models, and tools from the **Operate** section, including agents registered from other clouds.
+* **Enterprise controls** – Full authentication support for MCP and A2A, AI gateway integration, and Azure Policy integration.
+
+## Microsoft Foundry API and SDKs
+
+The [Microsoft Foundry API](https://learn.microsoft.com/rest/api/aifoundry/) is designed specifically for building agentic applications and provides a consistent contract for working across different model providers. The API is complemented by SDKs to make it easy to integrate AI capabilities into your applications. [SDK Client libraries](/api-sdk/sdk-overview) are available for:
+
+- Python
+- C#
+- JavaScript/TypeScript (preview)
+- Java (preview)
+
+The [Microsoft Foundry for VS Code Extension](/developer-experience/get-started-projects-vs-code) helps you explore models and develop agents directly in your development environment.
+
+## Foundry portal
+
+The [Microsoft Foundry portal](https://ai.azure.com) is where you manage projects, deploy models, build agents, and monitor your AI assets. To use the current version, make sure the **New Foundry** toggle in the banner is set to on.
+
+<img src="/images/new-foundry.png" />
+
+<Tip>
+See [Find features in the Foundry portal](/get-started/navigate-from-classic) if you're used to the Foundry (classic) portal and not sure where to find things now.
+</Tip>
+
+### Choosing a project
+
+In the Foundry portal, the project you're working with appears in the upper-left corner of most pages. 
+* If you see a long list of projects instead, select a project to begin. This brings you to the **Home** page with the project name in the upper-left corner.
+* To switch to another recently used project, select the project name in the upper-left corner, then select the other project. 
+* To see all of your Foundry projects, select the project name in the upper-left corner, then select **View all projects**. Select the next project you want to work on.
+
+### Find other resources
+
+The Foundry portal displays only the **default** project for each Foundry resource, not other resources or hub-based projects you might have created in Foundry (classic). If you created multiple projects under the same Foundry resource, you can identify which project is the default by checking the Microsoft Foundry (classic) portal. The default project is marked with (default) next to its name.
+
+To find these other resources,  select the project name in the upper-left corner, then select **View all resources**.  A new browser tab opens the Foundry (classic) portal.  [Switch to Microsoft Foundry (classic) documentation]() to work with these other resources in the Foundry (classic) portal.
+
+### Disable preview features
+
+Use your organization controls to limit production environments to general availability supported capabilities, and validate current feature status before rollout decisions. For guidance on hiding preview features with tags or blocking them with custom RBAC roles, see [Disable preview features in Microsoft Foundry](../how-to/disable-preview-features.md).
+
+## Pricing and billing
+
+Microsoft Foundry is monetized through individual products customers access and consume in the platform, including API and models, complete AI toolchain, and responsible AI and enterprise grade production at scale products. Each product has its own billing model and price. 
+
+The platform is free to use and explore. Pricing occurs at the deployment level. 
+
+Using Foundry also incurs costs associated with the underlying services. To learn more, read [Plan and manage costs for Foundry Tools](/foundry-models/manage-costs).
+
+## Region availability
+
+Foundry is available in most regions where Foundry Tools are available. For more information, see [region support for Microsoft Foundry](/foundry-models/region-support).
+
+## How to get access
+
+You need an [Azure account](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).  Then sign in to [Microsoft Foundry](https://ai.azure.com?cid=learnDocs).
+
+## Related content
+
+- [Quickstart: Get started with Microsoft Foundry](/get-started/quickstart-create-foundry-resources)- [Create a project](/setup/create-projects)
+- [Get started with an AI template](/developer-experience/ai-template-get-started)
+- [What's new in Microsoft Foundry documentation?](/operate/whats-new-foundry)

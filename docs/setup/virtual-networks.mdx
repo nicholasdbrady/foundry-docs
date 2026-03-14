@@ -97,10 +97,9 @@ After the template deployment finishes, verify that all resources are configured
 - **Agent subnet size**: The recommended size of the delegated Agent subnet is /24 (256 addresses) due to the delegation of the subnet to `Microsoft.App/environments`. For more on subnet sizing, see [Configuring virtual networks for Azure Container Apps](https://learn.microsoft.com/azure/container-apps/custom-virtual-networks).
 - **Agent subnet egress firewall allowlisting**: If you're integrating an Azure Firewall with your private network secured standard agent, allowlist the Fully Qualified Domain Names (FQDNs) listed under **Managed Identity** in the [Integrate with Azure Firewall](https://learn.microsoft.com/azure/container-apps/use-azure-firewall#application-rules) article or add the Service Tag **AzureActiveDirectory**.
     - Verify that no TLS inspection happens in the Firewall that could add a self-signed certificate. During failures, inspect whether there's any traffic landing on the Firewall and what traffic is being blocked.
-    - Additionally, expect traffic to a `10.x.x.x` private IP (for non-class A scenarios) or `100.x.x.x` private IP (for class A scenario) as necessary traffic to Agent Infra services. Allow this traffic if you're integrating with a Firewall.
 - **All Foundry workspace resources must be deployed in the same region as the virtual network (VNet)**. This includes Azure Cosmos DB, Storage Account, Azure AI Search, Foundry Account, Project, Managed Identity, Azure OpenAI, or another Foundry resource used for model deployments.
 - **Region availability**:
-  - For supported regions for model deployments, see: [Azure OpenAI model region support](/models/catalog/models-sold-directly-by-azure).
+  - For supported regions for model deployments, see: [Azure OpenAI model region support](/foundry-models/models-sold-directly-by-azure).
 - **Azure Blob Storage**: Using Azure Blob Storage files with the File Search tool isn't supported.
 - **Grounding with Bing Search**: Only the following regions are supported:
   - West Europe
@@ -256,4 +255,4 @@ These FQDNs are listed under **Managed Identity** in the [Integrate with Azure F
 
 ## Next steps
 
-You've now successfully configured a network-secure account and project. Use the [quickstart](/agents/development/quickstart-hosted-agent) to create your first agent.
+You've now successfully configured a network-secure account and project. Use the [quickstart](/agent-service/quickstart-hosted-agent) to create your first agent.
