@@ -206,6 +206,85 @@ def run_evaluation(
     return {"metadata": run_metadata, "results": results}
 
 
+def compare_results(current: dict, baseline_path: str) -> int:
+    """Compare current results against a baseline run.
+
+    Returns exit code 0 for improvement/inconclusive, 1 for regression.
+    """
+    with open(baseline_path) as f:
+        baseline = json.load(f)
+
+    def _success_rates(data: dict) -> dict[str, dict[str, float]]:
+        """Compute per-scenario, per-server success rates."""
+        rates: dict[str, dict[str, list[bool]]] = {}
+        for r in data.get("results", []):
+            scenario = r["scenario_id"]
+            server = r["server"]
+            rates.setdefault(scenario, {}).setdefault(server, []).append(
+                r["status"] == "success"
+            )
+        return {
+            scenario: {
+                server: sum(outcomes) / len(outcomes)
+                for server, outcomes in servers.items()
+            }
+            for scenario, servers in rates.items()
+        }
+
+    baseline_rates = _success_rates(baseline)
+    current_rates = _success_rates(current)
+
+    THRESHOLD = 0.05
+    verdicts: list[dict] = []
+    has_regression = False
+
+    all_scenarios = sorted(set(baseline_rates) | set(current_rates))
+    for scenario in all_scenarios:
+        b_servers = baseline_rates.get(scenario, {})
+        c_servers = current_rates.get(scenario, {})
+        all_servers = sorted(set(b_servers) | set(c_servers))
+        for server in all_servers:
+            b_rate = b_servers.get(server)
+            c_rate = c_servers.get(server)
+            if b_rate is None or c_rate is None:
+                verdict = "inconclusive"
+            else:
+                delta = c_rate - b_rate
+                if delta > THRESHOLD:
+                    verdict = "improvement"
+                elif delta < -THRESHOLD:
+                    verdict = "regression"
+                    has_regression = True
+                else:
+                    verdict = "inconclusive"
+            verdicts.append({
+                "scenario": scenario,
+                "server": server,
+                "baseline": b_rate,
+                "current": c_rate,
+                "verdict": verdict,
+            })
+
+    # Print summary table
+    print("\n" + "=" * 72)
+    print("BASELINE COMPARISON")
+    print("=" * 72)
+    print(f"{'Scenario':<25} {'Server':<22} {'Base':>5} {'Curr':>5} {'Verdict'}")
+    print("-" * 72)
+    for v in verdicts:
+        b_str = f"{v['baseline']:.0%}" if v["baseline"] is not None else "N/A"
+        c_str = f"{v['current']:.0%}" if v["current"] is not None else "N/A"
+        icon = {"improvement": "✅", "inconclusive": "➖", "regression": "❌"}[v["verdict"]]
+        print(f"{v['scenario']:<25} {v['server']:<22} {b_str:>5} {c_str:>5} {icon} {v['verdict']}")
+    print("=" * 72)
+
+    if has_regression:
+        print("❌ Regression detected — failing the check.")
+        return 1
+    print("✅ No regressions detected.")
+    return 0
+
+
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Run documentation evaluation harness"
@@ -237,6 +316,10 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--dry-run", action="store_true",
         help="Print what would run without executing"
+    )
+    parser.add_argument(
+        "--baseline", type=str, default=None,
+        help="Path to a previous results JSON for regression comparison"
     )
     return parser.parse_args()
 
@@ -280,6 +363,10 @@ def main():
 
     print(f"\nResults saved to {output_path}")
     print(f"Total evaluations: {output['metadata']['total_evaluations']}")
+
+    if args.baseline:
+        exit_code = compare_results(output, args.baseline)
+        raise SystemExit(exit_code)
 
 
 if __name__ == "__main__":

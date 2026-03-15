@@ -59,6 +59,7 @@ imports:
   - shared/reporting.md
   - shared/mcp/mintlify-docs.md
   - shared/mcp/foundry-docs.md
+  - shared/mcp/ms-learn.md
 
 ---
 
@@ -158,6 +159,20 @@ For each merged PR and commit, analyze:
 - **Features Modified**: Changed behavior, updated APIs
 - **Upstream Sync Changes**: New/updated docs from azure-ai-docs-pr sync
 - **Breaking Changes**: Any changes affecting users
+
+### Quality Gate: Compare Against Canonical Sources
+
+Before editing any file in `docs-vnext/`, compare the proposed change against canonical sources:
+
+1. **Search Microsoft Learn MCP** for the same topic to understand the official framing
+2. **Search foundry-docs MCP** (`docs/` canonical) to see the current synced version
+3. Only make changes that **improve** on both sources:
+   - Better code examples (multi-language `<CodeGroup>`, copy-paste ready)
+   - Clearer structure (Diátaxis-aligned, better headings)
+   - Reduced verbosity while preserving completeness
+   - Additional context (prerequisites, troubleshooting)
+4. **Skip** files where the canonical version is already optimal — don't change for the sake of change
+5. In the PR description, include a brief note for each file: what was improved and why it's better than the canonical version
 
 ## Step 5: Identify Gaps and Update Documentation
 

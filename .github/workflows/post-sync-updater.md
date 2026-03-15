@@ -32,6 +32,7 @@ imports:
   - shared/reporting.md
   - shared/mcp/mintlify-docs.md
   - shared/mcp/foundry-docs.md
+  - shared/mcp/ms-learn.md
 
 tools:
   cache-memory: true
@@ -46,7 +47,8 @@ tools:
     - "grep *"
     - "cat *"
     - "git log --oneline -20"
-    - "git diff --stat HEAD~1"
+    - "git diff *"
+    - "git rev-parse *"
     - "git show --stat HEAD"
 
 safe-outputs:
@@ -80,22 +82,31 @@ If this was triggered by a `workflow_run` event, check the parent workflow's con
 - If the conclusion is NOT `success` (e.g., `failure`, `cancelled`), immediately call `noop` with message: "Parent workflow did not succeed (conclusion: [conclusion]). Skipping."
 - If triggered by `workflow_dispatch` (manual), skip this check and proceed normally.
 
+## Step 0B: Load Last Processed Commit
+
+```bash
+LAST_SHA=$(cat /tmp/gh-aw/cache-memory/post-sync-last-sha.txt 2>/dev/null || echo "HEAD~1")
+echo "Diffing from $LAST_SHA to HEAD"
+```
+
+Use `$LAST_SHA` instead of `HEAD~1` in all git diff commands.
+
 ## Step 1: Analyze What Changed
 
 Check the most recent sync commit to understand what upstream changes arrived:
 
 ```bash
 git log --oneline -5
-git diff --stat HEAD~1
+git diff --stat $LAST_SHA HEAD
 ```
 
 List files that changed in `docs/`:
 
 ```bash
-git show --stat HEAD | grep 'docs/' | head -30
+git diff --name-only $LAST_SHA HEAD -- docs/ | head -30
 ```
 
-If no `docs/` files changed in the last commit, call `noop` — the sync had no upstream changes.
+If no `docs/` files changed since `$LAST_SHA`, call `noop` — the sync had no upstream changes.
 
 ## Step 2: Identify Impacted docs-vnext Files
 
@@ -104,16 +115,46 @@ For each changed file in `docs/`, determine:
 2. Has the `docs-vnext/` version been customized (differs from the old `docs/` version)?
 3. What type of change occurred: new content, updated content, or structural change?
 
+### docs-vnext Information Architecture Mapping
+
+The `docs/` canonical directory uses a flat structure from upstream. `docs-vnext/` reorganizes content for better discoverability:
+
+| docs/ path | docs-vnext/ path | Notes |
+|-----------|-----------------|-------|
+| `agent-service/*.mdx` | `agents/development/*.mdx` OR `agents/tools/*.mdx` | Agent content split by type |
+| `foundry-models/*.mdx` | `models/capabilities/*.mdx` OR `models/catalog/*.mdx` OR `models/fine-tuning/*.mdx` | Model content split by category |
+| All other paths | Same relative path | Direct 1:1 mapping |
+
+When checking for missing files, search ALL possible vnext locations before reporting a file as missing.
+
 ```bash
-for f in $(git show --stat HEAD -- docs/ | grep '\.mdx' | awk '{print $1}' | sed 's|docs/||'); do
+for f in $(git diff --name-only $LAST_SHA HEAD -- docs/ | grep '\.mdx$' | sed 's|^docs/||'); do
+  # Check direct path first
   if [ -f "docs-vnext/$f" ]; then
     if ! diff -q "docs/$f" "docs-vnext/$f" > /dev/null 2>&1; then
-      echo "CUSTOMIZED: $f (docs-vnext differs from synced docs)"
+      echo "CUSTOMIZED: $f (docs-vnext differs)"
     else
-      echo "IDENTICAL: $f (no customizations)"
+      echo "IDENTICAL: $f"
+    fi
+  # Check agent-service → agents/ mapping
+  elif echo "$f" | grep -q '^agent-service/'; then
+    base=$(basename "$f")
+    if [ -f "docs-vnext/agents/development/$base" ] || [ -f "docs-vnext/agents/tools/$base" ]; then
+      echo "MAPPED: $f → agents/ (restructured)"
+    else
+      echo "MISSING: $f (not in docs-vnext/agents/)"
+    fi
+  # Check foundry-models → models/ mapping
+  elif echo "$f" | grep -q '^foundry-models/'; then
+    base=$(basename "$f")
+    found=$(find docs-vnext/models/ -name "$base" 2>/dev/null | head -1)
+    if [ -n "$found" ]; then
+      echo "MAPPED: $f → $found (restructured)"
+    else
+      echo "MISSING: $f (not in docs-vnext/models/)"
     fi
   else
-    echo "MISSING: $f (exists in docs/ but not docs-vnext/)"
+    echo "MISSING: $f (no docs-vnext counterpart)"
   fi
 done
 ```
@@ -138,6 +179,21 @@ For each impacted file, determine the appropriate action:
 - Carefully merge upstream changes into the customized version
 - Preserve agent improvements (unbloating, better examples, added context)
 - Incorporate new upstream content (new sections, updated APIs)
+
+## Step 4B: Quality Comparison
+
+For each file you're about to add or modify, verify the change improves on the canonical source:
+
+1. Search the same topic on **Microsoft Learn MCP** to read the canonical version
+2. Compare your proposed docs-vnext content against the MS Learn version
+3. Only proceed if the change provides:
+   - Better code examples (multi-language, copy-paste ready)
+   - Improved structure (clearer headings, better flow)
+   - Additional context (prerequisites, troubleshooting, related links)
+   - Reduced verbosity while preserving completeness
+4. If the canonical version is already better, skip the file — don't regress
+
+Include a brief comparison note in the PR description for each file changed.
 
 ## Step 5: Verify MDX Syntax
 
@@ -165,3 +221,9 @@ If no changes needed:
 - **Preserve customizations**: Agent-improved content in docs-vnext/ should be kept
 - **Be minimal**: Only update what the sync actually changed
 - **Be fast**: This runs after every sync, so stay within the timeout
+
+## Step 7: Update Cache
+
+```bash
+echo "$(git rev-parse HEAD)" > /tmp/gh-aw/cache-memory/post-sync-last-sha.txt
+```
