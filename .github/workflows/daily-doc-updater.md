@@ -16,8 +16,6 @@ permissions:
 tracker-id: daily-doc-updater
 engine: copilot
 strict: true
-features:
-  copilot-requests: true
 timeout-minutes: 15
 concurrency:
   group: "gh-aw-${{ github.workflow }}"

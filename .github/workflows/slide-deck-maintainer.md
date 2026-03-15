@@ -16,8 +16,6 @@ permissions:
   issues: read
 tracker-id: slide-deck-maintainer
 engine: copilot
-features:
-  copilot-requests: true
 concurrency:
   group: "gh-aw-${{ github.workflow }}"
   cancel-in-progress: true

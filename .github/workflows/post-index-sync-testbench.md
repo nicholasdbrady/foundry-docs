@@ -15,8 +15,6 @@ permissions:
 
 engine: copilot
 strict: true
-features:
-  copilot-requests: true
 tracker-id: post-index-testbench
 
 network:

@@ -24,8 +24,6 @@ safe-outputs:
   noop:
 
 engine: copilot
-features:
-  copilot-requests: true
 concurrency:
   group: "gh-aw-${{ github.workflow }}"
   cancel-in-progress: true

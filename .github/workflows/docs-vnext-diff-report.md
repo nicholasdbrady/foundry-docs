@@ -14,8 +14,6 @@ permissions:
 tracker-id: docs-vnext-diff-report
 engine: copilot
 strict: true
-features:
-  copilot-requests: true
 concurrency:
   group: "gh-aw-${{ github.workflow }}"
   cancel-in-progress: true
