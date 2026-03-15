@@ -16,6 +16,10 @@ permissions:
 engine: copilot
 strict: true
 tracker-id: post-sync-updater
+timeout-minutes: 15
+concurrency:
+  group: "gh-aw-${{ github.workflow }}"
+  cancel-in-progress: true
 
 network:
   allowed:
@@ -55,7 +59,6 @@ safe-outputs:
     auto-merge: true
   noop:
 
-timeout-minutes: 30
 ---
 
 # Post-Sync Documentation Updater

@@ -47,6 +47,9 @@ imports:
   - shared/mood.md
 
 timeout-minutes: 10
+concurrency:
+  group: "gh-aw-${{ github.workflow }}"
+  cancel-in-progress: true
 ---
 
 # Search Testbench Runner

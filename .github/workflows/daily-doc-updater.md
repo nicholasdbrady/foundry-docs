@@ -16,6 +16,7 @@ permissions:
 tracker-id: daily-doc-updater
 engine: copilot
 strict: true
+timeout-minutes: 15
 concurrency:
   group: "gh-aw-${{ github.workflow }}"
   cancel-in-progress: true
@@ -52,8 +53,6 @@ tools:
     - "cat *"
     - "diff *"
     - "git"
-
-timeout-minutes: 45
 
 imports:
   - shared/mood.md

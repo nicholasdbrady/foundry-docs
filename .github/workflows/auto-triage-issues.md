@@ -40,7 +40,10 @@ network:
 imports:
   - shared/mood.md
 
-timeout-minutes: 5
+timeout-minutes: 10
+concurrency:
+  group: "gh-aw-${{ github.workflow }}"
+  cancel-in-progress: true
 ---
 
 # Auto-Triage Issues

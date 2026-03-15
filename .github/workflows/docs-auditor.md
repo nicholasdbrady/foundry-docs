@@ -38,6 +38,9 @@ safe-outputs:
     expires: 14d
   noop:
 timeout-minutes: 25
+concurrency:
+  group: "gh-aw-${{ github.workflow }}"
+  cancel-in-progress: true
 imports:
   - shared/mood.md
   - shared/reporting.md

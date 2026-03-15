@@ -46,7 +46,10 @@ safe-outputs:
     max: 1
   noop:
 
-timeout-minutes: 15
+timeout-minutes: 10
+concurrency:
+  group: "gh-aw-${{ github.workflow }}"
+  cancel-in-progress: true
 ---
 
 # On-Demand Documentation Audit

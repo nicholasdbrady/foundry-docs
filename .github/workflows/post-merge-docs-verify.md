@@ -43,7 +43,10 @@ safe-outputs:
     expires: 7d
   noop:
 
-timeout-minutes: 15
+timeout-minutes: 10
+concurrency:
+  group: "gh-aw-${{ github.workflow }}"
+  cancel-in-progress: true
 ---
 
 # Post-Merge Documentation Verification

@@ -17,6 +17,7 @@ permissions:
 strict: true
 
 engine: copilot
+timeout-minutes: 15
 concurrency:
   group: "gh-aw-${{ github.workflow }}"
   cancel-in-progress: true
@@ -65,7 +66,6 @@ safe-outputs:
     run-success: "🗜️ Docs on a diet! [{workflow_name}]({run_url}) has removed the bloat. Lean and mean! 💪"
     run-failure: "📦 Unbloating paused! [{workflow_name}]({run_url}) {status}. The docs remain... fluffy."
 
-timeout-minutes: 30
 ---
 
 # Documentation Unbloat Workflow

@@ -16,6 +16,9 @@ permissions:
 
 engine: copilot
 strict: true
+concurrency:
+  group: "gh-aw-${{ github.workflow }}"
+  cancel-in-progress: true
 tracker-id: sdk-release-monitor
 
 tools:

@@ -2,7 +2,7 @@
 name: Upstream Docs Monitor
 description: Monitors azure-ai-docs-pr for changes to Foundry documentation and triggers sync when detected
 on:
-  schedule: every 8h
+  schedule: every 12h
   workflow_dispatch:
 
 permissions:
@@ -12,6 +12,9 @@ permissions:
 
 engine: copilot
 strict: true
+concurrency:
+  group: "gh-aw-${{ github.workflow }}"
+  cancel-in-progress: true
 tracker-id: docs-upstream-monitor
 
 tools:

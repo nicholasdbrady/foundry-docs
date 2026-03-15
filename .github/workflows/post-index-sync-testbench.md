@@ -44,7 +44,10 @@ imports:
   - shared/mood.md
   - shared/reporting.md
 
-timeout-minutes: 15
+timeout-minutes: 10
+concurrency:
+  group: "gh-aw-${{ github.workflow }}"
+  cancel-in-progress: true
 ---
 
 # Post-Index Search Quality Check

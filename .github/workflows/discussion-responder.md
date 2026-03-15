@@ -42,6 +42,9 @@ safe-outputs:
   noop:
 
 timeout-minutes: 10
+concurrency:
+  group: "gh-aw-${{ github.workflow }}"
+  cancel-in-progress: true
 ---
 
 # Discussion Feedback Responder

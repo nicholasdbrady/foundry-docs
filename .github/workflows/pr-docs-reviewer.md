@@ -44,7 +44,10 @@ safe-outputs:
     max: 3
   noop:
 
-timeout-minutes: 15
+timeout-minutes: 10
+concurrency:
+  group: "gh-aw-${{ github.workflow }}"
+  cancel-in-progress: true
 ---
 
 # PR Documentation Reviewer

@@ -24,6 +24,9 @@ safe-outputs:
   noop:
 
 engine: copilot
+concurrency:
+  group: "gh-aw-${{ github.workflow }}"
+  cancel-in-progress: true
 timeout-minutes: 10
 ---
 

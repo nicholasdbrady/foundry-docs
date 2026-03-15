@@ -48,7 +48,10 @@ safe-outputs:
     max: 1
   noop:
 
-timeout-minutes: 30
+timeout-minutes: 10
+concurrency:
+  group: "gh-aw-${{ github.workflow }}"
+  cancel-in-progress: true
 ---
 
 # Label-Ops Documentation Fixer

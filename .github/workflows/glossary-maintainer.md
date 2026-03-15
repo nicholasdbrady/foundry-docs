@@ -14,6 +14,7 @@ permissions:
   actions: read
 
 engine: copilot
+timeout-minutes: 15
 concurrency:
   group: "gh-aw-${{ github.workflow }}"
   cancel-in-progress: true
@@ -53,7 +54,6 @@ tools:
     - "cat *"
     - "mkdir *"
 
-timeout-minutes: 20
 ---
 
 # Glossary Maintainer
