@@ -531,6 +531,9 @@ def rewrite_links(content: str, source_path: str) -> str:
         text = match.group(1)
         href = match.group(2)
 
+        # Normalize backslash separators from upstream Windows paths
+        href = href.replace('\\', '/')
+
         # Strip query params
         clean_href = re.sub(r'\?.*$', '', href)
 
@@ -538,22 +541,39 @@ def rewrite_links(content: str, source_path: str) -> str:
         if clean_href.startswith("http://") or clean_href.startswith("https://"):
             return f"[{text}]({href})"
 
+        # Empty links — keep text, drop the link
+        if not clean_href or clean_href == "#":
+            return text if text else match.group(0)
+
         # Absolute /azure/... paths → learn.microsoft.com URLs
         if clean_href.startswith("/azure/") or clean_href.startswith("/rest/") or clean_href.startswith("/dotnet/") or clean_href.startswith("/python/") or clean_href.startswith("/javascript/") or clean_href.startswith("/cli/") or clean_href.startswith("/java/"):
             return f"[{text}](https://learn.microsoft.com{clean_href})"
 
-        # Relative .md links → try to map to output path
-        if clean_href.endswith(".md") or ".md#" in href:
-            anchor = ""
-            path_part = clean_href
-            if "#" in clean_href:
-                path_part, anchor = clean_href.split("#", 1)
-                anchor = f"#{anchor}"
+        # Extract anchor if present
+        anchor = ""
+        path_part = clean_href
+        if "#" in clean_href:
+            path_part, anchor = clean_href.split("#", 1)
+            anchor = f"#{anchor}"
 
+        # Relative .md links → try to map to output path
+        if path_part.endswith(".md"):
             resolved = resolve_include_path(path_part, source_path)
             if resolved and resolved in SOURCE_TO_OUTPUT:
                 output = SOURCE_TO_OUTPUT[resolved]
                 return f"[{text}](/{output}{anchor})"
+
+            # Unresolved cross-repo paths → externalize to learn.microsoft.com
+            # Matches: ../../foundry-classic/..., ../../../foundry-classic/...
+            cross_repo = re.match(r'^(?:\.\./)+(?:foundry-classic|ai-foundry|foundry)/(.*?)\.md$', path_part)
+            if cross_repo:
+                relative = cross_repo.group(1)
+                repo_prefix = "foundry-classic" if "foundry-classic" in path_part else ("ai-foundry" if "ai-foundry" in path_part else "foundry")
+                return f"[{text}](https://learn.microsoft.com/en-us/azure/{repo_prefix}/{relative}{anchor})"
+
+            # Any other unresolved .md link — strip extension for Mintlify
+            stripped = re.sub(r'\.md$', '', path_part)
+            return f"[{text}]({stripped}{anchor})"
 
         return f"[{text}]({clean_href})"
 
