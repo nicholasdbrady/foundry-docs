@@ -12,6 +12,8 @@ permissions:
 tracker-id: docs-auditor-weekly
 engine: copilot
 strict: true
+features:
+  copilot-requests: true
 network:
   allowed:
     - defaults

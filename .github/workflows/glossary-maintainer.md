@@ -14,6 +14,8 @@ permissions:
   actions: read
 
 engine: copilot
+features:
+  copilot-requests: true
 timeout-minutes: 15
 concurrency:
   group: "gh-aw-${{ github.workflow }}"

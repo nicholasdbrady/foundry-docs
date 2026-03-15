@@ -15,6 +15,8 @@ permissions:
 
 engine: copilot
 strict: true
+features:
+  copilot-requests: true
 tracker-id: audit-file
 
 network:

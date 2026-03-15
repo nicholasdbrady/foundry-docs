@@ -14,6 +14,8 @@ permissions:
 
 engine: copilot
 strict: true
+features:
+  copilot-requests: true
 tracker-id: discussion-responder
 
 network:

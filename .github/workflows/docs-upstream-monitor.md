@@ -12,6 +12,8 @@ permissions:
 
 engine: copilot
 strict: true
+features:
+  copilot-requests: true
 concurrency:
   group: "gh-aw-${{ github.workflow }}"
   cancel-in-progress: true

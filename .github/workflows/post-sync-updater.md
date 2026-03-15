@@ -15,6 +15,8 @@ permissions:
 
 engine: copilot
 strict: true
+features:
+  copilot-requests: true
 tracker-id: post-sync-updater
 timeout-minutes: 15
 concurrency:

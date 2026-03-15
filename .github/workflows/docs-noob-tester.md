@@ -11,6 +11,8 @@ permissions:
   issues: read
   pull-requests: read
 engine: copilot
+features:
+  copilot-requests: true
 concurrency:
   group: "gh-aw-${{ github.workflow }}"
   cancel-in-progress: true

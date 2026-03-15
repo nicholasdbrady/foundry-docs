@@ -16,6 +16,8 @@ permissions:
 
 engine: copilot
 strict: true
+features:
+  copilot-requests: true
 tracker-id: post-merge-docs-verify
 
 network:
