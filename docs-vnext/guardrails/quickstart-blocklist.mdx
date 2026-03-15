@@ -10,11 +10,6 @@ Get started using Azure AI Content Safety to create a custom text blocklist and 
 The sample data and code may contain offensive content. User discretion is advised.
 </Danger>
 
-## Prerequisites
-
-- An Azure account. If you don't have one, you can [create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
-- An [Azure AI resource](https://ms.portal.azure.com/#view/Microsoft_Azure_ProjectOxford/CognitiveServicesHub/~/AIServices). 
-
 ## Setup
 
 Follow these steps to use the Content Safety **try it out** page: 
@@ -43,7 +38,7 @@ The **Use blocklist** tab lets you create, edit, and add a blocklist to the mode
 
 ## Create a blocklist 
 
-The following section walks through a sample request with cURL. Paste the command below into a text editor, and make the following changes.
+Replace the placeholders in the following command before running it:
 
 1. Replace `<endpoint>` with the endpoint URL associated with your resource.
 1. Replace `<your_subscription_key>` with one of the keys that come with your resource.
@@ -54,12 +49,6 @@ The following section walks through a sample request with cURL. Paste the comman
 curl --location --request PATCH '<endpoint>/contentsafety/text/blocklists/<your_blocklist_name>?api-version=2024-09-01' --header 'Ocp-Apim-Subscription-Key: <your_subscription_key>' --header 'Content-Type: application/json' --data-raw '{"description": "This is a violence list"}'
 ```
 
-The below fields must be included in the url:
-
-| Name      |Required  |  Description | Type   |
-| :------- |-------- |:--------------- | ------ |
-| **API Version** |Required |This is the API version to be checked. The current version is: api-version=2024-09-01. Example: `<endpoint>/contentsafety/text:analyze?api-version=2024-09-01` | String |
-
 See the following sample request body:
 
 ```json
@@ -67,8 +56,6 @@ See the following sample request body:
   "description": "Test Blocklist"
 }
 ```
-
-Open a command prompt window, paste in the edited cURL command, and run it.
 
 ### Output
 
@@ -83,7 +70,7 @@ You should see the results displayed as JSON data in the console output. For exa
 
 ## Add items to a blocklist 
 
-The following section walks through a sample request with cURL. Paste the command below into a text editor, and make the following changes.
+Replace the placeholders in the following command before running it:
 
 1. Replace `<endpoint>` with the endpoint URL associated with your resource.
 1. Replace `<your_subscription_key>` with one of the keys that come with your resource.
@@ -93,12 +80,6 @@ The following section walks through a sample request with cURL. Paste the comman
 ```shell
 curl --request POST <endpoint>/contentsafety/text/blocklists/<your_blocklist_name>:addOrUpdateBlocklistItems?api-version=2024-09-01 --header 'Ocp-Apim-Subscription-Key: <your_subscription_key>' --header 'Content-Type: application/json' --data-raw '{"blocklistItems": [{"description": "string", "text": "bleed"}]}'
 ```
-
-The below fields must be included in the url:
-
-| Name      |Required  |  Description | Type   |
-| :------- |-------- |:--------------- | ------ |
-| **API Version** |Required |This is the API version to be checked. The current version is: api-version=2024-09-01. Example: `<endpoint>/contentsafety/text:analyze?api-version=2024-09-01` | String |
 
 See the following sample request body:
 
@@ -117,8 +98,6 @@ See the following sample request body:
   ]
 }
 ```
-
-Open a command prompt window, paste in the edited cURL command, and run it.
 
 ### Output
 
@@ -149,7 +128,7 @@ You should see the results displayed as JSON data in the console output. For exa
 After you edit a blocklist, it can take a few minutes before text analysis reflects the changes. If you don't see matches right away, retry the analyze call after a short delay.
 </Note>
 
-The following section walks through a sample request with cURL. Paste the command below into a text editor, and make the following changes.
+Replace the placeholders in the following command before running it:
 
 1. Replace `<endpoint>` with the endpoint URL associated with your resource.
 1. Replace `<your_subscription_key>` with one of the keys that come with your resource.
@@ -184,8 +163,6 @@ See the following sample request body:
   "outputType": "FourSeverityLevels"
 }
 ```
-
-Open a command prompt window, paste in the edited cURL command, and run it.
 
 ### Output
 
@@ -258,16 +235,6 @@ Create a new C# application.
     dotnet build
     ```
 
-    The build output should contain no warnings or errors. 
-
-    ```console
-    ...
-    Build succeeded.
-      0 Warning(s)
-      0 Error(s)
-    ...
-    ```
-
     ### Install the client SDK
 
     Within the application directory, install the Azure AI Content Safety client SDK for .NET with the following command:
@@ -281,41 +248,21 @@ Create a new C# application.
 
 ## Create environment variables 
 
-In this example, you'll write your credentials to environment variables on the local machine running the application.
+Set these environment variables using your resource's key and endpoint:
 
-To set the environment variable for your key and endpoint, open a console window and follow the instructions for your operating system and development environment.
+<CodeGroup>
+```console Windows
+setx CONTENT_SAFETY_KEY 'YOUR_CONTENT_SAFETY_KEY'
+setx CONTENT_SAFETY_ENDPOINT 'YOUR_CONTENT_SAFETY_ENDPOINT'
+```
 
-- To set the `CONTENT_SAFETY_KEY` environment variable, replace `YOUR_CONTENT_SAFETY_KEY` with one of the keys for your resource.
-- To set the `CONTENT_SAFETY_ENDPOINT` environment variable, replace `YOUR_CONTENT_SAFETY_ENDPOINT` with the endpoint for your resource.
+```bash Linux
+export CONTENT_SAFETY_KEY='YOUR_CONTENT_SAFETY_KEY'
+export CONTENT_SAFETY_ENDPOINT='YOUR_CONTENT_SAFETY_ENDPOINT'
+```
+</CodeGroup>
 
-<Tabs>
-  <Tab title="Windows">
-
-    ```console
-    setx CONTENT_SAFETY_KEY 'YOUR_CONTENT_SAFETY_KEY'
-    ```
-
-    ```console
-    setx CONTENT_SAFETY_ENDPOINT 'YOUR_CONTENT_SAFETY_ENDPOINT'
-    ```
-
-    After you add the environment variables, you might need to restart any running programs that will read the environment variables, including the console window.
-
-  </Tab>
-  <Tab title="Linux">
-
-    ```bash
-    export CONTENT_SAFETY_KEY='YOUR_CONTENT_SAFETY_KEY'
-    ```
-
-    ```bash
-    export CONTENT_SAFETY_ENDPOINT='YOUR_CONTENT_SAFETY_ENDPOINT'
-    ```
-
-    After you add the environment variables, run `source ~/.bashrc` from your console window to make the changes effective.
-
-  </Tab>
-</Tabs>
+On Windows, restart any programs that need to read the updated environment. On Linux, run `source ~/.bashrc` to apply changes.
 
 ## Create and use a blocklist
 
@@ -479,41 +426,21 @@ dependencies {
 
 ## Create environment variables 
 
-In this example, you'll write your credentials to environment variables on the local machine running the application.
+Set these environment variables using your resource's key and endpoint:
 
-To set the environment variable for your key and endpoint, open a console window and follow the instructions for your operating system and development environment.
+<CodeGroup>
+```console Windows
+setx CONTENT_SAFETY_KEY 'YOUR_CONTENT_SAFETY_KEY'
+setx CONTENT_SAFETY_ENDPOINT 'YOUR_CONTENT_SAFETY_ENDPOINT'
+```
 
-- To set the `CONTENT_SAFETY_KEY` environment variable, replace `YOUR_CONTENT_SAFETY_KEY` with one of the keys for your resource.
-- To set the `CONTENT_SAFETY_ENDPOINT` environment variable, replace `YOUR_CONTENT_SAFETY_ENDPOINT` with the endpoint for your resource.
+```bash Linux
+export CONTENT_SAFETY_KEY='YOUR_CONTENT_SAFETY_KEY'
+export CONTENT_SAFETY_ENDPOINT='YOUR_CONTENT_SAFETY_ENDPOINT'
+```
+</CodeGroup>
 
-<Tabs>
-  <Tab title="Windows">
-
-    ```console
-    setx CONTENT_SAFETY_KEY 'YOUR_CONTENT_SAFETY_KEY'
-    ```
-
-    ```console
-    setx CONTENT_SAFETY_ENDPOINT 'YOUR_CONTENT_SAFETY_ENDPOINT'
-    ```
-
-    After you add the environment variables, you might need to restart any running programs that will read the environment variables, including the console window.
-
-  </Tab>
-  <Tab title="Linux">
-
-    ```bash
-    export CONTENT_SAFETY_KEY='YOUR_CONTENT_SAFETY_KEY'
-    ```
-
-    ```bash
-    export CONTENT_SAFETY_ENDPOINT='YOUR_CONTENT_SAFETY_ENDPOINT'
-    ```
-
-    After you add the environment variables, run `source ~/.bashrc` from your console window to make the changes effective.
-
-  </Tab>
-</Tabs>
+On Windows, restart any programs that need to read the updated environment. On Linux, run `source ~/.bashrc` to apply changes.
 
 ## Create and use a blocklist
 
@@ -654,45 +581,23 @@ BlocklistName: ProductSaleBlocklist, BlockItemId: 6155969c-1589-4c27-8cb0-617589
 
 ## Create environment variables 
 
-In this example, you'll write your credentials to environment variables on the local machine running the application.
+Set these environment variables using your resource's key and endpoint:
 
-To set the environment variable for your key and endpoint, open a console window and follow the instructions for your operating system and development environment.
+<CodeGroup>
+```console Windows
+setx CONTENT_SAFETY_KEY 'YOUR_CONTENT_SAFETY_KEY'
+setx CONTENT_SAFETY_ENDPOINT 'YOUR_CONTENT_SAFETY_ENDPOINT'
+```
 
-- To set the `CONTENT_SAFETY_KEY` environment variable, replace `YOUR_CONTENT_SAFETY_KEY` with one of the keys for your resource.
-- To set the `CONTENT_SAFETY_ENDPOINT` environment variable, replace `YOUR_CONTENT_SAFETY_ENDPOINT` with the endpoint for your resource.
+```bash Linux
+export CONTENT_SAFETY_KEY='YOUR_CONTENT_SAFETY_KEY'
+export CONTENT_SAFETY_ENDPOINT='YOUR_CONTENT_SAFETY_ENDPOINT'
+```
+</CodeGroup>
 
-<Tabs>
-  <Tab title="Windows">
-
-    ```console
-    setx CONTENT_SAFETY_KEY 'YOUR_CONTENT_SAFETY_KEY'
-    ```
-
-    ```console
-    setx CONTENT_SAFETY_ENDPOINT 'YOUR_CONTENT_SAFETY_ENDPOINT'
-    ```
-
-    After you add the environment variables, you might need to restart any running programs that will read the environment variables, including the console window.
-
-  </Tab>
-  <Tab title="Linux">
-
-    ```bash
-    export CONTENT_SAFETY_KEY='YOUR_CONTENT_SAFETY_KEY'
-    ```
-
-    ```bash
-    export CONTENT_SAFETY_ENDPOINT='YOUR_CONTENT_SAFETY_ENDPOINT'
-    ```
-
-    After you add the environment variables, run `source ~/.bashrc` from your console window to make the changes effective.
-
-  </Tab>
-</Tabs>
+On Windows, restart any programs that need to read the updated environment. On Linux, run `source ~/.bashrc` to apply changes.
 
 ## Create and use a blocklist
-
-The code in this section creates a new blocklist, adds items to it, and then analyzes a text string against the blocklist.
 
 1. Open a command prompt, navigate to your project folder, and create a new file named *quickstart.py*.
 1. Run this command to install the Azure AI Content Safety library:
@@ -846,41 +751,21 @@ Your app's `package.json` file will be updated with the dependencies.
 
 ## Create environment variables 
 
-In this example, you'll write your credentials to environment variables on the local machine running the application.
+Set these environment variables using your resource's key and endpoint:
 
-To set the environment variable for your key and endpoint, open a console window and follow the instructions for your operating system and development environment.
+<CodeGroup>
+```console Windows
+setx CONTENT_SAFETY_KEY 'YOUR_CONTENT_SAFETY_KEY'
+setx CONTENT_SAFETY_ENDPOINT 'YOUR_CONTENT_SAFETY_ENDPOINT'
+```
 
-- To set the `CONTENT_SAFETY_KEY` environment variable, replace `YOUR_CONTENT_SAFETY_KEY` with one of the keys for your resource.
-- To set the `CONTENT_SAFETY_ENDPOINT` environment variable, replace `YOUR_CONTENT_SAFETY_ENDPOINT` with the endpoint for your resource.
+```bash Linux
+export CONTENT_SAFETY_KEY='YOUR_CONTENT_SAFETY_KEY'
+export CONTENT_SAFETY_ENDPOINT='YOUR_CONTENT_SAFETY_ENDPOINT'
+```
+</CodeGroup>
 
-<Tabs>
-  <Tab title="Windows">
-
-    ```console
-    setx CONTENT_SAFETY_KEY 'YOUR_CONTENT_SAFETY_KEY'
-    ```
-
-    ```console
-    setx CONTENT_SAFETY_ENDPOINT 'YOUR_CONTENT_SAFETY_ENDPOINT'
-    ```
-
-    After you add the environment variables, you might need to restart any running programs that will read the environment variables, including the console window.
-
-  </Tab>
-  <Tab title="Linux">
-
-    ```bash
-    export CONTENT_SAFETY_KEY='YOUR_CONTENT_SAFETY_KEY'
-    ```
-
-    ```bash
-    export CONTENT_SAFETY_ENDPOINT='YOUR_CONTENT_SAFETY_ENDPOINT'
-    ```
-
-    After you add the environment variables, run `source ~/.bashrc` from your console window to make the changes effective.
-
-  </Tab>
-</Tabs>
+On Windows, restart any programs that need to read the updated environment. On Linux, run `source ~/.bashrc` to apply changes.
 
 ## Create and use a blocklist
 
@@ -1063,41 +948,21 @@ node index.js
 
 ## Create environment variables 
 
-In this example, you'll write your credentials to environment variables on the local machine running the application.
+Set these environment variables using your resource's key and endpoint:
 
-To set the environment variable for your key and endpoint, open a console window and follow the instructions for your operating system and development environment.
+<CodeGroup>
+```console Windows
+setx CONTENT_SAFETY_KEY 'YOUR_CONTENT_SAFETY_KEY'
+setx CONTENT_SAFETY_ENDPOINT 'YOUR_CONTENT_SAFETY_ENDPOINT'
+```
 
-- To set the `CONTENT_SAFETY_KEY` environment variable, replace `YOUR_CONTENT_SAFETY_KEY` with one of the keys for your resource.
-- To set the `CONTENT_SAFETY_ENDPOINT` environment variable, replace `YOUR_CONTENT_SAFETY_ENDPOINT` with the endpoint for your resource.
+```bash Linux
+export CONTENT_SAFETY_KEY='YOUR_CONTENT_SAFETY_KEY'
+export CONTENT_SAFETY_ENDPOINT='YOUR_CONTENT_SAFETY_ENDPOINT'
+```
+</CodeGroup>
 
-<Tabs>
-  <Tab title="Windows">
-
-    ```console
-    setx CONTENT_SAFETY_KEY 'YOUR_CONTENT_SAFETY_KEY'
-    ```
-
-    ```console
-    setx CONTENT_SAFETY_ENDPOINT 'YOUR_CONTENT_SAFETY_ENDPOINT'
-    ```
-
-    After you add the environment variables, you might need to restart any running programs that will read the environment variables, including the console window.
-
-  </Tab>
-  <Tab title="Linux">
-
-    ```bash
-    export CONTENT_SAFETY_KEY='YOUR_CONTENT_SAFETY_KEY'
-    ```
-
-    ```bash
-    export CONTENT_SAFETY_ENDPOINT='YOUR_CONTENT_SAFETY_ENDPOINT'
-    ```
-
-    After you add the environment variables, run `source ~/.bashrc` from your console window to make the changes effective.
-
-  </Tab>
-</Tabs>
+On Windows, restart any programs that need to read the updated environment. On Linux, run `source ~/.bashrc` to apply changes.
 
 ## Create and use a blocklist
 
@@ -1288,14 +1153,6 @@ try {
   }
 }
 ```
-
-This code:
-
-- Creates a custom blocklist.
-- Adds prohibited terms to it.
-- Analyzes text against the blocklist.
-
-The TypeScript implementation provides strong typing for better development experience and error checking.
 
 ## Build and run the sample
 
