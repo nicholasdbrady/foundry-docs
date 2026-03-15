@@ -24,6 +24,8 @@ safe-outputs:
   noop:
 
 engine: copilot
+imports:
+  - shared/mcp/mintlify-docs.md
 concurrency:
   group: "gh-aw-${{ github.workflow }}"
   cancel-in-progress: true

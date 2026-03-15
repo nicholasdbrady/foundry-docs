@@ -46,6 +46,7 @@ steps:
     run: pip install "markitdown[pptx]"
 imports:
   - shared/mood.md
+  - shared/mcp/mintlify-docs.md
 ---
 
 # Slide Deck Maintenance Agent
