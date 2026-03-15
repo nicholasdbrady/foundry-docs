@@ -211,8 +211,16 @@ def compare_results(current: dict, baseline_path: str) -> int:
 
     Returns exit code 0 for improvement/inconclusive, 1 for regression.
     """
-    with open(baseline_path) as f:
-        baseline = json.load(f)
+    if not os.path.exists(baseline_path):
+        print(f"Error: Baseline file not found: {baseline_path}", file=sys.stderr)
+        return 2
+
+    try:
+        with open(baseline_path) as f:
+            baseline = json.load(f)
+    except json.JSONDecodeError as e:
+        print(f"Error: Invalid JSON in baseline file: {e}", file=sys.stderr)
+        return 2
 
     def _success_rates(data: dict) -> dict[str, dict[str, float]]:
         """Compute per-scenario, per-server success rates."""
