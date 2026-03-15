@@ -48,7 +48,7 @@ safe-outputs:
     max: 1
   noop:
 
-timeout-minutes: 10
+timeout-minutes: 15
 concurrency:
   group: "gh-aw-${{ github.workflow }}"
   cancel-in-progress: true

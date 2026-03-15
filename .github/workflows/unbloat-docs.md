@@ -17,7 +17,7 @@ permissions:
 strict: true
 
 engine: copilot
-timeout-minutes: 15
+timeout-minutes: 25
 concurrency:
   group: "gh-aw-${{ github.workflow }}"
   cancel-in-progress: true

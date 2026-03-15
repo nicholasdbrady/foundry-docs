@@ -31,7 +31,7 @@
 #     - shared/mood.md
 #     - shared/reporting.md
 #
-# gh-aw-metadata: {"schema_version":"v2","frontmatter_hash":"122befb39623319f1e8dfdea0286bac84a2915767d47a9ca8c9eaf5ba0f10c84","compiler_version":"v0.58.3","strict":true}
+# gh-aw-metadata: {"schema_version":"v2","frontmatter_hash":"3a3d47ece53a00a2b5a3de16ae9b2641796ef72030e97090ccbe01d236d2647e","compiler_version":"v0.58.3","strict":true}
 
 name: "Daily Documentation Updater"
 "on":
@@ -786,7 +786,7 @@ jobs:
         # --allow-tool shell(yq)
         # --allow-tool web_fetch
         # --allow-tool write
-        timeout-minutes: 15
+        timeout-minutes: 25
         run: |
           set -o pipefail
           touch /tmp/gh-aw/agent-step-summary.md
@@ -1163,7 +1163,7 @@ jobs:
           GH_AW_CODE_PUSH_FAILURE_COUNT: ${{ needs.safe_outputs.outputs.code_push_failure_count }}
           GH_AW_GROUP_REPORTS: "false"
           GH_AW_FAILURE_REPORT_AS_ISSUE: "true"
-          GH_AW_TIMEOUT_MINUTES: "15"
+          GH_AW_TIMEOUT_MINUTES: "25"
         with:
           github-token: ${{ secrets.GH_AW_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
           script: |

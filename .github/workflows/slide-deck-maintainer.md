@@ -19,7 +19,7 @@ engine: copilot
 concurrency:
   group: "gh-aw-${{ github.workflow }}"
   cancel-in-progress: true
-timeout-minutes: 20
+timeout-minutes: 30
 tools:
   cache-memory: true
   edit:
