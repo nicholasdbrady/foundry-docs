@@ -93,12 +93,12 @@ Check cache to avoid duplicate work:
 ## Step 3: Scan Recent Changes
 
 Look for:
-- New MCP tool names or server configurations
+- New Foundry service names, API surfaces, or SDK classes
 - New API parameters or endpoints
 - New Foundry-specific concepts (agents, models, evaluators)
 - Pipeline script changes introducing new terminology
 - Azure AI service terms (AI Search, AI Projects, embeddings)
-- Technical acronyms (MCP, RAG, RBAC, MDX, FastMCP)
+- Technical acronyms used in Foundry documentation (RAG, RBAC, MCP as a tool type)
 
 ## Step 4: Review Current Glossary
 
@@ -127,14 +127,16 @@ Create a list of:
 2. **Terms to update**: Existing terms with changed meaning
 3. **Terms to clarify**: Incomplete definitions
 
-**Foundry-specific terms to track**:
-- FastMCP, MCP (Model Context Protocol), MCP server
-- Azure AI Search, hybrid search, semantic reranking
-- RAG (Retrieval Augmented Generation), embeddings
-- Azure AI Projects, AI Foundry, Foundry client
-- Agent tools (Code Interpreter, File Search, Function Calling)
-- Evaluators, red teaming, observability
-- Mintlify MDX, docs pipeline, content chunking
+**Scoping rule — what belongs in the glossary:**
+
+Include terms that a **Microsoft Foundry user or developer** encounters when using the product, its SDKs, APIs, or integrated technologies:
+
+- ✅ **IN scope**: Foundry services (Agent Service, Foundry IQ), SDK classes (AIProjectClient), API concepts (Responses API, Conversations), agent tools (Code Interpreter, File Search), integrated protocols and frameworks used by Foundry (MCP as a tool type, Agent Framework for multi-agent orchestration, OpenTelemetry for tracing)
+- ❌ **OUT of scope**: This documentation project's build tooling — FastMCP (the Python library), Mintlify, gh-aw, agentic workflows, docs pipeline, content chunking, search indexing
+
+**The distinction**: "MCP" as a tool type that Foundry agents can use = IN scope. "FastMCP" as the Python library this docs server is built on = OUT of scope.
+
+**Do NOT add terms that only appear in this repository's infrastructure** (scripts/, foundry_docs_mcp/, .github/workflows/). Only add terms that appear in the product documentation that users read.
 
 ## Step 7: Update the Glossary
 
@@ -161,8 +163,8 @@ An AI-powered entity that can perform tasks autonomously using tools, models, an
 
 ## F
 
-### FastMCP
-A Python framework for building Model Context Protocol (MCP) servers. The foundry-docs MCP server is built on FastMCP.
+### Foundry Agent Service
+The managed agent infrastructure in Microsoft Foundry for creating, deploying, and operating AI agents.
 ```
 
 ## Step 8: Save Cache State
