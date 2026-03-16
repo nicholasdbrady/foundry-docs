@@ -52,6 +52,29 @@ The opt out feature is preview and may be subject to change/removal in the futur
 
 Yes, using the [quota request form](https://aka.ms/oai/stuquotarequest) you can always request more quota. If the request is approved, the current tier will remain the same, but with more quota assigned.  
 
+### How do I find available capacity across regions?
+
+When a deployment fails because capacity isn't available in your target region, check other regions for the same model:
+
+```bash
+{/* List all regions where a model is available and check capacity */}
+az cognitiveservices model list \
+  --location YOUR_REGION \
+  --query "[?model.name=='gpt-4.1'].{Model:model.name, Version:model.version, Deprecation:model.deprecation.fineTune}" \
+  --output table
+
+{/* Check your current quota usage in a specific region */}
+az cognitiveservices usage list \
+  --location YOUR_REGION \
+  --output table
+```
+
+<Note>
+Quota does not guarantee capacity. Even if your subscription has available TPM quota in a region, the physical capacity for that model might be temporarily exhausted. If you receive a capacity error, try deploying to a different region where the model is available.
+</Note>
+
+For a list of which models are available in which regions, see [Models sold directly by Azure](/models/catalog/models-sold-directly-by-azure).
+
 ### Quota tier reference
 
 <Tabs>

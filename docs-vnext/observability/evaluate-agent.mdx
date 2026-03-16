@@ -285,6 +285,53 @@ Each evaluation run returns output items per row in your test dataset, providing
 }
 ```
 
+## Create evaluation datasets from production traces
+
+Rather than manually writing test datasets, you can harvest real agent conversations from Application Insights traces to build evaluation datasets that reflect actual user interactions.
+
+### Query traces from Application Insights
+
+Use KQL to extract successful and failed agent conversations:
+
+```kusto
+customEvents
+| where name == "gen_ai.choice"
+| extend conversation_id = tostring(customDimensions["gen_ai.conversation.id"])
+| extend content = tostring(customDimensions["gen_ai.response.completion_tokens"])
+| project timestamp, conversation_id, content
+| order by timestamp desc
+| take 100
+```
+
+### Format traces as an evaluation dataset
+
+Convert the extracted conversations into JSONL format compatible with the evaluation SDK. Each line should contain the fields required by your chosen evaluators:
+
+```python
+import json
+
+# After extracting traces from App Insights
+traces = [...]  # your extracted trace data
+
+with open("eval-dataset-from-traces.jsonl", "w") as f:
+    for trace in traces:
+        record = {
+            "query": trace["user_input"],
+            "response": trace["agent_response"],
+            "context": trace.get("context", ""),
+        }
+        f.write(json.dumps(record) + "\n")
+```
+
+### Track regressions across versions
+
+Run evaluations on the same trace-derived dataset after each agent version update. Compare pass rates between versions to detect regressions:
+
+1. Save the dataset with a version label (for example, `eval-dataset-v3.jsonl`).
+1. Run evaluation against the current agent version.
+1. After deploying a new version, run the same evaluation again.
+1. [Compare runs](/observability/evaluate-results#compare-the-evaluation-results) to identify any quality degradation.
+
 ## Integrate into your workflow
 
 - **CI/CD pipeline**: Use evaluation as a quality gate in your deployment pipeline. For detailed integration, see [Run evaluations with GitHub Actions](/observability/evaluation-github-action).

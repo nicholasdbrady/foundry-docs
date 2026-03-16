@@ -253,6 +253,20 @@ You can also test agents in the agent playground UI in the Foundry portal.
 - **Missing capability host**: Create an account-level capability host before deploying. See [Deploy a hosted agent](/agents/development/deploy-hosted-agent#create-an-account-level-capability-host)
 - **Publishing identity mismatch**: After publishing, the agent uses a different identity. Reassign RBAC permissions
 
+### Environment variable security
+
+<Warning>
+Environment variables are visible in container log streams and in Azure portal deployment details. Never store secrets such as API keys, tokens, or connection strings directly in environment variables.
+</Warning>
+
+Instead of embedding secrets in environment variables:
+
+1. Use [managed identities](/agents/development/agent-identity) to authenticate to Azure services without credentials.
+1. Store secrets in Azure Key Vault and connect them through a [Key Vault connection](/security/set-up-key-vault-connection).
+1. Use Foundry [connections](https://learn.microsoft.com/azure/ai-foundry/concepts/connections) to securely reference external service credentials.
+
+If you suspect that secrets were exposed through environment variables, rotate the affected credentials immediately and redeploy the agent with the secrets removed from the environment variable configuration.
+
 ## Next steps
 
 <Card title="Publish and share agents" icon="arrow-right" href="publish-agent.md" />

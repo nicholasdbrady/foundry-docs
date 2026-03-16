@@ -154,6 +154,50 @@ After you create the rule, it appears in the **Alert rules** list. The rule beco
 
 For application-layer observability, see [Monitor your generative AI applications (preview)](https://learn.microsoft.com/en-us/azure/foundry-classic/how-to/monitor-applications).
 
+### Common troubleshooting queries
+
+Use the following KQL queries to diagnose common production issues:
+
+**Find failed agent runs and their error details:**
+
+```kusto
+AzureMetrics
+| where MetricName == "AgentRuns"
+| extend RunStatus = tostring(parse_json(Tags).RunStatus)
+| where RunStatus == "Failed"
+| summarize FailedRuns = sum(Total) by bin(TimeGenerated, 1h), RunStatus
+| order by TimeGenerated desc
+```
+
+**Measure P95 and P99 response latency:**
+
+```kusto
+AzureMetrics
+| where MetricName == "AgentRunDuration"
+| summarize P95 = percentile(Average, 95), P99 = percentile(Average, 99) by bin(TimeGenerated, 1h)
+| order by TimeGenerated desc
+```
+
+**Detect rate limiting (HTTP 429 responses):**
+
+```kusto
+AzureMetrics
+| where MetricName == "AgentRuns"
+| extend StatusCode = tostring(parse_json(Tags).StatusCode)
+| where StatusCode == "429"
+| summarize ThrottledRequests = sum(Total) by bin(TimeGenerated, 15m)
+| order by TimeGenerated desc
+```
+
+**Token consumption by model deployment:**
+
+```kusto
+AzureMetrics
+| where MetricName in ("ProcessedPromptTokens", "GeneratedCompletionTokens")
+| summarize TotalTokens = sum(Total) by MetricName, bin(TimeGenerated, 1h)
+| order by TimeGenerated desc
+```
+
 ## Troubleshooting
 
 ### No data appears in Metrics Explorer

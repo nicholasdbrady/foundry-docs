@@ -102,7 +102,39 @@ For more information, see the [pricing page](https://azure.microsoft.com/pricing
 
 No. All [quotas](https://learn.microsoft.com/en-us/azure/foundry-classic/agents/quotas-limits) apply to using models with Foundry Agent Service.
 
+## Agent behavior and versioning
+
+### Are agent versions immutable?
+
+Yes. Once you create an agent version, you cannot modify it. To change an agent's instructions, tools, or configuration, create a new version. This design enables safe rollbacks — if a new version underperforms, you can revert to a previous version without risk of unintended changes.
+
+### Do guardrails apply to all agents?
+
+Guardrails (content filters, prompt shields, blocklists) only apply to agents running in Foundry Agent Service. If you register an agent from another cloud provider or run agents outside of Foundry, guardrail policies do not apply to those agents.
+
+### Can information at the end of a prompt override earlier instructions?
+
+Models exhibit recency bias — information at the end of the system prompt has more influence on the agent's behavior. If you notice your agent ignoring early instructions, repeat critical directives near the end of your prompt. See [System message best practices](/agents/development/system-message) for guidance.
+
+### Should I avoid putting secrets in response format schemas?
+
+Yes. Any content in JSON schemas, response format definitions, or system prompts can appear in model outputs or logs. Never include API keys, passwords, tokens, or connection strings in prompt content or schema definitions.
+
 ## Tools and integrations
+
+### What's the difference between function tools and MCP servers?
+
+**Function tools** are simpler to set up — you define a JSON schema inline and the agent calls your function. Use function tools for single-purpose custom logic within one agent. **MCP servers** follow the Model Context Protocol standard and run as separate server processes. Use MCP servers when you need to share tools across multiple agents, connect to external APIs through a standard protocol, or use community-built tool servers.
+
+### Can I add or edit function tools in the portal?
+
+No. Function tools can only be defined through the SDK or REST API. The Foundry portal does not support creating or editing function tool definitions. Use the SDK to define function schemas and attach them to your agent programmatically.
+
+### Are there tools that don't work well with evaluations?
+
+Some tools have limited evaluator support. Tools that require real-time external connections (Azure AI Search, Bing Search, SharePoint) may not produce reliable evaluation results because evaluators cannot replay or mock the tool outputs. Test your evaluation setup with these tools before relying on evaluation scores for quality gating.
+
+## Monitoring and operations
 
 ### Where can I learn about tools like Code Interpreter and File Search?
 
