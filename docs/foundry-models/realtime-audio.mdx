@@ -30,18 +30,14 @@ The GPT real-time models are available for global deployments.
 - `gpt-4o-mini-realtime-preview` (version `2024-12-17`)
 - `gpt-realtime` (version `2025-08-28`)
 - `gpt-realtime-mini` (version `2025-10-06`)
-- `gpt-realtime-mini-2025-12-15` (version `2025-12-15`)
+- `gpt-realtime-mini` (version `2025-12-15`)
 - `gpt-realtime-1.5` (`2026-02-23`)
 
 For more information, see the [models and versions documentation](https://learn.microsoft.com/azure/ai-foundry/foundry-models/concepts/models-sold-directly-by-azure).
 
-<Note>
-Token limits vary by model:
-- **Preview models** (gpt-4o-realtime-preview, gpt-4o-mini-realtime-preview): Input 128,000 / Output 4,096 tokens
-- **GA models** (gpt-realtime, gpt-realtime-mini): Input 28,672 / Output 4,096 tokens
-</Note>
+The Realtime API supports up to 32,000 input tokens and 4,096 output tokens.
 
-For the Realtime API, use API version `2025-04-01-preview` in the URL for preview models. For GA models, use the GA API version (without the `-preview` suffix) when possible. 
+For all Realtime API models, use the GA endpoint format with `/openai/v1` in the URL.
 
 ## Prerequisites
 
@@ -49,7 +45,7 @@ Before you can use GPT real-time audio, you need:
 
 - An Azure subscription - [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
 - A Microsoft Foundry resource - [Create a Microsoft Foundry resource](https://learn.microsoft.com/azure/ai-services/multi-service-resource) in one of the [supported regions](#supported-models).
-- An API key or Microsoft Entra ID credentials for authentication. For production applications, we recommend using [Microsoft Entra ID](../../../foundry-classic/openai/how-to/managed-identity.md) for enhanced security.
+- An API key or Microsoft Entra ID credentials for authentication. For production applications, we recommend using [Microsoft Entra ID](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/how-to/managed-identity) for enhanced security.
 - A deployment of a GPT realtime model in a supported region as described in the [supported models](#supported-models) section in this article.
     - In the Microsoft Foundry portal, load your project. Select **Build** in the upper right menu, then select the **Models** tab on the left pane, and **Deploy a base model**. Search for the model you want, and select **Deploy** on the model page.
 
@@ -1751,11 +1747,7 @@ The **Chat playground** doesn't support the `gpt-realtime` model. Use the **Audi
 
 ## API support
 
-Support for the Realtime API was first added in API version `2024-10-01-preview` (retired). Use version `2025-08-28` to access the latest Realtime API features. We recommend you select the generally available API version (without '-preview' suffix) when possible.
-
-<Danger>
-You need to use **different** endpoint formats for Preview and Generally Available (GA) models. All samples in this article use GA models and GA endpoint format, and don't use `api-version` parameter, which is required for Preview endpoint format only. See detailed information on the endpoint format [in this article](/foundry-models/realtime-audio-websockets#connection-and-authentication).
-</Danger>
+For the Realtime API, use the GA endpoint with `/openai/v1` in the URL. Don't use date-based API versions or the api-version query parameter.
 
 <Note>
 The Realtime API has specific rate limits for audio tokens and concurrent sessions. Before deploying to production, review [Azure OpenAI quotas and limits](/foundry-models/quotas-limits) for your deployment type.
