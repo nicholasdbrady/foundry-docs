@@ -7,11 +7,23 @@ Key terms and concepts used throughout the Microsoft Foundry documentation.
 
 ## A
 
+### A2A (Agent2Agent)
+An open protocol for agent-to-agent communication that enables Foundry agents to interoperate with external agents through a standardized interface. When used as a tool in Foundry Agent Service, the calling agent routes the request to an external A2A endpoint and incorporates the response, while retaining control of the conversation.
+
 ### Agent
 An AI-powered entity that can perform tasks autonomously using tools, models, and instructions. In Microsoft Foundry, agents are created via the Azure AI Projects SDK and can use built-in tools like Code Interpreter, File Search, and Function Calling.
 
+### Agent Identity
+A specialized Microsoft Entra ID service principal that represents an AI agent at runtime. Foundry automatically provisions and manages agent identities, enabling agents to authenticate to downstream systems (such as Azure Storage or Azure AI Search) without embedding secrets in code, prompts, or connection strings.
+
+### Agent Identity Blueprint
+A Microsoft Entra ID object that governs a class of agent identities and is used for lifecycle operations such as provisioning and managing the service principals that represent Foundry agents at runtime.
+
 ### Agentic Retrieval
 A multi-query retrieval pipeline that uses a language model to decompose complex questions into focused subqueries, executes them in parallel, applies semantic reranking, and returns structured grounding data with citations. Used in Foundry IQ and Azure AI Search to improve retrieval quality over classic single-query RAG patterns.
+
+### AI Red Teaming Agent
+A Microsoft Foundry tool that automates adversarial probing of AI systems to identify safety risks and vulnerabilities. It uses attack strategies from Microsoft's open-source PyRIT framework combined with Foundry risk and safety evaluators to simulate harmful prompts, calculate attack success rate (ASR), and generate scorecards for pre-deployment safety review.
 
 ### AIProjectClient
 The primary Python client class in the Azure AI Projects SDK for connecting to a Microsoft Foundry project. Used to access agents, models, connections, and other project resources programmatically.
@@ -19,10 +31,24 @@ The primary Python client class in the Azure AI Projects SDK for connecting to a
 ### Azure AI Search
 A cloud search service providing keyword, vector, and semantic search capabilities. Used as the underlying indexing and retrieval infrastructure for RAG patterns, Foundry IQ knowledge bases, and vector stores.
 
+## B
+
+### Basic Agent Setup
+A Foundry Agent Service configuration where agent data—conversation history, uploaded files, and vector stores—is stored in Microsoft-managed Azure resources. The default deployment model; no capability host configuration is required.
+
+### Browser Automation
+A built-in Foundry agent tool (preview) that enables agents to perform web browsing tasks through natural language prompts. The tool creates isolated browser sessions using Microsoft Playwright Workspaces to navigate pages, fill forms, and extract content.
+
 ## C
+
+### Capability Host
+A sub-resource in Foundry Agent Service configured at the account and project scopes. Capability hosts determine whether agent data—conversation threads, uploaded files, and vector stores—is stored in Microsoft-managed resources or in customer-owned Azure resources (Azure Cosmos DB, Azure Storage, Azure AI Search). Required to configure standard agent setup.
 
 ### Code Interpreter
 A built-in Foundry agent tool that lets agents write and execute Python code in a sandboxed environment. Useful for data analysis, mathematical calculations, chart generation, and file processing tasks.
+
+### Computer Use
+A built-in Foundry agent tool (preview) that enables agents to interpret screenshots and automate UI interactions—clicking, typing, scrolling—in desktop and browser applications. Uses the `computer-use-preview` model to propose actions based on visual content.
 
 ### Conversation
 A durable object in Foundry Agent Service that persists interaction state across turns and sessions. Conversations store items (messages, tool calls, tool outputs) and have unique identifiers that can be reused across sessions. Replaces the thread concept from the Assistants API.
@@ -56,8 +82,16 @@ Content retrieved from an external data source and provided to a language model 
 
 ## H
 
+### Hosted Agent
+A containerized agent deployment in Foundry Agent Service (preview) that runs custom agent code using a supported framework such as LangGraph or Microsoft Agent Framework. Foundry manages the container infrastructure, scaling, observability, and version rollbacks.
+
 ### Hybrid Search
 A retrieval strategy that combines keyword (BM25) search and vector (semantic) search to improve recall. Results from both methods are merged and optionally reranked using a semantic ranker for higher relevance. Supported in Azure AI Search and used in Foundry Agent Service file search.
+
+## I
+
+### Image Generation
+A built-in Foundry agent tool (preview) that generates images from text prompts using the `gpt-image-1` model, returning base64-encoded output. Requires a compatible orchestrator model (such as `gpt-4o`) and an image generation model deployed in the same Foundry project.
 
 ## K
 
@@ -69,6 +103,12 @@ A top-level Foundry IQ resource that orchestrates agentic retrieval over one or 
 ### MCP (Model Context Protocol)
 An open protocol that enables AI agents to connect to external data sources and tools through a standardized interface. In Microsoft Foundry, agents can use MCP servers as tools via the Model Context Protocol tool type, allowing integration with custom data sources and services.
 
+### Memory
+A managed long-term memory capability in Foundry Agent Service (preview) that extracts, consolidates, and retrieves user-specific knowledge across sessions. Enables agents to recall user preferences and prior interactions to deliver personalized responses.
+
+### Memory Store
+A persistent storage resource in Foundry Agent Service that holds memory items—user profile details and chat summaries—for use by agents across sessions. Memory stores are scoped per user to ensure isolated experiences.
+
 ### Microsoft Entra ID
 Microsoft's cloud identity and access management service, formerly Azure Active Directory. Used in Foundry for keyless authentication (instead of API keys) and as the identity provider for role-based access control (RBAC) assignments.
 
@@ -76,6 +116,11 @@ Microsoft's cloud identity and access management service, formerly Azure Active 
 
 ### OpenTelemetry
 An open-source observability framework for collecting traces, metrics, and logs. Foundry Agent Service integrates with OpenTelemetry to emit agent traces to Application Insights or other compatible backends, enabling debugging, latency analysis, and production monitoring.
+
+## P
+
+### Prompt Optimizer
+A feature in Microsoft Foundry (preview) that automatically improves agent system instructions using LLM-driven prompt engineering best practices. Prompt Optimizer restructures and clarifies instructions, provides per-paragraph reasoning for each change, and supports iterative refinement until the result is satisfactory.
 
 ## R
 
@@ -91,6 +136,11 @@ The output of a single agent invocation in Foundry Agent Service. A response inc
 ### Responses API
 The API surface for generating agent outputs in Foundry Agent Service. The Responses API accepts a conversation (or previous response output) and returns a new response with the agent's result. It supersedes the older Assistants API runs endpoint.
 
+## S
+
+### Standard Agent Setup
+A Foundry Agent Service configuration where agent data—conversation threads, uploaded files, and vector stores—is stored in customer-owned Azure resources (Azure Cosmos DB, Azure Storage, and Azure AI Search) via capability hosts. Used to meet data sovereignty, compliance, or security requirements.
+
 ## V
 
 ### Vector Store
@@ -98,3 +148,8 @@ A container for searchable file content (chunks and embeddings) used by the file
 
 ### Voice Live
 A real-time voice API in Microsoft Foundry that enables building voice agents using Azure Speech capabilities. Voice Live supports low-latency, bidirectional audio streaming for interactive voice agent scenarios.
+
+## W
+
+### Web Search
+A built-in Foundry agent tool (preview) that retrieves real-time information from the public web using Grounding with Bing Search. Enables agents to deliver up-to-date answers with inline citations grounded in current web content.
