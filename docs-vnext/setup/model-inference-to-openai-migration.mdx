@@ -2,21 +2,11 @@
 title: "How to migrate from Azure AI Inference SDK to OpenAI SDK"
 description: "Learn how to migrate to OpenAI SDK from Azure AI Inference SDK for enhanced compatibility and unified APIs when working with Microsoft Foundry Models."
 ---
-This article provides guidance on migrating your applications from the Azure AI Inference SDK to the OpenAI SDK. The OpenAI SDK offers broader compatibility, access to the latest OpenAI features, and simplified code with unified patterns across Azure OpenAI and Foundry Models.
+This article provides guidance on migrating your applications from the Azure AI Inference SDK to the OpenAI SDK. The OpenAI SDK provides broader model support (Azure OpenAI, DeepSeek, Grok, and other Foundry Models), a unified API surface across providers, built-in support for both API key and Microsoft Entra ID authentication, and implicit API versioning that removes the need to manually specify `api-version` parameters.
 
 <Note>
 The OpenAI SDK refers to the client libraries (such as the Python `openai` package or JavaScript `openai` npm package) that connect to [OpenAI v1 API endpoints](/api-sdk/api-version-lifecycle#api-evolution). These SDKs have their own versioning separate from the API version - for example, the Go OpenAI SDK is currently at v3, but it still connects to the OpenAI v1 API endpoints with `/openai/v1/` in the URL path.
 </Note>
-
-## Benefits of migrating
-
-Migrating to the OpenAI SDK provides several advantages:
-
-- **Broader model support**: Works with Azure OpenAI in Foundry Models and other Foundry Models from providers like DeepSeek and Grok
-- **Unified API**: Uses the same SDK libraries and clients for both OpenAI and Azure OpenAI endpoints
-- **Latest features**: Access to the newest OpenAI features without waiting for Azure-specific updates
-- **Simplified authentication**: Built-in support for both API key and Microsoft Entra ID authentication
-- **Implicit API versioning**: The v1 API eliminates the need to frequently update `api-version` parameters
 
 ## Key differences
 
@@ -30,7 +20,9 @@ The following table shows the main differences between the two SDKs:
 | Model parameter | Optional (for multi-model endpoints) | Required (deployment name) |
 | Authentication | Azure credentials only | API key or Azure credentials |
 
-## Setup
+## Python
+
+### Setup
 
 Install the OpenAI SDK:
 
@@ -44,14 +36,12 @@ For Microsoft Entra ID authentication, also install:
 pip install azure-identity
 ```
 
-## Client configuration
+### Client configuration
 
-<Tabs>
-  <Tab title="OpenAI SDK">
+With API key authentication:
 
-    With API key authentication:
-
-    ```python
+<CodeGroup>
+```python OpenAI SDK
     import os
     from openai import OpenAI
 
@@ -61,10 +51,7 @@ pip install azure-identity
     )
     ```
 
-  </Tab>
-  <Tab title="Azure AI Inference SDK">
-
-    ```python
+```python Azure AI Inference SDK
     import os
     from azure.ai.inference import ChatCompletionsClient
     from azure.core.credentials import AzureKeyCredential
@@ -74,9 +61,7 @@ pip install azure-identity
         credential=AzureKeyCredential(os.environ["AZURE_INFERENCE_CREDENTIAL"]),
     )
     ```
-
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 With Microsoft Entra ID authentication:
 
@@ -108,7 +93,7 @@ With Microsoft Entra ID authentication:
     ```
 </CodeGroup>
 
-## Chat completions
+### Chat completions
 
 <CodeGroup>
 ```python OpenAI SDK
@@ -174,7 +159,7 @@ With Microsoft Entra ID authentication:
     ```
 </CodeGroup>
 
-## Embeddings
+### Embeddings
 
 <CodeGroup>
 ```python OpenAI SDK
@@ -214,7 +199,9 @@ With Microsoft Entra ID authentication:
     ```
 </CodeGroup>
 
-## Setup
+## C#
+
+### Setup
 
 Install the OpenAI SDK:
 
@@ -228,7 +215,7 @@ For Microsoft Entra ID authentication, also install:
 dotnet add package Azure.Identity
 ```
 
-## Client configuration
+### Client configuration
 
 With API key authentication:
 
@@ -295,7 +282,7 @@ With Microsoft Entra ID authentication:
     ```
 </CodeGroup>
 
-## Chat completions
+### Chat completions
 
 <CodeGroup>
 ```csharp OpenAI SDK
@@ -370,7 +357,7 @@ With Microsoft Entra ID authentication:
     ```
 </CodeGroup>
 
-## Embeddings
+### Embeddings
 
 <CodeGroup>
 ```csharp OpenAI SDK
@@ -415,7 +402,9 @@ With Microsoft Entra ID authentication:
     ```
 </CodeGroup>
 
-## Setup
+## JavaScript
+
+### Setup
 
 Install the OpenAI SDK:
 
@@ -429,7 +418,7 @@ For Microsoft Entra ID authentication, also install:
 npm install @azure/identity
 ```
 
-## Client configuration
+### Client configuration
 
 With API key authentication:
 
@@ -490,7 +479,7 @@ With Microsoft Entra ID authentication:
     ```
 </CodeGroup>
 
-## Chat completions
+### Chat completions
 
 <CodeGroup>
 ```javascript OpenAI SDK
@@ -560,7 +549,7 @@ With Microsoft Entra ID authentication:
     ```
 </CodeGroup>
 
-## Embeddings
+### Embeddings
 
 <CodeGroup>
 ```javascript OpenAI SDK
@@ -604,7 +593,9 @@ With Microsoft Entra ID authentication:
     ```
 </CodeGroup>
 
-## Setup
+## Java
+
+### Setup
 
 Add the OpenAI SDK to your project. Check the [OpenAI Java GitHub repository](https://github.com/openai/openai-java) for the latest version and installation instructions.
 
@@ -618,7 +609,7 @@ For Microsoft Entra ID authentication, also add:
 </dependency>
 ```
 
-## Client configuration
+### Client configuration
 
 With API key authentication:
 
@@ -682,7 +673,7 @@ With Microsoft Entra ID authentication:
     ```
 </CodeGroup>
 
-## Chat completions
+### Chat completions
 
 <CodeGroup>
 ```java OpenAI SDK
@@ -764,7 +755,7 @@ With Microsoft Entra ID authentication:
     ```
 </CodeGroup>
 
-## Embeddings
+### Embeddings
 
 <CodeGroup>
 ```java OpenAI SDK
@@ -814,7 +805,13 @@ With Microsoft Entra ID authentication:
     ```
 </CodeGroup>
 
-## Setup
+## Go
+
+<Note>
+Azure AI Inference SDK for Go does not have equivalent wrapper APIs. The examples in this section show only the OpenAI SDK.
+</Note>
+
+### Setup
 
 Install the OpenAI SDK:
 
@@ -828,231 +825,157 @@ For Microsoft Entra ID authentication, also install:
 go get -u github.com/Azure/azure-sdk-for-go/sdk/azidentity
 ```
 
-## Client configuration
+### Client configuration
 
 With API key authentication:
 
-<Tabs>
-  <Tab title="OpenAI SDK">
+```go
+import (
+    "github.com/openai/openai-go/v3"
+    "github.com/openai/openai-go/v3/option"
+)
 
-    ```go
-    import (
-        "github.com/openai/openai-go/v3"
-        "github.com/openai/openai-go/v3/option"
-    )
-
-    client := openai.NewClient(
-        option.WithBaseURL("https://<resource>.openai.azure.com/openai/v1/"),
-        option.WithAPIKey(os.Getenv("AZURE_OPENAI_API_KEY")),
-    )
-    ```
-
-  </Tab>
-  <Tab title="Azure AI Inference SDK">
-
-    Azure AI Inference SDK for Go uses Azure SDK patterns.
-
-  </Tab>
-</Tabs>
+client := openai.NewClient(
+    option.WithBaseURL("https://<resource>.openai.azure.com/openai/v1/"),
+    option.WithAPIKey(os.Getenv("AZURE_OPENAI_API_KEY")),
+)
+```
 
 With Microsoft Entra ID authentication:
 
-<Tabs>
-  <Tab title="OpenAI SDK">
+```go
+import (
+    "github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+    "github.com/openai/openai-go/v3"
+    "github.com/openai/openai-go/v3/azure"
+    "github.com/openai/openai-go/v3/option"
+)
 
-    ```go
-    import (
-        "github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-        "github.com/openai/openai-go/v3"
-        "github.com/openai/openai-go/v3/azure"
-        "github.com/openai/openai-go/v3/option"
-    )
+tokenCredential, err := azidentity.NewDefaultAzureCredential(nil)
+if err != nil {
+    panic(err)
+}
 
-    tokenCredential, err := azidentity.NewDefaultAzureCredential(nil)
-    if err != nil {
-        panic(err)
-    }
+client := openai.NewClient(
+    option.WithBaseURL("https://<resource>.openai.azure.com/openai/v1/"),
+    azure.WithTokenCredential(tokenCredential),
+)
+```
 
-    client := openai.NewClient(
-        option.WithBaseURL("https://<resource>.openai.azure.com/openai/v1/"),
-        azure.WithTokenCredential(tokenCredential),
-    )
-    ```
+### Chat completions
 
-  </Tab>
-  <Tab title="Azure AI Inference SDK">
+```go
+import (
+    "context"
+    "fmt"
+    "github.com/openai/openai-go/v3"
+)
 
-    Azure AI Inference SDK for Go supports Microsoft Entra ID through Azure SDK.
+chatCompletion, err := client.Chat.Completions.New(context.TODO(), openai.ChatCompletionNewParams{
+    Messages: []openai.ChatCompletionMessageParamUnion{
+        openai.SystemMessage("You are a helpful assistant."),
+        openai.UserMessage("What is Azure AI?"),
+    },
+    Model: "DeepSeek-V3.1", // Required: your deployment name
+})
 
-  </Tab>
-</Tabs>
+if err != nil {
+    panic(err.Error())
+}
 
-## Chat completions
-
-<Tabs>
-  <Tab title="OpenAI SDK">
-
-    ```go
-    import (
-        "context"
-        "fmt"
-        "github.com/openai/openai-go/v3"
-    )
-
-    chatCompletion, err := client.Chat.Completions.New(context.TODO(), openai.ChatCompletionNewParams{
-        Messages: []openai.ChatCompletionMessageParamUnion{
-            openai.SystemMessage("You are a helpful assistant."),
-            openai.UserMessage("What is Azure AI?"),
-        },
-        Model: "DeepSeek-V3.1", // Required: your deployment name
-    })
-
-    if err != nil {
-        panic(err.Error())
-    }
-
-    fmt.Println(chatCompletion.Choices[0].Message.Content)
-    ```
-
-  </Tab>
-  <Tab title="Azure AI Inference SDK">
-
-    Azure AI Inference SDK for Go uses Azure SDK patterns for chat completions.
-
-  </Tab>
-</Tabs>
+fmt.Println(chatCompletion.Choices[0].Message.Content)
+```
 
 ### Streaming
 
-<Tabs>
-  <Tab title="OpenAI SDK">
+```go
+import (
+    "context"
+    "fmt"
+    "github.com/openai/openai-go/v3"
+)
 
-    ```go
-    import (
-        "context"
-        "fmt"
-        "github.com/openai/openai-go/v3"
+stream := client.Chat.Completions.NewStreaming(context.TODO(), openai.ChatCompletionNewParams{
+    Messages: []openai.ChatCompletionMessageParamUnion{
+        openai.SystemMessage("You are a helpful assistant."),
+        openai.UserMessage("Write a poem about Azure."),
+    },
+    Model: "DeepSeek-V3.1", // Required: your deployment name
+})
+
+for stream.Next() {
+    chunk := stream.Current()
+    if len(chunk.Choices) > 0 && chunk.Choices[0].Delta.Content != "" {
+        fmt.Print(chunk.Choices[0].Delta.Content)
+    }
+}
+
+if err := stream.Err(); err != nil {
+    panic(err.Error())
+}
+```
+
+### Embeddings
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "log"
+
+    "github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+    "github.com/openai/openai-go/v3"
+    "github.com/openai/openai-go/v3/azure"
+    "github.com/openai/openai-go/v3/option"
+)
+
+func main() {
+    tokenCredential, err := azidentity.NewDefaultAzureCredential(nil)
+    if err != nil {
+        log.Fatalf("Error creating credential:%s", err)
+    }
+    // Create a client with Azure OpenAI endpoint and Entra ID credentials
+    client := openai.NewClient(
+        option.WithBaseURL("https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/"),
+        azure.WithTokenCredential(tokenCredential),
     )
 
-    stream := client.Chat.Completions.NewStreaming(context.TODO(), openai.ChatCompletionNewParams{
-        Messages: []openai.ChatCompletionMessageParamUnion{
-            openai.SystemMessage("You are a helpful assistant."),
-            openai.UserMessage("Write a poem about Azure."),
+    inputText := "The quick brown fox jumped over the lazy dog"
+
+    // Make the embedding request synchronously
+    resp, err := client.Embeddings.New(context.Background(), openai.EmbeddingNewParams{
+        Model: openai.EmbeddingModel("text-embedding-3-large"), // Use your deployed model name on Azure
+        Input: openai.EmbeddingNewParamsInputUnion{
+            OfArrayOfStrings: []string{inputText},
         },
-        Model: "DeepSeek-V3.1", // Required: your deployment name
     })
-
-    for stream.Next() {
-        chunk := stream.Current()
-        if len(chunk.Choices) > 0 && chunk.Choices[0].Delta.Content != "" {
-            fmt.Print(chunk.Choices[0].Delta.Content)
-        }
+    if err != nil {
+        log.Fatalf("Failed to get embedding: %s", err)
     }
 
-    if err := stream.Err(); err != nil {
-        panic(err.Error())
-    }
-    ```
-
-  </Tab>
-  <Tab title="Azure AI Inference SDK">
-
-    Azure AI Inference SDK for Go supports streaming through Azure SDK patterns.
-
-  </Tab>
-</Tabs>
-
-## Embeddings
-
-<Tabs>
-  <Tab title="OpenAI SDK">
-
-    ```go
-    package main
-
-    import (
-        "context"
-        "fmt"
-        "log"
-
-        "github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-        "github.com/openai/openai-go/v3"
-        "github.com/openai/openai-go/v3/azure"
-        "github.com/openai/openai-go/v3/option"
-    )
-
-    func main() {
-        tokenCredential, err := azidentity.NewDefaultAzureCredential(nil)
-        if err != nil {
-            log.Fatalf("Error creating credential:%s", err)
-        }
-        // Create a client with Azure OpenAI endpoint and Entra ID credentials
-        client := openai.NewClient(
-            option.WithBaseURL("https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/"),
-            azure.WithTokenCredential(tokenCredential),
-        )
-
-        inputText := "The quick brown fox jumped over the lazy dog"
-
-        // Make the embedding request synchronously
-        resp, err := client.Embeddings.New(context.Background(), openai.EmbeddingNewParams{
-            Model: openai.EmbeddingModel("text-embedding-3-large"), // Use your deployed model name on Azure
-            Input: openai.EmbeddingNewParamsInputUnion{
-                OfArrayOfStrings: []string{inputText},
-            },
-        })
-        if err != nil {
-            log.Fatalf("Failed to get embedding: %s", err)
-        }
-
-        if len(resp.Data) == 0 {
-            log.Fatalf("No embedding data returned.")
-        }
-
-        // Print embedding information
-        embedding := resp.Data[0].Embedding
-        fmt.Printf("Embedding Length: %d\n", len(embedding))
-        fmt.Println("Embedding Values:")
-        for _, value := range embedding {
-            fmt.Printf("%f, ", value)
-        }
-        fmt.Println()
+    if len(resp.Data) == 0 {
+        log.Fatalf("No embedding data returned.")
     }
 
-    ```
-
-  </Tab>
-  <Tab title="Azure AI Inference SDK">
-
-    Azure AI Inference SDK for Go uses Azure SDK patterns for embeddings.
-
-  </Tab>
-</Tabs>
+    // Print embedding information
+    embedding := resp.Data[0].Embedding
+    fmt.Printf("Embedding Length: %d\n", len(embedding))
+    fmt.Println("Embedding Values:")
+    for _, value := range embedding {
+        fmt.Printf("%f, ", value)
+    }
+    fmt.Println()
+}
+```
 
 ## Common migration patterns
 
-### Model parameter handling
+The key differences are covered in the [comparison table](#key-differences). Practically:
 
-- **Azure AI Inference SDK**: The `model` parameter is optional for single-model endpoints but required for multimodel endpoints.
-- **OpenAI SDK**: The `model` parameter is always required and should be set to your deployment name.
-
-### Endpoint URL format
-
-- **Azure AI Inference SDK**: Uses `https://<resource>.services.ai.azure.com/models`.
-- **OpenAI SDK**: Uses `https://<resource>.openai.azure.com/openai/v1` (connects to the OpenAI v1 API).
-
-### Response structure
-
-The response structure is similar but has some differences:
-
-- **Azure AI Inference SDK**: Returns `ChatCompletions` object with `choices[].message.content`.
-- **OpenAI SDK**: Returns `ChatCompletion` object with `choices[].message.content`.
-
-Both SDKs provide similar access patterns to response data, including:
-- Message content
-- Token usage
-- Model information
-- Finish reason
+- The `model` parameter is always required in the OpenAI SDK (set it to your deployment name). In the Azure AI Inference SDK, it is optional for single-model endpoints.
+- Both SDKs return similar response structures: `choices[].message.content`, `choices[].finish_reason`, and token usage. The class name differs — `ChatCompletions` in the Inference SDK, `ChatCompletion` in the OpenAI SDK.
 
 ## Migration checklist
 
@@ -1068,31 +991,20 @@ Use this checklist to ensure a smooth migration:
 <Check>Update error handling to use OpenAI SDK exceptions</Check>
 <Check>Test all functionality thoroughly</Check>
 <Check>Update documentation and code comments</Check>
+
 ## Troubleshooting
 
 ### Authentication failures
 
-If you experience authentication failures:
-
-- Verify your API key is correct and isn't expired
-- For Microsoft Entra ID, ensure your application has the correct permissions
-- Check that the credential scope is set to `https://cognitiveservices.azure.com/.default`
+Verify your API key is not expired. For Microsoft Entra ID, ensure your application has the required permissions and the credential scope is `https://cognitiveservices.azure.com/.default`.
 
 ### Endpoint errors
 
-If you receive endpoint errors:
-
-- Verify the endpoint URL format includes `/openai/v1/` at the end.
-- Ensure your resource name is correct.
-- Check that the model deployment exists and is active.
+Verify the endpoint URL includes `/openai/v1/` and your resource name is correct. Confirm the model deployment exists and is active.
 
 ### Model not found errors
 
-If you receive "model not found" errors:
-
-- Verify you're using your deployment name, not the model name.
-- Check that the deployment is active in your Microsoft Foundry resource.
-- Ensure the deployment name matches exactly (case-sensitive).
+Ensure you use your deployment name (not the base model name), that it matches exactly (case-sensitive), and that it is active in your Foundry resource.
 
 ## Related content
 
