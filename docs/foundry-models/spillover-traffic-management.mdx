@@ -52,7 +52,7 @@ This article describes how to manage traffic with spillover for provisioned depl
 
     ```
 
-    A successful request returns HTTP status `200` with the chat completion response. If spillover occurs, the response includes the `x-ms-spillover-from-<deployment-name>` header.
+    A successful request returns HTTP status `200` with the chat completion response. If spillover occurs, the response includes the `x-ms-spillover-from-deployment` header.
 
     **Reference:** [Create chat completion](/api-sdk/latest#create-chat-completion)
 
@@ -87,9 +87,9 @@ Even if a subset of requests is routed to the standard deployment, the service p
 
 The following HTTP response headers indicate that a specific request spilled over:
 
-- `x-ms-spillover-from-<deployment-name>`. This header contains the PTU deployment name. The presence of this header indicates that the request is a spillover request.
+- `x-ms-spillover-from-deployment`. This header contains the PTU deployment name. The presence of this header indicates that the request is a spillover request.
 
-- `x-ms-<deployment-name>`. This header contains the name of the deployment that serves the request. If the request spills over, the deployment name is the name of the standard deployment.
+- `x-ms-deployment-name`. This header contains the name of the deployment that serves the request. If the request spills over, the deployment name is the name of the standard deployment.
 
 For a request that spills over, if the standard deployment request fails for any reason, the original PTU response is used in the response to the customer. The customer sees a header `x-ms-spillover-error` that contains the response code of the spillover request (such as `429` or `500`) so that they know the reason for the failed spillover.
 
