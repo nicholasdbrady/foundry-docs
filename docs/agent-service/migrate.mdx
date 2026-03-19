@@ -463,7 +463,12 @@ The following examples compare how you invoke agent logic. The previous approach
 
     ThreadRun run =
         await agentsClient.CreateRunAsync(
-            threadId, assistantId);
+            threadId,
+            assistantId,
+            additionalInstructions:
+                "Please address the user as "
+                + "Jane Doe. The user has a "
+                + "premium account");
 
     while (run.Status == RunStatus.Queued
         || run.Status ==
@@ -480,7 +485,14 @@ The following examples compare how you invoke agent logic. The previous approach
     const assistantId = "asst_efgh5678";
 
     let run = await client.agents.createRun(
-        threadId, assistantId);
+        threadId,
+        assistantId,
+        {
+            additionalInstructions:
+                "Please address the user as "
+                + "Jane Doe. The user has a "
+                + "premium account",
+        });
 
     while (run.status === "queued"
         || run.status === "in_progress") {
@@ -497,7 +509,13 @@ The following examples compare how you invoke agent logic. The previous approach
 
     ThreadRun run =
         agentsClient.createRun(
-            threadId, assistantId);
+            threadId,
+            assistantId,
+            new CreateRunOptions()
+                .setAdditionalInstructions(
+                    "Please address the user "
+                    + "as Jane Doe. The user "
+                    + "has a premium account"));
 
     while (RunStatus.QUEUED
             .equals(run.getStatus())
@@ -1137,7 +1155,11 @@ The following example shows a complete before-and-after comparison. Notice that 
     ThreadRun run =
         await agentsClient.CreateRunAsync(
             thread.Id,
-            agent.Id);
+            agent.Id,
+            additionalInstructions:
+                "Please address the user as "
+                + "Jane Doe. The user has a "
+                + "premium account");
 
     while (run.Status ==
             RunStatus.Queued
@@ -1199,7 +1221,14 @@ The following example shows a complete before-and-after comparison. Notice that 
 
     // Create run and poll
     let run = await client.agents.createRun(
-        thread.id, agent.id);
+        thread.id,
+        agent.id,
+        {
+            additionalInstructions:
+                "Please address the user as "
+                + "Jane Doe. The user has a "
+                + "premium account",
+        });
 
     while (run.status === "queued"
         || run.status === "in_progress") {
@@ -1251,7 +1280,13 @@ The following example shows a complete before-and-after comparison. Notice that 
     // Create run and poll
     ThreadRun run =
         agentsClient.createRun(
-            thread.getId(), agent.getId());
+            thread.getId(),
+            agent.getId(),
+            new CreateRunOptions()
+                .setAdditionalInstructions(
+                    "Please address the user "
+                    + "as Jane Doe. The user "
+                    + "has a premium account"));
 
     while (RunStatus.QUEUED
             .equals(run.getStatus())
@@ -1331,6 +1366,12 @@ The following example shows a complete before-and-after comparison. Notice that 
             "premium account"
         ),
     )
+
+    # Print the response output
+    for item in response.output:
+        if item.type == "message":
+            for block in item.content:
+                print(block.text)
     ```
 
 ```csharp C#
@@ -1365,6 +1406,18 @@ The following example shows a complete before-and-after comparison. Notice that 
         + "y-intercept of 9. Please address the "
         + "user as Jane Doe. The user has a "
         + "premium account");
+
+    // Print the response output
+    foreach (var item in result.OutputItems)
+    {
+        if (item is ResponseMessageItem msg)
+        {
+            foreach (var block in msg.Content)
+            {
+                Console.WriteLine(block.Text);
+            }
+        }
+    }
     ```
 
 ```javascript JavaScript
@@ -1415,6 +1468,15 @@ The following example shows a complete before-and-after comparison. Notice that 
                 type: "agent_reference",
             },
         });
+
+    // Print the response output
+    for (const item of response.output) {
+        if (item.type === "message") {
+            for (const block of item.content) {
+                console.log(block.text);
+            }
+        }
+    }
     ```
 
 ```java Java
@@ -1452,6 +1514,19 @@ The following example shows a complete before-and-after comparison. Notice that 
             + "y-intercept of 9. Please address "
             + "the user as Jane Doe. The user "
             + "has a premium account"));
+
+    // Print the response output
+    for (ResponseItem item : result.getOutput()) {
+        if (item instanceof ResponseMessageItem) {
+            ResponseMessageItem msg =
+                (ResponseMessageItem) item;
+            for (ContentBlock block
+                    : msg.getContent()) {
+                System.out.println(
+                    block.getText());
+            }
+        }
+    }
     ```
 </CodeGroup>
 ## Verify your migration
