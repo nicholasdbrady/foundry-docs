@@ -77,6 +77,17 @@ Microsoft's cloud identity and access management service, formerly Azure Active 
 ### OpenTelemetry
 An open-source observability framework for collecting traces, metrics, and logs. Foundry Agent Service integrates with OpenTelemetry to emit agent traces to Application Insights or other compatible backends, enabling debugging, latency analysis, and production monitoring.
 
+## P
+
+### Priority Processing
+A low-latency service tier for Global Standard and Data Zone Standard deployments in Foundry Models that delivers faster, more consistent token generation with pay-as-you-go billing. Priority processing can be enabled at the deployment level or overridden per-request using the `service_tier` parameter (`priority` or `default`).
+
+### Provisioned Throughput
+A deployment type in Foundry Models that reserves dedicated model processing capacity for a deployment, providing predictable latency and consistent throughput for production workloads with known traffic patterns. Capacity is measured and billed in Provisioned Throughput Units (PTU) on an hourly basis regardless of actual utilization.
+
+### PTU (Provisioned Throughput Units)
+The unit of model processing capacity used to size and bill provisioned deployments in Foundry Models. PTU quota is scoped per subscription and region and determines the maximum number of units that can be assigned to deployments. PTU reservations can be shared across Azure OpenAI and other Foundry Models (such as DeepSeek) within the same subscription.
+
 ## R
 
 ### RAG (Retrieval Augmented Generation)
@@ -85,11 +96,25 @@ A pattern that combines information retrieval with language model generation to 
 ### RBAC (Role-Based Access Control)
 An authorization model that restricts resource access based on assigned roles rather than individual permissions. In Microsoft Foundry, RBAC is enforced via Microsoft Entra ID role assignments on Azure resources such as AI projects, Azure AI Search indexes, and storage accounts.
 
+### Reasoning Effort
+A parameter (`reasoning_effort`) on reasoning model requests that controls how many reasoning tokens the model uses when processing a request. Supported values are `low`, `medium`, `high`, and `xhigh` (selected models only); higher settings trade latency and cost for improved accuracy on complex tasks.
+
+### Reasoning Models
+A class of AI models in Foundry Models — including the o1, o3-mini, o4-mini, and GPT-5 series — that spend additional compute time processing and understanding a request before generating a response. Reasoning models excel at science, math, and complex coding tasks compared to standard generation models, and use `reasoning_effort` and `reasoning_tokens` to characterize their behavior.
+
+### Reasoning Tokens
+Hidden internal computation tokens that reasoning models use to process a request. Reasoning tokens are reported in `completion_tokens_details.reasoning_tokens` in API responses and count toward total token usage, but are not included in the generated message content.
+
 ### Response
 The output of a single agent invocation in Foundry Agent Service. A response includes output items (messages, tool call records, tool outputs) and is appended to the conversation. Responses replace the *run* concept from the Assistants API.
 
 ### Responses API
 The API surface for generating agent outputs in Foundry Agent Service. The Responses API accepts a conversation (or previous response output) and returns a new response with the agent's result. It supersedes the older Assistants API runs endpoint.
+
+## S
+
+### Spillover
+A traffic management feature for provisioned deployments that automatically routes overflow requests to a designated standard deployment when PTU capacity is exhausted (HTTP 429), a long-context request fails (HTTP 400), or a server error occurs (HTTP 500/503). Spillover is configured via the `spilloverDeploymentName` deployment property or the `x-ms-spillover-deployment` request header.
 
 ## V
 
