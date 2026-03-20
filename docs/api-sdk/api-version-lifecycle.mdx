@@ -2,6 +2,7 @@
 title: "Azure OpenAI in Microsoft Foundry Models v1 API"
 description: "Learn how to use the Azure OpenAI v1 API, which simplifies authentication, removes api-version parameters, and supports cross-provider model calls."
 ---
+
 This article shows you how to use the v1 Azure OpenAI API. The v1 API simplifies authentication, removes the need for dated `api-version` parameters, and supports cross-provider model calls.
 
 <Note>
@@ -11,8 +12,8 @@ New API response objects might be added to the API response at any time. We reco
 ## Prerequisites
 
 - An Azure subscription - [Create one for free](https://azure.microsoft.com/free/cognitive-services)
-- A [Foundry resource](/setup/multi-service-resource) or [Azure OpenAI resource](https://learn.microsoft.com/azure/ai-foundry/openai/how-to/create-resource) deployed in a [supported region](https://azure.microsoft.com/explore/global-infrastructure/products-by-region/?products=cognitive-services)
-- At least one [model deployment](/foundry-models/deploy-foundry-models)
+- A [Foundry resource](../../../ai-services/multi-service-resource) or [Azure OpenAI resource](https://learn.microsoft.com/azure/ai-foundry/openai/how-to/create-resource) deployed in a [supported region](https://azure.microsoft.com/explore/global-infrastructure/products-by-region/?products=cognitive-services)
+- At least one [model deployment](../../foundry-models/how-to/deploy-foundry-models)
 - For Microsoft Entra ID authentication: the `Cognitive Services OpenAI User` role assigned to your identity. For more information, see [Role-based access control for Azure OpenAI](https://learn.microsoft.com/azure/ai-foundry/openai/how-to/role-based-access-control)
 
 ## API evolution
@@ -31,7 +32,7 @@ Access to new API calls that are still in preview will be controlled by passing 
 
 Examples:
 
-- When `/openai/v1/evals` was previously in preview it required passing an `"aoai-evals":"preview"` header. **/evals is no longer in prevew.**
+- When `/openai/v1/evals` was previously in preview it required passing an `"aoai-evals":"preview"` header. **/evals is no longer in preview.**
 - `/openai/v1/fine_tuning/alpha/graders/` is in preview and requires no custom header due to the presence of `alpha` in the API path.
 
 For the initial v1 Generally Available (GA) API launch, only a subset of the inference and authoring API capabilities are supported. All GA features are supported for use in production. Support for more capabilities is being added rapidly.
@@ -43,7 +44,7 @@ For the initial v1 Generally Available (GA) API launch, only a subset of the inf
 
     ### v1 API
 
-    [Python v1 examples](/foundry-models/supported-languages)
+    [Python v1 examples](../supported-languages)
 
     **API Key**:
 
@@ -120,7 +121,7 @@ Handling automatic token refresh was previously handled through use of the `Azur
 
     ### v1 API
 
-    [C# v1 examples](/foundry-models/supported-languages)
+    [C# v1 examples](../supported-languages)
 
     **API Key**:
 
@@ -154,7 +155,7 @@ Handling automatic token refresh was previously handled through use of the `Azur
 
     ### v1 API
 
-    [JavaScript v1 examples](/foundry-models/supported-languages)
+    [JavaScript v1 examples](../supported-languages)
 
     **API Key**:
 
@@ -188,7 +189,7 @@ Handling automatic token refresh was previously handled through use of the `Azur
 
     ### v1 API
 
-    [Go v1 examples](/foundry-models/supported-languages)
+    [Go v1 examples](../supported-languages)
 
     **API Key**:
 
@@ -219,7 +220,7 @@ Handling automatic token refresh was previously handled through use of the `Azur
   </Tab>
   <Tab title="Java">
 
-    [Java v1 examples](/foundry-models/supported-languages)
+    [Java v1 examples](../supported-languages)
 
     ### v1 API
 
@@ -288,12 +289,12 @@ Handling automatic token refresh was previously handled through use of the `Azur
 
 ## Model support
 
-For Azure OpenAI models we recommend using the [Responses API](/foundry-models/supported-languages), however, the v1 API also allows you to make chat completions calls with models from other providers like DeepSeek and Grok which support the OpenAI v1 chat completions syntax.
+For Azure OpenAI models we recommend using the [Responses API](../supported-languages), however, the v1 API also allows you to make chat completions calls with models from other providers like DeepSeek and Grok which support the OpenAI v1 chat completions syntax.
 
 `base_url` will accept both `https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/` and `https://YOUR-RESOURCE-NAME.services.ai.azure.com/openai/v1/` formats.
 
 <Note>
-Responses API also works with Foundry Models sold directly by Azure, such as Microsoft AI, DeepSeek, and Grok models. To learn how to use the Responses API with these models, see [How to generate text responses with Microsoft Foundry Models](/foundry-models/generate-responses).
+Responses API also works with Foundry Models sold directly by Azure, such as Microsoft AI, DeepSeek, and Grok models. To learn how to use the Responses API with these models, see [How to generate text responses with Microsoft Foundry Models](../../foundry-models/how-to/generate-responses).
 </Note>
 
 <CodeGroup>
@@ -484,7 +485,7 @@ The following sections summarize changes between API versions.
 ### Changes between v1 preview release and 2025-04-01-preview
 
 - [v1 preview API](#api-evolution)
-- [Video generation support](/foundry-models/video-generation)
+- [Video generation support](../concepts/video-generation)
 - **NEW** Responses API features:
     * Remote Model Context Protocol (MCP) servers tool integration
     * Support for asynchronous background tasks
@@ -499,7 +500,7 @@ The following sections summarize changes between API versions.
 
 ### Changes between 2025-03-01-preview and 2025-02-01-preview
 
-- [Responses API](/foundry-models/responses)
+- [Responses API](../how-to/responses)
 - Computer use
 
 ### Changes between 2025-02-01-preview and 2025-01-01-preview
@@ -508,13 +509,13 @@ The following sections summarize changes between API versions.
 
 ### Changes between 2025-01-01-preview and 2024-12-01-preview
 
-- `prediction` parameter added for [predicted outputs](/foundry-models/predicted-outputs) support.
-- `gpt-4o-audio-preview` [model support](/foundry-models/audio-completions-quickstart).
+- `prediction` parameter added for [predicted outputs](../how-to/predicted-outputs) support.
+- `gpt-4o-audio-preview` [model support](../audio-completions-quickstart).
 
 ### Changes between 2024-12-01-preview and 2024-10-01-preview
 
 - `store`, and `metadata` parameters added for stored completions support.
-- `reasoning_effort` added for latest [reasoning models](/foundry-models/reasoning).
+- `reasoning_effort` added for latest [reasoning models](../how-to/reasoning).
 - `user_security_context` added for [Microsoft Defender for Cloud integration](https://aka.ms/TP4AI/Documentation/EndUserContext).
 
 ### Changes between 2024-09-01-preview and 2024-08-01-preview
@@ -526,7 +527,7 @@ The following sections summarize changes between API versions.
 
 ### Changes between 2024-07-01-preview and 2024-08-01-preview API specification
 
-- [Structured outputs support](/foundry-models/structured-outputs).
+- [Structured outputs support](../how-to/structured-outputs).
 - Large file upload API added.
 - On your data changes:
     * Mongo DB integration.
@@ -537,7 +538,7 @@ The following sections summarize changes between API versions.
 
 ### Changes between 2024-05-01-preview and 2024-07-01-preview API specification
 
-- [Batch API support added](/foundry-models/batch)
+- [Batch API support added](../how-to/batch)
 - [Vector store chunking strategy parameters](https://learn.microsoft.com/azure/ai-foundry/openai/reference-preview)
 - `max_num_results` that the file search tool should output.
 
@@ -562,8 +563,8 @@ The following sections summarize changes between API versions.
 
 ## Next steps
 
-- [Supported programming languages for the v1 API](/foundry-models/supported-languages)
-- [Foundry Models sold directly by Azure](/foundry-models/models-sold-directly-by-azure)
-- [Working with Azure OpenAI models](/foundry-models/working-with-models)
+- [Supported programming languages for the v1 API](../supported-languages)
+- [Foundry Models sold directly by Azure](../../foundry-models/concepts/models-sold-directly-by-azure)
+- [Working with Azure OpenAI models](../how-to/working-with-models)
 - [Azure OpenAI quotas and limits](https://learn.microsoft.com/azure/ai-foundry/openai/quotas-limits)
 - [v1 OpenAPI 3.0 spec](https://github.com/Azure/azure-rest-api-specs/blob/main/specification/ai/data-plane/OpenAI.v1/azure-v1-v1-generated.json)

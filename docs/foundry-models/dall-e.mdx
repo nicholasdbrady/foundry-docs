@@ -2,6 +2,11 @@
 title: "How to Use Image Generation Models from OpenAI"
 description: "Learn how to generate and edit images using Azure OpenAI image generation models. Discover configuration options and start creating images today."
 ---
+
+<Info>
+The DALL-E image generation model `dall-e-3` was retired on March 4, 2026, and is no longer available for new deployments. Existing deployments are non-functional. Use `gpt-image-1` or `gpt-image-1.5` for image generation instead. See the [image generation how-to guide](https://learn.microsoft.com/azure/ai-foundry/openai/how-to/dall-e) for updated instructions.
+</Info>
+
 OpenAI's image generation models create images from user-provided text prompts and optional images. This article explains how to use these models, configure options, and benefit from advanced image generation capabilities in Azure.
 
 You can do image generation via [image generation API](https://learn.microsoft.com/azure/ai-foundry/openai/dall-e-quickstart) or [responses API](https://learn.microsoft.com/azure/ai-foundry/openai/how-to/responses). Or you can experiment with image generation in the [Foundry portal](https://ai.azure.com)
@@ -12,17 +17,17 @@ Use the tabs at the start of this page to select your preferred API approach and
 
 Use this table to learn the differences between the different image generation models, and to help you choose the best model for your image generation needs.
 
-| Aspect | GPT-Image-1.5 | GPT-Image-1 | GPT-Image-1-Mini | DALL·E 3 |
-|--------|---------------|--------------|------------------|-----------|
-|**Availability** | Limited access preview ([Apply for GPT-image-1.5 access](https://aka.ms/oai/gptimage1.5access)) | Limited access preview ([Apply for GPT-image-1 access](https://aka.ms/oai/gptimage1access)) | Limited access preview ([Apply for GPT-image-1 access](https://aka.ms/oai/gptimage1access)) | Generally available|
-| **Strengths** | Best for realism, instruction following, multimodal context, and improved speed/cost | Best for realism, instruction following, and multimodal context | Best for fast prototyping, bulk generation, or cost-sensitive use cases | Strong prompt adherence, natural text rendering, and stylistic diversity |
-| **Input / Output Modalities & Format** | Accepts **text + image** inputs; outputs images only in **base64** (no URL option). | Accepts **text + image** inputs; outputs images only in **base64** (no URL option). | Accepts **text + image** inputs; outputs images only in **base64** (no URL option). | Accepts **text (primary)** input; limited image editing inputs (with mask). Outputs as **URL or base64**. |
-| **Image Sizes / Resolutions** | 1024×1024, 1024×1536, 1536×1024 | 1024×1024, 1024×1536, 1536×1024 | 1024×1024, 1024×1536, 1536×1024 | 1024×1024, 1024×1792, 1792×1024 |
-| **Quality Options** | `low`, `medium`, `high` (default = high) | `low`, `medium`, `high` (default = high) | `low`, `medium`, `high` (default = medium) | `standard`, `hd`; style options: `natural`, `vivid` |
-| **Number of Images per Request** | 1–10 images per request (`n` parameter) | 1–10 images per request (`n` parameter) | 1–10 images per request (`n` parameter) | Only **1 image** per request (`n` must be 1) |
-| **Editing (inpainting / variations)** | ✅ Supports inpainting and variations with mask + prompt | ✅ Supports inpainting and variations with mask + prompt | ✅ Supports inpainting and variations with mask + prompt | ✅ Supports inpainting and variations |
-| **Face Preservation** | ✅ Advanced **face preservation** for realistic, consistent results | ✅ Advanced **face preservation** for realistic, consistent results | ❌ No dedicated face preservation; better for **non-portrait/general creative** imagery | ❌ No dedicated face preservation |
-| **Performance & Cost** | High-fidelity, **realism-optimized** model; improved efficiency and latency over GPT-Image-1 | High-fidelity, **realism-optimized** model; higher latency and cost | **Cost-efficient** and **faster** for large-scale or iterative generation | Balanced performance; higher latency on complex prompts |
+| Aspect | GPT-Image-1.5 | GPT-Image-1 | GPT-Image-1-Mini |
+|--------|---------------|--------------|------------------|
+|**Availability** | Limited access preview ([Apply for GPT-image-1.5 access](https://aka.ms/oai/gptimage1.5access)) | Limited access preview ([Apply for GPT-image-1 access](https://aka.ms/oai/gptimage1access)) | Limited access preview ([Apply for GPT-image-1 access](https://aka.ms/oai/gptimage1access)) |
+| **Strengths** | Best for realism, instruction following, multimodal context, and improved speed/cost | Best for realism, instruction following, and multimodal context | Best for fast prototyping, bulk generation, or cost-sensitive use cases |
+| **Input / Output Modalities & Format** | Accepts **text + image** inputs; outputs images only in **base64** (no URL option). | Accepts **text + image** inputs; outputs images only in **base64** (no URL option). | Accepts **text + image** inputs; outputs images only in **base64** (no URL option). |
+| **Image Sizes / Resolutions** | 1024×1024, 1024×1536, 1536×1024 | 1024×1024, 1024×1536, 1536×1024 | 1024×1024, 1024×1536, 1536×1024 |
+| **Quality Options** | `low`, `medium`, `high` (default = high) | `low`, `medium`, `high` (default = high) | `low`, `medium`, `high` (default = medium) |
+| **Number of Images per Request** | 1–10 images per request (`n` parameter) | 1–10 images per request (`n` parameter) | 1–10 images per request (`n` parameter) |
+| **Editing (inpainting / variations)** | ✅ Supports inpainting and variations with mask + prompt | ✅ Supports inpainting and variations with mask + prompt | ✅ Supports inpainting and variations with mask + prompt |
+| **Face Preservation** | ✅ Advanced **face preservation** for realistic, consistent results | ✅ Advanced **face preservation** for realistic, consistent results | ❌ No dedicated face preservation; better for **non-portrait/general creative** imagery |
+| **Performance & Cost** | High-fidelity, **realism-optimized** model; improved efficiency and latency over GPT-Image-1 | High-fidelity, **realism-optimized** model; higher latency and cost | **Cost-efficient** and **faster** for large-scale or iterative generation |
 
 ## Quickstart
 
@@ -34,7 +39,7 @@ Use this guide to get started calling the Azure OpenAI in Microsoft Foundry Mode
 - <a href="https://www.python.org/" target="_blank">Python 3.8 or later version</a>.
 - The following Python libraries installed: `os`, `requests`, `json`.
 - An Azure OpenAI resource created in a supported region. See [Region availability](https://learn.microsoft.com/azure/ai-foundry/openai/concepts/models#model-summary-table-and-region-availability).
-- Then, you need to deploy a `gpt-image-1`-series or `dalle3` model with your Azure resource. For more information, see [Create a resource and deploy a model with Azure OpenAI](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/how-to/create-resource).
+- Then, you need to deploy a `gpt-image-1`-series model with your Azure resource. For more information, see [Create a resource and deploy a model with Azure OpenAI](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/how-to/create-resource).
 
 ### Setup 
 
@@ -78,269 +83,229 @@ Create and assign persistent environment variables for your key and endpoint.
 
 Create a new Python file named _quickstart.py_. Open the new file in your preferred editor or IDE.
 
+1. Replace the contents of _quickstart.py_ with the following code. Change the value of `prompt` to your preferred text. Also set `deployment` to the deployment name you chose when you deployed the GPT-image-1 series model.
+    
+    ```python
+    import os
+    import requests
+    import base64
+    from PIL import Image
+    from io import BytesIO
+    
+    # set environment variables
+    endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+    subscription_key = os.getenv("AZURE_OPENAI_API_KEY")
+    
+    deployment = "gpt-image-1.5" # the name of your GPT-image-1 series deployment
+    api_version = "2025-04-01-preview" # or later version
+    
+    def decode_and_save_image(b64_data, output_filename):
+      image = Image.open(BytesIO(base64.b64decode(b64_data)))
+      image.show()
+      image.save(output_filename)
+    
+    def save_all_images_from_response(response_data, filename_prefix):
+      for idx, item in enumerate(response_data['data']):
+        b64_img = item['b64_json']
+        filename = f"{filename_prefix}_{idx+1}.png"
+        decode_and_save_image(b64_img, filename)
+        print(f"Image saved to: '{filename}'")
+    
+    base_path = f'openai/deployments/{deployment}/images'
+    params = f'?api-version={api_version}'
+    
+    generation_url = f"{endpoint}{base_path}/generations{params}"
+    generation_body = {
+      "prompt": "girl falling asleep",
+      "n": 1,
+      "size": "1024x1024",
+      "quality": "medium",
+      "output_format": "png"
+    }
+    generation_response = requests.post(
+      generation_url,
+      headers={
+        'Api-Key': subscription_key,
+        'Content-Type': 'application/json',
+      },
+      json=generation_body
+    ).json()
+    save_all_images_from_response(generation_response, "generated_image")
+    
+    # In addition to generating images, you can edit them.
+    edit_url = f"{endpoint}{base_path}/edits{params}"
+    edit_body = {
+      "prompt": "girl falling asleep",
+      "n": 1,
+      "size": "1024x1024",
+      "quality": "medium"
+    }
+    files = {
+      "image": ("generated_image_1.png", open("generated_image_1.png", "rb"), "image/png"),
+      # You can use a mask to specify which parts of the image you want to edit.
+      # The mask must be the same size as the input image.
+      # "mask": ("mask.png", open("mask.png", "rb"), "image/png"),
+    }
+    edit_response = requests.post(
+      edit_url,
+      headers={'Api-Key': subscription_key},
+      data=edit_body,
+      files=files
+    ).json()
+    save_all_images_from_response(edit_response, "edited_image")
+    ```
+
+    The script makes a synchronous image generation API call.
+
+<Info>
+Remember to remove the key from your code when you're done, and never post your key publicly. For production, use a secure way of storing and accessing your credentials. For more information, see [Azure Key Vault](https://learn.microsoft.com/azure/key-vault/general/overview).
+</Info>
+
+1. Run the application with the `python` command:
+
+    ```console
+    python quickstart.py
+    ```
+
+    Wait a few moments to get the response.
+
+{/*
 <Tabs>
-  <Tab title="GPT-image-1 series">
-
-    1. Replace the contents of _quickstart.py_ with the following code. Change the value of `prompt` to your preferred text. Also set `deployment` to the deployment name you chose when you deployed the GPT-image-1 series model.
-
-        ```python
-        import os
-        import requests
-        import base64
-        from PIL import Image
-        from io import BytesIO
-
-        # set environment variables
-        endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
-        subscription_key = os.getenv("AZURE_OPENAI_API_KEY")
-
-        deployment = "gpt-image-1.5" # the name of your GPT-image-1 series deployment
-        api_version = "2025-04-01-preview" # or later version
-
-        def decode_and_save_image(b64_data, output_filename):
-          image = Image.open(BytesIO(base64.b64decode(b64_data)))
-          image.show()
-          image.save(output_filename)
-
-        def save_all_images_from_response(response_data, filename_prefix):
-          for idx, item in enumerate(response_data['data']):
-            b64_img = item['b64_json']
-            filename = f"{filename_prefix}_{idx+1}.png"
-            decode_and_save_image(b64_img, filename)
-            print(f"Image saved to: '{filename}'")
-
-        base_path = f'openai/deployments/{deployment}/images'
-        params = f'?api-version={api_version}'
-
-        generation_url = f"{endpoint}{base_path}/generations{params}"
-        generation_body = {
-          "prompt": "girl falling asleep",
-          "n": 1,
-          "size": "1024x1024",
-          "quality": "medium",
-          "output_format": "png"
-        }
-        generation_response = requests.post(
-          generation_url,
-          headers={
-            'Api-Key': subscription_key,
-            'Content-Type': 'application/json',
-          },
-          json=generation_body
-        ).json()
-        save_all_images_from_response(generation_response, "generated_image")
-
-        # In addition to generating images, you can edit them.
-        edit_url = f"{endpoint}{base_path}/edits{params}"
-        edit_body = {
-          "prompt": "girl falling asleep",
-          "n": 1,
-          "size": "1024x1024",
-          "quality": "medium"
-        }
-        files = {
-          "image": ("generated_image_1.png", open("generated_image_1.png", "rb"), "image/png"),
-          # You can use a mask to specify which parts of the image you want to edit.
-          # The mask must be the same size as the input image.
-          # "mask": ("mask.png", open("mask.png", "rb"), "image/png"),
-        }
-        edit_response = requests.post(
-          edit_url,
-          headers={'Api-Key': subscription_key},
-          data=edit_body,
-          files=files
-        ).json()
-        save_all_images_from_response(edit_response, "edited_image")
-        ```
-
-        The script makes a synchronous image generation API call.
-
-<Info>
-Remember to remove the key from your code when you're done, and never post your key publicly. For production, use a secure way of storing and accessing your credentials. For more information, see [Azure Key Vault](https://learn.microsoft.com/azure/key-vault/general/overview).
-</Info>
-
-    1. Run the application with the `python` command:
-
-        ```console
-        python quickstart.py
-        ```
-
-        Wait a few moments to get the response.
-
-    {/*
-    </Tab>
-    <Tab title="Black Forest Labs">
+  <Tab title="Black Forest Labs">
     tbd
-    */}
+*/}
 
-  </Tab>
-  <Tab title="DALL-E 3">
+    ### Output
 
-    1. Replace the contents of _quickstart.py_ with the following code. Change the value of `prompt` to your preferred text.
+    The output from a successful image generation API call looks like the following example. The `b64_json` field contains the base64-encoded output image data.
 
-        You also need to replace `<dalle3>` in the URL with the deployment name you chose when you deployed the DALL-E 3 model. Entering the model name will result in an error unless you chose a deployment name that is identical to the underlying model name. If you encounter an error, double check to make sure that you don't have a doubling of the `/` at the separation between your endpoint and `/openai/deployments`.
+    ```json
+    { 
+        "created": 1698116662, 
+        "data": [ 
+            { 
+                "b64_json": "<base64 image data>"
+            }
+        ]
+    } 
+    ```
 
-        ```python
-        import requests
-        import time
-        import os
-        api_base = os.environ['AZURE_OPENAI_ENDPOINT']  # Enter your endpoint here
-        api_key = os.environ['AZURE_OPENAI_API_KEY']         # Enter your API key here
+    A successful response includes:
+    - A `created` timestamp (Unix epoch time)
+    - A `data` array with at least one image object- Either a `b64_json` (base64-encoded image data) value for each generated image
 
-        api_version = '2024-02-01'
-        url = f"{api_base}/openai/deployments/<dalle3>/images/generations?api-version={api_version}"
-        headers= { "api-key": api_key, "Content-Type": "application/json" }
-        body = {
-            # Enter your prompt text here
-            "prompt": "A multi-colored umbrella on the beach, disposable camera",
-            "size": "1024x1024", # supported values are “1792x1024”, “1024x1024” and “1024x1792” 
-            "n": 1, #The number of images to generate. Only n=1 is supported for DALL-E 3.
-            "quality": "hd", # Options are “hd” and “standard”; defaults to standard 
-            "style": "vivid" # Options are “natural” and “vivid”; defaults to “vivid”
-        }
-        submission = requests.post(url, headers=headers, json=body)
+    #### Common errors
 
-        image_url = submission.json()['data'][0]['url']
+    | Error | Cause | Resolution |
+    |-------|-------|------------|
+    | `DeploymentNotFound` | The deployment name doesn't exist or is misspelled | Verify the deployment name in the Azure portal or Foundry portal |
+    | `401 Unauthorized` | Invalid or missing API key | Check that your `AZURE_OPENAI_API_KEY` environment variable is set correctly |
+    | `429 Too Many Requests` | Rate limit exceeded | Implement retry logic with exponential backoff |
+    | `content_policy_violation` | Prompt or generated output blocked by content filter | Modify the prompt to comply with the content policy |
+    | `InvalidPayload` | Missing required parameters or invalid values | Check that `prompt`, `size`, and `n` are correctly specified |
 
-        print(image_url)
-        ```
+    The Image APIs come with a content moderation filter. If the service recognizes your prompt as harmful content, it doesn't generate an image. For more information, see [Content filtering](https://learn.microsoft.com/en-us/azure/foundry-classic/foundry-models/concepts/content-filter). For examples of error responses, see the [Image generation how-to guide](/foundry-models/dall-e).
 
-        The script makes a synchronous image generation API call.
+    The system returns an operation status of `Failed` and the `error.code` value in the message is set to `contentFilter`. Here's an example:
 
-<Info>
-Remember to remove the key from your code when you're done, and never post your key publicly. For production, use a secure way of storing and accessing your credentials. For more information, see [Azure Key Vault](https://learn.microsoft.com/azure/key-vault/general/overview).
-</Info>
-
-    1. Run the application with the `python` command:
-
-        ```console
-        python quickstart.py
-        ```
-
-        Wait a few moments to get the response.
-
-  </Tab>
-</Tabs>
-
-### Output
-
-The output from a successful image generation API call looks like the following example. The `url` field contains a URL where you can download the generated image. The URL stays active for 24 hours.
-
-```json
-{ 
-    "created": 1698116662, 
-    "data": [ 
-        { 
-            "url": "<URL_to_generated_image>",
-            "revised_prompt": "<prompt_that_was_used>" 
-        }
-    ]
-} 
-```
-
-A successful response includes:
-- A `created` timestamp (Unix epoch time)
-- A `data` array with at least one image object
-- Either a `url` (temporary link valid for 24 hours) or `b64_json` (base64-encoded image data)
-
-#### Common errors
-
-| Error | Cause | Resolution |
-|-------|-------|------------|
-| `DeploymentNotFound` | The deployment name doesn't exist or is misspelled | Verify the deployment name in the Azure portal or Foundry portal |
-| `401 Unauthorized` | Invalid or missing API key | Check that your `AZURE_OPENAI_API_KEY` environment variable is set correctly |
-| `429 Too Many Requests` | Rate limit exceeded | Implement retry logic with exponential backoff |
-| `content_policy_violation` | Prompt or generated output blocked by content filter | Modify the prompt to comply with the content policy |
-| `InvalidPayload` | Missing required parameters or invalid values | Check that `prompt`, `size`, and `n` are correctly specified |
-
-The Image APIs come with a content moderation filter. If the service recognizes your prompt as harmful content, it doesn't generate an image. For more information, see [Content filtering](https://learn.microsoft.com/en-us/azure/foundry-classic/foundry-models/concepts/content-filter). For examples of error responses, see the [Image generation how-to guide](/foundry-models/dall-e).
-
-The system returns an operation status of `Failed` and the `error.code` value in the message is set to `contentFilter`. Here's an example:
-
-```json
-{
-    "created": 1698435368,
-    "error":
+    ```json
     {
-        "code": "contentFilter",
-        "message": "Your task failed as a result of our safety system."
+        "created": 1698435368,
+        "error":
+        {
+            "code": "contentFilter",
+            "message": "Your task failed as a result of our safety system."
+        }
     }
-}
-```
+    ```
 
-It's also possible that the generated image itself is filtered. In this case, the error message is set to `Generated image was filtered as a result of our safety system.`. Here's an example:
+    It's also possible that the generated image itself is filtered. In this case, the error message is set to `Generated image was filtered as a result of our safety system.`. Here's an example:
 
-```json
-{
-    "created": 1698435368,
-    "error":
+    ```json
     {
-        "code": "contentFilter",
-        "message": "Generated image was filtered as a result of our safety system."
+        "created": 1698435368,
+        "error":
+        {
+            "code": "contentFilter",
+            "message": "Generated image was filtered as a result of our safety system."
+        }
     }
-}
-```
+    ```
 
-### Clean up resources
+    ### Clean up resources
 
-If you want to clean up and remove an Azure OpenAI resource, you can delete the resource or resource group. Deleting the resource group also deletes any other resources associated with it.
+    If you want to clean up and remove an Azure OpenAI resource, you can delete the resource or resource group. Deleting the resource group also deletes any other resources associated with it.
 
-- [Azure portal](/setup/multi-service-resource)
-- [Azure CLI](/setup/multi-service-resource)
+    - [Azure portal](/setup/multi-service-resource)
+    - [Azure CLI](/setup/multi-service-resource)
 
-Use this guide to get started generating images with the Azure OpenAI SDK for Python.
+    ::: zone-end
 
-[Library source code](https://github.com/openai/openai-python/tree/main/src/openai) | [Package](https://github.com/openai/openai-python) | [Samples](https://github.com/openai/openai-python/tree/main/examples)
+    ::: zone pivot="programming-language-python"
 
-### Prerequisites
+    Use this guide to get started generating images with the Azure OpenAI SDK for Python.
 
-- An Azure subscription. [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
-- <a href="https://www.python.org/" target="_blank">Python 3.8 or later version</a>.
-- An Azure OpenAI resource created in a compatible region. See [Region availability](https://learn.microsoft.com/azure/ai-foundry/openai/concepts/models#model-summary-table-and-region-availability).
-    - Access the Azure OpenAI resource endpoint and keys in the Azure portal.
-- A deployed image generation model:
-    - **DALL-E 3**: Deploy a `dalle3` model. Generally available.
-    - **GPT-image-1 series**: Deploy a `gpt-image-1` model. Requires [limited access registration](https://aka.ms/oai/access).
+    [Library source code](https://github.com/openai/openai-python/tree/main/src/openai) | [Package](https://github.com/openai/openai-python) | [Samples](https://github.com/openai/openai-python/tree/main/examples)
 
-For more information, see [Create a resource and deploy a model with Azure OpenAI](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/how-to/create-resource).
+    ### Prerequisites
 
-### Setup
+    - An Azure subscription. [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
+    - <a href="https://www.python.org/" target="_blank">Python 3.8 or later version</a>.
+    - An Azure OpenAI resource created in a compatible region. See [Region availability](https://learn.microsoft.com/azure/ai-foundry/openai/concepts/models#model-summary-table-and-region-availability).
+        - Access the Azure OpenAI resource endpoint and keys in the Azure portal.
+    - A deployed image generation model:
+        - **GPT-image-1 series**: Deploy a `gpt-image-1`-series model. Available in limited access.
+        - **GPT-image-1 series**: Deploy a `gpt-image-1` model. Requires [limited access registration](https://aka.ms/oai/access).
 
-#### Retrieve key and endpoint
+    For more information, see [Create a resource and deploy a model with Azure OpenAI](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/how-to/create-resource).
 
-To successfully call the Azure OpenAI APIs, you need the following information about your Azure OpenAI resource:
+    ### Setup
 
-| Variable | Name | Value |
-|---|---|---|
-| **Endpoint** | `api_base` | The endpoint value is located under **Keys and Endpoint** for your resource in the Azure portal. You can also find the endpoint via the **Deployments** page in Microsoft Foundry portal. An example endpoint is: `https://docs-test-001.openai.azure.com/`. |
-| **Key** | `api_key` | The key value is also located under **Keys and Endpoint** for your resource in the Azure portal. Azure generates two keys for your resource. You can use either value. |
+    #### Retrieve key and endpoint
 
-Go to your resource in the Azure portal. On the navigation pane, select **Keys and Endpoint** under **Resource Management**. Copy the **Endpoint** value and an access key value. You can use either the **KEY 1** or **KEY 2** value. Always having two keys allows you to securely rotate and regenerate keys without causing a service disruption.
+    To successfully call the Azure OpenAI APIs, you need the following information about your Azure OpenAI resource:
+
+    | Variable | Name | Value |
+    |---|---|---|
+    | **Endpoint** | `api_base` | The endpoint value is located under **Keys and Endpoint** for your resource in the Azure portal. You can also find the endpoint via the **Deployments** page in Microsoft Foundry portal. An example endpoint is: `https://docs-test-001.openai.azure.com/`. |
+    | **Key** | `api_key` | The key value is also located under **Keys and Endpoint** for your resource in the Azure portal. Azure generates two keys for your resource. You can use either value. |
+
+    Go to your resource in the Azure portal. On the navigation pane, select **Keys and Endpoint** under **Resource Management**. Copy the **Endpoint** value and an access key value. You can use either the **KEY 1** or **KEY 2** value. Always having two keys allows you to securely rotate and regenerate keys without causing a service disruption.
 
 <Frame>
-  <img src="/images/endpoint.png" alt="Screenshot that shows the Keys and Endpoint page for an Azure OpenAI resource in the Azure portal." />
+<img src="/images/endpoint.png" alt="Screenshot that shows the Keys and Endpoint page for an Azure OpenAI resource in the Azure portal." />
 </Frame>
 
-### Environment variables
+    ### Environment variables
 
-Create and assign persistent environment variables for your key and endpoint.
+    Create and assign persistent environment variables for your key and endpoint.
 
-<CodeGroup>
-```cmd Command Line
+  </Tab>
+  <Tab title="Command Line">
+
+    ```cmd
     setx AZURE_OPENAI_API_KEY "REPLACE_WITH_YOUR_KEY_VALUE_HERE" 
     setx AZURE_OPENAI_ENDPOINT "REPLACE_WITH_YOUR_ENDPOINT_HERE" 
     ```
 
-```powershell PowerShell
+  </Tab>
+  <Tab title="PowerShell">
+
+    ```powershell
     [System.Environment]::SetEnvironmentVariable('AZURE_OPENAI_API_KEY', 'REPLACE_WITH_YOUR_KEY_VALUE_HERE', 'User')
     [System.Environment]::SetEnvironmentVariable('AZURE_OPENAI_ENDPOINT', 'REPLACE_WITH_YOUR_ENDPOINT_HERE', 'User')
     ```
 
-```bash Bash
+  </Tab>
+  <Tab title="Bash">
+
+    ```bash
     export AZURE_OPENAI_API_KEY="REPLACE_WITH_YOUR_KEY_VALUE_HERE"
     export AZURE_OPENAI_ENDPOINT="REPLACE_WITH_YOUR_ENDPOINT_HERE"
     ```
-</CodeGroup>
+
+  </Tab>
+</Tabs>
 
 ### Install the Python SDK
 
@@ -370,13 +335,13 @@ from PIL import Image
 import json
 
 client = AzureOpenAI(
-    api_version="2024-02-01",  
+    api_version="2025-04-01-preview",  
     api_key=os.environ["AZURE_OPENAI_API_KEY"],  
     azure_endpoint=os.environ['AZURE_OPENAI_ENDPOINT']
 )
 
 result = client.images.generate(
-    model="dalle3", # the name of your DALL-E 3 deployment
+    model="gpt-image-1", # the name of your GPT-image-1 series deployment
     prompt="a close-up of a bear walking through the forest",
     n=1
 )
@@ -406,7 +371,7 @@ image.show()
 
 1. Make sure the `AZURE_OPENAI_ENDPOINT` and `AZURE_OPENAI_API_KEY` environment variables are set.
 1. Change the value of `prompt` to your preferred text.
-1. Change the value of `model` to the name of your deployed DALL-E 3 model.
+1. Change the value of `model` to the name of your deployed GPT-image-1 series model.
 
 <Info>
 Remember to remove the key from your code when you're done, and never post your key publicly. For production, use a secure way of storing and accessing your credentials. For more information, see [Azure Key Vault](https://learn.microsoft.com/azure/key-vault/general/overview).
@@ -555,7 +520,7 @@ To run the quickstart, follow these steps:
     //AzureOpenAIClient openAIClient = new AzureOpenAIClient(new Uri(endpoint), new AzureKeyCredential(key));
     
     // This must match the custom deployment name you chose for your model
-    ImageClient chatClient = openAIClient.GetImageClient("dalle-3");
+    ImageClient chatClient = openAIClient.GetImageClient("gpt-image-1");
     
     var imageGeneration = await chatClient.GenerateImageAsync(
             "a happy monkey sitting in a tree, in watercolor",
@@ -625,7 +590,7 @@ For the recommended keyless authentication with Microsoft Entra ID, you need to:
    <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
         <modelVersion>4.0.0</modelVersion>
         <groupId>com.azure.samples</groupId>
-        <artifactId>quickstart-dall-e</artifactId>
+        <artifactId>quickstart-image-generation</artifactId>
         <version>1.0.0-SNAPSHOT</version>
         <build>
             <sourceDirectory>src</sourceDirectory>
@@ -952,7 +917,7 @@ You need to retrieve the following information to authenticate your application 
 To use the recommended keyless authentication with the SDK, make sure that the `AZURE_OPENAI_API_KEY` environment variable isn't set.
 </Danger>
 
-### Generate images with DALL-E
+### Generate images
 
 <Tabs>
   <Tab title="Microsoft Entra ID">
@@ -971,7 +936,7 @@ To use the recommended keyless authentication with the SDK, make sure that the `
 
         // Required Azure OpenAI deployment name and API version
         const apiVersion = process.env.OPENAI_API_VERSION || "2024-07-01";
-        const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "dall-e-3";
+        const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "gpt-image-1";
 
         // The prompt to generate images from
         const prompt = "a monkey eating a banana";
@@ -1039,7 +1004,7 @@ To use the recommended keyless authentication with the SDK, make sure that the `
 
         // Required Azure OpenAI deployment name and API version
         const apiVersion = process.env.OPENAI_API_VERSION || "2024-07-01";
-        const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "dall-e-3";
+        const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "gpt-image-1";
 
         // The prompt to generate images from
         const prompt = "a monkey eating a banana";
@@ -1189,7 +1154,7 @@ You need to retrieve the following information to authenticate your application 
 To use the recommended keyless authentication with the SDK, make sure that the `AZURE_OPENAI_API_KEY` environment variable isn't set.
 </Danger>
 
-### Generate images with DALL-E
+### Generate images
 
 <Tabs>
   <Tab title="Microsoft Entra ID">
@@ -1208,7 +1173,7 @@ To use the recommended keyless authentication with the SDK, make sure that the `
 
         // Required Azure OpenAI deployment name and API version
         const apiVersion = process.env.OPENAI_API_VERSION || "2024-07-01";
-        const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "dall-e-3";
+        const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "gpt-image-1";
 
         // keyless authentication    
         const credential = new DefaultAzureCredential();
@@ -1293,7 +1258,7 @@ To use the recommended keyless authentication with the SDK, make sure that the `
 
         // Required Azure OpenAI deployment name and API version
         const apiVersion = process.env.OPENAI_API_VERSION || "2024-07-01";
-        const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "dall-e-3";
+        const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "gpt-image-1";
 
         // The prompt to generate images from
         const prompt = "a monkey eating a banana";
@@ -1482,7 +1447,7 @@ The sample code in this quickstart uses Microsoft Entra ID for the recommended k
 
         func main() {
         	azureOpenAIEndpoint := os.Getenv("AZURE_OPENAI_ENDPOINT")
-        	modelDeploymentID := "dall-e-3"
+        	modelDeploymentID := "gpt-image-1"
 
         	credential, err := azidentity.NewDefaultAzureCredential(nil)
         	if err != nil {
@@ -1570,7 +1535,7 @@ The sample code in this quickstart uses Microsoft Entra ID for the recommended k
 
         func main() {
         	azureOpenAIEndpoint := os.Getenv("AZURE_OPENAI_ENDPOINT")
-        	modelDeploymentID := "dall-e-3"
+        	modelDeploymentID := "gpt-image-1"
 
         	azureOpenAIKey := os.Getenv("AZURE_OPENAI_API_KEY")
         	credential := azcore.NewKeyCredential(azureOpenAIKey)
@@ -1718,7 +1683,8 @@ You need to retrieve the following information to authenticate your application 
     # Azure OpenAI metadata variables
     $openai = @{
         api_base    = $Env:AZURE_OPENAI_ENDPOINT 
-        api_version = '2023-06-01-preview' # This can change in the future.
+        api_version = '2025-04-01-preview'
+        deployment  = 'gpt-image-1' # the name of your GPT-image-1 series deployment
     }
     
     # Use the recommended keyless authentication via bearer token.
@@ -1735,20 +1701,13 @@ You need to retrieve the following information to authenticate your application 
         prompt = $prompt
         size   = '1024x1024'
         n      = 1
+        quality = 'high'
     } | ConvertTo-Json
     
     # Call the API to generate the image and retrieve the response
-    $url = "$($openai.api_base)/openai/images/generations:submit?api-version=$($openai.api_version)"
+    $url = "$($openai.api_base)/openai/deployments/$($openai.deployment)/images/generations?api-version=$($openai.api_version)"
     
-    $submission = Invoke-RestMethod -Uri $url -Headers $headers -Body $body -Method Post -ContentType 'application/json' -ResponseHeadersVariable submissionHeaders
-    
-    $operation_location = $submissionHeaders['operation-location'][0]
-    $status = ''
-    while ($status -ne 'succeeded') {
-        Start-Sleep -Seconds 1
-        $response = Invoke-RestMethod -Uri $operation_location -Headers $headers
-        $status   = $response.status
-    }
+    $response = Invoke-RestMethod -Uri $url -Headers $headers -Body $body -Method Post -ContentType 'application/json'
     
     # Set the directory for the stored image
     $image_dir = Join-Path -Path $pwd -ChildPath 'images'
@@ -1761,9 +1720,9 @@ You need to retrieve the following information to authenticate your application 
     # Initialize the image path (note the filetype should be png)
     $image_path = Join-Path -Path $image_dir -ChildPath 'generated_image.png'
     
-    # Retrieve the generated image
-    $image_url = $response.result.data[0].url  # extract image URL from response
-    $generated_image = Invoke-WebRequest -Uri $image_url -OutFile $image_path  # download the image
+    # Decode the base64 image and save to file
+    $image_bytes = [Convert]::FromBase64String($response.data[0].b64_json)
+    [IO.File]::WriteAllBytes($image_path, $image_bytes)
     return $image_path
    ```
 
@@ -1777,7 +1736,7 @@ For production, use a secure way of storing and accessing your credentials like 
    ./quickstart.ps1
    ```
 
-   The script loops until the generated image is ready.
+   The script generates the image and saves it.
 
 ### Output
 
@@ -1803,7 +1762,7 @@ Use this guide to get started generating images with Azure OpenAI in your browse
 
 Browse to [Foundry](https://ai.azure.com/?cid=learnDocs) and sign in with the credentials associated with your Azure OpenAI resource. During or after the sign-in workflow, select the appropriate directory, Azure subscription, and Azure OpenAI resource.
 
-From the Foundry landing page, create or select a new project. Navigate to the **Models + endpoints** page on the left nav. Select **Deploy model** and then choose one of the DALL-E models from the list. Complete the deployment process. 
+From the Foundry landing page, create or select a new project. Navigate to the **Models + endpoints** page on the left nav. Select **Deploy model** and then choose one of the GPT-Image-1 series models from the list. Complete the deployment process. 
 
 On the model's page, select **Open in playground**.
 
@@ -1830,7 +1789,6 @@ Image generation has default rate limits per deployment:
 
 | Model | Default quota (images/min) |
 |-------|---------------------------|
-| DALL-E 3 | 2 |
 | GPT-image-1 series | 5 |
 
 To view your current quota or request an increase, see [Manage Azure OpenAI quotas](https://learn.microsoft.com/azure/ai-foundry/openai/how-to/quota).
@@ -1847,83 +1805,43 @@ Image generation typically takes 10-30 seconds depending on the model, size, and
 
 - An Azure subscription. You can [create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
 - An Azure OpenAI resource created in a supported region. See [Region availability](https://learn.microsoft.com/azure/ai-foundry/openai/concepts/models#model-summary-table-and-region-availability).
-- Deploy a `dall-e-3` or `gpt-image-1`-series model with your Azure OpenAI resource. For more information on deployments, see [Create a resource and deploy a model with Azure OpenAI](https://learn.microsoft.com/azure/ai-foundry/openai/how-to/create-resource).
-    - GPT-image-1 series models are newer and feature a number of improvements over DALL-E 3. They are available in limited access: [Apply for GPT-image-1 access](https://aka.ms/oai/gptimage1access); [Apply for GPT-image-1.5 access](https://aka.ms/oai/gptimage1.5access).
+- Deploy a `gpt-image-1`-series model with your Azure OpenAI resource. For more information on deployments, see [Create a resource and deploy a model with Azure OpenAI](https://learn.microsoft.com/azure/ai-foundry/openai/how-to/create-resource).
+    - GPT-image-1 series models are available in limited access: [Apply for GPT-image-1 access](https://aka.ms/oai/gptimage1access); [Apply for GPT-image-1.5 access](https://aka.ms/oai/gptimage1.5access).
 - Python 3.8 or later.
     - Install the required packages: `pip install openai azure-identity`
 
-<Tabs>
-  <Tab title="GPT-image-1 series">
+Send a POST request to:
 
-    Send a POST request to:
+```
+https://<your_resource_name>.openai.azure.com/openai/deployments/<your_deployment_name>/images/generations?api-version=<api_version>
+```
 
-    ```
-    https://<your_resource_name>.openai.azure.com/openai/deployments/<your_deployment_name>/images/generations?api-version=<api_version>
-    ```
+**URL**:
 
-    **URL**:
+Replace the following values:
 
-    Replace the following values:
+- `<your_resource_name>` is the name of your Azure OpenAI resource.
+- `<your_deployment_name>` is the name of your GPT-image-1 series model deployment.
+- `<api_version>` is the version of the API you want to use. For example, `2025-04-01-preview`.
 
-    - `<your_resource_name>` is the name of your Azure OpenAI resource.
-    - `<your_deployment_name>` is the name of your GPT-image-1 series model deployment.
-    - `<api_version>` is the version of the API you want to use. For example, `2025-04-01-preview`.
+**Required headers**:
 
-    **Required headers**:
+- `Content-Type`: `application/json`
+- `api-key`: `<your_API_key>`
 
-    - `Content-Type`: `application/json`
-    - `api-key`: `<your_API_key>`
+**Body**:
 
-    **Body**:
+The following is a sample request body. You specify a number of options, defined in later sections.
 
-    The following is a sample request body. You specify a number of options, defined in later sections.
-
-    ```json
-    {
-        "prompt": "A multi-colored umbrella on the beach, disposable camera",
-        "model": "gpt-image-1.5",
-        "size": "1024x1024", 
-        "n": 1,
-        "quality": "high"
-    }
-    ```
-
-  </Tab>
-  <Tab title="DALL-E 3">
-
-    Send a POST request to:
-
-    ```
-    https://<your_resource_name>.openai.azure.com/openai/deployments/<your_deployment_name>/images/generations?api-version=<api_version>
-    ```
-
-    **URL**:
-
-    Replace the following values:
-    - `<your_resource_name>` is the name of your Azure OpenAI resource.
-    - `<your_deployment_name>` is the name of your DALL-E 3 model deployment.
-    - `<api_version>` is the version of the API you want to use. For example, `2024-02-01`.
-
-    **Required headers**:
-    - `Content-Type`: `application/json`
-    - `api-key`: `<your_API_key>`
-
-    **Body**:
-
-    The following is a sample request body. You specify a number of options, defined in later sections.
-
-    ```json
-    {
-        "prompt": "A multi-colored umbrella on the beach, disposable camera",
-        "size": "1024x1024", 
-        "n": 1,
-        "quality": "hd", 
-        "style": "vivid"
-    }
-    ```
-
-  </Tab>
-</Tabs>
+```json
+{
+    "prompt": "A multi-colored umbrella on the beach, disposable camera",
+    "model": "gpt-image-1.5",
+    "size": "1024x1024", 
+    "n": 1,
+    "quality": "high"
+}
+```
 
 <Tip>
 For image generation token costs, see [Image tokens](/foundry-models/models-sold-directly-by-azure).
@@ -1931,44 +1849,21 @@ For image generation token costs, see [Image tokens](/foundry-models/models-sold
 
 ### Output
 
-<Tabs>
-  <Tab title="GPT-image-1 series">
+The response from a successful image generation API call looks like the following example. The `b64_json` field contains the output image data.
 
-    The response from a successful image generation API call looks like the following example. The `b64_json` field contains the output image data.
-
-    ```json
-    { 
-        "created": 1698116662, 
-        "data": [ 
-            { 
-                "b64_json": "<base64 image data>"
-            }
-        ]
-    } 
-    ```
-    <Note>
-    The `response_format` parameter isn't supported for GPT-image-1 series models, which always return base64-encoded images.
-    </Note>
-
-  </Tab>
-  <Tab title="DALL-E 3">
-
-    The response from a successful image generation API call looks like the following example. The `url` field contains a URL where you can download the generated image. The URL stays active for 24 hours.
-
-    ```json
-    { 
-        "created": 1698116662, 
-        "data": [ 
-            { 
-                "url": "<URL_to_generated_image>",
-                "revised_prompt": "<prompt_that_was_used>" 
-            }
-        ]
-    } 
-    ```
-
-  </Tab>
-</Tabs>
+```json
+{ 
+    "created": 1698116662, 
+    "data": [ 
+        { 
+            "b64_json": "<base64 image data>"
+        }
+    ]
+} 
+```
+<Note>
+The `response_format` parameter isn't supported for GPT-image-1 series models, which always return base64-encoded images.
+</Note>
 
 ### Streaming
 
@@ -2014,185 +1909,129 @@ for event in stream:
 
 The following API body parameters are available for image generation models.
 
-<Tabs>
-  <Tab title="GPT-image-1 series">
+#### Size
 
-    #### Size
+Specify the size of the generated images. Must be one of `1024x1024`, `1024x1536`, or `1536x1024` for GPT-image-1 series models. Square images are faster to generate.
 
-    Specify the size of the generated images. Must be one of `1024x1024`, `1024x1536`, or `1536x1024` for GPT-image-1 series models. Square images are faster to generate.
+#### Quality
 
-    #### Quality
+There are three options for image quality: `low`, `medium`, and `high`. Lower quality images can be generated faster.
 
-    There are three options for image quality: `low`, `medium`, and `high`. Lower quality images can be generated faster.
+The default value is `high`.
 
-    The default value is `high`.
+#### Number
 
-    #### Number
+You can generate between one and 10 images in a single API call. The default value is `1`.
 
-    You can generate between one and 10 images in a single API call. The default value is `1`.
+#### User ID
 
-    #### User ID
+Use the *user* parameter to specify a unique identifier for the user making the request. This identifier is useful for tracking and monitoring usage patterns. The value can be any string, such as a user ID or email address.
 
-    Use the *user* parameter to specify a unique identifier for the user making the request. This identifier is useful for tracking and monitoring usage patterns. The value can be any string, such as a user ID or email address.
+#### Output format
 
-    #### Output format
+Use the *output_format* parameter to specify the format of the generated image. Supported formats are `PNG` and `JPEG`. The default is `PNG`.
 
-    Use the *output_format* parameter to specify the format of the generated image. Supported formats are `PNG` and `JPEG`. The default is `PNG`.
+<Note>
+WEBP images aren't supported in the Azure OpenAI in Microsoft Foundry Models.
+</Note>
 
-    <Note>
-    WEBP images aren't supported in the Azure OpenAI in Microsoft Foundry Models.
-    </Note>
+#### Compression
 
-    #### Compression
+Use the *output_compression* parameter to specify the compression level for the generated image. Input an integer between `0` and `100`, where `0` is no compression and `100` is maximum compression. The default is `100`.
 
-    Use the *output_compression* parameter to specify the compression level for the generated image. Input an integer between `0` and `100`, where `0` is no compression and `100` is maximum compression. The default is `100`.
+#### Streaming 
 
-    #### Streaming 
+Use the *stream* parameter to enable streaming responses. When set to `true`, the API returns partial images as they're generated. This feature provides faster visual feedback for users and improves perceived latency. Set the *partial_images* parameter to control how many partial images are generated (1-3).
 
-    Use the *stream* parameter to enable streaming responses. When set to `true`, the API returns partial images as they're generated. This feature provides faster visual feedback for users and improves perceived latency. Set the *partial_images* parameter to control how many partial images are generated (1-3).
+#### Transparency
 
-    #### Transparency
-
-    Set the *background* parameter to `transparent` and *output_format* to `PNG` on an image generate request to get an image with a transparent background.
-
-  </Tab>
-  <Tab title="DALL-E 3">
-
-    {/*
-    | Parameter Name   | Description       | Values         |
-    |------------------|-------------|--------------------------|
-    | Size             | Specifies the size of generated images. Square images generate faster.    | `1024x1024` (default), `1792x1024`, `1024x1792`           |
-    | Style            | DALL-E 3 offers two style options. The natural style is more similar to the default style of older models, while the vivid style generates more hyper-real and cinematic images. </br></br>The natural style is useful in cases where DALL-E 3 over-exaggerates or confuses a subject that's meant to be more simple, subdued, or realistic.     | `natural`, `vivid` (default)           |
-    | Quality          | Controls image quality. `hd` has finer details and better consistency; `standard` is faster.    | `hd`, `standard` (default) |
-    | Number (`n`)     | Must be set to 1 for DALL-E 3. To get multiple images, make parallel requests.        | `1`              |
-    | Response format  | Format for the returned images. Default is `url`.   | `url`, `b64_json`|
-    */}
-
-    #### Size
-
-    Specify the size of the generated images. Must be one of `1024x1024`, `1792x1024`, or `1024x1792` for DALL-E 3 models. Square images are faster to generate.
-
-    #### Style
-
-    DALL-E 3 offers two style options: `natural` and `vivid`. The natural style is more similar to the default style of older models, while the vivid style generates more hyper-real and cinematic images.
-
-    The natural style is useful in cases where DALL-E 3 over-exaggerates or confuses a subject that's meant to be more simple, subdued, or realistic.
-
-    The default value is `vivid`.
-
-    #### Quality
-
-    There are two options for image quality: `hd` and `standard`. The hd option creates images with finer details and greater consistency across the image. Standard images are faster to generate.
-
-    The default value is `standard`.
-
-    #### Number
-
-    With DALL-E 3, you can't generate more than one image in a single API call: the `n` parameter must be set to *1*. To generate multiple images at once, make parallel requests.
-
-    #### Response format
-
-    The format in which DALL-E 3 returns generated images. Must be one of `url` or `b64_json`. This parameter isn't supported for GPT-image-1 series models, which always return base64-encoded images.
-
-  </Tab>
-</Tabs>
+Set the *background* parameter to `transparent` and *output_format* to `PNG` on an image generate request to get an image with a transparent background.
 
 ## Call the image edit API
 
 The Image Edit API enables you to modify existing images based on text prompts you provide. The API call is similar to the image generation API call, but you also need to provide an input image.
 
-<Tabs>
-  <Tab title="GPT-image-1 series">
+<Info>
+The input image must be less than 50 MB in size and must be a PNG or JPG file.
+</Info>
 
-    <Info>
-    The input image must be less than 50 MB in size and must be a PNG or JPG file.
-    </Info>
+Send a POST request to:
 
-    Send a POST request to:
+```
+https://<your_resource_name>.openai.azure.com/openai/deployments/<your_deployment_name>/images/edits?api-version=<api_version>
+```
 
-    ```
-    https://<your_resource_name>.openai.azure.com/openai/deployments/<your_deployment_name>/images/edits?api-version=<api_version>
-    ```
+**URL**:
 
-    **URL**:
+Replace the following values:
+- `<your_resource_name>` is the name of your Azure OpenAI resource.
+- `<your_deployment_name>` is the name of your GPT-image-1 series model deployment.
+- `<api_version>` is the version of the API you want to use. For example, `2025-04-01-preview`.
 
-    Replace the following values:
-    - `<your_resource_name>` is the name of your Azure OpenAI resource.
-    - `<your_deployment_name>` is the name of your GPT-image-1 series model deployment.
-    - `<api_version>` is the version of the API you want to use. For example, `2025-04-01-preview`.
+**Required headers**:
+- `Content-Type`: `multipart/form-data`
+- `api-key`: `<your_API_key>`
 
-    **Required headers**:
-    - `Content-Type`: `multipart/form-data`
-    - `api-key`: `<your_API_key>`
+**Body**:
 
-    **Body**:
-
-    The following is a sample request body. You specify a number of options, defined in later sections.
+The following is a sample request body. You specify a number of options, defined in later sections.
 
 <Info>
 The Image Edit API takes multipart/form data, not JSON data. The example below shows sample form data that would be attached to a cURL request.
 </Info>
 
-    ```
-    -F "image[]=@beach.png" \
-    -F 'prompt=Add a beach ball in the center' \
-    -F "model=gpt-image-1" \
-    -F "size=1024x1024" \
-    -F "n=1" \
-    -F "quality=high"
-    ```
-    ### API response output
+```
+-F "image[]=@beach.png" \
+-F 'prompt=Add a beach ball in the center' \
+-F "model=gpt-image-1" \
+-F "size=1024x1024" \
+-F "n=1" \
+-F "quality=high"
+```
+### API response output
 
-    The response from a successful image editing API call looks like the following example. The `b64_json` field contains the output image data.
+The response from a successful image editing API call looks like the following example. The `b64_json` field contains the output image data.
 
-    ```json
-    { 
-        "created": 1698116662, 
-        "data": [ 
-            { 
-                "b64_json": "<base64 image data>"
-            }
-        ]
-    } 
-    ```
+```json
+{ 
+    "created": 1698116662, 
+    "data": [ 
+        { 
+            "b64_json": "<base64 image data>"
+        }
+    ]
+} 
+```
 
-    ### Specify image edit API options
+### Specify image edit API options
 
-    The following API body parameters are available for image editing models, in addition to the ones available for image generation models.
+The following API body parameters are available for image editing models, in addition to the ones available for image generation models.
 
-    #### Image
+#### Image
 
-    The *image* value indicates the image file you want to edit.
+The *image* value indicates the image file you want to edit.
 
-    #### Input fidelity 
+#### Input fidelity 
 
-    The *input_fidelity* parameter controls how much effort the model puts into matching the style and features, especially facial features, of input images. 
+The *input_fidelity* parameter controls how much effort the model puts into matching the style and features, especially facial features, of input images. 
 
-    This parameter lets you make subtle edits to an image without changing unrelated areas. When you use high input fidelity, faces are preserved more accurately than in standard mode.
+This parameter lets you make subtle edits to an image without changing unrelated areas. When you use high input fidelity, faces are preserved more accurately than in standard mode.
 
 <Info>
 Input fidelity is not supported by the `gpt-image-1-mini` model.
 </Info>
 
-    #### Mask
+#### Mask
 
-    The *mask* parameter uses the same type as the main *image* input parameter. It defines the area of the image that you want the model to edit, using fully transparent pixels (alpha of zero) in those areas. The mask must be a PNG file and have the same dimensions as the input image.
+The *mask* parameter uses the same type as the main *image* input parameter. It defines the area of the image that you want the model to edit, using fully transparent pixels (alpha of zero) in those areas. The mask must be a PNG file and have the same dimensions as the input image.
 
-    #### Streaming 
+#### Streaming 
 
-    Use the *stream* parameter to enable streaming responses. When set to `true`, the API returns partial images as they're generated. This feature provides faster visual feedback for users and improves perceived latency. Set the *partial_images* parameter to control how many partial images are generated (1-3).
+Use the *stream* parameter to enable streaming responses. When set to `true`, the API returns partial images as they're generated. This feature provides faster visual feedback for users and improves perceived latency. Set the *partial_images* parameter to control how many partial images are generated (1-3).
 
-    #### Transparency
+#### Transparency
 
-    Set the *background* parameter to `transparent` and *output_format* to `PNG` on an image generate request to get an image with a transparent background.
-
-  </Tab>
-  <Tab title="DALL-E 3">
-
-    DALL-E models don't support the Image Edit API.
-
-  </Tab>
-</Tabs>
+Set the *background* parameter to `transparent` and *output_format* to `PNG` on an image generate request to get an image with a transparent background.
 
 ## Write effective text-to-image prompts
 
