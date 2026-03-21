@@ -1,0 +1,21 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+
+COPY pyproject.toml README.md ./
+COPY foundry_docs_mcp/ foundry_docs_mcp/
+
+COPY docs/ docs/
+COPY docs.json .
+
+RUN pip install --no-cache-dir .
+
+ENV FOUNDRY_DOCS_DIR=/app/docs
+ENV FOUNDRY_DOCS_JSON=/app/docs.json
+ENV MCP_TRANSPORT=streamable-http
+ENV MCP_HOST=0.0.0.0
+ENV MCP_PORT=8000
+
+EXPOSE 8000
+
+ENTRYPOINT ["foundry-docs"]

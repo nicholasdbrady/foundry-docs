@@ -1,0 +1,21 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+
+COPY pyproject.toml README.md ./
+COPY foundry_docs_mcp/ foundry_docs_mcp/
+COPY foundry_docs_vnext_mcp/ foundry_docs_vnext_mcp/
+
+COPY docs-vnext/ docs-vnext/
+
+RUN pip install --no-cache-dir .
+
+ENV FOUNDRY_VNEXT_DOCS_DIR=/app/docs-vnext
+ENV FOUNDRY_VNEXT_DOCS_JSON=/app/docs-vnext/docs.json
+ENV MCP_TRANSPORT=streamable-http
+ENV MCP_HOST=0.0.0.0
+ENV MCP_PORT=8000
+
+EXPOSE 8000
+
+ENTRYPOINT ["foundry-docs-vnext"]
