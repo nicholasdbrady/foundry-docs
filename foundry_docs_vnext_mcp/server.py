@@ -17,7 +17,10 @@ def main():
     kwargs = {}
     if transport != "stdio":
         kwargs["host"] = os.environ.get("MCP_HOST", "0.0.0.0")
-        kwargs["port"] = int(os.environ.get("MCP_PORT", "8000"))
+        try:
+            kwargs["port"] = int(os.environ.get("MCP_PORT", "8000"))
+        except ValueError as e:
+            raise ValueError(f"MCP_PORT must be a valid integer, got: {os.environ.get('MCP_PORT')!r}") from e
     mcp.run(transport=transport, **kwargs)
 
 

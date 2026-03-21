@@ -277,13 +277,20 @@ class AzureHybridBackend:
     def _ensure(self):
         if self._azure_index is not None:
             return
+        search_endpoint = os.environ.get("AZURE_SEARCH_ENDPOINT")
+        project_endpoint = os.environ.get("AZURE_AI_PROJECT_ENDPOINT")
+        if not search_endpoint or not project_endpoint:
+            raise EnvironmentError(
+                f"Backend '{self.name}' requires AZURE_SEARCH_ENDPOINT and "
+                "AZURE_AI_PROJECT_ENDPOINT environment variables"
+            )
         self._azure_index = AzureSearchIndex(
-            endpoint=os.environ["AZURE_SEARCH_ENDPOINT"],
+            endpoint=search_endpoint,
             index_name=self._index_name,
             api_key=os.environ.get("AZURE_SEARCH_API_KEY"),
         )
         self._foundry_client = FoundryProjectOpenAI(
-            project_endpoint=os.environ["AZURE_AI_PROJECT_ENDPOINT"],
+            project_endpoint=project_endpoint,
             embedding_model=os.environ.get("AZURE_OPENAI_EMBEDDING_DEPLOYMENT", "text-embedding-3-small"),
             api_key=os.environ.get("AZURE_AI_PROJECT_API_KEY") or os.environ.get("AZURE_OPENAI_API_KEY"),
         )
