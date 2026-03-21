@@ -28,7 +28,8 @@ from typing import Protocol
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from foundry_docs_mcp.indexer import SearchIndex  # noqa: E402
+from foundry_docs_mcp.indexer import AzureSearchIndex, SearchIndex  # noqa: E402
+from foundry_docs_mcp.foundry_client import FoundryProjectOpenAI  # noqa: E402
 
 try:
     import httpx
@@ -261,6 +262,57 @@ class MintlifyBackend:
             return None
 
 
+class AzureHybridBackend:
+    """Searches the Azure AI Search hybrid index (keyword + vector + semantic)."""
+
+    def __init__(self, docs_dir: Path, *, label: str, name: str, index_name: str):
+        self.name = name
+        self.label = label
+        self.docs_dir = docs_dir
+        self._index_name = index_name
+        self._local_index: SearchIndex | None = None
+        self._azure_index: AzureSearchIndex | None = None
+        self._foundry_client: FoundryProjectOpenAI | None = None
+
+    def _ensure(self):
+        if self._azure_index is not None:
+            return
+        self._azure_index = AzureSearchIndex(
+            endpoint=os.environ["AZURE_SEARCH_ENDPOINT"],
+            index_name=self._index_name,
+            api_key=os.environ.get("AZURE_SEARCH_API_KEY"),
+        )
+        self._foundry_client = FoundryProjectOpenAI(
+            project_endpoint=os.environ["AZURE_AI_PROJECT_ENDPOINT"],
+            embedding_model=os.environ.get("AZURE_OPENAI_EMBEDDING_DEPLOYMENT", "text-embedding-3-small"),
+            api_key=os.environ.get("AZURE_AI_PROJECT_API_KEY") or os.environ.get("AZURE_OPENAI_API_KEY"),
+        )
+        self._local_index = SearchIndex()
+        self._local_index.load_from_directory(self.docs_dir)
+
+    def search(self, query: str, limit: int) -> list[dict]:
+        self._ensure()
+        results = self._azure_index.search(
+            query=query, limit=limit, embedding_fn=self._foundry_client.embed_query,
+        )
+        for r in results:
+            content = self.get_content(r.get("path", ""))
+            r["snippet_chars"] = len(content) if content else 0
+        return results
+
+    def get_content(self, path: str) -> str | None:
+        self._ensure()
+        clean = path.lstrip("/").removesuffix(".mdx")
+        doc = self._local_index.docs.get(clean)
+        if doc:
+            return doc["content"]
+        target = clean.split("/")[-1]
+        for doc_path, doc_data in self._local_index.docs.items():
+            if doc_path.endswith(f"/{target}") or doc_path == target:
+                return doc_data["content"]
+        return None
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -391,6 +443,19 @@ def build_backends() -> list[SearchBackend]:
         backends.append(
             LocalDocsBackend(vnext_dir, vnext_json, label="D: foundry-docs-vnext", name="foundry-docs-vnext")
         )
+
+    # E/F: Azure hybrid search (when credentials are available)
+    if os.environ.get("AZURE_SEARCH_ENDPOINT") and os.environ.get("AZURE_AI_PROJECT_ENDPOINT"):
+        if docs_dir.is_dir():
+            backends.append(AzureHybridBackend(
+                docs_dir, label="E: foundry-docs-hybrid", name="foundry-docs-hybrid",
+                index_name=os.environ.get("AZURE_SEARCH_INDEX_NAME", "foundry-docs"),
+            ))
+        if vnext_dir.is_dir():
+            backends.append(AzureHybridBackend(
+                vnext_dir, label="F: foundry-docs-vnext-hybrid", name="foundry-docs-vnext-hybrid",
+                index_name=os.environ.get("AZURE_SEARCH_VNEXT_INDEX_NAME", "foundry-docs-vnext"),
+            ))
 
     return backends
 

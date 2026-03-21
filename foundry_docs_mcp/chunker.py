@@ -86,10 +86,10 @@ class MarkdownChunker:
         current_lines: list[str] = []
 
         for line in lines:
-            if re.match(r"^###?\s+", line):
+            if re.match(r"^#{2,4}\s+", line):
                 if current_lines:
                     sections.append((current_heading, current_lines))
-                current_heading = re.sub(r"^###?\s+", "", line).strip() or "Introduction"
+                current_heading = re.sub(r"^#{2,4}\s+", "", line).strip() or "Introduction"
                 current_lines = [line]
             else:
                 current_lines.append(line)

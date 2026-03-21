@@ -26,6 +26,7 @@ from azure.search.documents.indexes.models import (
     SemanticPrioritizedFields,
     SemanticSearch,
     SimpleField,
+    SynonymMap,
     VectorSearch,
     VectorSearchProfile,
 )
@@ -151,6 +152,22 @@ class SearchIndex:
 class AzureSearchIndex:
     """Azure AI Search hybrid index for chunk-level semantic retrieval."""
 
+    SYNONYM_MAP_NAME = "foundry-synonyms"
+    SYNONYM_RULES = "\n".join([
+        "rate limit, throttle, quota, rate limiting, throttling, 429",
+        "safety, guardrails, content filter, content filtering, harm",
+        "getting started, quickstart, tutorial, onboarding, first steps",
+        "troubleshoot, debug, fix, diagnose, error, problem, issue",
+        "evaluate, evaluation, assess, test, benchmark, measure",
+        "prompt injection, jailbreak, prompt attack, prompt shield",
+        "RBAC, role based access, permissions, authorization, access control",
+        "RAG, retrieval augmented generation, grounding, knowledge retrieval",
+        "MCP, model context protocol",
+        "deploy, deployment, provision, release, ship",
+        "observe, observability, monitor, trace, tracing, logging",
+        "fine-tune, fine-tuning, customize, train, training",
+    ])
+
     def __init__(
         self,
         endpoint: str,
@@ -170,10 +187,25 @@ class AzureSearchIndex:
                 SimpleField(name="chunk_id", type=SearchFieldDataType.String, key=True),
                 SimpleField(name="doc_path", type=SearchFieldDataType.String, filterable=True),
                 SimpleField(name="content_hash", type=SearchFieldDataType.String, filterable=True),
-                SearchableField(name="title", type=SearchFieldDataType.String, analyzer_name="en.lucene"),
-                SearchableField(name="section_heading", type=SearchFieldDataType.String, analyzer_name="en.lucene"),
+                SearchableField(
+                    name="title",
+                    type=SearchFieldDataType.String,
+                    analyzer_name="en.lucene",
+                    synonym_map_names=[self.SYNONYM_MAP_NAME],
+                ),
+                SearchableField(
+                    name="section_heading",
+                    type=SearchFieldDataType.String,
+                    analyzer_name="en.lucene",
+                    synonym_map_names=[self.SYNONYM_MAP_NAME],
+                ),
                 SearchableField(name="description", type=SearchFieldDataType.String, analyzer_name="en.lucene"),
-                SearchableField(name="content", type=SearchFieldDataType.String, analyzer_name="en.lucene"),
+                SearchableField(
+                    name="content",
+                    type=SearchFieldDataType.String,
+                    analyzer_name="en.lucene",
+                    synonym_map_names=[self.SYNONYM_MAP_NAME],
+                ),
                 SearchField(
                     name="content_vector",
                     type=SearchFieldDataType.Collection(SearchFieldDataType.Single),
@@ -200,10 +232,10 @@ class AzureSearchIndex:
                         prioritized_fields=SemanticPrioritizedFields(
                             title_field=SemanticField(field_name="title"),
                             content_fields=[
-                                SemanticField(field_name="section_heading"),
                                 SemanticField(field_name="content"),
+                                SemanticField(field_name="description"),
+                                SemanticField(field_name="section_heading"),
                             ],
-                            keywords_fields=[SemanticField(field_name="description")],
                         ),
                     )
                 ]
@@ -211,6 +243,13 @@ class AzureSearchIndex:
         )
 
     def create_index(self, recreate: bool = False):
+        # Create/update synonym map before the index
+        synonym_map = SynonymMap(name=self.SYNONYM_MAP_NAME, synonyms=self.SYNONYM_RULES)
+        with_retry(
+            lambda: self.index_client.create_or_update_synonym_map(synonym_map),
+            operation="search_create_synonym_map",
+        )
+
         if recreate:
             try:
                 with_retry(
@@ -351,7 +390,7 @@ class AzureSearchIndex:
         embedding_fn: Callable[[str], list[float]],
     ) -> list[dict]:
         query_vector = embedding_fn(query)
-        vector_query = VectorizedQuery(vector=query_vector, fields="content_vector", k_nearest_neighbors=50)
+        vector_query = VectorizedQuery(vector=query_vector, fields="content_vector", k_nearest_neighbors=30)
         results = with_retry(
             lambda: self.search_client.search(
                 search_text=query,
@@ -359,7 +398,7 @@ class AzureSearchIndex:
                 query_type=QueryType.SEMANTIC,
                 semantic_configuration_name="foundry-semantic",
                 query_caption=QueryCaptionType.EXTRACTIVE,
-                top=max(limit * 5, 20),
+                top=max(limit * 3, 20),
                 select=["doc_path", "title", "description", "section_heading", "content"],
             ),
             operation="search_query",
