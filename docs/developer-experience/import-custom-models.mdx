@@ -131,35 +131,104 @@ With the model registered, you can deploy it to Fireworks' cloud for inference.
 
 When the deployment completes, the status shows **Succeeded** in your deployment list.
 
-### Test your deployment
+<Note>
+You can only have one active model deployment of a custom model at a time in a given project.
+</Note>
 
-After the deployment succeeds, verify it works by sending a test request:
+### Deployment examples
 
-1. Open the [Foundry Playground](/foundry-models/concept-playgrounds).
-1. Select your custom model deployment from the model list.
-1. Send a test prompt and confirm the model returns a valid response.
+Use the following examples to automate parts of the deployment workflow after the custom model is registered. Each example deploys the custom model with `80` units of Global Provisioned throughput. Be sure to replace any placeholders with your details.
 
-## Troubleshooting
+<Tabs>
+  <Tab title="REST API">
 
-If you encounter issues during import or deployment, use the following table to identify common problems and resolutions.
+    ```http
+    PUT https://management.azure.com/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.CognitiveServices/accounts/{foundry-account}/deployments/{deployment-name}?api-version=2025-06-01
+    Authorization: Bearer <access-token>
+    Content-Type: application/json
+    ```
 
-| Issue | Resolution |
-| --- | --- |
-| Import fails with missing files | Verify your model directory contains all [required model files](#required-model-files), including `config.json`, weight files, an index file, and tokenizer files. |
-| Architecture mismatch | Confirm the architecture you selected matches your model. See [supported architectures](#supported-architectures). |
-| Upload times out or stalls | Check your network connection and retry. For large models, use a stable high-bandwidth connection. |
-| Deployment fails | Confirm you have sufficient quota and that the [Fireworks preview feature](/developer-experience/enable-fireworks-models#enable-fireworks-on-foundry) is enabled and registered in your subscription. |
-| Quota exceeded | [Request more quota](https://aka.ms/fireworks-quota) or reallocate provisioned throughput units from existing deployments. |
+    ```json
+    {
+      "sku": {
+        "name": "GlobalProvisionedManaged",
+        "capacity": 80
+      },
+      "properties": {
+        "model": {
+          "name": "<registered-model-name>",
+          "format": "FireworksCustom",
+          "version": "1",
+          "source": "/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.CognitiveServices/accounts/{foundry-account}/projects/{foundry-project}"
+        }
+      }
+    }
+    ```
 
-For more troubleshooting guidance, see [Troubleshoot Fireworks on Foundry](/developer-experience/enable-fireworks-models#troubleshoot-fireworks-on-foundry).
+  </Tab>
+  <Tab title="PowerShell">
 
-## Related content
+    ```powershell
+    az cognitiveservices account deployment create `
+      --name "<foundry-resource-name>" `
+      --resource-group "<resource-group>" `
+      --deployment-name "<deployment-name>" `
+      --model-name "<registered-model-name>" `
+      --model-version "1" `
+      --model-format "FireworksCustom" `
+      --model-source "/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.CognitiveServices/accounts/{foundry-account}/projects/{foundry-project}" `
+      --sku-name "GlobalProvisionedManaged" `
+      --sku-capacity 80
+    ```
 
-Explore the following resources to learn more about Fireworks models, deployment options, and authentication on Foundry.
+  </Tab>
+  <Tab title="Bash">
 
-* [Fireworks models on Foundry](/developer-experience/enable-fireworks-models)
-* [Deploy Foundry Models in the portal](/foundry-models/deploy-foundry-models)
-* [Deploy models using Azure CLI and Bicep](/foundry-models/create-model-deployments)
-* [Deployment types](/foundry-models/deployment-types)
-* [Provisioned throughput concepts](/foundry-models/provisioned-throughput)
-* [Configure keyless authentication with Microsoft Entra ID](/security/configure-entra-id)
+    ```bash
+    az cognitiveservices account deployment create \
+      --name "<foundry-resource-name>" \
+      --resource-group "<resource-group>" \
+      --deployment-name "<deployment-name>" \
+      --model-name "<registered-model-name>" \
+      --model-version "1" \
+      --model-format "FireworksCustom" \
+      --model-source "/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.CognitiveServices/accounts/{foundry-account}/projects/{foundry-project}" \
+      --sku-name "GlobalProvisionedManaged" \
+      --sku-capacity 80
+    ```
+
+    ### Test your deployment
+
+    After the deployment succeeds, verify it works by sending a test request:
+
+    1. Open the [Foundry Playground](/foundry-models/concept-playgrounds).
+    1. Select your custom model deployment from the model list.
+    1. Send a test prompt and confirm the model returns a valid response.
+
+    ## Troubleshooting
+
+    If you encounter issues during import or deployment, use the following table to identify common problems and resolutions.
+
+    | Issue | Resolution |
+    | --- | --- |
+    | Import fails with missing files | Verify your model directory contains all [required model files](#required-model-files), including `config.json`, weight files, an index file, and tokenizer files. |
+    | Architecture mismatch | Confirm the architecture you selected matches your model. See [supported architectures](#supported-architectures). |
+    | Upload times out or stalls | Check your network connection and retry. For large models, use a stable high-bandwidth connection. |
+    | Deployment fails | Confirm you have sufficient quota and that the [Fireworks preview feature](/developer-experience/enable-fireworks-models#enable-fireworks-on-foundry) is enabled and registered in your subscription. |
+    | Quota exceeded | [Request more quota](https://aka.ms/fireworks-quota) or reallocate provisioned throughput units from existing deployments. |
+
+    For more troubleshooting guidance, see [Troubleshoot Fireworks on Foundry](/developer-experience/enable-fireworks-models#troubleshoot-fireworks-on-foundry).
+
+    ## Related content
+
+    Explore the following resources to learn more about Fireworks models, deployment options, and authentication on Foundry.
+
+    * [Fireworks models on Foundry](/developer-experience/enable-fireworks-models)
+    * [Deploy Foundry Models in the portal](/foundry-models/deploy-foundry-models)
+    * [Deploy models using Azure CLI and Bicep](/foundry-models/create-model-deployments)
+    * [Deployment types](/foundry-models/deployment-types)
+    * [Provisioned throughput concepts](/foundry-models/provisioned-throughput)
+    * [Configure keyless authentication with Microsoft Entra ID](/security/configure-entra-id)
+
+  </Tab>
+</Tabs>
