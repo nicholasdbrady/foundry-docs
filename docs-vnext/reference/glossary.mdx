@@ -7,11 +7,23 @@ Key terms and concepts used throughout the Microsoft Foundry documentation.
 
 ## A
 
+### A2A (Agent2Agent)
+An open protocol that enables agents to securely invoke and communicate with other agents through standardized HTTP endpoints. Based on the [A2A protocol](https://a2a-protocol.org), this capability is available as an agent tool in Foundry Agent Service, supporting both agent-identity authentication and OAuth identity passthrough for cross-agent workflows.
+
 ### Agent
 An AI-powered entity that can perform tasks autonomously using tools, models, and instructions. In Microsoft Foundry, agents are created via the Azure AI Projects SDK and can use built-in tools like Code Interpreter, File Search, and Function Calling.
 
+### Agent Identity
+A specialized service principal in Microsoft Entra ID designed specifically for AI agents. Foundry automatically provisions agent identities throughout the agent lifecycle, enabling agents to authenticate to downstream services (such as Azure Storage or MCP servers) without embedding credentials in prompts or code.
+
+### Agent Identity Blueprint
+A Microsoft Entra ID object that acts as the reusable governing template for a class of agent identities. The blueprint defines the agent type, publisher, roles, and permissions; all associated agent identity instances are created from it. Foundry creates a default blueprint per project when you create your first agent.
+
 ### Agentic Retrieval
 A multi-query retrieval pipeline that uses a language model to decompose complex questions into focused subqueries, executes them in parallel, applies semantic reranking, and returns structured grounding data with citations. Used in Foundry IQ and Azure AI Search to improve retrieval quality over classic single-query RAG patterns.
+
+### AI Red Teaming Agent
+An automated adversarial testing tool in the Azure AI Evaluation SDK that simulates attack scenarios against generative AI applications. It runs configurable scans—locally or in the cloud—to surface vulnerabilities such as prompt injection, jailbreaks, and unsafe content, and outputs a structured risk scorecard.
 
 ### AIProjectClient
 The primary Python client class in the Azure AI Projects SDK for connecting to a Microsoft Foundry project. Used to access agents, models, connections, and other project resources programmatically.
@@ -19,18 +31,41 @@ The primary Python client class in the Azure AI Projects SDK for connecting to a
 ### Azure AI Search
 A cloud search service providing keyword, vector, and semantic search capabilities. Used as the underlying indexing and retrieval infrastructure for RAG patterns, Foundry IQ knowledge bases, and vector stores.
 
+## B
+
+### Basic Agent Setup
+A Foundry Agent Service configuration that stores agent state (threads, files, and vector stores) in Microsoft-managed resources. Suitable for getting started quickly without bringing your own Azure storage or search accounts.
+
+### Browser Automation
+A built-in agent tool that enables agents to automate web browsing tasks using isolated Playwright sessions. Agents can navigate pages, fill forms, click elements, and extract content from live websites.
+
 ## C
+
+### Capability Host
+A sub-resource at the Foundry account or project scope that directs where agent data—including conversation history (threads), file uploads, and vector stores—is stored and processed. Standard Agent Setup requires you to configure capability hosts pointing to your own Azure resources.
+
+### CLU (Conversational Language Understanding)
+An Azure Language natural language processing capability that analyzes user utterances to identify intents and extract entities. Used by the Intent Routing Agent tool in Foundry to classify incoming messages and route them to the correct handler.
 
 ### Code Interpreter
 A built-in Foundry agent tool that lets agents write and execute Python code in a sandboxed environment. Useful for data analysis, mathematical calculations, chart generation, and file processing tasks.
 
+### Computer Use
+A built-in agent tool that enables agents to automate UI interactions by interpreting screenshots and emitting mouse and keyboard actions (clicks, typing, scrolling). Powered by the `computer-use-preview` model, it lets agents operate desktop and web interfaces programmatically.
+
 ### Conversation
 A durable object in Foundry Agent Service that persists interaction state across turns and sessions. Conversations store items (messages, tool calls, tool outputs) and have unique identifiers that can be reused across sessions. Replaces the thread concept from the Assistants API.
+
+### CQA (Custom Question Answering)
+An Azure Language capability that delivers curated answers from organizational knowledge sources through question-answer pair management. Used by the Intent Routing Agent and Exact Question Answering Agent tools in Foundry to return deterministic, policy-aligned responses.
 
 ## E
 
 ### Embeddings
 Dense numeric vector representations of text (or other content) used for semantic similarity search. Embeddings are generated at indexing time and at query time to enable vector search in RAG workflows and vector stores.
+
+### Evaluator
+A function in the Azure AI Evaluation SDK that assesses agent or model responses for quality, safety, and reliability. Evaluators may use an AI model as a judge or apply deterministic rules. Common evaluators for agents include tool call accuracy, intent resolution, task adherence, and response completeness.
 
 ## F
 
@@ -56,8 +91,19 @@ Content retrieved from an external data source and provided to a language model 
 
 ## H
 
+### Hosted Agent
+A containerized agentic application that runs on Foundry Agent Service managed infrastructure. You build the agent code using any supported framework, package it as a container image, and deploy it as a hosted agent without managing containerization, scaling, or infrastructure yourself.
+
 ### Hybrid Search
 A retrieval strategy that combines keyword (BM25) search and vector (semantic) search to improve recall. Results from both methods are merged and optionally reranked using a semantic ranker for higher relevance. Supported in Azure AI Search and used in Foundry Agent Service file search.
+
+## I
+
+### Image Generation
+A built-in agent tool that enables agents to generate images from text prompts using a deployed image generation model (for example, `dall-e-3`). Generated images can be saved to files or returned as output items in a conversation.
+
+### Intent Routing Agent
+An Azure Language agent tool in Foundry that manages conversation flows by combining CLU for intent classification with CQA for answer delivery. It routes user messages to the correct handler or knowledge source based on recognized intents.
 
 ## K
 
@@ -65,6 +111,9 @@ A retrieval strategy that combines keyword (BM25) search and vector (semantic) s
 A top-level Foundry IQ resource that orchestrates agentic retrieval over one or more knowledge sources. A knowledge base defines which data sources to query, the retrieval reasoning effort level, and access control behavior. Multiple agents can share the same knowledge base.
 
 ## M
+
+### Memory Store
+A managed, long-term memory system in Foundry Agent Service that extracts, consolidates, and persists agent knowledge across sessions, devices, and workflows. A memory store holds two types of memories: user profile memories (static preferences and facts) and chat summary memories (distilled session summaries). Attach it to an agent via the memory search tool or interact directly through the Memory Store API.
 
 ### MCP (Model Context Protocol)
 An open protocol that enables AI agents to connect to external data sources and tools through a standardized interface. In Microsoft Foundry, agents can use MCP servers as tools via the Model Context Protocol tool type, allowing integration with custom data sources and services.
@@ -77,6 +126,23 @@ Microsoft's cloud identity and access management service, formerly Azure Active 
 ### OpenTelemetry
 An open-source observability framework for collecting traces, metrics, and logs. Foundry Agent Service integrates with OpenTelemetry to emit agent traces to Application Insights or other compatible backends, enabling debugging, latency analysis, and production monitoring.
 
+## P
+
+### Priority Processing
+A model service tier (preview) that provides low-latency token generation on a pay-as-you-go basis, without requiring provisioned capacity reservations. Enabled at the deployment level or per-request via the `service_tier: priority` attribute. If traffic ramps too quickly, the service may temporarily downgrade requests to standard processing.
+
+### Prompt Agent
+An agent type in Foundry Agent Service defined using `PromptAgentDefinition`. It combines a model deployment, system instructions, and tools into a declarative configuration. Prompt agents support multi-turn conversations via the Conversations API and are the most common agent type for interactive chat scenarios.
+
+### Prompt Optimizer
+A Microsoft Foundry portal feature (preview) that uses LLM-driven prompt engineering to automatically improve an agent's system instructions. It analyzes the existing prompt and produces a revised version with paragraph-level explanations for each change.
+
+### Provisioned Throughput
+A model deployment type that allocates a specified amount of processing capacity and reserves it exclusively for your workloads. Provisioned throughput provides stable, predictable latency compared to standard pay-as-you-go deployments. Capacity is measured in PTUs.
+
+### PTU (Provisioned Throughput Unit)
+The unit of measurement for provisioned throughput capacity in Microsoft Foundry. You purchase PTUs to reserve model processing capacity. The number of PTUs required depends on the model, token rate, and context length. See [Provisioned throughput onboarding](/models/capabilities/provisioned-throughput-onboarding) for sizing guidance.
+
 ## R
 
 ### RAG (Retrieval Augmented Generation)
@@ -85,11 +151,28 @@ A pattern that combines information retrieval with language model generation to 
 ### RBAC (Role-Based Access Control)
 An authorization model that restricts resource access based on assigned roles rather than individual permissions. In Microsoft Foundry, RBAC is enforced via Microsoft Entra ID role assignments on Azure resources such as AI projects, Azure AI Search indexes, and storage accounts.
 
+### Reasoning Effort
+A configurable parameter for reasoning models that controls how much chain-of-thought processing the model performs before responding. Accepted values are `low`, `medium`, `high`, and `xhigh`. Higher effort produces more thorough responses at the cost of increased latency and reasoning token usage.
+
+### Reasoning Model
+A class of language models (GPT-5 series, o3-mini, o1, o1-mini) that perform extended internal reasoning before generating output. Reasoning models excel at science, coding, and math tasks. They produce reasoning tokens internally and are configured using `reasoning_effort` rather than `temperature`.
+
+### Reasoning Tokens
+Internal chain-of-thought tokens consumed by reasoning models during problem solving. Reasoning tokens are not included in the model's visible output but do count toward token usage and cost. The total token budget for a reasoning model includes both reasoning tokens and output tokens.
+
 ### Response
 The output of a single agent invocation in Foundry Agent Service. A response includes output items (messages, tool call records, tool outputs) and is appended to the conversation. Responses replace the *run* concept from the Assistants API.
 
 ### Responses API
 The API surface for generating agent outputs in Foundry Agent Service. The Responses API accepts a conversation (or previous response output) and returns a new response with the agent's result. It supersedes the older Assistants API runs endpoint.
+
+## S
+
+### Spillover
+A traffic management feature for provisioned deployments that automatically routes overflow requests to a designated standard deployment when PTU capacity is exhausted or returns a non-200 error. Spillover is configured via the `spilloverDeploymentName` deployment property or the `x-ms-spillover-deployment` request header.
+
+### Standard Agent Setup
+A Foundry Agent Service configuration that stores agent data (threads, files, and vector stores) in your own Azure resources connected through capability hosts. Suitable for organizations with data residency, compliance, or isolation requirements.
 
 ## V
 
@@ -98,3 +181,11 @@ A container for searchable file content (chunks and embeddings) used by the file
 
 ### Voice Live
 A real-time voice API in Microsoft Foundry that enables building voice agents using Azure Speech capabilities. Voice Live supports low-latency, bidirectional audio streaming for interactive voice agent scenarios.
+
+## W
+
+### Web Search
+A built-in agent tool that retrieves real-time information from the web using Bing to ground agent responses in current data. Agents can use it to answer questions about recent events, fetch live content, or supplement knowledge not present in the model's training data.
+
+### Workflow Agent
+An agent type in Foundry Agent Service defined using `WorkflowAgentDefinition`. Workflow agents orchestrate multi-step processes, coordinating tool calls and sub-agent invocations in a structured sequence. Suitable for complex automation scenarios that require branching logic or long-running task execution.
