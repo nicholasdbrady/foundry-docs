@@ -10,8 +10,14 @@ Key terms and concepts used throughout the Microsoft Foundry documentation.
 ### Agent
 An AI-powered entity that can perform tasks autonomously using tools, models, and instructions. In Microsoft Foundry, agents are created via the Azure AI Projects SDK and can use built-in tools like Code Interpreter, File Search, and Function Calling.
 
+### Agent 365
+Microsoft's IT admin control plane for AI agents. Agent 365 provides identity, security, governance, and lifecycle management for AI agents across an organization, regardless of where they were built. It offers a centralized registry, Microsoft Entra–based access controls, agent visualization, Microsoft 365 interoperability, and security integration. Foundry agents can be published to Agent 365 as digital workers.
+
 ### Agentic Retrieval
 A multi-query retrieval pipeline that uses a language model to decompose complex questions into focused subqueries, executes them in parallel, applies semantic reranking, and returns structured grounding data with citations. Used in Foundry IQ and Azure AI Search to improve retrieval quality over classic single-query RAG patterns.
+
+### AI Gateway
+A governance layer in Microsoft Foundry that routes Model Context Protocol (MCP) tool traffic through Azure API Management. AI Gateway provides a single, governed entry point for enforcing authentication, rate limits, IP restrictions, and audit logging across all MCP tool calls made by Foundry agents, without requiring changes to MCP server code.
 
 ### AIProjectClient
 The primary Python client class in the Azure AI Projects SDK for connecting to a Microsoft Foundry project. Used to access agents, models, connections, and other project resources programmatically.
@@ -21,11 +27,25 @@ A cloud search service providing keyword, vector, and semantic search capabiliti
 
 ## C
 
+### Cluster Analysis
+A preview evaluation feature in Microsoft Foundry that groups evaluation samples with similar issues or patterns using embedding-based semantic similarity. Cluster Analysis visualizes evaluation results to help identify systemic weaknesses in model or agent behavior, making it easier to understand failure patterns at scale.
+
 ### Code Interpreter
 A built-in Foundry agent tool that lets agents write and execute Python code in a sandboxed environment. Useful for data analysis, mathematical calculations, chart generation, and file processing tasks.
 
 ### Conversation
 A durable object in Foundry Agent Service that persists interaction state across turns and sessions. Conversations store items (messages, tool calls, tool outputs) and have unique identifiers that can be reused across sessions. Replaces the thread concept from the Assistants API.
+
+## D
+
+### Deep Research
+An agent-driven research mode using the `o3-deep-research` model that performs multi-step reasoning, parallel web searches, and integration with remote MCP servers to produce comprehensive, citation-rich reports. Deep Research is suited for tasks requiring in-depth analysis across multiple sources.
+
+### Digital Worker
+A Microsoft Foundry agent published to Agent 365 as an enterprise-managed entity. Digital Workers are subject to Agent 365's identity, governance, and lifecycle management controls and can be connected to Microsoft Teams for user interaction.
+
+### Direct Preference Optimization (DPO)
+A fine-tuning alignment technique that adjusts model weights using binary human preference data (preferred vs. rejected outputs), without requiring a separate reward model. DPO is lighter-weight than reinforcement learning from human feedback (RLHF) and is supported in Microsoft Foundry for model customization.
 
 ## E
 
@@ -54,10 +74,18 @@ A capability that allows agents and language models to invoke user-defined funct
 ### Grounding Data
 Content retrieved from an external data source and provided to a language model as additional context. Grounding data reduces hallucination by anchoring model responses to your data rather than the model's parametric knowledge alone.
 
+### Groundedness Detection
+A content safety filter in Microsoft Foundry that validates whether language model responses are supported by the provided source material. Groundedness Detection is used primarily in RAG scenarios to reduce hallucinated or fabricated outputs not grounded in retrieved content.
+
 ## H
 
 ### Hybrid Search
 A retrieval strategy that combines keyword (BM25) search and vector (semantic) search to improve recall. Results from both methods are merged and optionally reranked using a semantic ranker for higher relevance. Supported in Azure AI Search and used in Foundry Agent Service file search.
+
+## I
+
+### Intervention Points
+The four locations in an agent execution pipeline where guardrail controls can be applied: user input, tool call, tool response, and output. Configuring intervention points allows targeted content safety enforcement at different stages of agent processing, including scanning for indirect prompt injection in tool responses before they reach agent memory.
 
 ## K
 
@@ -69,13 +97,30 @@ A top-level Foundry IQ resource that orchestrates agentic retrieval over one or 
 ### MCP (Model Context Protocol)
 An open protocol that enables AI agents to connect to external data sources and tools through a standardized interface. In Microsoft Foundry, agents can use MCP servers as tools via the Model Context Protocol tool type, allowing integration with custom data sources and services.
 
+### Microsoft Agent Framework
+An open-source SDK for building multi-agent systems in Python and .NET. The Microsoft Agent Framework provides a cloud-agnostic interface for orchestrating local and remote agents and integrates with Foundry Agent Service for cloud-backed deployments. It includes built-in OpenTelemetry observability support.
+
 ### Microsoft Entra ID
 Microsoft's cloud identity and access management service, formerly Azure Active Directory. Used in Foundry for keyless authentication (instead of API keys) and as the identity provider for role-based access control (RBAC) assignments.
+
+### Model Router
+A deployable AI model in Microsoft Foundry that dynamically selects the best large language model (LLM) from a configurable set to respond to each prompt in real time. Model Router exposes a standard Chat Completions API interface and supports routing modes (Balanced, Quality, Cost) to optimize for different priorities without requiring separate model deployments.
 
 ## O
 
 ### OpenTelemetry
 An open-source observability framework for collecting traces, metrics, and logs. Foundry Agent Service integrates with OpenTelemetry to emit agent traces to Application Insights or other compatible backends, enabling debugging, latency analysis, and production monitoring.
+
+## P
+
+### Predicted Outputs
+A model capability that reduces response latency for chat completions where the output is expected to closely resemble a known text. Predicted outputs are well-suited for coding workflows such as autocomplete and inline error correction where most of the output is predictable.
+
+### Prompt Caching
+An optimization feature that reuses cached input token computations for prompts sharing a common prefix, reducing both latency and cost. Prompt caching is supported on GPT-4o and newer models in Microsoft Foundry and activates automatically when identical prompt prefixes are detected.
+
+### Prompt Shields
+A content safety feature in Microsoft Foundry that detects and blocks attempts to manipulate model behavior through adversarial inputs. Prompt Shields guards against user prompt attacks (jailbreaks and instruction overrides) and document attacks (indirect prompt injection hidden in third-party content such as documents, emails, or web pages).
 
 ## R
 
@@ -85,11 +130,25 @@ A pattern that combines information retrieval with language model generation to 
 ### RBAC (Role-Based Access Control)
 An authorization model that restricts resource access based on assigned roles rather than individual permissions. In Microsoft Foundry, RBAC is enforced via Microsoft Entra ID role assignments on Azure resources such as AI projects, Azure AI Search indexes, and storage accounts.
 
+### Realtime Audio API
+An API in Microsoft Foundry for building low-latency, bidirectional voice agent experiences. The Realtime Audio API supports real-time audio input and output over WebRTC, WebSocket, or SIP protocols for interactive voice scenarios such as voice agents and live transcription.
+
+### Reinforcement Fine-Tuning (RFT)
+A fine-tuning technique that trains models using reward signals rather than only supervised examples. RFT uses graders to score model outputs and reinforces reasoning patterns that produce higher-quality results, improving performance on complex reasoning tasks. Supported in Microsoft Foundry for o-series reasoning models.
+
 ### Response
 The output of a single agent invocation in Foundry Agent Service. A response includes output items (messages, tool call records, tool outputs) and is appended to the conversation. Responses replace the *run* concept from the Assistants API.
 
 ### Responses API
 The API surface for generating agent outputs in Foundry Agent Service. The Responses API accepts a conversation (or previous response output) and returns a new response with the agent's result. It supersedes the older Assistants API runs endpoint.
+
+## S
+
+### Structured Outputs
+A model capability that constrains responses to conform to a JSON Schema provided in the API request. Structured outputs ensure schema-valid, predictable responses and are used for function calling, data extraction, and form-filling scenarios where a guaranteed output format is required.
+
+### Synthetic Data Generation
+A preview feature in Microsoft Foundry that generates task-ready training data for fine-tuning from reference documents or OpenAPI specifications. Supports Simple Q&A and Tool use generation patterns, reducing the effort required to prepare fine-tuning datasets.
 
 ## V
 
@@ -98,3 +157,8 @@ A container for searchable file content (chunks and embeddings) used by the file
 
 ### Voice Live
 A real-time voice API in Microsoft Foundry that enables building voice agents using Azure Speech capabilities. Voice Live supports low-latency, bidirectional audio streaming for interactive voice agent scenarios.
+
+## W
+
+### Webhooks
+An integration feature in Microsoft Foundry that enables applications to receive real-time event notifications from the API, such as batch job completions. Webhooks allow event-driven automation and eliminate the need for polling-based status checks.
