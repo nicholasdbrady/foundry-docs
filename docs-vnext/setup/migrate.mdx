@@ -31,32 +31,6 @@ openai_client = project_client.get_openai_client()
 
 Use `project_client` for agent creation and versioning. Use `openai_client` for conversations and responses.
 
-### Key benefits
-
-The new agents provide the following benefits:
-
-**Developer productivity**
-
-- ⭐ **More models.** Generate responses by using any Foundry model either in your agent or directly as a response generation call.
-- **More features.** Web Search, File Search, Code Interpreter, MCP tool calling, image generation, and reasoning summaries.
-- **Modern API primitive.** Built on the Responses API instead of the older Assistants API.
-- **Future-proof.** New features and model support are only added to the new agents.
-- **New agent types.** Create prompt-based or workflow-based agents.
-
-**Enterprise readiness**
-
-- ⭐ **Single-tenant storage.** Use single-tenant storage, with the option to bring your own Azure Cosmos DB to store state and keep your data secure.
-- **Enhanced security.** Control who can run or modify agent definitions.
-- **Separation of duties.** Define agents once and execute them with various inputs.
-- **Deployable agents.** Agents can be exposed as individual endpoints.
-
-**API modernization**
-
-- **Improved state management.** Uses conversations instead of threads and messages.
-- **Stateful context.** Automatically retains context across calls.
-- **Superset of Responses API.** Builds on the Responses API and adds more capabilities.
-- **Single or multi-agent workflows.** Easily chain agents for complex workflows.
-
 ## Key changes
 
 The following table summarizes the main API changes between the previous and current agent experience.
@@ -190,46 +164,17 @@ response = openai_client.responses.create(
 {
   "id": "run_xyz",
   "object": "thread.run",
-  "created_at": 1762218810,
   "assistant_id": "asst_efgh5678",
   "thread_id": "thread_abcd1234",
   "status": "completed",
-  "started_at": 1762218810,
-  "expires_at": null,
-  "cancelled_at": null,
-  "failed_at": null,
-  "completed_at": 1762218812,
-  "required_action": null,
-  "last_error": null,
   "model": "gpt-4.1",
-  "instructions": "You politely help with math questions. Use the Code Interpreter tool when asked to visualize numbers. Please address the user as Jane Doe. The user has a premium account",
-  "tools": [
-    {
-      "type": "code_interpreter"
-    }
-  ],
-  "tool_resources": {},
-  "metadata": {},
-  "temperature": 1.0,
-  "top_p": 1.0,
-  "max_completion_tokens": null,
-  "max_prompt_tokens": null,
-  "truncation_strategy": {
-    "type": "auto",
-    "last_messages": null
-  },
-  "incomplete_details": null,
+  "instructions": "You politely help with math questions...",
+  "tools": [{"type": "code_interpreter"}],
   "usage": {
     "prompt_tokens": 1216,
     "completion_tokens": 76,
-    "total_tokens": 1292,
-    "prompt_token_details": {
-      "cached_tokens": 0
-    }
-  },
-  "response_format": "auto",
-  "tool_choice": "auto",
-  "parallel_tool_calls": true
+    "total_tokens": 1292
+  }
 }
 ```
 
@@ -237,28 +182,17 @@ response = openai_client.responses.create(
 
 ```json
 {
-  "id": "resp_3483e9c8dda4f165006909550333588190afc76a645a0e877a",
+  "id": "resp_3483e9c8dda4f165...",
   "created_at": 1762219267.0,
-  "error": null,
-  "incomplete_details": null,
-  "instructions": null,
-  "metadata": {
-    "x-ms-telemetry-agent-kind": "",
-    "x-ms-telemetry-user-agent": "OpenAI/Python 2.4.0",
-    "x-ms-telemetry-response-start-time": "2025-11-04T01:21:06.5346780+00:00"
-  },
   "model": "gpt-4.1",
   "object": "response",
   "output": [
     {
-      "id": "msg_3483e9c8dda4f1650069095503abf881909917865574cddf2c",
+      "id": "msg_3483e9c8...",
       "content": [
         {
-          "annotations": [],
-          "text": "Of course! Here's a simple plot for the line with a rate of change of 4 and a y-intercept of 9.\\n\\nThe equation of the line is:\\n\\n\\\\[ y = 4x + 9 \\\\]\\n\\nLet's draw a graph for it:\\n\\n---\\n\\n```plaintext\\n  |\\n20|                     *\\n  |                  *\\n  |               *\\n  |            *\\n10|         *\\n  |      *\\n  |   *\\n  |*\\n  +---------------------------\\n   -2 -1  0  1  2  3\\n```\\n\\n**Key points:**\\n- The y-intercept is **9**, so at \\\\(x = 0\\\\), \\\\(y = 9\\\\) (point: (0,9))\\n- For each step right (increase in x), y goes up 4 units (rate of change \\\\(m = 4\\\\))\\n  - For \\\\(x = 1\\\\): \\\\(y = 4(1) + 9 = 13\\\\) (point: (1,13))\\n  - For \\\\(x = -1\\\\): \\\\(y = 4(-1) + 9 = 5\\\\) (point: (-1,5))\\n\\nIf you'd like a precise graph or want to visualize it interactively, let me know!",
-
-          "type": "output_text",
-          "logprobs": []
+          "text": "Of course! Here's a simple plot for the line with a slope of 4 and y-intercept of 9...",
+          "type": "output_text"
         }
       ],
       "role": "assistant",
@@ -266,50 +200,15 @@ response = openai_client.responses.create(
       "type": "message"
     }
   ],
-  "parallel_tool_calls": true,
-  "temperature": 1.0,
-  "tool_choice": "auto",
-  "tools": [],
-  "top_p": 1.0,
-  "background": false,
   "conversation": {
-    "id": "conv_3483e9c8dda4f16500GwcAgtdWlSmbMPzYLjWvDjiSe6LSFcC6"
+    "id": "conv_3483e9c8..."
   },
-  "max_output_tokens": null,
-  "max_tool_calls": null,
-  "previous_response_id": null,
-  "prompt": null,
-  "prompt_cache_key": null,
-  "reasoning": {
-    "effort": null,
-    "generate_summary": null,
-    "summary": null
-  },
-  "safety_identifier": null,
-  "service_tier": "default",
   "status": "completed",
-  "text": {
-    "format": {
-      "type": "text"
-    },
-    "verbosity": "medium"
-  },
-  "top_logprobs": 0,
-  "truncation": "disabled",
   "usage": {
     "input_tokens": 45,
-    "input_tokens_details": {
-      "cached_tokens": 0
-    },
     "output_tokens": 264,
-    "output_tokens_details": {
-      "reasoning_tokens": 0
-    },
     "total_tokens": 309
-  },
-  "user": null,
-  "content_filters": null,
-  "store": true
+  }
 }
 ```
 
@@ -399,7 +298,7 @@ The following JSON examples compare the response objects returned by the previou
 
 ## Migrate assistants to new agents
 
-If your code uses the OpenAI Assistants API (`client.beta.assistants.create()`), migrate to the Foundry Agent Service by using `client.agents.create_version()`. The following examples show the structural differences.
+If your code uses the OpenAI Assistants API (`client.beta.assistants.create()`), the migration path is the same as for [classic agents](#migrate-classic-agents-to-new-agents). Replace `client.beta.assistants.create()` with `project_client.agents.create_version()` and a `PromptAgentDefinition` object.
 
 **Previous - assistants**
 
@@ -407,24 +306,12 @@ If your code uses the OpenAI Assistants API (`client.beta.assistants.create()`),
 assistant = client.beta.assistants.create( 
     model="gpt-4.1", 
     name="my-assistant", 
-    instructions="You politely help with math questions. Use the Code Interpreter tool when asked to visualize numbers.",  # Instructions for the agent 
+    instructions="You politely help with math questions. Use the Code Interpreter tool when asked to visualize numbers.",
     tools=[{"type": "code_interpreter"}], 
 ) 
 ```
 
-**Current - new agents**
-
-```python
-from azure.ai.projects.models import PromptAgentDefinition
-
-agent = project_client.agents.create_version( 
-    agent_name="my-agent", 
-    definition=PromptAgentDefinition(
-        model="gpt-4.1",  
-        instructions="You politely help with math questions. Use the Code Interpreter tool when asked to visualize numbers."
-    )
-) 
-```
+The current replacement is identical to the `create_version()` pattern shown in [Migrate classic agents to new agents](#migrate-classic-agents-to-new-agents).
 
 ## Run the migration tool
 
