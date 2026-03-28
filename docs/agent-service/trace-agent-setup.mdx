@@ -1,13 +1,17 @@
 ---
 title: "Set Up Tracing for AI Agents in Microsoft Foundry"
-description: "Learn how to set up tracing in Microsoft Foundry to debug AI agent runs and monitor behavior by sending telemetry to Application Insights with OpenTelemetry."
+description: "Learn how to set up tracing in Microsoft Foundry to debug AI agent runs and monitor behavior by sending telemetry to Azure Monitor Application Insights with OpenTelemetry."
 ---
 
 <Info>
 Items marked (preview) in this article are currently in public preview. This preview is provided without a service-level agreement, and we don't recommend it for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
 </Info>
 
-Use tracing (preview) to debug your AI agents and monitor their behavior in production. Tracing captures detailed telemetry—including latency, exceptions, prompt content, and retrieval operations—so you can identify and fix issues faster.
+<Note>
+Tracing is generally available for prompt agents only. Workflow, hosted, and custom agents are in preview.
+</Note>
+
+Use tracing to debug your AI agents and monitor their behavior in production. Tracing captures detailed telemetry—including latency, exceptions, prompt content, and retrieval operations—so you can identify and fix issues faster.
 
 ## Prerequisites
 
@@ -17,7 +21,7 @@ Use tracing (preview) to debug your AI agents and monitor their behavior in prod
 
 ## Connect Application Insights to your Foundry project
 
-Foundry stores traces in [Azure Application Insights](https://learn.microsoft.com/azure/azure-monitor/app/app-insights-overview) by using [OpenTelemetry semantic conventions](https://opentelemetry.io/docs/specs/semconv/gen-ai/).
+Foundry stores traces in [Application Insights](https://learn.microsoft.com/azure/azure-monitor/app/app-insights-overview) by using [OpenTelemetry semantic conventions](https://opentelemetry.io/docs/specs/semconv/gen-ai/).
 
 1. Sign in to [Microsoft Foundry](https://ai.azure.com/?cid=learnDocs). Make sure the **New Foundry** toggle is on. These steps refer to **Foundry (new)**.
 
@@ -30,12 +34,32 @@ Foundry stores traces in [Azure Application Insights](https://learn.microsoft.co
    - To create a new resource, select **Create new** and complete the wizard.
 
 <Frame>
-  <img src="/images/traces-connect.png" alt="Screenshot of the the Agents tab showing traces and the connect button." />
+  <img src="/images/traces-connect.png" alt="Screenshot of the Agents tab showing traces and the connect button." />
 </Frame>
 
    A confirmation message appears when the connection succeeds.
 
 After you connect the resource, your project is ready to use tracing.
+
+If you don’t see the message bar or Connect button, here’s an alternative way to enable Azure Monitor Application Insights.
+
+1. Select the **Project details** from the dropdown menu from your project name.
+
+<Frame>
+<img src="/images/project-details.png" alt="Screenshot of project name menu with project details highlighted." />
+</Frame>
+
+1. Navigate to the **Connected resources** tab then select **Add connection**.
+
+<Frame>
+<img src="/images/connected-resources-add-connection.png" alt="Screenshot of project details with connected resources tab select highlighting add connection." />
+</Frame>
+
+1. Select **Application Insights** in the *Choose a connection* menu.
+
+<Frame>
+<img src="/images/choose-connection.png" alt="Screenshot of Choose a connection with Application Insights highlighted." />
+</Frame>
 
 <Info>
 Make sure you have the permissions you need to query telemetry.
@@ -65,7 +89,7 @@ pip install azure-ai-projects azure-identity opentelemetry-sdk azure-core-tracin
 ```
 
 <Info>
-Using a project's endpoint in your application requires configuring Microsoft Entra ID. If you don't configure Microsoft Entra ID, use the Azure Application Insights connection string.
+Using a project's endpoint in your application requires configuring Microsoft Entra ID. If you don't configure Microsoft Entra ID, use the Application Insights connection string.
 </Info>
 
 After running your agent, you can begin to [view and analyze traces in Foundry portal](#view-traces-in-the-foundry-portal).
@@ -98,7 +122,7 @@ For more information on how to send traces to Azure Monitor and create an Azure 
 
 A **Conversation** is the persistent context of an end-to-end dialogue history between a user and an agent. In the Foundry portal, you can view **Conversation** results for your agent run out of the box along with traces on the **Traces** page.
 
-You can search for a known Conversation ID, search by a Response ID, or search by a Trace ID that maps to this conversation. Then, select **Conversation ID** to review the conversation:
+You can select a conversation search for a Response ID, or search by a Trace ID that maps to this conversation. Then, select **Conversation ID** to review the conversation:
 
 - Conversation history details
 - Response information and tokens in a run

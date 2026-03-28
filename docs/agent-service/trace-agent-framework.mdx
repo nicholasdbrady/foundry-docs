@@ -1,19 +1,24 @@
 ---
 title: "Configure tracing for AI agent frameworks"
-description: "Debug issues and monitor AI agent performance in production by configuring OpenTelemetry tracing for LangChain, LangGraph, Semantic Kernel, and OpenAI Agents SDK."
+description: "Debug issues and monitor AI agent performance in production by configuring OpenTelemetry tracing for LangChain, LangGraph and OpenAI Agents SDK."
 ---
 {/* CustomerIntent: As a developer building AI agents, I want to configure tracing for my agent framework so that I can debug issues and monitor performance in production. */}
 
 # Configure tracing for AI agent frameworks (preview)
+
 <Info>
 Items marked (preview) in this article are currently in public preview. This preview is provided without a service-level agreement, and we don't recommend it for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
 </Info>
+
+<Note>
+Tracing is generally available for prompt agents only. Workflow, hosted, and custom agents are in preview.
+</Note>
 
 When AI agents behave unexpectedly in production, tracing gives you the visibility to quickly identify the root cause. Tracing captures detailed telemetry—including LLM calls, tool invocations, and agent decision flows—so you can debug issues, monitor latency, and understand agent behavior across requests.
 
 Microsoft Foundry provides tracing integrations for popular agent frameworks that require minimal code changes. In this article, you learn how to:
 
-- Configure automatic tracing for Microsoft Agent Framework and Semantic Kernel
+- Configure automatic tracing for Microsoft Agent Framework
 - Set up the `langchain-azure-ai` tracer for LangChain and LangGraph
 - Instrument the OpenAI Agents SDK with OpenTelemetry
 - Verify that traces appear in the Foundry portal
@@ -21,7 +26,7 @@ Microsoft Foundry provides tracing integrations for popular agent frameworks tha
 
 ## Prerequisites
 
-- A [Foundry project](/setup/create-projects) with [tracing connected](/agent-service/trace-agent-setup) to Application Insights.
+- A [Foundry project](/setup/create-projects) with [tracing connected](/agent-service/trace-agent-setup) to Azure Monitor Application Insights.
 - Contributor or higher role on the Application Insights resource for trace ingestion.
 - Access to the connected Application Insights resource for viewing traces. For log-based queries, you might also need access to the associated Log Analytics workspace.
 - Python 3.10 or later (required for all code samples in this article).
@@ -51,9 +56,9 @@ For more guidance, see [Security and privacy](/agent-service/trace-agent-concept
 Trace data stored in Application Insights is subject to your workspace's data retention settings and Azure Monitor pricing. For cost management, consider adjusting sampling rates or retention periods in production. See [Azure Monitor pricing](https://azure.microsoft.com/pricing/details/monitor/) and [Configure data retention and archive](https://learn.microsoft.com/azure/azure-monitor/logs/data-retention-configure).
 </Note>
 
-## Configure tracing for Microsoft Agent Framework and Semantic Kernel
+## Configure tracing for Microsoft Agent Framework
 
-Microsoft Foundry has native integrations with both Microsoft Agent Framework and Semantic Kernel. Agents built with either framework automatically emit traces when tracing is enabled for your Foundry project—no additional code or packages are required.
+Microsoft Foundry has native integrations with both Microsoft Agent Framework. Agents built with either framework automatically emit traces when tracing is enabled for your Foundry project—no additional code or packages are required.
 
 To verify tracing is working:
 
@@ -64,7 +69,6 @@ To verify tracing is working:
 Traces typically appear within 2–5 minutes after agent execution. For advanced configuration, see the framework-specific documentation:
 
 - [Microsoft Agent Framework Workflows – Observability](/agent-framework/user-guide/workflows/observability)
-- [Semantic Kernel observability](/semantic-kernel/concepts/enterprise-readiness/observability)
 
 ## Configure tracing for LangChain and LangGraph
 

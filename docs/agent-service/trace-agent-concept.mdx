@@ -2,9 +2,14 @@
 title: "Agent tracing in Microsoft Foundry (preview)"
 description: "Learn how agent tracing in Microsoft Foundry captures inputs, outputs, and tool usage with OpenTelemetry. Debug agent runs, identify latency issues, and improve reliability."
 ---
+
 <Info>
 Items marked (preview) in this article are currently in public preview. This preview is provided without a service-level agreement, and we don't recommend it for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
 </Info>
+
+<Note>
+Tracing is generally available for prompt agents only. Workflow, hosted, and custom agents are in preview.
+</Note>
 
 Microsoft Foundry provides an observability platform for monitoring and tracing AI agents. It captures key details during an agent run, such as inputs, outputs, tool usage, retries, latencies, and costs. Understanding the reasoning behind your agent's executions is important for troubleshooting and debugging. However, understanding complex agents presents challenges for several reasons:
 
@@ -20,10 +25,11 @@ Trace results solve this by allowing you to view the inputs and outputs of each 
 To use tracing end-to-end, you need:
 
 - A Foundry project with tracing enabled. To set it up, see [How to set up tracing in Microsoft Foundry](/agent-service/trace-agent-setup).
-- Access to the Azure Application Insights resource connected to your project. For background, see [Azure Application Insights](https://learn.microsoft.com/azure/azure-monitor/app/app-insights-overview).
+- Access to the Application Insights resource connected to your project. For background, see [Azure Monitor Application Insights](https://learn.microsoft.com/azure/azure-monitor/app/app-insights-overview).
+- A Log Analytics reader role to view traces, insights, and visualizations in Foundry.
 
 <Note>
-Tracing stores telemetry data in Azure Application Insights, which may incur costs based on data volume and retention settings. For pricing details, see [Application Insights pricing](https://learn.microsoft.com/azure/azure-monitor/cost-usage#application-insights-billing).
+Tracing stores telemetry data in Azure Monitor Application Insights, which may incur costs based on data volume and retention settings. For pricing details, see [Application Insights pricing](https://learn.microsoft.com/azure/azure-monitor/cost-usage#application-insights-billing).
 </Note>
 
 ## OpenTelemetry in Foundry
@@ -50,7 +56,8 @@ At a high level, tracing captures:
 
 - User inputs and agent outputs.
 - Tool usage, including tool calls and results.
-- Timing signals such as latency.
+- Token consumption
+- Time signals such as duration and latency.
 
 Once tracing is enabled for your project, you can inspect traces in the Foundry portal and in Azure Monitor Application Insights. For the step-by-step setup and viewing options, see [How to set up tracing in Microsoft Foundry](/agent-service/trace-agent-setup).
 
@@ -62,7 +69,6 @@ These enhancements are integrated into:
 
 - Foundry
 - Microsoft Agent Framework
-- Semantic Kernel
 - LangChain
 - LangGraph
 - OpenAI Agents SDK
