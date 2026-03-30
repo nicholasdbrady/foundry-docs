@@ -52,6 +52,10 @@ Create a Foundry project to organize your work. The project contains models, age
 
     1. Create the Foundry resource. For example, create `my-foundry-resource` in the `my-foundry-rg` resource group:
 
+<Note>
+This command creates your Foundry resource. The `az cognitiveservices account` command is used because Microsoft Foundry resources are managed under the Azure Cognitive Services resource provider (`Microsoft.CognitiveServices`). The `--kind AIServices` flag specifies a Foundry resource rather than a single-purpose Cognitive Services resource.
+</Note>
+
        ```azurecli
        az cognitiveservices account create \
            --name my-foundry-resource \
@@ -61,10 +65,6 @@ Create a Foundry project to organize your work. The project contains models, age
            --location eastus \
           --allow-project-management
        ```
-
-       <Note>
-       The `az cognitiveservices account` command is used because Microsoft Foundry resources are managed under the Azure Cognitive Services resource provider (`Microsoft.CognitiveServices`). Foundry resources are the modern successor to Azure Cognitive Services accounts, so the CLI commands use this legacy namespace. The `--kind AIServices` flag specifies a Foundry resource rather than a single-purpose Cognitive Services resource.
-       </Note>
 
        The `--allow-project-management` flag enables project creation within this resource.
 
@@ -135,6 +135,10 @@ Deploy a model that you can use. This example uses **gpt-4.1-mini**, but you can
         --sku-capacity 10 \
         --sku-name Standard
     ```
+
+    <Note>
+    OpenAI models use date-based version strings (for example, `2025-04-14`). To find available model versions and check regional availability, see the [Model Catalog](https://ai.azure.com/explore/models).
+    </Note>
 
     Verify the deployment succeeded:
 
