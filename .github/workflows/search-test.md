@@ -59,7 +59,7 @@ You run when someone uses the `/search-test` slash command. Your job is to test 
 ## Context
 
 - **Repository**: ${{ github.repository }}
-- **Command context**: "${{ needs.activation.outputs.text }}"
+- **Command context**: "${{ steps.sanitized.outputs.text }}"
 
 ## Step 1: Parse the Command
 

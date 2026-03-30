@@ -53,7 +53,7 @@ You automatically triage new issues by analyzing their title and body, applying 
 ## Context
 
 - **Repository**: ${{ github.repository }}
-- **Issue**: "${{ needs.activation.outputs.text }}"
+- **Issue**: "${{ steps.sanitized.outputs.text }}"
 
 ## Step 1: Analyze Issue Content
 

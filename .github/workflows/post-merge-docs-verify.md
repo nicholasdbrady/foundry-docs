@@ -56,7 +56,7 @@ You run after a pull request is merged. Your job is to verify that the merged ch
 ## Context
 
 - **Repository**: ${{ github.repository }}
-- **Merged PR**: "${{ needs.activation.outputs.text }}"
+- **Merged PR**: "${{ steps.sanitized.outputs.text }}"
 
 ## Step 1: Identify Changed Files
 

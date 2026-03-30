@@ -54,7 +54,7 @@ You respond to comments on GitHub Discussions in this repository. When someone c
 ## Context
 
 - **Repository**: ${{ github.repository }}
-- **Comment**: "${{ needs.activation.outputs.text }}"
+- **Comment**: "${{ steps.sanitized.outputs.text }}"
 
 ## Step 1: Analyze the Comment
 

@@ -59,7 +59,7 @@ You review pull requests that modify `docs-vnext/` documentation to ensure MDX q
 - **Repository**: ${{ github.repository }}
 - **PR Number**: ${{ github.event.pull_request.number }}
 - **PR Title**: ${{ github.event.pull_request.title }}
-- **Context**: "${{ needs.activation.outputs.text }}"
+- **Context**: "${{ steps.sanitized.outputs.text }}"
 
 ## Step 1: Get PR Changed Files
 

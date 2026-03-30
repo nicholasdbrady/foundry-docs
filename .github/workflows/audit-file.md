@@ -59,7 +59,7 @@ You perform a targeted audit of specific documentation files when triggered by t
 ## Context
 
 - **Repository**: ${{ github.repository }}
-- **Command context**: "${{ needs.activation.outputs.text }}"
+- **Command context**: "${{ steps.sanitized.outputs.text }}"
 
 ## Step 1: Parse the Command
 

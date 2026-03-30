@@ -42,7 +42,7 @@ safe-outputs:
     title-prefix: "[docs-vnext-report] "
     labels: [documentation, metrics, docs-vnext]
     close-older-issues: true
-    expires: 14
+    expires: 14d
   noop:
 
 timeout-minutes: 15

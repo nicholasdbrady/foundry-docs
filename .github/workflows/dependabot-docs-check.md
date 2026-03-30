@@ -51,7 +51,7 @@ You run when Dependabot opens a pull request for dependency updates. Your job is
 ## Context
 
 - **Repository**: ${{ github.repository }}
-- **PR**: "${{ needs.activation.outputs.text }}"
+- **PR**: "${{ steps.sanitized.outputs.text }}"
 
 ## Step 1: Identify Updated Dependencies
 

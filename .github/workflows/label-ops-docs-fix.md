@@ -63,7 +63,7 @@ When the triggering label is `sdk-update`, the issue was created by the SDK Rele
 ## Context
 
 - **Repository**: ${{ github.repository }}
-- **Issue**: "${{ needs.activation.outputs.text }}"
+- **Issue**: "${{ steps.sanitized.outputs.text }}"
 
 ## Step 1: Analyze the Issue
 
