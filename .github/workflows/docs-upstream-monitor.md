@@ -19,6 +19,11 @@ tracker-id: docs-upstream-monitor
 
 tools:
   cache-memory: true
+  repo-memory:
+    branch-name: memory/doc-metrics
+    file-glob: ["*.json", "*.txt"]
+    allowed-extensions: [".json", ".txt", ".md"]
+    max-file-size: 524288
   github:
     toolsets: [default]
   bash:
@@ -61,10 +66,10 @@ You monitor the upstream documentation repository (`MicrosoftDocs/azure-ai-docs-
 - **Upstream path**: `articles/foundry/**`
 - **MS Learn refresh cadence**: 4x/day from azure-ai-docs-pr main
 
-## Step 1: Load Cached State
+## Step 1: Load Persisted State
 
 ```bash
-cat /tmp/gh-aw/cache-memory/upstream-docs-state.txt 2>/dev/null || echo "No cached state — first run"
+cat /tmp/gh-aw/repo-memory/default/upstream-docs-state.txt 2>/dev/null || cat /tmp/gh-aw/cache-memory/upstream-docs-state.txt 2>/dev/null || echo "No cached state — first run"
 ```
 
 ## Step 2: Check Upstream Commits
@@ -127,12 +132,15 @@ Also dispatch the `sync-and-convert` workflow:
 {"noop": {"message": "No new Foundry docs changes in azure-ai-docs-pr. Last check: TIMESTAMP. Reviewed N commits."}}
 ```
 
-## Step 6: Update Cache
+## Step 6: Update Persisted State
+
+Write to both repo memory (durable) and cache memory (backward compatibility):
 
 ```bash
-echo "last_commit_sha=COMMIT_SHA" > /tmp/gh-aw/cache-memory/upstream-docs-state.txt
-echo "last_check_time=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> /tmp/gh-aw/cache-memory/upstream-docs-state.txt
-echo "foundry_commits_found=N" >> /tmp/gh-aw/cache-memory/upstream-docs-state.txt
+echo "last_commit_sha=COMMIT_SHA" > /tmp/gh-aw/repo-memory/default/upstream-docs-state.txt
+echo "last_check_time=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> /tmp/gh-aw/repo-memory/default/upstream-docs-state.txt
+echo "foundry_commits_found=N" >> /tmp/gh-aw/repo-memory/default/upstream-docs-state.txt
+cp /tmp/gh-aw/repo-memory/default/upstream-docs-state.txt /tmp/gh-aw/cache-memory/upstream-docs-state.txt
 ```
 
 ## Guidelines

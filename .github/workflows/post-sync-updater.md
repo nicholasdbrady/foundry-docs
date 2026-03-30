@@ -36,6 +36,11 @@ imports:
 
 tools:
   cache-memory: true
+  repo-memory:
+    branch-name: memory/doc-metrics
+    file-glob: ["*.json", "*.txt"]
+    allowed-extensions: [".json", ".txt", ".md"]
+    max-file-size: 524288
   github:
     toolsets: [default]
   edit:
@@ -85,7 +90,7 @@ If this was triggered by a `workflow_run` event, check the parent workflow's con
 ## Step 0B: Load Last Processed Commit
 
 ```bash
-LAST_SHA=$(cat /tmp/gh-aw/cache-memory/post-sync-last-sha.txt 2>/dev/null || echo "HEAD~1")
+LAST_SHA=$(cat /tmp/gh-aw/repo-memory/default/post-sync-last-sha.txt 2>/dev/null || cat /tmp/gh-aw/cache-memory/post-sync-last-sha.txt 2>/dev/null || echo "HEAD~1")
 echo "Diffing from $LAST_SHA to HEAD"
 ```
 
@@ -222,8 +227,11 @@ If no changes needed:
 - **Be minimal**: Only update what the sync actually changed
 - **Be fast**: This runs after every sync, so stay within the timeout
 
-## Step 7: Update Cache
+## Step 7: Update Persisted State
+
+Write to both repo memory (durable) and cache memory (backward compatibility):
 
 ```bash
-echo "$(git rev-parse HEAD)" > /tmp/gh-aw/cache-memory/post-sync-last-sha.txt
+echo "$(git rev-parse HEAD)" > /tmp/gh-aw/repo-memory/default/post-sync-last-sha.txt
+cp /tmp/gh-aw/repo-memory/default/post-sync-last-sha.txt /tmp/gh-aw/cache-memory/post-sync-last-sha.txt
 ```
