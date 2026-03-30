@@ -20,14 +20,7 @@ tools:
   playwright:
   web-fetch:
   bash:
-    - "cat *"
-    - "find *"
-    - "ls*"
-    - "curl *"
-    - "python3 *"
-    - "head *"
-    - "tail *"
-    - "wc *"
+    - "*"
 safe-outputs:
   upload-asset:
   create-issue:
