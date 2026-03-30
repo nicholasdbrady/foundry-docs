@@ -16,6 +16,8 @@ concurrency:
   cancel-in-progress: true
 timeout-minutes: 15
 tools:
+  playwright:
+  web-fetch:
   bash:
     - "cat *"
     - "find *"
@@ -25,9 +27,6 @@ tools:
     - "head *"
     - "tail *"
     - "wc *"
-    - "npm *"
-    - "npx *"
-    - "playwright-cli *"
 safe-outputs:
   upload-asset:
   create-issue:
@@ -61,80 +60,46 @@ You are a brand new user trying to learn about Microsoft Foundry for the first t
 - Repository: ${{ github.repository }}
 - Documentation site: https://hobbyist-e43fa225.mintlify.app/
 
-## Step 0: Install Playwright CLI
-
-Install the playwright-cli tool for browser automation:
-
-```bash
-npm install -g @playwright/cli@latest
-playwright-cli install --with-deps chromium
-```
-
-Verify the install:
-```bash
-playwright-cli --help
-```
-
 ## Your Mission
 
 Act as a complete beginner who has never used Microsoft Foundry before. Navigate the live documentation site, follow tutorials step-by-step, and document any issues you encounter.
 
 ## Step 1: Navigate Documentation as a Noob
 
-Using playwright-cli, navigate the deployed docs site as a complete beginner. Open the browser and visit each page:
-
-```bash
-playwright-cli open https://hobbyist-e43fa225.mintlify.app/
-```
-
-For each page, take a snapshot to inspect the content and a screenshot for the report:
-
-```bash
-playwright-cli snapshot
-playwright-cli screenshot
-```
-
-Navigate between pages with `goto`:
-
-```bash
-playwright-cli goto https://hobbyist-e43fa225.mintlify.app/get-started/quickstart-create-foundry-resources
-```
+Use `web-fetch` to fetch each page from the live documentation site. This lets you see the rendered HTML exactly as a real user would, including checking for broken links and missing content.
 
 ### Pages to visit and evaluate:
 
-1. **Home page** at https://hobbyist-e43fa225.mintlify.app/
-   - Take a snapshot and screenshot
+1. **Home page** — fetch https://hobbyist-e43fa225.mintlify.app/
    - Is it clear what Microsoft Foundry does?
    - Can you find "Get Started" quickly?
 
-2. **Quickstart** at https://hobbyist-e43fa225.mintlify.app/get-started/quickstart-create-foundry-resources
-   - Take snapshots of each section
+2. **Quickstart** — fetch https://hobbyist-e43fa225.mintlify.app/get-started/quickstart-create-foundry-resources
    - Are prerequisites clear?
    - Are steps complete and unambiguous?
 
-3. **Agent Development** at https://hobbyist-e43fa225.mintlify.app/agents/development/overview
+3. **Agent Development** — fetch https://hobbyist-e43fa225.mintlify.app/agents/development/overview
    - Is the agent development flow clear?
    - Are code examples runnable?
 
-4. **SDK/API Reference** at https://hobbyist-e43fa225.mintlify.app/api-sdk/sdk-overview
+4. **SDK/API Reference** — fetch https://hobbyist-e43fa225.mintlify.app/api-sdk/sdk-overview
    - Are installation instructions clear?
    - Are there enough code examples?
 
-5. **Setup & Configuration** at https://hobbyist-e43fa225.mintlify.app/setup/planning
+5. **Setup & Configuration** — fetch https://hobbyist-e43fa225.mintlify.app/setup/planning
    - Is the setup flow logical?
    - Are there missing steps?
 
 ### Checking links
 
-Click on links to verify they work:
+For each page, identify all internal links and verify a sample of them by fetching the linked URLs. If a link leads to a 404 or error, document it as a critical issue.
 
-```bash
-playwright-cli snapshot
-playwright-cli click <ref>
-playwright-cli snapshot
-```
+### Cross-reference with source files
 
-If a link leads to a 404 or unexpected page, document it as a critical issue.
+After fetching each live page, also read the corresponding source file from `docs-vnext/` to check for:
+- Content that exists in source but isn't rendering
+- MDX syntax issues that might cause rendering problems
+- Broken code blocks or callout components
 
 ## Step 2: Identify Pain Points
 
@@ -157,33 +122,15 @@ If a link leads to a 404 or unexpected page, document it as a critical issue.
 
 ## Step 2B: Multi-Device Viewport Testing
 
-Test the documentation site across different device viewports to catch responsive layout issues. Use `playwright-cli resize` to change the viewport:
+If Playwright tools are available (browser_navigate, browser_snapshot, browser_resize), use them for viewport testing. Otherwise, skip this section — the content analysis from Step 1 is the primary value.
 
 ### Mobile (375×812)
-```bash
-playwright-cli resize 375 812
-playwright-cli goto https://hobbyist-e43fa225.mintlify.app/
-playwright-cli screenshot --filename=mobile-home.png
-playwright-cli snapshot
-```
 Check: Is the navigation menu accessible? Is text readable? Do code blocks scroll horizontally?
 
 ### Tablet (768×1024)
-```bash
-playwright-cli resize 768 1024
-playwright-cli goto https://hobbyist-e43fa225.mintlify.app/get-started/quickstart-create-foundry-resources
-playwright-cli screenshot --filename=tablet-quickstart.png
-playwright-cli snapshot
-```
 Check: Is the sidebar visible or collapsed? Do tables render properly? Are images sized correctly?
 
 ### Desktop (1440×900)
-```bash
-playwright-cli resize 1440 900
-playwright-cli goto https://hobbyist-e43fa225.mintlify.app/agents/development/overview
-playwright-cli screenshot --filename=desktop-agents.png
-playwright-cli snapshot
-```
 Check: Is the full layout visible? Is the sidebar navigation working? Are code examples properly formatted?
 
 For each viewport, note:
