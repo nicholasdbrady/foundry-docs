@@ -25,7 +25,7 @@ tools:
   cache-memory: true
   repo-memory:
     branch-name: memory/doc-metrics
-    file-glob: ["memory/doc-metrics/*.json", "memory/doc-metrics/*.txt"]
+    file-glob: ["*.json", "*.txt"]
     allowed-extensions: [".json", ".txt", ".md"]
     max-file-size: 524288
   github:
@@ -82,7 +82,7 @@ You monitor the Azure SDK repositories and REST API for new releases of the `azu
 Check repo memory for previously detected versions (falls back to cache memory for backward compatibility):
 
 ```bash
-cat /tmp/gh-aw/repo-memory-doc-metrics/sdk-versions.txt 2>/dev/null || cat /tmp/gh-aw/cache-memory/sdk-versions.txt 2>/dev/null || echo "No cached state — first run"
+cat /tmp/gh-aw/repo-memory/default/sdk-versions.txt 2>/dev/null || cat /tmp/gh-aw/cache-memory/sdk-versions.txt 2>/dev/null || echo "No cached state — first run"
 ```
 
 ## Step 2: Fetch Changelogs
@@ -133,13 +133,13 @@ Determine which documentation sections in `docs-vnext/` might need updates:
 Write to both repo memory (durable) and cache memory (backward compatibility):
 
 ```bash
-echo "python=VERSION_HERE" > /tmp/gh-aw/repo-memory-doc-metrics/sdk-versions.txt
-echo "javascript=VERSION_HERE" >> /tmp/gh-aw/repo-memory-doc-metrics/sdk-versions.txt
-echo "dotnet=VERSION_HERE" >> /tmp/gh-aw/repo-memory-doc-metrics/sdk-versions.txt
-echo "java=VERSION_HERE" >> /tmp/gh-aw/repo-memory-doc-metrics/sdk-versions.txt
-echo "rest_api=API_VERSION_HERE" >> /tmp/gh-aw/repo-memory-doc-metrics/sdk-versions.txt
-echo "last_check=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> /tmp/gh-aw/repo-memory-doc-metrics/sdk-versions.txt
-cp /tmp/gh-aw/repo-memory-doc-metrics/sdk-versions.txt /tmp/gh-aw/cache-memory/sdk-versions.txt
+echo "python=VERSION_HERE" > /tmp/gh-aw/repo-memory/default/sdk-versions.txt
+echo "javascript=VERSION_HERE" >> /tmp/gh-aw/repo-memory/default/sdk-versions.txt
+echo "dotnet=VERSION_HERE" >> /tmp/gh-aw/repo-memory/default/sdk-versions.txt
+echo "java=VERSION_HERE" >> /tmp/gh-aw/repo-memory/default/sdk-versions.txt
+echo "rest_api=API_VERSION_HERE" >> /tmp/gh-aw/repo-memory/default/sdk-versions.txt
+echo "last_check=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> /tmp/gh-aw/repo-memory/default/sdk-versions.txt
+cp /tmp/gh-aw/repo-memory/default/sdk-versions.txt /tmp/gh-aw/cache-memory/sdk-versions.txt
 ```
 
 ## Step 6: Create Issue or Noop

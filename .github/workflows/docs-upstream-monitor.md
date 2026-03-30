@@ -21,7 +21,7 @@ tools:
   cache-memory: true
   repo-memory:
     branch-name: memory/doc-metrics
-    file-glob: ["memory/doc-metrics/*.json", "memory/doc-metrics/*.txt"]
+    file-glob: ["*.json", "*.txt"]
     allowed-extensions: [".json", ".txt", ".md"]
     max-file-size: 524288
   github:
@@ -69,7 +69,7 @@ You monitor the upstream documentation repository (`MicrosoftDocs/azure-ai-docs-
 ## Step 1: Load Persisted State
 
 ```bash
-cat /tmp/gh-aw/repo-memory-doc-metrics/upstream-docs-state.txt 2>/dev/null || cat /tmp/gh-aw/cache-memory/upstream-docs-state.txt 2>/dev/null || echo "No cached state — first run"
+cat /tmp/gh-aw/repo-memory/default/upstream-docs-state.txt 2>/dev/null || cat /tmp/gh-aw/cache-memory/upstream-docs-state.txt 2>/dev/null || echo "No cached state — first run"
 ```
 
 ## Step 2: Check Upstream Commits
@@ -137,10 +137,10 @@ Also dispatch the `sync-and-convert` workflow:
 Write to both repo memory (durable) and cache memory (backward compatibility):
 
 ```bash
-echo "last_commit_sha=COMMIT_SHA" > /tmp/gh-aw/repo-memory-doc-metrics/upstream-docs-state.txt
-echo "last_check_time=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> /tmp/gh-aw/repo-memory-doc-metrics/upstream-docs-state.txt
-echo "foundry_commits_found=N" >> /tmp/gh-aw/repo-memory-doc-metrics/upstream-docs-state.txt
-cp /tmp/gh-aw/repo-memory-doc-metrics/upstream-docs-state.txt /tmp/gh-aw/cache-memory/upstream-docs-state.txt
+echo "last_commit_sha=COMMIT_SHA" > /tmp/gh-aw/repo-memory/default/upstream-docs-state.txt
+echo "last_check_time=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> /tmp/gh-aw/repo-memory/default/upstream-docs-state.txt
+echo "foundry_commits_found=N" >> /tmp/gh-aw/repo-memory/default/upstream-docs-state.txt
+cp /tmp/gh-aw/repo-memory/default/upstream-docs-state.txt /tmp/gh-aw/cache-memory/upstream-docs-state.txt
 ```
 
 ## Guidelines
