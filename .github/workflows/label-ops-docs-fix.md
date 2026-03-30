@@ -1,10 +1,10 @@
 ---
 name: Label-Ops Documentation Fixer
-description: Automatically fixes documentation issues when an issue is labeled docs-fix-needed
+description: Automatically fixes documentation issues when an issue is labeled docs-fix-needed, sdk-update, or noob-test
 on:
   issues:
     types: [labeled]
-    names: [docs-fix-needed, sdk-update]
+    names: [docs-fix-needed, sdk-update, noob-test]
   reaction: "rocket"
 
 permissions:
@@ -56,9 +56,16 @@ concurrency:
 
 # Label-Ops Documentation Fixer
 
-You are triggered when an issue is labeled `docs-fix-needed` or `sdk-update`. Your job is to read the issue, understand the documentation problem described, find the affected files in `docs-vnext/`, and create a fix PR.
+You are triggered when an issue is labeled `docs-fix-needed`, `sdk-update`, or `noob-test`. Your job is to read the issue, understand the documentation problem described, find the affected files in `docs-vnext/`, and create a fix PR.
 
 When the triggering label is `sdk-update`, the issue was created by the SDK Release Monitor and contains structured sections: **Breaking Changes**, **New Features**, **Documentation Impact Assessment**, and **Recommended Actions**. Treat the recommended actions as your task list and apply each change systematically across all affected files in `docs-vnext/`.
+
+When the triggering label is `noob-test`, the issue was created by the Documentation Noob Tester — an automated workflow that navigates the live docs site as a complete beginner. The issue contains structured sections: **Summary**, **Critical Issues Found**, **Confusing Areas**, **What Worked Well**, and **Recommendations**. Prioritize fixes in this order:
+1. **Critical Issues** (🔴) — blocking problems like broken links, 404 pages, missing prerequisites, incorrect code examples
+2. **Confusing Areas** (🟡) — unclear explanations, jargon without definitions, missing examples, inconsistent terminology
+3. **Recommendations** — treat each recommendation as a task to address
+
+Focus on actionable content fixes: clarify confusing prose, add missing context, fix broken examples, improve getting-started flow. Skip cosmetic or layout-only observations that are Mintlify theme concerns rather than content issues.
 
 ## Context
 
@@ -80,6 +87,22 @@ If the issue title starts with `[sdk-release]`, this is an automated SDK release
 - **New Features** — identify what needs new documentation
 - **Documentation Impact Assessment** — use the impact table to prioritize
 - **Recommended Actions** — treat each checkbox item as a task
+
+### Noob Test Issues (label: `noob-test`)
+
+If the issue title starts with `[noob-test]`, this is an automated noob test report. Parse these sections from the issue body:
+- **Summary** — understand which pages were visited and the overall impression
+- **Critical Issues Found** (🔴) — extract each blocking issue with its page URL and description
+- **Confusing Areas** (🟡) — extract each confusing section with its page URL and what was unclear
+- **Recommendations** — treat each suggestion as a prioritized task
+
+For each issue or recommendation:
+1. Map the documentation site URL back to the source file in `docs-vnext/` (e.g., `/agents/development/overview` → `docs-vnext/agents/development/overview.mdx`)
+2. Read the current file content
+3. Apply the fix: clarify prose, add missing prerequisites, fix code examples, add definitions for jargon, improve step-by-step flow
+4. Verify MDX syntax after editing
+
+Skip items that are purely about site layout, theme styling, or viewport rendering — those are Mintlify platform concerns, not content fixes.
 
 For breaking changes, build a mapping of old name → new name, then search `docs-vnext/` for every occurrence and apply the rename. Common patterns:
 - Tool class renames (e.g., `AzureAISearchAgentTool` → `AzureAISearchTool`)
