@@ -6,46 +6,6 @@ Most businesses don't want just chatbots. They want automation that's faster and
 
 Large language models (LLMs) introduce a new type of automation with systems that can understand unstructured data, make decisions, and generate content. In practice, businesses can have difficulty moving beyond demos and into production. LLMs can drift, be incorrect, and lack accountability. Without visibility, policy enforcement, and orchestration, these models are hard to trust in real business workflows.
 
-{/* Code snippet for quick reference */}
-<CodeGroup>
-```python Python
-from azure.ai.projects import AIProjectClient
-from azure.ai.projects.models import PromptAgentDefinition
-from azure.identity import DefaultAzureCredential
-
-client = AIProjectClient(
-    endpoint="YOUR_PROJECT_ENDPOINT",
-    credential=DefaultAzureCredential(),
-)
-
-agent = client.agents.create_version(
-    agent_name="my-agent",
-    definition=PromptAgentDefinition(
-        model="YOUR_MODEL_DEPLOYMENT_NAME",
-        instructions="You are a helpful assistant.",
-    ),
-)
-print(f"Agent created: {agent.name} (version: {agent.version})")
-```
-
-```typescript TypeScript
-import { AIProjectClient } from "@azure/ai-projects";
-import { DefaultAzureCredential } from "@azure/identity";
-
-const client = new AIProjectClient(
-  "YOUR_PROJECT_ENDPOINT",
-  new DefaultAzureCredential(),
-);
-
-const agent = await client.agents.createVersion("my-agent", {
-  kind: "prompt",
-  model: "YOUR_MODEL_DEPLOYMENT_NAME",
-  instructions: "You are a helpful assistant.",
-});
-console.log(`Agent created: ${agent.name} (version: ${agent.version})`);
-```
-</CodeGroup>
-
 <Columns cols={2}>
   <Card>
     *Microsoft Foundry* is designed to change that. It's a platform that combines models, tools, frameworks, and governance into a unified system for building intelligent agents. At the center of this system is *Foundry Agent Service*, which enables the operation of agents across development, deployment, and production.
@@ -167,6 +127,48 @@ If you're building in code, see [Microsoft Foundry SDKs](/api-sdk/sdk-overview) 
 If it's your first time using the service, start with the [environment setup](/setup/environment-setup) and [quickstart](/get-started/quickstart-create-foundry-resources) guides.
 
 Create a project with the required resources. After you create a project, deploy a compatible model such as GPT-4o. When you have a deployed model, you can start making API calls to Agent Service by using the SDKs.
+
+The following example shows how to create a basic agent once your project endpoint and model deployment are set up. For setup instructions, see the [quickstart](/get-started/quickstart-create-foundry-resources).
+
+{/* Code snippet for quick reference — shown after context */}
+<CodeGroup>
+```python Python
+from azure.ai.projects import AIProjectClient
+from azure.ai.projects.models import PromptAgentDefinition
+from azure.identity import DefaultAzureCredential
+
+client = AIProjectClient(
+    endpoint="YOUR_PROJECT_ENDPOINT",
+    credential=DefaultAzureCredential(),
+)
+
+agent = client.agents.create_version(
+    agent_name="my-agent",
+    definition=PromptAgentDefinition(
+        model="YOUR_MODEL_DEPLOYMENT_NAME",
+        instructions="You are a helpful assistant.",
+    ),
+)
+print(f"Agent created: {agent.name} (version: {agent.version})")
+```
+
+```typescript TypeScript
+import { AIProjectClient } from "@azure/ai-projects";
+import { DefaultAzureCredential } from "@azure/identity";
+
+const client = new AIProjectClient(
+  "YOUR_PROJECT_ENDPOINT",
+  new DefaultAzureCredential(),
+);
+
+const agent = await client.agents.createVersion("my-agent", {
+  kind: "prompt",
+  model: "YOUR_MODEL_DEPLOYMENT_NAME",
+  instructions: "You are a helpful assistant.",
+});
+console.log(`Agent created: ${agent.name} (version: ${agent.version})`);
+```
+</CodeGroup>
 
 You can find a list of official samples with the new Python agent SDK on [GitHub](https://github.com/Azure/azure-sdk-for-python/tree/main/sdk/ai/azure-ai-projects).
 
