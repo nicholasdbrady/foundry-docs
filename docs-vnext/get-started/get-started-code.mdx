@@ -57,7 +57,7 @@ MODEL_DEPLOYMENT_NAME="gpt-4.1-mini"
   <Tab title="REST API">
 
     Follow along below or get the code:
-    <Card title="Get the code" icon="arrow-right" href="https://github.com/microsoft-foundry/foundry-samples/tree/main/samples/REST/quickstart" />
+    <Card title="Get the code" icon="arrow-right" href="https://github.com/azure-ai-foundry/foundry-samples/tree/main/samples/REST/quickstart" />
     1. Sign in using the CLI `az login` command to authenticate before running the next command.
     1. Get a temporary access token. It will expire in 60-90 minutes, you'll need to refresh after that.
 
@@ -76,6 +76,10 @@ MODEL_DEPLOYMENT_NAME="gpt-4.1-mini"
 </Tabs>
 
 ## Install and authenticate
+
+<Tip>
+**Starting a new project?** Install the 2.x preview package — it's the current active API for new Foundry projects. Code using 2.x is not compatible with 1.x. See [SDK overview](/api-sdk/sdk-overview) for details.
+</Tip>
 
 Make sure you install the correct preview/prerelease version of the packages as shown here.
 
@@ -109,7 +113,7 @@ Make sure you install the correct preview/prerelease version of the packages as 
   </Tab>
   <Tab title="TypeScript">
 
-    1. Install these packages, including the preview version of `@azure/ai-projects`. This version uses the **Foundry projects (new) API** (preview).:
+    1. Install these packages, including the preview version of `@azure/ai-projects`. This version uses the **Foundry projects (new) API** (preview).
 
         ```bash
         npm install @azure/ai-projects@beta @azure/identity dotenv
@@ -119,6 +123,27 @@ Make sure you install the correct preview/prerelease version of the packages as 
 
   </Tab>
   <Tab title="Java">
+
+    1. Add these Maven dependencies to your `pom.xml`. These packages use the **Foundry projects (new) API** (preview).
+
+        ```xml
+        <dependency>
+            <groupId>com.azure</groupId>
+            <artifactId>azure-ai-agents</artifactId>
+            <version>1.0.0-beta.3</version>
+        </dependency>
+        <dependency>
+            <groupId>com.azure</groupId>
+            <artifactId>azure-identity</artifactId>
+        </dependency>
+        ```
+
+        Or with Gradle:
+
+        ```groovy
+        implementation 'com.azure:azure-ai-agents:1.0.0-beta.3'
+        implementation 'com.azure:azure-identity'
+        ```
 
     1. Sign in using the CLI `az login` command to authenticate before running your Java scripts.
 
@@ -178,7 +203,8 @@ Interacting with a model is the basic building block of AI applications.  Send a
     print(f"Response output: {response.output_text}")
     ```
 
-     # [C#](#tab/csharp)
+  </Tab>
+  <Tab title="C#">
 
     ```csharp
     using Azure.AI.Projects;
