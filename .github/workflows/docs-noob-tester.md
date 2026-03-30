@@ -5,7 +5,7 @@ on:
   schedule: daily
   workflow_dispatch:
   skip-if-match: 'is:discussion is:open in:title "Noob Test Report"'
-  stop-after: "+180d"
+  stop-after: "+365d"
 permissions:
   contents: read
   issues: read
