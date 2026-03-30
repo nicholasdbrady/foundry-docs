@@ -36,6 +36,12 @@ tools:
     - "find docs-vnext -name '*.mdx'"
     - "cat *"
     - "grep *"
+    - "sed *"
+    - "head *"
+    - "tail *"
+    - "wc *"
+    - "diff *"
+    - "python3 *"
 
 safe-outputs:
   create-pull-request:
