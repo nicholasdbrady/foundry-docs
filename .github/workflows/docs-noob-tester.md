@@ -16,7 +16,6 @@ concurrency:
   cancel-in-progress: true
 timeout-minutes: 15
 tools:
-  playwright:
   bash:
     - "cat *"
     - "find *"
@@ -26,6 +25,9 @@ tools:
     - "head *"
     - "tail *"
     - "wc *"
+    - "npm *"
+    - "npx *"
+    - "playwright-cli *"
 safe-outputs:
   upload-asset:
   create-issue:
@@ -41,6 +43,9 @@ network:
     - hobbyist-e43fa225.mintlify.app
     - learn.microsoft.com
     - github.com
+    - registry.npmjs.org
+    - cdn.playwright.dev
+    - playwright.download.prss.microsoft.com
 
 imports:
   - shared/mood.md
@@ -56,35 +61,80 @@ You are a brand new user trying to learn about Microsoft Foundry for the first t
 - Repository: ${{ github.repository }}
 - Documentation site: https://hobbyist-e43fa225.mintlify.app/
 
+## Step 0: Install Playwright CLI
+
+Install the playwright-cli tool for browser automation:
+
+```bash
+npm install -g @playwright/cli@latest
+playwright-cli install --with-deps chromium
+```
+
+Verify the install:
+```bash
+playwright-cli --help
+```
+
 ## Your Mission
 
 Act as a complete beginner who has never used Microsoft Foundry before. Navigate the live documentation site, follow tutorials step-by-step, and document any issues you encounter.
 
 ## Step 1: Navigate Documentation as a Noob
 
-Using Playwright, navigate the deployed docs site as a complete beginner:
+Using playwright-cli, navigate the deployed docs site as a complete beginner. Open the browser and visit each page:
 
-1. **Visit the home page** at https://hobbyist-e43fa225.mintlify.app/
-   - Take a screenshot
+```bash
+playwright-cli open https://hobbyist-e43fa225.mintlify.app/
+```
+
+For each page, take a snapshot to inspect the content and a screenshot for the report:
+
+```bash
+playwright-cli snapshot
+playwright-cli screenshot
+```
+
+Navigate between pages with `goto`:
+
+```bash
+playwright-cli goto https://hobbyist-e43fa225.mintlify.app/get-started/quickstart-create-foundry-resources
+```
+
+### Pages to visit and evaluate:
+
+1. **Home page** at https://hobbyist-e43fa225.mintlify.app/
+   - Take a snapshot and screenshot
    - Is it clear what Microsoft Foundry does?
    - Can you find "Get Started" quickly?
 
-2. **Follow the Quickstart** at https://hobbyist-e43fa225.mintlify.app/get-started/quickstart-create-foundry-resources
-   - Take screenshots of each section
+2. **Quickstart** at https://hobbyist-e43fa225.mintlify.app/get-started/quickstart-create-foundry-resources
+   - Take snapshots of each section
    - Are prerequisites clear?
    - Are steps complete and unambiguous?
 
-3. **Explore Agent Development** at https://hobbyist-e43fa225.mintlify.app/agents/development/overview
+3. **Agent Development** at https://hobbyist-e43fa225.mintlify.app/agents/development/overview
    - Is the agent development flow clear?
    - Are code examples runnable?
 
-4. **Check the SDK/API Reference** at https://hobbyist-e43fa225.mintlify.app/api-sdk/sdk-overview
+4. **SDK/API Reference** at https://hobbyist-e43fa225.mintlify.app/api-sdk/sdk-overview
    - Are installation instructions clear?
    - Are there enough code examples?
 
-5. **Browse Setup & Configuration** at https://hobbyist-e43fa225.mintlify.app/setup/planning
+5. **Setup & Configuration** at https://hobbyist-e43fa225.mintlify.app/setup/planning
    - Is the setup flow logical?
    - Are there missing steps?
+
+### Checking links
+
+Click on links to verify they work:
+
+```bash
+playwright-cli snapshot
+playwright-cli click <ref>
+playwright-cli snapshot
+```
+
+If a link leads to a 404 or unexpected page, document it as a critical issue.
 
 ## Step 2: Identify Pain Points
 
@@ -107,25 +157,34 @@ Using Playwright, navigate the deployed docs site as a complete beginner:
 
 ## Step 2B: Multi-Device Viewport Testing
 
-Test the documentation site across different device viewports to catch responsive layout issues:
+Test the documentation site across different device viewports to catch responsive layout issues. Use `playwright-cli resize` to change the viewport:
 
 ### Mobile (375×812)
+```bash
+playwright-cli resize 375 812
+playwright-cli goto https://hobbyist-e43fa225.mintlify.app/
+playwright-cli screenshot --filename=mobile-home.png
+playwright-cli snapshot
 ```
-Navigate to the home page at 375×812 viewport. Take a screenshot.
 Check: Is the navigation menu accessible? Is text readable? Do code blocks scroll horizontally?
-```
 
 ### Tablet (768×1024)
+```bash
+playwright-cli resize 768 1024
+playwright-cli goto https://hobbyist-e43fa225.mintlify.app/get-started/quickstart-create-foundry-resources
+playwright-cli screenshot --filename=tablet-quickstart.png
+playwright-cli snapshot
 ```
-Navigate to the quickstart page at 768×1024 viewport. Take a screenshot.
 Check: Is the sidebar visible or collapsed? Do tables render properly? Are images sized correctly?
-```
 
 ### Desktop (1440×900)
+```bash
+playwright-cli resize 1440 900
+playwright-cli goto https://hobbyist-e43fa225.mintlify.app/agents/development/overview
+playwright-cli screenshot --filename=desktop-agents.png
+playwright-cli snapshot
 ```
-Navigate to the agent development overview at 1440×900 viewport. Take a screenshot.
 Check: Is the full layout visible? Is the sidebar navigation working? Are code examples properly formatted?
-```
 
 For each viewport, note:
 - 🔴 Layout breaks (overlapping elements, cut-off text)
