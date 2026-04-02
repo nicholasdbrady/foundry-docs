@@ -43,7 +43,7 @@ To run the samples in this article, you need:
   <Tab title="C#">
 
     ```bash
-    dotnet add package Azure.AI.Projects --version 2.0.0-beta.2
+    dotnet add package Azure.AI.Projects
     dotnet add package Azure.Identity
     ```
 
@@ -134,7 +134,7 @@ The following example creates a prompt agent with a name, model, and instruction
         .CreateAgentVersionAsync(
             agentName: "my-agent",
             options: new(
-                new PromptAgentDefinition("gpt-5-mini")
+                new DeclarativeAgentDefinition("gpt-5-mini")
                 {
                     Instructions = "You are a helpful assistant.",
                 }));
@@ -258,7 +258,7 @@ You can attach one or more tools when you create an agent. During response gener
         .CreateAgentVersionAsync(
             agentName: "my-tool-agent",
             options: new(
-                new PromptAgentDefinition("gpt-5-mini")
+                new DeclarativeAgentDefinition("gpt-5-mini")
                 {
                     Instructions = "You are a helpful assistant that can search the web.",
                     Tools = { ResponseTool.CreateWebSearchTool() },
@@ -403,7 +403,7 @@ The following example generates a response using an agent reference, then sends 
 
     // Generate a response using the agent
     ProjectResponsesClient responsesClient
-        = projectClient.OpenAI.GetProjectResponsesClientForAgent(agentName);
+        = projectClient.ProjectOpenAIClient.GetProjectResponsesClientForAgent(agentName);
     ResponseResult response = await responsesClient.CreateResponseAsync(
         "What is the largest city in France?");
     Console.WriteLine(response.GetOutputText());
@@ -576,7 +576,7 @@ When an agent uses tools during response generation, the response output contain
         tokenProvider: new DefaultAzureCredential());
 
     ProjectResponsesClient responsesClient
-        = projectClient.OpenAI.GetProjectResponsesClientForAgent(agentName);
+        = projectClient.ProjectOpenAIClient.GetProjectResponsesClientForAgent(agentName);
     ResponseResult response = await responsesClient.CreateResponseAsync(
         "What happened in the news today?");
 
@@ -768,7 +768,7 @@ This approach is useful when you need full control over conversation state, want
 
     // Generate a response without storing
     ProjectResponsesClient responsesClient
-        = projectClient.OpenAI.GetProjectResponsesClientForAgent(agentName);
+        = projectClient.ProjectOpenAIClient.GetProjectResponsesClientForAgent(agentName);
     ResponseResult response = await responsesClient.CreateResponseAsync(
         new CreateResponseOptions
         {
@@ -970,7 +970,7 @@ The following example creates a conversation with an initial user message. Use t
 
     // Create a conversation
     ProjectConversation conversation
-        = await projectClient.OpenAI.Conversations.CreateProjectConversationAsync();
+        = await projectClient.ProjectOpenAIClient.GetProjectConversationsClient().CreateProjectConversationAsync();
     Console.WriteLine($"Conversation ID: {conversation.Id}");
     ```
 
@@ -1204,11 +1204,11 @@ Combine a conversation with an agent reference to maintain history across multip
 
     // Create a conversation for multi-turn chat
     ProjectConversation conversation
-        = await projectClient.OpenAI.Conversations.CreateProjectConversationAsync();
+        = await projectClient.ProjectOpenAIClient.GetProjectConversationsClient().CreateProjectConversationAsync();
 
     // First turn
     ProjectResponsesClient responsesClient
-        = projectClient.OpenAI.GetProjectResponsesClientForAgent(
+        = projectClient.ProjectOpenAIClient.GetProjectResponsesClientForAgent(
             agentName, conversation);
     ResponseResult response = await responsesClient.CreateResponseAsync(
         "What is the largest city in France?");
@@ -1395,7 +1395,7 @@ Streaming returns partial results as they're generated. This approach is useful 
 
     // Stream a response using the agent
     ProjectResponsesClient responsesClient
-        = projectClient.OpenAI.GetProjectResponsesClientForAgent(agentName);
+        = projectClient.ProjectOpenAIClient.GetProjectResponsesClientForAgent(agentName);
     await foreach (StreamingResponseUpdate update
         in responsesClient.CreateResponseStreamingAsync(
             "Explain how agents work in one paragraph."))
@@ -1545,7 +1545,7 @@ Background mode runs the agent asynchronously, which is useful for long-running 
 
     // Start a background response using the agent
     ProjectResponsesClient responsesClient
-        = projectClient.OpenAI.GetProjectResponsesClientForAgent(agentName);
+        = projectClient.ProjectOpenAIClient.GetProjectResponsesClientForAgent(agentName);
     ResponseResult response = await responsesClient.CreateResponseAsync(
         new CreateResponseOptions
         {
