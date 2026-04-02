@@ -19,7 +19,15 @@ The primary Python client class in the Azure AI Projects SDK for connecting to a
 ### Azure AI Search
 A cloud search service providing keyword, vector, and semantic search capabilities. Used as the underlying indexing and retrieval infrastructure for RAG patterns, Foundry IQ knowledge bases, and vector stores.
 
+## B
+
+### Basic Setup
+A Foundry Agent Service environment configuration that uses Microsoft-managed, multitenant Azure resources to store agent state (files, conversation history, and vector stores). Basic Setup is compatible with the OpenAI Assistants API and is the fastest way to get started. For enterprise data isolation, see [Standard Setup](#standard-setup).
+
 ## C
+
+### Capability Host
+A sub-resource attached to a Foundry account or project that enables interaction with Foundry Agent Service. The account-level capability host activates the Agents capability; the project-level capability host specifies which Azure resources (Cosmos DB, Storage, AI Search) store agent state and determines whether the project uses basic or standard setup. Capability hosts cannot be updated after creation.
 
 ### Code Interpreter
 A built-in Foundry agent tool that lets agents write and execute Python code in a sandboxed environment. Useful for data analysis, mathematical calculations, chart generation, and file processing tasks.
@@ -45,6 +53,9 @@ The management layer in Microsoft Foundry for registering, discovering, and mana
 
 ### Foundry IQ
 A managed knowledge layer in Microsoft Foundry that turns enterprise data into reusable, permission-aware knowledge bases for AI agents. Foundry IQ connects structured and unstructured data sources (Azure Blob Storage, SharePoint, OneLake, and the public web), automates indexing and chunking, enforces access controls via Microsoft Entra ID and Microsoft Purview, and uses agentic retrieval to return grounded answers with citations.
+
+### Foundry SDK
+The primary SDK for Foundry-specific capabilities, including agents, models, connections, and tools, with OpenAI-compatible interfaces. Available for Python (`azure-ai-projects`), C# (`Azure.AI.Projects`), JavaScript/TypeScript (`@azure/ai-projects`), and Java (`com.azure:azure-ai-projects`). The Foundry SDK is distinct from the Azure AI Inference SDK, which provides a more generic inference interface.
 
 ### Function Calling
 A capability that allows agents and language models to invoke user-defined functions based on structured parameters. The model determines when to call a function, generates the arguments, and the application executes the function and returns results back to the model.
@@ -74,6 +85,9 @@ Microsoft's cloud identity and access management service, formerly Azure Active 
 
 ## O
 
+### OpenAPI Tool
+A built-in Foundry agent tool that connects agents to external APIs described by an OpenAPI 3.0 or 3.1 specification. The agent uses the operation descriptions and `operationId` fields to decide when and how to call the external service. Supports anonymous, API key, and managed identity authentication methods.
+
 ### OpenTelemetry
 An open-source observability framework for collecting traces, metrics, and logs. Foundry Agent Service integrates with OpenTelemetry to emit agent traces to Application Insights or other compatible backends, enabling debugging, latency analysis, and production monitoring.
 
@@ -91,6 +105,11 @@ The output of a single agent invocation in Foundry Agent Service. A response inc
 ### Responses API
 The API surface for generating agent outputs in Foundry Agent Service. The Responses API accepts a conversation (or previous response output) and returns a new response with the agent's result. It supersedes the older Assistants API runs endpoint.
 
+## S
+
+### Standard Setup
+A Foundry Agent Service environment configuration that uses customer-managed, single-tenant Azure resources (Azure Storage, Azure Cosmos DB, Azure AI Search) to store all agent state. Standard Setup provides full data sovereignty, supports Customer Managed Keys (CMK), and can be combined with a Bring Your Own (BYO) virtual network for private network isolation. Contrast with [Basic Setup](#basic-setup).
+
 ## V
 
 ### Vector Store
@@ -98,3 +117,8 @@ A container for searchable file content (chunks and embeddings) used by the file
 
 ### Voice Live
 A real-time voice API in Microsoft Foundry that enables building voice agents using Azure Speech capabilities. Voice Live supports low-latency, bidirectional audio streaming for interactive voice agent scenarios.
+
+## W
+
+### Web Search
+A built-in Foundry agent tool that enables agents to retrieve real-time information from the web. When invoked, the tool issues search queries, retrieves current results, and provides them as grounding data to the model context. Use Web Search for tasks requiring up-to-date information beyond the model's training data cutoff.
