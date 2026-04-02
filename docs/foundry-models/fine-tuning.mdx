@@ -50,7 +50,9 @@ The following models are supported for fine-tuning:
 Or you can fine-tune a previously fine-tuned model, formatted as `base-model.ft-{jobid}`.
 
 <Note>
+
 Open-source models (Ministral-3B, Qwen-32B, Llama-3.3-70B-Instruct, gpt-oss-20b) are only supported on Foundry resources and in the new Foundry UI.
+
 </Note>
 
 ## Prepare your data
@@ -129,7 +131,9 @@ The supported customization methods depend on the selected model:
 - **Reinforcement fine-tuning (RFT)**: Uses reward signals from model graders to optimize complex behaviors.
 
 <Note>
+
 The rest of this article covers steps for the SFT method. For instructions specific to other customization methods, see the [guide for DPO](../openai/how-to/fine-tuning-direct-preference-optimization) and the [guide for RFT](../openai/how-to/reinforcement-fine-tuning).
+
 </Note>
 
 ### Training type
@@ -175,7 +179,9 @@ The following hyperparameters are available:
 #### Automatic deployment
 
 <Info>
+
 For automatic deployment, you need the **Azure AI Owner** role or any role with the `Microsoft.CognitiveServices/accounts/deployments/write` action.
+
 </Info>
 
 To save time, you can enable automatic deployment for your resulting model. If training finishes successfully, the model is deployed according to the selected deployment type. The deployment name is based on the unique name generated for your custom model and the optional suffix that you might have provided earlier.
@@ -208,15 +214,19 @@ When each training epoch finishes, a checkpoint is generated. You can view check
 A checkpoint is a fully functional version of a model that can be both deployed and used as the target model for subsequent fine-tuning jobs. Checkpoints can be particularly useful, because they might provide snapshots prior to overfitting. When a fine-tuning job finishes, you have the three most recent versions of the model available to deploy. You can copy checkpoints between resources and subscriptions through the REST API.
 
 <Note>
+
 During the training, you can view the metrics and pause the job as needed. Pausing can be useful if metrics aren't converging or if you feel that the model isn't learning at the right pace. When you pause a training job, a deployable checkpoint is created after safety evaluations are complete. This checkpoint is available for you to deploy and use for inference, or you can resume the job to complete it.
 
 The pause operation is applicable only for jobs that are trained for at least one step and are in a **Running** state. Pausing is supported only for OpenAI models.
+
 </Note>
 
 ## Deploy the fine-tuned model
 
 <Info>
+
 To deploy models, you need the **Azure AI Owner** role or any role with the `Microsoft.CognitiveServices/accounts/deployments/write` action.
+
 </Info>
 
 When you're satisfied with the metrics from your fine-tuning job, you can deploy the model by selecting the **Deploy** button on the details page and then configuring your deployment settings.
@@ -228,7 +238,9 @@ For more information, see the [fine-tuning deployment guide](../openai/how-to/fi
 After you deploy your fine-tuned model, you can use it like any other deployed model. You can use the playground in [Foundry](https://ai.azure.com/?cid=learnDocs) to experiment with your new deployment. You can also use the REST API to call your fine-tuned model from your own application. You can even begin to use this new fine-tuned model in your prompt flow to build your generative AI application.
 
 <Note>
+
 For chat models, the system message that you use to guide your fine-tuned model (whether it's deployed or available for testing in the playground) must be the same as the system message that you used for training. If you use a different system message, the model might not perform as expected.
+
 </Note>
 
 ## Perform continuous fine-tuning
@@ -246,11 +258,13 @@ When you no longer need your fine-tuned model, you can delete the deployment and
 ### Delete your fine-tuned model deployment
 
 <Info>
+
 After you deploy a customized model, if at any time the deployment remains inactive for more than 15 days, the deployment is deleted. The deployment of a customized model is _inactive_ if the model was deployed more than 15 days ago and no chat completions or response API calls were made to it during a continuous 15-day period.
 
 The deletion of an inactive deployment doesn't delete or affect the underlying customized model. The customized model can be redeployed at any time.
 
 As described in [Azure OpenAI in Microsoft Foundry Models pricing](https://azure.microsoft.com/pricing/details/cognitive-services/openai-service/), each customized (fine-tuned) model that's deployed incurs an hourly hosting cost regardless of whether chat completions or response API calls are made to the model. To learn more about planning and managing costs with Azure OpenAI, see [Plan and manage costs for Azure OpenAI](/foundry-models/manage-costs#fine-tuned-models).
+
 </Info>
 
 You can delete the deployment for your fine-tuned model on the **Build** > **Models** page in the Foundry portal.
@@ -260,7 +274,9 @@ You can delete the deployment for your fine-tuned model on the **Build** > **Mod
 You can delete a fine-tuned model on the **Fine-tuning** page in the Foundry portal. Select the fine-tuned model to delete, and then select **Delete**.
 
 <Note>
+
 You can't delete a fine-tuned model if it has an existing deployment. You must [delete your model deployment](#delete-your-fine-tuned-model-deployment) before you can delete your fine-tuned model.
+
 </Note>
 
 <Tabs>
@@ -297,7 +313,9 @@ You can't delete a fine-tuned model if it has an existing deployment. You must [
     Or you can fine-tune a previously fine-tuned model, formatted as `base-model.ft-{jobid}`.
 
 <Note>
+
 Open-source models (Ministral-3B, Qwen-32B, Llama-3.3-70B-Instruct, gpt-oss-20b) are only supported on Foundry resources and in the new Foundry UI.
+
 </Note>
 
     ## Review the workflow for the Python SDK
@@ -420,7 +438,9 @@ Open-source models (Ministral-3B, Qwen-32B, Llama-3.3-70B-Instruct, gpt-oss-20b)
     ```
 
 <Note>
+
 We recommend using the Global Standard tier for the training type, because it offers [cost savings](https://azure.microsoft.com/pricing/details/cognitive-services/openai-service/) and uses global capacity for faster queuing times. However, it does copy data and weights outside the current resource region. If [data residency](https://azure.microsoft.com/explore/global-infrastructure/data-residency/) is a requirement, use a [model](/foundry-models/models-sold-directly-by-azure) that supports Standard-tier training.
+
 </Note>
 
     You can also pass additional optional parameters, like hyperparameters, to take greater control of the fine-tuning process. For initial training, we recommend using the automatic defaults that are present without specifying these parameters.
@@ -664,11 +684,13 @@ When you no longer need your customized model, you can delete the deployment and
 ### Delete your model deployment
 
 <Info>
+
 After you deploy a customized model, if at any time the deployment remains inactive for more than 15 days, the deployment is deleted. The deployment of a customized model is _inactive_ if the model was deployed more than 15 days ago and no chat completions or response API calls were made to it during a continuous 15-day period.
 
 The deletion of an inactive deployment doesn't delete or affect the underlying customized model. The customized model can be redeployed at any time.
 
 As described in [Azure OpenAI in Microsoft Foundry Models pricing](https://azure.microsoft.com/pricing/details/cognitive-services/openai-service/), each customized (fine-tuned) model that's deployed incurs an hourly hosting cost regardless of whether chat completions or response API calls are made to the model. To learn more about planning and managing costs with Azure OpenAI, see [Plan and manage costs for Azure OpenAI](/foundry-models/manage-costs#fine-tuned-models).
+
 </Info>
 
 You can use either of these methods to delete the deployment for your customized model:
@@ -681,7 +703,9 @@ You can use either of these methods to delete the deployment for your customized
 You can delete your customized model by using [Foundry](/foundry-models/fine-tuning).
 
 <Note>
+
 You can't delete a customized model if it has an existing deployment. You must [delete your model deployment](#delete-your-model-deployment) before you can delete your customized model.
+
 </Note>
 
 ### Delete your training files
@@ -749,7 +773,9 @@ for id in results:
     Or you can fine-tune a previously fine-tuned model, formatted as `base-model.ft-{jobid}`.
 
 <Note>
+
 Open-source models (Ministral-3B, Qwen-32B, Llama-3.3-70B-Instruct, gpt-oss-20b) are only supported on Foundry resources and in the new Foundry UI.
+
 </Note>
 
     ## Review the workflow for the Python SDK
@@ -873,7 +899,9 @@ Open-source models (Ministral-3B, Qwen-32B, Llama-3.3-70B-Instruct, gpt-oss-20b)
     ```
 
 <Note>
+
 We recommend using the Global Standard tier for the training type, because it offers [cost savings](https://azure.microsoft.com/pricing/details/cognitive-services/openai-service/) and uses global capacity for faster queuing times. However, it does copy data and weights outside the current resource region. If [data residency](https://azure.microsoft.com/explore/global-infrastructure/data-residency/) is a requirement, use a [model](/foundry-models/models-sold-directly-by-azure) that supports Standard-tier training.
+
 </Note>
 
     You can also pass additional optional parameters, like hyperparameters, to take greater control of the fine-tuning process. For initial training, we recommend using the automatic defaults that are present without specifying these parameters.
@@ -1099,7 +1127,9 @@ The following models are supported for fine-tuning:
 Or you can fine-tune a previously fine-tuned model, formatted as `base-model.ft-{jobid}`.
 
 <Note>
+
 Open-source models (Ministral-3B, Qwen-32B, Llama-3.3-70B-Instruct, gpt-oss-20b) are only supported on Foundry resources and in the new Foundry UI.
+
 </Note>
 
 ## Review the workflow for the REST API
@@ -1317,7 +1347,9 @@ You can now copy a fine-tuned checkpointed model from one region to another, acr
 After the model is copied from region A to region B, you can continually fine-tune the model in region B and deploy the model from this location.
 
 <Note>
+
 Deletion of the model checkpoint in the source region doesn't cause the model to be deleted in the destination region. To delete the model in both regions after it's copied, you must deploy the model separately in each region.
+
 </Note>
 
 ### Prerequisites
@@ -1359,7 +1391,9 @@ curl --request GET \
 ```
 
 <Note>
+
 When you copy a checkpoint from a source account, the same checkpoint name is retained in the destination account. Ensure that you use exactly this same name for fine-tuning, deployment, or any other operation in the destination account. This checkpoint doesn't appear in the UI or in the `list checkpoints` API.
+
 </Note>
 
 ## Analyze your customized model
@@ -1467,7 +1501,9 @@ You can use either of these methods to delete the deployment for your customized
 You can delete your customized model by using [Foundry](/foundry-models/fine-tuning).
 
 <Note>
+
 You can't delete a customized model if it has an existing deployment. You must [delete your model deployment](#delete-your-model-deployment) before you can delete your customized model.
+
 </Note>
 
 ### Delete your training files

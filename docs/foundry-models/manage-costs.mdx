@@ -27,7 +27,9 @@ Use this task-to-role mapping as a starting point:
 - **Create or modify custom roles:** **Owner** at the target scope.
 
 <Note>
+
 Foundry doesn't have a dedicated page in the Azure pricing calculator because Foundry is composed of several optional Azure services. This article shows how to use the calculator to estimate costs for these services.
+
 </Note>
 
 ## Estimate costs before using Foundry
@@ -85,7 +87,9 @@ Common billing approaches include:
 - **Commitment tiers:** You commit to using service features for a fixed fee, providing predictable costs. For details, see [Commitment tier pricing](https://learn.microsoft.com/azure/ai-services/commitment-tier).
 
 <Note>
+
 If you use the resource above the quota provided by the commitment plan, you pay for the extra usage as described in the overage amount in the Azure portal when you buy a commitment plan.
+
 </Note>
 
 ## Understand the billing model for Foundry Models
@@ -109,7 +113,9 @@ Azure OpenAI fine-tuned models are charged in three ways:
 Monitor hosted fine-tuned model costs closely to avoid unexpected charges. For current rates, see the [Azure OpenAI pricing page](https://azure.microsoft.com/pricing/details/azure-openai/).
 
 <Info>
+
 Fine-tuned deployments can incur hosting charges while deployed, even during low usage periods. Deployments inactive for more than 15 days might be automatically deleted. Remove or scale down deployments that you don't need, and verify current lifecycle behavior in the [fine-tuning documentation](/foundry-models/fine-tuning) before relying on automatic cleanup behavior.
+
 </Info>
 
 ### HTTP Error response code and billing status
@@ -126,7 +132,9 @@ Access cost information from the [Microsoft Foundry](https://ai.azure.com/?cid=l
 **Reference:** [Cost analysis](https://learn.microsoft.com/azure/cost-management-billing/costs/quick-acm-cost-analysis)
 
 <Info>
+
 Your Foundry costs are only a subset of your overall application or solution costs. You need to monitor costs for all Azure resources used in your application or solution.
+
 </Info>
 
 ### Configure permissions to view costs
@@ -143,7 +151,9 @@ Example read permissions:
 * `Microsoft.CognitiveServices/accounts/AIServices/usage/read`
 
 <Note>
+
 You need the **Owner** role at the subscription or resource group scope to create custom roles in that scope.
+
 </Note>
 
 To create a custom role, use one of the following articles:
@@ -179,11 +189,15 @@ To create a custom role, construct a role definition JSON file that specifies pe
 Replace `<subscriptionId>`, `<resourceGroupName>`, and `<foundryResourceName>` with your actual values.
 
 <Note>
+
 Validate custom role definitions in a nonproduction environment before broad rollout, and verify each action against your tenant's supported resource provider operations.
+
 </Note>
 
 <Note>
+
 This custom role example doesn't grant access to Foundry resources by itself. Assign an additional role such as [Azure AI User](/security/rbac-foundry#built-in-roles) if users also need Foundry resource visibility.
+
 </Note>
 
 ## Monitor in Foundry portal
@@ -194,11 +208,15 @@ This custom role example doesn't grant access to Foundry resources by itself. As
 1. Use the sections below to monitor costs.
 
 <Note>
+
 Foundry portal labels and navigation can vary slightly by tenant and release wave. If you don't see an exact label in this article, use equivalent cost views in the same project scope.
+
 </Note>
 
 <Note>
+
 Estimates do not reflect discounts or contracted pricing that may appear on your final bill. Estimates cover standard deployment costs only, not [provisioned throughput](/foundry-models/provisioned-throughput).
+
 </Note>
 
 ### Agent costs
@@ -257,7 +275,9 @@ You see total cost and an estimated cost chart for the selected range.
 When you select **View More Details** or **Azure Cost Management**, you're directed to the Azure portal's **Cost Management** section. Azure portal costs can show aggregated charges for the related account scope, not only individual models.
 
 <Note>
+
 Token and request charts can temporarily differ from **Estimated cost** because of ingestion timing and aggregation differences. Use **Estimated cost** for near-real-time monitoring, and use Azure Cost Management and invoiced charges for financial reconciliation.
+
 </Note>
 
 ## Monitor in Azure portal
@@ -302,7 +322,9 @@ Use the **Cost Analysis** tool to view costs grouped by billing meter:
 1. By default, cost analysis is scoped to the selected resource group.
 
 <Info>
+
 Scope *Cost Analysis* to the resource group where you deployed the Foundry resource. The cost meters associated with Models from Partners and Community display under the resource group instead of the Foundry resource.
+
 </Info>
 
 1. Modify **Group by** to **Meter**. You can now see that for this particular resource group, the source of the costs comes from different model series.
@@ -375,7 +397,9 @@ If you try to add a filter by service, you can't find Azure OpenAI in the list. 
 Create budgets with filters for specific resources or services in Azure if you want more granularity in your monitoring. Filters help ensure that you don't accidentally create new resources that cost more money. For more about filter options when you create a budget, see [Group and filter options](https://learn.microsoft.com/azure/cost-management-billing/costs/group-filter).
 
 <Info>
+
 While OpenAI has an option for hard limits that prevent you from going over your budget, Azure OpenAI doesn't currently provide this functionality. You can start automation from action groups as part of your budget notifications to take more advanced actions, but this functionality requires additional custom development.
+
 </Info>
 
 ## Export cost data

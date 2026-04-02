@@ -58,7 +58,9 @@ This article describes how to manage traffic with spillover for provisioned depl
     **Reference:** [Create chat completion](/api-sdk/latest#create-chat-completion)
 
     <Note>
+
     If the spillover capability is enabled for the deployment using the `spilloverDeploymentName` property and also enabled at the request level using the `x-ms-spillover-deployment` header, the system defaults to the setting of the deployment property. If you want to ensure that spillover is only enabled on per-request basis, don't set the `spilloverDeploymentName` property on the provisioned deployment and only rely on the `x-ms-spillover-deployment` header on a per-request basis.
+
     </Note>
 
   </Tab>
@@ -81,7 +83,9 @@ When you enable spillover for a deployment or configure it for a given inference
 When a request results in one of these non-`200` response codes, Azure OpenAI automatically sends the request from your provisioned deployment to your standard deployment to be processed.
 
 <Note>
+
 Even if a subset of requests is routed to the standard deployment, the service prioritizes sending requests to the provisioned deployment before sending any overage requests to the standard deployment. This prioritization might incur additional latency.
+
 </Note>
 
 ## Identify spillover requests
@@ -138,10 +142,12 @@ The following Azure Monitor metrics chart provides an example of the split of re
 </Frame>
 
 <Note>
+
 As requests go to the pay-as-you-go deployment, they still generate 429 response codes on the provisioned deployment before being redirected.
 <Frame>
 <img src="/images/spillover-chart-errors.png" alt="A screenshot showing the response codes from a provisioned deployment." />
 </Frame>
+
 </Note>
 
 ### View spillover metrics

@@ -15,7 +15,9 @@ The following table shows SDK and setup support.
 | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ |
 
 <Note>
+
 For Java, use the `com.azure:azure-ai-agents` package for OpenAPI agent tools. The `com.azure:azure-ai-projects` package doesn't currently expose OpenAPI agent tool types.
+
 </Note>
 
 ## Prerequisites
@@ -50,7 +52,9 @@ Before you begin, make sure you have:
 - For API key/token authentication: a project connection configured with your API key or token. See [Add a new connection to your project](/setup/connections-add).
 
 <Note>
+
 The `FOUNDRY_PROJECT_ENDPOINT` value refers to your Microsoft Foundry project endpoint, not the external OpenAPI service endpoint. You can find this endpoint in the Microsoft Foundry portal under your project’s Overview page. This endpoint is required to authenticate the agent service and is separate from any OpenAPI endpoints defined in your specification file.
+
 </Note>
 
 ## Understand limitations
@@ -62,11 +66,14 @@ The `FOUNDRY_PROJECT_ENDPOINT` value refers to your Microsoft Foundry project en
 ## Code example
 
 <Note>
+
 - You need the latest SDK package. The .NET SDK is currently in preview. See the [quickstart](/get-started/get-started-code) for details.
 - If you use API key for authentication, your connection ID should be in the format of `/subscriptions/{{subscriptionID}}/resourceGroups/{{resourceGroupName}}/providers/Microsoft.CognitiveServices/accounts/{{foundryAccountName}}/projects/{{foundryProjectName}}/connections/{{foundryConnectionName}}`.
+
 </Note>
 
 <Info>
+
 **For API key authentication to work**, your OpenAPI specification file must include:
 1. A `securitySchemes` section with your API key configuration, such as the header name and parameter name.
 1. A `security` section that references the security scheme.
@@ -75,6 +82,7 @@ The `FOUNDRY_PROJECT_ENDPOINT` value refers to your Microsoft Foundry project en
 Without these configurations, the API key isn't included in requests. For detailed setup instructions, see the [Authenticate with API key](#authenticate-with-api-key) section.
 
 You can also use token-based authentication (for example, a Bearer token) by storing the token in a project connection. For Bearer token auth, create a **Custom keys** connection with key set to `Authorization` and value set to `Bearer <token>` (replace `<token>` with your actual token). The word `Bearer` followed by a space must be included in the value. For details, see [Set up a Bearer token connection](#set-up-a-bearer-token-connection).
+
 </Info>
 
 ### Complete example
@@ -1157,7 +1165,9 @@ By using API key authentication, you can authenticate your OpenAPI spec by using
   1. Create or select a connection that stores the secret. See [Add a new connection to your project](/setup/connections-add).
 
 <Note>
+
 If you regenerate the API key at a later date, you need to update the connection with the new key.
+
 </Note>
     
    1. Enter the following information
@@ -1219,7 +1229,9 @@ You need to:
       - **value**: `Bearer <token>` (replace `<token>` with your actual token)
 
 <Info>
+
 The value must include the word `Bearer` followed by a space before the token. For example: `Bearer eyJhbGciOiJSUzI1NiIs...`. If you omit `Bearer `, the API receives a raw token without the required authorization scheme prefix, and the request fails.
+
 </Info>
 
 1. After you create the connection, use it with the `project_connection` auth type in your code, the same way you would for API key authentication. The connection ID uses the same format: `/subscriptions/{{subscriptionID}}/resourceGroups/{{resourceGroupName}}/providers/Microsoft.CognitiveServices/accounts/{{foundryAccountName}}/projects/{{foundryProjectName}}/connections/{{foundryConnectionName}}`.
@@ -1229,7 +1241,9 @@ The value must include the word `Bearer` followed by a space before the token. F
 [Microsoft Entra ID](/entra/fundamentals/what-is-entra) is a cloud-based identity and access management service that your employees can use to access external resources. By using Microsoft Entra ID, you can add extra security to your APIs without needing to use API keys. When you set up managed identity authentication, the agent authenticates through the Foundry tool it uses.
 
 <Info>
+
 Managed identity authentication only works when the target service accepts Microsoft Entra ID tokens. If the target API uses a custom authentication scheme that doesn't support Microsoft Entra ID, use [API key](#authenticate-with-api-key) or [Bearer token](#set-up-a-bearer-token-connection) authentication instead.
+
 </Info>
 
 ### Understand the audience URI
@@ -1237,7 +1251,9 @@ Managed identity authentication only works when the target service accepts Micro
 The **audience** (sometimes called *resource identifier* or *Application ID URI*) tells Microsoft Entra ID which service or API the token is intended to access. The audience value must match what the target service expects, or authentication fails with a 401 error.
 
 <Note>
+
 The audience is **not** your Foundry project endpoint. It's the resource identifier of the target service that your OpenAPI tool calls.
+
 </Note>
 
 The following table lists audience URIs for common Azure services:
@@ -1252,7 +1268,9 @@ The following table lists audience URIs for common Azure services:
 | API protected by a Microsoft Entra app registration (including APIM with OAuth) | The **Application ID URI** from your app registration (for example, `api://<client-id>`) |
 
 <Tip>
+
 If you use Azure API Management to protect a custom API with an OAuth 2.0 validation policy, the audience is the **Application ID URI** from the app registration that protects the API — not `https://management.azure.com`. The management plane audience only applies to Azure Resource Manager operations on the APIM resource itself.
+
 </Tip>
 
 For more information about how agents authenticate with Microsoft Entra ID, see [Agent identity and authentication](/agent-service/agent-identity).

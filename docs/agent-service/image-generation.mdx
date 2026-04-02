@@ -4,8 +4,10 @@ description: "Generate images from text prompts with the image generation tool i
 ---
 
 <Info>
+
 - The image generation tool requires the `gpt-image-1` model. See the [Azure OpenAI transparency note](/responsible-ai/transparency-note) for limitations and responsible AI considerations.
 - You also need a compatible orchestrator model (`gpt-4o`, `gpt-4o-mini`, `gpt-4.1`, `gpt-4.1-mini`, `gpt-4.1-nano`, `o3`, or `gpt-5` series) deployed in the same Foundry project.
+
 </Info>
 
 The **image generation tool** in Microsoft Foundry Agent Service generates images from text prompts in conversations and multistep workflows. Use it to create AI-generated visuals and return base64-encoded output that you can save to a file.
@@ -442,7 +444,9 @@ public class ImageGenerationExample {
 ```
 
 <Note>
+
 The `response.output()` list contains `image_generation_call` items with base64-encoded image data in the `result` field. Use `java.util.Base64.getDecoder().decode()` to convert the result to bytes and write them to a file.
+
 </Note>
 
 ### Expected output
@@ -478,7 +482,9 @@ Customize image generation by specifying these optional parameters when you crea
 | `input_image_mask` | Optional mask for inpainting. Provide `image_url` (base64) or `file_id`. |
 
 <Note>
+
 Image generation time varies based on the `quality` setting and prompt complexity. For time-sensitive applications, consider using `quality: "low"` or enabling `partial_images` for streaming.
+
 </Note>
 
 Use the Responses API if you want to: 
@@ -493,7 +499,9 @@ Effective prompts produce better images. Describe the subject, visual style, and
 Content filtering can block image generation if the service detects unsafe content in your prompt. For more information, see [Guardrails and controls overview](/guardrails/guardrails-overview).
 
 <Tip>
+
 For a thorough look at how you can tweak your text prompts to generate different kinds of images, see [Image prompt engineering techniques](/foundry-models/gpt-4-v-prompt-engineering).
+
 </Tip>
 
 ## Verify tool execution

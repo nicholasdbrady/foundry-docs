@@ -22,7 +22,9 @@ This tutorial covers the first stage of the Microsoft Foundry developer journey:
 This minimal sample demonstrates enterprise-ready patterns with realistic business scenarios.
 
 <Info>
+
 Code in this article uses packages that are currently in preview. This preview is provided without a service-level agreement, and we don't recommend it for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
+
 </Info>
 
 ## Prerequisites 
@@ -35,7 +37,9 @@ Code in this article uses packages that are currently in preview. This preview i
 - SharePoint connection configured in your project ([SharePoint tool documentation](/agent-service/sharepoint))
 
 <Note>
+
 To configure your Foundry project for SharePoint connectivity, see the [SharePoint tool documentation](/agent-service/sharepoint).
+
 </Note>
 
 - (Optional) Git installed for cloning the sample repository
@@ -47,7 +51,9 @@ Instead of navigating a large repository tree, use one of these approaches:
 #### Option A (clone entire samples repo)
 
 <Tip>
+
 Code uses **Azure AI Projects 2.x** and is incompatible with Azure AI Projects 1.x. [See the Foundry (classic) documentation](../../foundry-classic/index.yml)  for the Azure AI Projects 1.x version.
+
 </Tip>
 
 <CodeGroup>
@@ -89,7 +95,9 @@ Code uses **Azure AI Projects 2.x** and is incompatible with Azure AI Projects 1
 Download the repository ZIP, extract it to your local environment, and go to the tutorial folder.
 
 <Info>
+
 For production adoption, use a standalone repository. This tutorial uses the shared samples repo. Sparse checkout minimizes local noise.
+
 </Info>
 
 <Tabs>
@@ -230,6 +238,7 @@ Start by running the agent so you see working functionality before diving into i
    Confirm `.env` contains valid values by opening the file and verifying that `FOUNDRY_PROJECT_ENDPOINT` starts with `https://` and `FOUNDRY_MODEL_NAME` matches the name of a deployed model in your project.
 
 <Tip>
+
 To get your **tenant ID**, run:
 
 ```bash
@@ -238,6 +247,7 @@ az account show --query tenantId -o tsv
 ```
 
 To get your **project endpoint**, open your project in the [Foundry portal](https://ai.azure.com) and copy the value shown there.
+
 </Tip>
 
 ### Run agent and evaluation
@@ -303,7 +313,9 @@ Now that you have a working agent, the next sections explain how it works. You d
 ## Understand the assistant implementation
 
 <Note>
+
 This section is for reference only — no action needed. It explains the code you already ran.
+
 </Note>
 
 This section explains the core code in `main.py` (Python) or `ModernWorkplaceAssistant/Program.cs` (C#). You already ran the agent. After reading it, you can:
@@ -322,7 +334,9 @@ The code breaks down into the following main sections, ordered as they appear in
 1. [Converse with the agent](#converse-with-the-agent)
 
 <Info>
+
 Code in this article uses packages that are currently in preview. This preview is provided without a service-level agreement, and we don't recommend it for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
+
 </Info>
 
 ### Imports and authentication setup
@@ -6219,11 +6233,15 @@ The code breaks down into the following main sections:
 1. [Retrieve evaluation results](#retrieve-evaluation-results).
 
 <Tip>
+
 For detailed guidance on batch evaluations, see [Run evaluations in the cloud](/observability/cloud-evaluation). To find a comprehensive list of built-in evaluators available in Foundry, see [Observability in generative AI](/observability/observability).
+
 </Tip>
 
 <Note>
+
 The C# sample uses a local batch evaluation approach with `ProjectResponsesClient` instead of the cloud `openai_client.evals` API shown in Python. It sends queries to the agent, checks responses against expected keywords, and writes results to `evaluation_results.json`. See the [C# Evaluations SDK sample](https://github.com/Azure/azure-sdk-for-net/tree/main/sdk/ai/Azure.AI.Projects/samples/Evaluations) for cloud evaluation patterns in C#.
+
 </Note>
 
 ### Configure the evaluation
@@ -7423,7 +7441,9 @@ Batch evaluations provide structured results that you can view in the Foundry po
 You can also view detailed results in the Foundry portal by selecting **Evaluation** from your project and selecting the evaluation run. The portal provides visualizations, filtering, and export options.
 
 <Tip>
+
 For production scenarios, consider running evaluations as part of your CI/CD pipeline. See [How to run an evaluation in Azure DevOps](/observability/evaluation-azure-devops), and [Continuously evaluate your AI agents](/agent-service/how-to-monitor-agents-dashboard) for integration patterns.
+
 </Tip>
 
 ## Troubleshooting

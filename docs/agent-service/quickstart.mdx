@@ -86,7 +86,9 @@ To set the environment variable for your Language resource key, open a console w
     ```
 
     <Note>
+
     If you only need to access the environment variables in the current running console, you can set the environment variable with `set` instead of `setx`.
+
     </Note>
 
     After you add the environment variables, you might need to restart any running programs that will need to read the environment variables, including the console window. For example, if you're using Visual Studio as your editor, restart Visual Studio before running the example.
@@ -272,7 +274,9 @@ To set the environment variable for your Language resource key, open a console w
     ```
 
     <Note>
+
     If you only need to access the environment variables in the current running console, you can set the environment variable with `set` instead of `setx`.
+
     </Note>
 
     After you add the environment variables, you might need to restart any running programs that will need to read the environment variables, including the console window. For example, if you're using Visual Studio as your editor, restart Visual Studio before running the example.
@@ -464,7 +468,9 @@ To set the environment variable for your Language resource key, open a console w
     ```
 
     <Note>
+
     If you only need to access the environment variables in the current running console, you can set the environment variable with `set` instead of `setx`.
+
     </Note>
 
     After you add the environment variables, you might need to restart any running programs that will need to read the environment variables, including the console window. For example, if you're using Visual Studio as your editor, restart Visual Studio before running the example.
@@ -596,7 +602,9 @@ ID 1 - Primary language: Chinese_Simplified (iso6391 name: zh_chs)
 
 Use this quickstart to create a language detection application with the client library for Python. In the following example, you create a Python application that can identify the language a text sample was written in.
 <Tip>
+
 You can use [**Microsoft Foundry**](https://ai.azure.com/) to try Azure Language features without needing to write code.
+
 </Tip>
 
 ## Prerequisites
@@ -673,7 +681,9 @@ To set the environment variable for your Language resource key, open a console w
     ```
 
     <Note>
+
     If you only need to access the environment variables in the current running console, you can set the environment variable with `set` instead of `setx`.
+
     </Note>
 
     After you add the environment variables, you might need to restart any running programs that will need to read the environment variables, including the console window. For example, if you're using Visual Studio as your editor, restart Visual Studio before running the example.
@@ -851,7 +861,9 @@ To set the environment variable for your Language resource key, open a console w
     ```
 
     <Note>
+
     If you only need to access the environment variables in the current running console, you can set the environment variable with `set` instead of `setx`.
+
     </Note>
 
     After you add the environment variables, you might need to restart any running programs that will need to read the environment variables, including the console window. For example, if you're using Visual Studio as your editor, restart Visual Studio before running the example.
@@ -1034,3 +1046,161 @@ Use the following commands to delete the environment variables you created for t
     unset LANGUAGE_ENDPOINT
     ```
 </CodeGroup>
+
+## Prerequisites
+
+* **Azure subscription**. If you don't have one, you can [create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
+* **Requisite permissions**. Make sure the person establishing the account and project has the Azure AI Account Owner role at the subscription level assigned. Alternatively, the **Contributor** or **Cognitive Services Contributor** role at the subscription scope also meets this requirement. For more information, see [Role based access control (RBAC)](https://learn.microsoft.com/en-us/azure/ai-foundry/openai/how-to/role-based-access-control#cognitive-services-contributor).
+* **Foundry resource**. Create a [Foundry resource](../../../../multi-service-resource) or see [Configure a Foundry resource](../../../concepts/configure-azure-resources). Alternatively, you can use a [Language resource](https://portal.azure.com/?Microsoft_Azure_PIMCommon=true#create/Microsoft.CognitiveServicesTextAnalytics).
+* **A Foundry project**. For more information, see [Create a Foundry project](https://learn.microsoft.com/en-us/azure/ai-foundry/how-to/create-projects).
+
+<Tabs>
+  <Tab title="Foundry (classic)">
+
+    <Note>
+
+    This content refers to the [Foundry (classic)](https://ai.azure.com/) portal, which supports hub-based projects and other resource types. To confirm that you're using Foundry (classic), make sure the version toggle in the portal banner is in the **off** position. <img src="/images/classic-foundry.png" />
+
+    </Note>
+
+    You can use [Foundry (classic)](https://ai.azure.com/) to:
+
+    - Detect the language of input text
+    - Review confidence scores and ISO language codes
+    - Configure country/region hints for improved accuracy
+    ## Navigate to the Foundry (classic) playground
+
+    1. In the left pane, select **Playgrounds**.
+    1. Select the **Try Azure Language Playground** button.
+
+<Frame>
+<img src="/images/foundry-playground-navigation.png" alt="Screenshot showing the Playgrounds navigation and the Try Azure Language Playground button in Foundry (classic)." />
+</Frame>
+
+    ## Detect language in the Foundry playground
+
+    The **Language playground** consists of four sections:
+
+       | Section | Purpose |
+       | --- | --- |
+       | **Top banner** | Select the **Detect language** tile. |
+       | **Left pane** | Set **Configuration** options such as API version, model version, and country/region hint. |
+       | **Center pane** | Enter text for processing and review results. |
+       | **Right pane** | View **Details** for detected language and script. |
+
+    1. Select the **Detect language** tile from the top banner.
+    1. Enter or paste text in the center pane.
+    1. In the **Configuration** pane, set the following options:
+
+       |Option              |Description                              |
+       |--------------------|-----------------------------------------|
+       |Select API version  | Select which version of the API to use.    |
+       |Select model version| Select which version of the model to use.|
+       |Select country/region hint| Select the origin country/region of the input text. |
+
+    1. Select the **Run** button to detect the language.
+
+    After the operation completes, the **Details** section displays the following fields for the detected language and script:
+
+       | Field | Description |
+       | --- | --- |
+       | ISO 639-1 Code | The ISO 639-1 two-letter code for the detected language. |
+       | Confidence Score | The model's level of certainty that the language identification is correct. |
+       | Script Name | The name of the detected script in the text. |
+       | ISO 15924 Script Code | The ISO 15924 code for the detected script (writing system). |
+
+<Frame>
+<img src="/images/language-detection.png" alt="A screenshot showing language detection results with confidence scores and ISO codes displayed in the Details pane of the Foundry portal." />
+</Frame>
+
+    Verify that the detected language matches the language of your input text. If the result shows `unknown`, provide a longer text sample or set a **Country/region hint** for better accuracy.
+
+  </Tab>
+  <Tab title="Foundry (new)">
+
+<Note>
+
+This content refers to the [Foundry (new)](https://ai.azure.com/) portal, which supports only Foundry projects and provides streamlined access to models, agents, and tools. For more information, see [What is Microsoft Foundry?](https://learn.microsoft.com/en-us/azure/ai-foundry/what-is-foundry). To confirm that you're using Foundry (new), make sure the version toggle in the portal banner is in the **on** position. <img src="/images/new-foundry.png" />
+
+</Note>
+
+    You can use [Foundry (new)](https://ai.azure.com/) to:
+
+    - Detect the language of input text
+    - Review confidence scores and ISO language codes
+    - Configure country/region hints for improved accuracy
+    ## Navigate to the Foundry (new) playground
+
+    The active project appears in the upper-left corner. To create a new project:
+
+    1. Open the project drop-down menu.
+    1. Enter a project name or select an existing one.
+    1. Select **Create project**.
+
+<Frame>
+<img src="/images/new-foundry-homepage.png" alt="Screenshot of the Foundry (new) homepage" />
+</Frame>
+
+    There are two ways to access the Language Detection interface:
+
+    1. Select the **Discover** tab from the upper right navigation bar to go to the **Models** page.
+       * In the search bar under models, enter **Azure** and press enter.
+       * Next, select **Azure-Language-detection** from the search results.
+       * Finally, select the **Open in Playground** button.
+
+    1. Select the **Build** tab from the upper right navigation bar.
+       * From the left navigation bar, select  **Models**.
+       * Select the **AI services** tab.
+       * Next, select  **Azure-Language-detection** to go to the playground.
+
+    ## Detect language in the Foundry playground
+
+    The **Detect Language** feature identifies the language used in written content.
+
+    1. On the **Playground** tab, select a text sample from the drop-down menu, use the paperclip icon to upload your text, or enter your own text.
+
+    1. Select the **Configure** button. In the **Configure** side panel, set the following options:
+
+      |Option|Description|
+      |---|---|
+      |**API version**| Select the API version that you prefer to use.|
+      |**Model version**| Select the model version that you prefer to use.|
+      |**Country/region hint** (optional)| You can select the origin country/region for the source text.|
+
+    After you make your selections, choose the **Detect** button. Then review the text and accompanying details written in formatted text or as a JSON response:
+
+      |Field | Description|
+      |---|---|
+      |**Confidence**| The model's level of certainty regarding whether it correctly identified a language.|
+      |**ISO 639-1 code**| A two letter code for the detected language.|
+      |**Detected script**| The name of the detected script in the text.|
+      |**Detected script code**| The ISO 15924 script code for the detected script (writing system).|
+
+    Verify that the detected language matches the language of your input text. You can use the **Edit** button to modify the **Configure** parameters and rerun detection as needed.
+
+    ## Troubleshooting
+
+    | Issue | Resolution |
+    |---|---|
+    | You get a `401` or `403` error when calling the API. | Confirm your key and endpoint are correct for the same Azure AI resource. If you recently changed role assignments, wait a few minutes and try again. |
+    | You get an error about missing environment variables. | Confirm `LANGUAGE_KEY` and `LANGUAGE_ENDPOINT` are set in your environment before you run the sample. |
+    | The Foundry experience doesn't match the steps. | In the Foundry portal, use the version toggle to switch between Foundry (classic) and Foundry (new), then follow the matching tab in the Foundry section. |
+    | The API returns `unknown` as the detected language. | The input text might be too short or ambiguous. Provide a longer text sample or set the **Country/region hint** to improve accuracy. |
+    | The API returns an `InvalidCountryHint` error. | Confirm the country/region hint code is a valid ISO 3166-1 alpha-2 code (for example, `US`, `FR`, `JP`). |
+
+    ## Clean up resources
+
+    If you no longer need the resources you created in this quickstart, delete the individual resource or the entire resource group. Deleting the resource group also deletes all other resources associated with it.
+
+    * [Azure portal](/setup/multi-service-resource)
+    * [Azure CLI](/setup/multi-service-resource)
+
+    ## Related content
+
+    * [Language detection overview](overview)
+    * [Call the Language Detection API](how-to/call-api)
+    * [Language support](language-support)
+    * [Use containers](how-to/use-containers)
+
+  </Tab>
+</Tabs>

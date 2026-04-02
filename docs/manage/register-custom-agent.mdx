@@ -17,7 +17,9 @@ This article shows you how to register a custom agent in Foundry Control Plane. 
 - An agent that you deploy and expose through a reachable endpoint. The endpoint can be either a public endpoint or an endpoint that's reachable from the network where you deploy the Foundry resource.
 
 <Note>
+
 This capability is available only in the  Foundry (new) portal. Look for <img src="/images/new-foundry.png" /> in the portal banner to confirm you're using Foundry (new).
+
 </Note>
 
 ## Add a custom agent
@@ -161,7 +163,9 @@ async def stream_run():
 **Expected output**: The agent processes the message and streams back responses as chunks. Each chunk contains partial results from the agent's execution. These results might include tool calls to the weather function and the final response about Los Angeles weather.
 
 <Note>
+
 Although Foundry acts as a proxy for incoming requests for your agent, the original authorization and authentication schema in the original endpoint still applies. When you consume the new endpoint, *provide the same authentication mechanism as if you're using the original endpoint.*
+
 </Note>
 
 ## Block and unblock the agent
@@ -219,7 +223,9 @@ To get the best level of fidelity, Foundry expects custom agents to comply with 
 </Frame>
 
 <Tip>
+
 In this example, you can see how clients use the new agent's endpoint to communicate with the agent. The example shows an agent served with the Agent Protocol from LangChain. Clients use the route `/runs/stream`.
+
 </Tip>
 
 In this example, the trace doesn't include any details beyond the HTTP post. The agent's code doesn't include any further instrumentation. In the next section, you learn how to instrument your code and get details like tool calls and large language model (LLM) calls.
@@ -265,7 +271,9 @@ agent = create_agent(
 **Expected output**: The agent runs normally while automatically emitting OpenTelemetry traces to Application Insights. Traces include operation names, durations, model calls, tool invocations, and token usage. You can view these traces in the Foundry portal, in the **Traces** section.
 
 <Tip>
+
 You can pass the connection string to Application Insights by using the environment variable `APPLICATIONINSIGHTS_CONNECTION_STRING`.
+
 </Tip>
 
 ### Instrument platform solutions

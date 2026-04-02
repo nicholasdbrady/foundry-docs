@@ -521,7 +521,9 @@ The compaction item carries forward the essential prior state and reasoning into
 If you are using stateless input-array chaining, append output items as usual. If you are using `previous_response_id`, pass only the new user message on each turn. In both patterns, the compaction item carries the context needed for the next window.
 
 <Tip>
+
 After appending output items to the previous input items, you can drop items that came before the most recent compaction item to keep requests smaller and reduce long-tail latency. The latest compaction item carries the necessary context to continue the conversation. If you use `previous_response_id` chaining, do not manually prune.
+
 </Tip>
 
 #### Flow
@@ -697,7 +699,9 @@ print(response.output)
 ### Containers
 
 <Info>
+
 Code Interpreter has [additional charges](https://azure.microsoft.com/pricing/details/cognitive-services/openai-service/) beyond the token based fees for Azure OpenAI usage. If your Responses API calls Code Interpreter simultaneously in two different threads, two code interpreter sessions are created. Each session is active by default for 1 hour with an idle timeout of 20 minutes.
+
 </Info>
 
 The Code Interpreter tool requires a container—a fully sandboxed virtual machine where the model can execute Python code. Containers can include uploaded files or files generated during execution.
@@ -868,6 +872,7 @@ print(response)
 Models with vision capabilities support PDF input. PDF files can be provided either as Base64-encoded data or as file IDs. To help models interpret PDF content, both the extracted text and an image of each page are included in the model’s context. This is useful when key information is conveyed through diagrams or non-textual content.
 
 <Note>
+
 - All extracted text and images are put into the model's context. Make sure you understand the pricing and token usage implications of using PDFs as input.
 
 - In a single API request, the size of content uploaded across multiple inputs (files) should be within the model's context length.
@@ -875,6 +880,7 @@ Models with vision capabilities support PDF input. PDF files can be provided eit
 - Only models that support both text and image inputs can accept PDF files as input.
 
 - A `purpose` of `user_data` is currently not supported. As a temporary workaround you will need to set purpose to `assistants`.
+
 </Note>
 
 ### Convert PDF to Base64 and analyze
@@ -1144,9 +1150,11 @@ response = client.responses.create(
 ### Authentication
 
 <Info>
+
 - The MCP client within the Responses API requires TLS 1.2 or greater.
 - mutual TLS (mTLS) is currently not supported.
 - [Azure service tags](https://learn.microsoft.com/azure/virtual-network/service-tags-overview) are currently not supported for MCP client traffic.
+
 </Info>
 
 Unlike the GitHub MCP server, most remote MCP servers require authentication. The MCP tool in the Responses API supports custom headers, allowing you to securely connect to these servers using the authentication scheme they require.
@@ -1332,7 +1340,9 @@ for event in stream:
 ```
 
 <Note>
+
 Background responses currently have a higher time-to-first-token latency than synchronous responses. Improvements are underway to reduce this gap.
+
 </Note>
 
 ### Limitations
@@ -1378,7 +1388,9 @@ Compared to the standalone Image API, the Responses API offers several advantage
 * **Flexible inputs**: Accept image File IDs as inputs, in addition to raw image bytes.
 
 <Note>
+
 The image generation tool in the Responses API is only supported by the `gpt-image-1`-series models. You can however call this model from this list of supported models - `gpt-4o`, `gpt-4o-mini`, `gpt-4.1`, `gpt-4.1-mini`, `gpt-4.1-nano`, `o3`, `gpt-5` and `gpt-5.1` series models.<br /><br />The Responses API image generation tool does not currently support streaming mode. To use streaming mode and generate partial images, call the [image generation API](/foundry-models/dall-e) directly outside of the Responses API.
+
 </Note>
 
 Use the Responses API if you want to build conversational image experiences with GPT Image.
@@ -1502,6 +1514,7 @@ The responses API is currently available in the following regions:
 Not every model is available in the regions supported by the responses API. Check the [models page](/foundry-models/models-sold-directly-by-azure) for model region availability.
 
 <Note>
+
 Not currently supported:
 - Image generation using multi-turn editing and streaming.
 - Images can't be uploaded as a file and then referenced as input.
@@ -1509,6 +1522,7 @@ Not currently supported:
 There's a known issue with the following:
 - PDF as an input file [is now supported](#file-input), but setting file upload purpose to `user_data` is not currently supported.
 - Performance issues when background mode is used with streaming. The issue is expected to be resolved soon.
+
 </Note>
 
 ### Reference documentation

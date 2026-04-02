@@ -5,7 +5,9 @@ description: "Deploy and manage containerized agents on Foundry Agent Service (p
 When you build agentic applications by using open-source frameworks, you typically manage containerization, web server setup, security integration, memory persistence, infrastructure scaling, data transmission, instrumentation, and version rollbacks. These tasks become even more challenging in heterogeneous cloud environments.
 
 <Info>
+
 If you use Foundry Agent Service to host agents that interact with third-party models, servers, or agents, you do so at your own risk. We recommend reviewing all data being shared with third-party models, servers, or agents and understanding third-party practices for retention and location of data. It is your responsibility to manage whether your data will flow outside of your organization’s Azure compliance and geographic boundaries and any related implications.
+
 </Info>
 
 Hosted agents in Foundry Agent Service solve these challenges for Microsoft Foundry users. By using this managed platform, you can deploy and operate AI agents securely and at scale. You can use your custom agent code or a preferred agent framework with streamlined deployment and management.
@@ -89,7 +91,9 @@ Hosted agents are containerized agentic AI applications that run on Agent Servic
 Hosted agents follow a standard lifecycle: create, start, update, stop, and delete. Each phase provides specific capabilities and status transitions to help you manage your agent deployments effectively.
 
 <Note>
+
 Hosted agents are currently in preview. For current constraints and availability, see [Limits, pricing, and availability (preview)](#limits-pricing-and-availability-preview).
+
 </Note>
 
 ### Hosting adapter
@@ -128,7 +132,9 @@ Agent Service handles:
 - Enterprise-grade security, compliance, and governance
 
 <Info>
+
 If you use Agent Service to host agents that interact with non-Microsoft servers or agents, you take on the risk. Review all data that you share with non-Microsoft servers or agents. Be aware of non-Microsoft practices for retention and location of data. You're responsible for managing whether your data flows outside your organization's Azure compliance and geographic boundaries, along with any related implications.
+
 </Info>
 
 ### Framework and language support
@@ -379,7 +385,9 @@ To build your agent as a Docker container and upload it to Azure Container Regis
 1. Build your Docker image locally:
 
 <Info>
+
 **You MUST specify `--platform linux/amd64` when building your Docker image.** Hosted agents run on Linux AMD64 infrastructure. Images built for other architectures (such as ARM64 on Apple Silicon Macs) will fail to start with container runtime errors.
+
 </Info>
 
     ```bash
@@ -511,8 +519,10 @@ Here are the key parameters:
 - `CPU/Memory`: Resource allocation (for example, `1` for CPU, `2Gi` for memory).
 
 <Note>
+
 - Ensure that your container image is accessible from the Foundry project.
 - `DefaultAzureCredential` handles authentication automatically.
+
 </Note>
 
 ---
@@ -593,6 +603,7 @@ az cognitiveservices agent start --account-name myAccount --project-name myProje
 ```
 
 <Tip>
+
 - To minimize charges when idle, set `--min-replicas 0`. The service scales to zero and doesn't allocate compute when not serving requests.
 - The first request after scaling to zero incurs a cold start. To avoid cold starts, keep at least one warm replica by setting `--min-replicas 1` (or higher), trading steady-state cost for lower latency.
 - You can adjust replica settings later with a non-versioned update: `az cognitiveservices agent update --min-replicas <n> --max-replicas <m>`.
@@ -602,6 +613,7 @@ Example (scale-to-zero when idle):
 ```bash
 az cognitiveservices agent start --account-name myAccount --project-name myProject --name myAgent --agent-version 1 --min-replicas 0 --max-replicas 2
 ```
+
 </Tip>
 
 When you start an agent:

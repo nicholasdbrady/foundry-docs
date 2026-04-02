@@ -12,6 +12,7 @@ Foundry Models are available for standard deployment to a Foundry resource.
 To learn more about attributes of Foundry Models sold directly by Azure, see [Explore Foundry Models](https://learn.microsoft.com/en-us/azure/foundry-classic/concepts/foundry-models-overview#models-sold-directly-by-azure).
 
 <Note>
+
 Foundry Models sold directly by Azure also include select models from top model providers, such as:
 
 - Black Forest Labs: `FLUX.2-flex`, `FLUX.2-pro`, `FLUX.1-Kontext-pro`, `FLUX-1.1-pro`
@@ -24,6 +25,7 @@ Foundry Models sold directly by Azure also include select models from top model 
 - xAI: `grok-code-fast-1`, `grok-3`, `grok-3-mini`, `grok-4-fast-reasoning`, `grok-4-fast-non-reasoning`, `grok-4`, `grok-4.1-fast-reasoning`, `grok-4.1-fast-non-reasoning`
 
 To learn about these models, switch to [Other model collections](/foundry-models/models-sold-directly-by-azure) at the top of this article.
+
 </Note>
 
 ## Azure OpenAI in Microsoft Foundry models
@@ -101,7 +103,9 @@ Access will be granted based on Microsoft's eligibility criteria. Customers who 
 | `gpt-5.2-chat` (2026-02-10)<br />**Preview** |  - Chat Completions API. <br /> - [Responses API](../how-to/responses). <br /> - Structured outputs <br /> - Functions, tools, and parallel tool calling. |128,000 <br /><br />Input: 111,616 <br /> Output: 16,384  | 16,384 | August 2025 |
 
 <Danger>
+
 We don't recommend using preview models in production. We'll upgrade all deployments of preview models to either future preview versions or to the latest stable, generally available version. Models that are designated preview don't follow the standard Azure OpenAI model lifecycle.
+
 </Danger>
 
 {/* > [!IMPORTANT]
@@ -133,15 +137,19 @@ We don't recommend using preview models in production. We'll upgrade all deploym
 | `gpt-5.1-codex-max` (2025-12-04) |  - [Responses API](../how-to/responses) only. <br /> - Text and image processing  <br /> - Structured outputs.<br /> - Functions, tools, and parallel tool calling. <br /> - [Full summary of capabilities](../how-to/reasoning)<br /> - Optimized for [Codex CLI & Codex VS Code extension](../how-to/codex)  | 400,000<br /><br />Input: 272,000<br />Output: 128,000 | 128,000 | September 30, 2024 |
 
 <Danger>
+
 We don't recommend using preview models in production. We'll upgrade all deployments of preview models to either future preview versions or to the latest stable, generally available version. Models that are designated preview don't follow the standard Azure OpenAI model lifecycle.
+
 </Danger>
 
 <Info>
+
 - `gpt-5.1` `reasoning_effort` defaults to `none`. When upgrading from previous reasoning models to `gpt-5.1`, keep in mind that you may need to update your code to explicitly pass a `reasoning_effort` level if you want reasoning to occur.
 
 - `gpt-5.1-chat` adds built-in reasoning capabilities. Like other [reasoning models](../how-to/reasoning) it does not support parameters like `temperature`. If you upgrade from using `gpt-5-chat` (which is not a reasoning model) to `gpt-5.1-chat` make sure you remove any custom parameters like `temperature` from your code which are not supported by reasoning models.
 
 - `gpt-5.1-codex-max` adds support for setting `reasoning_effort` to `xhigh`. Reasoning effort `none` is not supported with `gpt-5.1-codex-max`.
+
 </Info>
 
 ## GPT-5
@@ -169,15 +177,19 @@ We don't recommend using preview models in production. We'll upgrade all deploym
 | `gpt-5-pro` (2025-10-06) | - [Reasoning](../how-to/reasoning) <br /> - [Responses API](../how-to/responses). <br /> - Structured outputs.<br /> - Text and image processing. <br /> - Functions and tools <br /> - [Full summary of capabilities](../how-to/reasoning).  | 400,000<br /><br />Input: 272,000<br />Output: 128,000  | 128,000 | September 30, 2024 |
 
 <Note>
+
 <sup>1</sup> `gpt-5-chat` version `2025-10-03` introduces a significant enhancement focused on emotional intelligence and mental health capabilities. This upgrade integrates specialized datasets and refined response strategies to improve the model's ability to:
 - **Understand and interpret emotional context** more accurately, enabling nuanced and empathetic interactions.
 - **Provide supportive, responsible responses** in conversations related to mental health, ensuring sensitivity and adherence to best practices.
 
 These improvements aim to make GPT-5-chat more context-aware, human-centric, and reliable in scenarios where emotional tone and well-being considerations are critical.
+
 </Note>
 
 <Danger>
+
 We don't recommend using preview models in production. We'll upgrade all deployments of preview models to either future preview versions or to the latest stable, generally available version. Models that are designated preview don't follow the standard Azure OpenAI model lifecycle.
+
 </Danger>
 
 ## gpt-oss
@@ -224,6 +236,7 @@ az cognitiveservices account deployment create \
 ### Capabilities
 
 <Info>
+
 A known issue is affecting all GPT 4.1 series models. Large tool or function call definitions that exceed 300,000 tokens will result in failures, even though the 1 million token context limit of the models wasn't reached.
 
 The errors can vary based on API call and underlying payload characteristics.
@@ -237,6 +250,7 @@ Here are the error messages for the Chat Completions API:
 Here's the error message for the Responses API:
 
 - `Error code: 500 - {'error': {'message': 'The server had an error processing your request. Sorry about that! You can retry your request, or contact us through an Azure support request at: https://go.microsoft.com/fwlink/?linkid=2213926 if you keep seeing this error. (Please include the request ID d2008353-291d-428f-adc1-defb5d9fb109 in your email.)', 'type': 'server_error', 'param': None, 'code': None}}`
+
 </Info>
 
 |  Model ID  | Description | Context window | Max output tokens | Training data (up to)  |
@@ -252,7 +266,9 @@ An experimental model trained for use with the [Responses API](../how-to/respons
 It can be used with third-party libraries to allow the model to control mouse and keyboard input, while getting context from screenshots of the current environment.
 
 <Danger>
+
 We don't recommend using preview models in production. We'll upgrade all deployments of preview models to either future preview versions or to the latest stable, generally available version. Models that are designated preview don't follow the standard Azure OpenAI model lifecycle.
+
 </Danger>
 
 Registration is required to access `computer-use-preview`. Access is granted based on Microsoft's eligibility criteria. Customers who have access to other limited access models still need to request access for this model.
@@ -320,7 +336,9 @@ See [Model versions](https://learn.microsoft.com/en-us/azure/foundry-classic/ope
 | `gpt-4` (turbo-2024-04-09) <br />GPT-4 Turbo with Vision | New generally available model. <br /> - Replacement for all previous GPT-4 preview models (`vision-preview`, `1106-Preview`, `0125-Preview`). <br /> - [Feature availability](#gpt-4o-and-gpt-4-turbo) is currently different, depending on the method of input and the deployment type. | Input: 128,000  <br /> Output: 4,096  | December 2023 |
 
 <Danger>
+
 We don't recommend that you use preview models in production. We'll upgrade all deployments of preview models to either future preview versions or to the latest stable, generally available version. Models that are designated preview don't follow the standard Azure OpenAI model lifecycle.
+
 </Danger>
 
 ## Embeddings
@@ -378,7 +396,9 @@ Audio models in Azure OpenAI are available via the `realtime`, `completions`, an
 The GPT-4o audio models are part of the GPT-4o model family and support either low-latency, *speech in, speech out* conversational interactions or audio generation.
 
 <Danger>
+
 We don't recommend using preview models in production. We'll upgrade all deployments of preview models to either future preview versions or to the latest stable, generally available version. Models that are designated preview don't follow the standard Azure OpenAI model lifecycle.
+
 </Danger>
 
 Details about maximum request tokens and training data are available in the following table:
@@ -474,7 +494,9 @@ All deployments can perform the exact same inference operations, but the billing
     | westus3            | ✅                             | -                            | ✅                        | -                           | -                            | -                             | -                             | -                                | -                            | -                             | ✅                              | -                                      | -                               | -                              | -                                 | ✅                        | -                            | -                                 | -                            | ✅                        | ✅                             | ✅                              | ✅                                   | -                                         | -                         | -                              | ✅                                 | -                                 | -                      | -                          | -                           | -                         | -                            | ✅                      | -                          | ✅                           | ✅                           | -                            | -                                | -                      | -                            | -                          | -                    | ✅                   | ✅                        | ✅                            | ✅                        | ✅                             | ✅                             | -                                      | -                               | -                                 | -                                    | ✅                        | -                                    | -                                         | -                                            | -                                       | ✅                   | ✅                       | ✅                       | ✅                            | ✅                       | ✅                              | ✅                              | ✅                              |
 
     <Note>
+
     `o3-deep-research` is currently only available with Foundry Agent Service. To learn more, see the [Deep Research tool guidance](https://learn.microsoft.com/azure/ai-foundry/agents/how-to/tools/deep-research).
+
     </Note>
 
   </Tab>
@@ -566,9 +588,11 @@ All deployments can perform the exact same inference operations, but the billing
     | westus3            | -                            | ✅                        | ✅                              | ✅                              | ✅                        | -                            | ✅                        | ✅                      | ✅                           | ✅                           | -                            | -                            | ✅                   | ✅                        | ✅                        | ✅                             | ✅                             | ✅                        | ✅                   | ✅                       | ✅                       | ✅                            | ✅                       | ✅                              | ✅                              | ✅                              |
 
     <Note>
+
     `o1-mini` is currently available to all customers for Global Standard deployment.
 
     Select customers were granted standard (regional) deployment access to `o1-mini` as part of the `o1-preview` limited access release. At this time, access to `o1-mini` standard (regional) deployments isn't being expanded.
+
     </Note>
 
   </Tab>
@@ -646,9 +670,11 @@ All deployments can perform the exact same inference operations, but the billing
     | westus3            | ✅                        | -                    | ✅                        | ✅                        | ✅                             | -                            | ✅                   | ✅                       | ✅                       | ✅                            | ✅                       | -                 | ✅                              | ✅                              | -                             | -                             | ✅             | ✅                | -                |
 
     <Note>
+
     `o1-mini` is currently available to all customers for Global Standard deployment.
 
     Select customers were granted standard (regional) deployment access to `o1-mini` as part of the `o1-preview` limited access release. At this time, access to `o1-mini` standard (regional) deployments isn't being expanded.
+
     </Note>
 
   </Tab>
@@ -687,7 +713,9 @@ All deployments can perform the exact same inference operations, but the billing
     | westus3            | -                       | -                       | ✅                        | ✅                      | ✅                           | ✅                   | ✅                        | ✅                        | ✅                             | ✅                             | -                       | -                  | ✅                       | ✅                       | ✅                            | ✅                       |
 
     <Note>
+
     The provisioned version of `gpt-4` version `turbo-2024-04-09` is currently limited to text only.
+
     </Note>
 
     For more information on provisioned deployments, see [Provisioned guidance](../concepts/provisioned-throughput).
@@ -702,7 +730,9 @@ This table doesn't include fine-tuning regional availability information. Consul
 These models can be used only with Embedding API requests.
 
 <Note>
+
 `text-embedding-3-large` is the latest and most capable embedding model. You can't upgrade between embedding models. To migrate from using `text-embedding-ada-002` to `text-embedding-3-large`, you need to generate new embeddings.
+
 </Note>
 
 |  Model ID | Max request (tokens) | Output dimensions |Training data (up to)
@@ -713,7 +743,9 @@ These models can be used only with Embedding API requests.
 | `text-embedding-3-small` | 8,192|  1,536 | Sep 2021 |
 
 <Note>
+
 When you send an array of inputs for embedding, the maximum number of input items in the array per call to the embedding endpoint is 2,048.
+
 </Note>
 
 ### Image generation models
@@ -751,10 +783,13 @@ The following models are supported for fine-tuning:
 Or you can fine-tune a previously fine-tuned model, formatted as `base-model.ft-{jobid}`.
 
 <Note>
+
 Open-source models (Ministral-3B, Qwen-32B, Llama-3.3-70B-Instruct, gpt-oss-20b) are only supported on Foundry resources and in the new Foundry UI.
+
 </Note>
 
 <Note>
+
 Global training provides [more affordable](https://aka.ms/aoai-pricing) training per token, but doesn't offer [data residency](https://aka.ms/data-residency). It's currently available to Foundry resources in the following regions:
 
 - Australia East
@@ -783,6 +818,7 @@ Global training provides [more affordable](https://aka.ms/aoai-pricing) training
 - West Europe
 - West US
 - West US3
+
 </Note>
 
 ## Assistants (preview)
@@ -816,7 +852,9 @@ For the latest information on model retirements, refer to the [model retirement 
 - [Learn more about fine-tuning Azure OpenAI models](../how-to/fine-tuning)
 
 <Note>
+
 Foundry Models sold directly by Azure also include all Azure OpenAI models. To learn about these models, switch to the [Azure OpenAI models](/foundry-models/models-sold-directly-by-azure) collection at the top of this article.
+
 </Note>
 
 ## Black Forest Labs models sold directly by Azure
@@ -887,8 +925,11 @@ See [this model collection in the Foundry portal](https://ai.azure.com/explore/m
 
 Microsoft models include various model groups such as Model Router, MAI models, Phi models, healthcare AI models, and more. See [the Microsoft model collection in the Foundry portal](https://ai.azure.com/explore/models?&selectedCollection=Microsoft/?cid=learnDocs). You can also find several Microsoft models available [from partners and community](/foundry-models/models-from-partners#microsoft).
 
+MAI-Image-2 is a text-to-image generation model designed to create high-quality, visually rich images from natural language prompts. It uses a diffusion-based generative approach to progressively refine images, enabling strong alignment between the input text and the generated output. To work with MAI-Image-2 in Foundry, see [Deploy and use MAI-image-2 in Microsoft Foundry](/foundry-models/use-foundry-models-mai).
+
 | Model  | Type | Capabilities | Deployment type (region availability) |
 | ------ | ---- | ------------ | ------------------------------------- |
+| `MAI-Image-2` | Text-to-Image. See [API endpoint](/foundry-models/use-foundry-models-mai#api-endpoint) for details. | - **Input:** text <br /> - **Output:** One image <br /> - **Context length**: 32,000 tokens <br /> - **Tool calling:** No <br /> - **Response formats:** Image (PNG) <br /> - **Languages:** `en` <br /> - **Key features:** High-quality text-to-image generation; photorealistic image synthesis with consistent visual structure; well suited for product imagery, marketing visuals, brand assets, and commercial creative workflows.  <br /> - **Parameters:** `width`, `height`, `prompt` <br /> Minimum 768×768 pixels; maximum total pixel count 1,048,576 (equivalent to 1024×1024). Either dimension can exceed 1024 as long as the total pixel count stays within the limit (for example, 768×1365). | - Global standard (all regions) |
 | [model-router](https://ai.azure.com/resource/models/model-router/version/2025-11-18/registry/azureml-routers/?cid=learnDocs)<sup>1</sup> | chat-completion | More details in [Model router overview](https://learn.microsoft.com/azure/ai-foundry/openai/how-to/model-router). <br /> - **Input:** text, image <br /> - **Output:** text (max output tokens varies<sup>2</sup>) <br /> **Context window:** 200,000<sup>3</sup> <br /> - **Languages:** `en` |- Global standard (East US 2, Sweden Central) <br /> - Data Zone standard<sup>4</sup> (East US 2, Sweden Central) |
 
 <sup>1</sup> **Model router version** `2025-11-18`. Earlier versions (`2025-08-07` and `2025-05-19`) are also available. 

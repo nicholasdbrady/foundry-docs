@@ -62,7 +62,9 @@ When creating a new Foundry resource, follow these steps:
     - From the **Virtual Network** form, select the virtual network and subnet that you want to connect to.
 
 <Note>
+
 In the portal UI, the target to which you create the private endpoint should be labeled as an "account". Select your Foundry resource when prompted.
+
 </Note>
 
 1. Continue through the forms to create the project.When you reach the **Review + create** tab, review your settings and select **Create** to create the project.
@@ -81,7 +83,9 @@ If you have an existing Foundry resource and project and want to add network iso
 1. After you populate the forms with any other network configurations you require, use the **Review + create** tab to review your settings and select **Create** to create the private endpoint.
 
 <Tip>
+
 After creating the private endpoint, proceed to the [DNS configuration](#dns-configuration) section to ensure proper name resolution.
+
 </Tip>
 
 ### DNS configuration
@@ -99,11 +103,13 @@ This approach enables access to the Foundry resource using the same connection s
 If you use a custom DNS server on your network, clients must be able to resolve the fully qualified domain name (FQDN) for the Foundry resource endpoint to the private endpoint IP address. Configure your DNS server to delegate your private link subdomain to the private DNS zone for the virtual network.
 
 <Tip>
+
 When you use a custom or on-premises DNS server, configure your DNS server to resolve the Foundry resource name in the `privatelink` subdomain to the private endpoint IP address. Delegate the `privatelink` subdomain to the private DNS zone of the virtual network. Alternatively, configure the DNS zone of your DNS server and add the DNS A records.
 
 For more information on configuring your own DNS server to support private endpoints, use the following articles:
 - [Name resolution that uses your own DNS server](https://learn.microsoft.com/azure/virtual-network/virtual-networks-name-resolution-for-vms-and-role-instances#name-resolution-that-uses-your-own-dns-server)
 - [DNS configuration](https://learn.microsoft.com/azure/private-link/private-endpoint-overview#dns-configuration)
+
 </Tip>
 
 ### Validate the configuration
@@ -134,7 +140,9 @@ After creating a network-isolated Foundry project, you might need to modify the 
 You can remove one or all private endpoints for a project. Removing a private endpoint removes the project from the Azure Virtual Network that the endpoint was associated with. Removing the private endpoint might prevent the project from accessing resources in that virtual network, or resources in the virtual network from accessing the workspace. For example, if the virtual network doesn't allow access to or from the public internet.
 
 <Warning>
+
 Removing the private endpoints for a project **doesn't make it publicly accessible**. To make the project publicly accessible, use the steps in the [Enable public access](#enable-public-access) section.
+
 </Warning>
 
 To remove a private endpoint, use the following steps:
@@ -148,7 +156,9 @@ To remove a private endpoint, use the following steps:
 In some situations, you might want to allow someone to connect to your secured project over a public endpoint, instead of through the virtual network. Or you might want to remove the project from the virtual network and re-enable public access.
 
 <Info>
+
 Enabling public access doesn't remove any private endpoints that exist. All communications between components behind the virtual network that the private endpoints connect to are still secured. It enables public access only to the project, in addition to the private access through any private endpoints.
+
 </Info>
 
 1. From the [Azure portal](https://portal.azure.com), select your project.
@@ -209,9 +219,11 @@ When creating a new Foundry resource, follow these steps:
 1. Continue through the forms to create the project. When you reach the **Review + create** tab, review your settings and select **Create** to create the project.
 
 <Note>
+
 The ability to create a Foundry resource with virtual network injection in the Azure portal only appears if you have first selected bring-your-own resources for Storage, Search, and CosmosDB AND if you have selected public network access as disabled. We do not support virutal network injection with managed resources, also known as the Basic Agent set-up, or when you have public network access as enabled.
 
 Private endpoints to Azure AI Search, Azure Storage, and Azure CosmosDB are NOT auto-created when you deploy your Foundry resource. Please ensure to create private endpoints to these resources separately in their resource pages in the Azure portal.
+
 </Note>
 
 ### Agent tools with network isolation
@@ -241,7 +253,9 @@ Certain Agent tools are supported when Foundry is network isolated, while others
 | Agent-to-Agent (A2A) | ❌ Not supported | Under development |
 
 <Note>
+
 **Public endpoint tools** (Bing Grounding, Websearch, SharePoint Grounding) work in network-isolated environments but communicate over the public internet. These tools don't require private endpoints or VNet configuration. If your organization requires that all traffic remain within a private network, these tools may not meet your compliance requirements.
+
 </Note>
 
 #### Configuration requirements by traffic pattern
@@ -326,4 +340,4 @@ If you experience connectivity problems after setting up a private endpoint, try
 ## Next steps
 
 - [Create a Foundry project](/setup/create-projects)
-- [Learn more about Foundry](/what-is-microsoft-foundry?/what-is-foundry)
+- [Learn more about Foundry](/what-is-microsoft-foundry/what-is-foundry)

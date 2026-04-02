@@ -3,12 +3,16 @@ title: "Use SharePoint content with agent API"
 description: "Learn how to ground Microsoft Foundry agents with SharePoint content using the agent API. Connect to SharePoint sites or folders, use identity passthrough, and keep enterprise access controls intact."
 ---
 <Info>
+
 Items marked (preview) in this article are currently in public preview. This preview is provided without a service-level agreement, and we don't recommend it for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
+
 </Info>
 
 <Note>
+
 - This article describes the Microsoft SharePoint tool for Foundry Agent Service. For information on using and deploying SharePoint sites, see the [SharePoint documentation](/sharepoint/).
 - See [best practices](/agent-service/tool-best-practice) for information on optimizing tool usage.
+
 </Note>
 
 Use the SharePoint tool (preview) for SharePoint grounding in Microsoft Foundry Agent Service by retrieving content from a SharePoint site or folder (for example, `contoso.sharepoint.com/sites/policies`). When a user asks a question, the agent can invoke the SharePoint tool to retrieve relevant text from documents the user can access. The agent then generates a response based on that retrieved content.
@@ -16,7 +20,9 @@ Use the SharePoint tool (preview) for SharePoint grounding in Microsoft Foundry 
 This integration uses identity passthrough (On-Behalf-Of) so SharePoint permissions continue to apply to every request. For details on the underlying Microsoft 365 Copilot Retrieval API integration, see [How it works](#how-it-works).
 
 <Info>
+
 Before you start: The SharePoint tool requires user identity authentication (no app-only/service principal), your SharePoint site and Foundry agent must be in the same tenant, and only one SharePoint tool per agent is supported. The tool doesn't work when the agent is published to Microsoft Teams. See [Limitations](#limitations) for the full list.
+
 </Info>
 
 ### Usage support
@@ -510,7 +516,9 @@ public class SharePointGroundingExample {
 ## Setup
 
 <Note>
+
 Start with SharePoint sites that have a simple folder structure and a small number of short documents.
+
 </Note>
 
 1. Select **SharePoint** and follow the prompts to add the tool. You can only add one per agent.
@@ -525,7 +533,9 @@ Start with SharePoint sites that have a simple folder structure and a small numb
      - Folder URL example: `https://<company>.sharepoint.com/sites/<site_name>/Shared%20documents/<folder_name>`
 
 <Note>
+
 Your `site_url` needs to follow the format above. If you copy the entire value from the address bar of your SharePoint, it doesn't work.
+
 </Note>
 
   1. Save the connection, and then copy its connection **ID**.

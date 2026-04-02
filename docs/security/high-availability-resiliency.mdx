@@ -4,7 +4,9 @@ description: "Learn how to plan for high availability and resiliency for Microso
 ---
 
 <Info>
+
 Items marked (preview) in this article are currently in public preview. This preview is provided without a service-level agreement, and we don't recommend it for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
+
 </Info>
 
 Plan ahead to maintain business continuity and prepare for disaster recovery with [Microsoft Foundry](https://ai.azure.com/?cid=learnDocs).
@@ -17,7 +19,9 @@ Microsoft strives to ensure that Azure services are always available. However, u
 * Fail over to another region.
 
 <Info>
+
 Foundry itself doesn't provide automatic failover or disaster recovery.
+
 </Info>
 
 ## Prerequisites
@@ -144,7 +148,9 @@ You need to configure resources to support recovery before an incident happens. 
 Basic mode provides almost no recovery capabilities for human or automation-based resource loss. In the [Standard deployment mode](https://learn.microsoft.com/azure/ai-foundry/agents/concepts/standard-agent-setup), you host agent state in your own Azure Cosmos DB, Azure AI Search, and Azure Storage accounts. This topology adds incident risk (for example, direct data deletion) but gives you control over, and the responsibility for, recovery procedures.
 
 <Tip>
+
 Agent Service has no availability or state durability Service Level Agreement (SLA). Standard mode offloads SLAs and data durability assurances to the underlying storage components.
+
 </Tip>
 
 ### Use user-assigned managed identities
@@ -154,9 +160,11 @@ When a component uses a managed identity to access a dependency, grant that iden
 Using a user-assigned managed identity avoids this reassignment effort. After you restore the faulted resource, reattach the existing user-assigned managed identity. Existing role assignments on dependencies remain valid; no further action is required.
 
 <Info>
+
 Avoid treating a single user-assigned managed identity as a universal identity for multiple unrelated uses.
 
 For example, assign a dedicated user-assigned managed identity per project. Even if two projects have identical role assignments today, treat that situation as temporary. Future divergence can grant unnecessary permissions to one project if they share an identity, violating least privilege. Separate identities also let dependency logs distinguish activity per project.
+
 </Info>
 
 ### Use repeatable deployment techniques
@@ -194,7 +202,9 @@ A multiregional deployment relies on creating Foundry resources and other infras
     * Hot/cold: The primary region is active. The secondary region has Foundry and other resources deployed, along with the required data. Deploy resources such as models, model deployments, and pipelines manually.
 
 <Tip>
+
 Depending on your business requirements, you might treat Foundry services differently.
+
 </Tip>
 
 Foundry builds on other services. Some services replicate to other regions. You must manually create other services in multiple regions. The following table lists the services, who is responsible for replication, and an overview of the configuration:
@@ -247,7 +257,9 @@ When the primary project is unavailable, switch to the secondary project to cont
 Foundry doesn't sync or recover artifacts or metadata between projects. Depending on your deployment strategy, you might need to move or recreate artifacts in the failover project. If you configure the primary and secondary projects to share associated resources with geo-replication enabled, some objects are available in the failover project. For example, both projects share the same Docker images, configured datastores, and Azure Key Vault resources.
 
 <Note>
+
 Jobs that run during a service outage don't automatically transition to the secondary project. They also don't typically resume and finish successfully in the primary project after the outage. Resubmit these jobs in the secondary project or in the primary project after the outage.
+
 </Note>
 
 ### Verify failover readiness

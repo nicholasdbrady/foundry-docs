@@ -23,6 +23,7 @@ The following table summarizes each recovery scenario, expected recovery time, a
 | Capability host destructive reset | Minutes | Complete state loss (single project) | [Destructive reset](#perform-a-destructive-reset-of-the-azure-ai-agent-service-capability-host) |
 
 <Info>
+
 This article is part of a three-part series.
 
 To understand platform limitations, prevention controls, and baseline configuration, see the [Agent Service disaster recovery overview](/security/agent-service-disaster-recovery). That article explains why some losses are unrecoverable and why recovery often means reconstruction rather than restoration.
@@ -30,6 +31,7 @@ To understand platform limitations, prevention controls, and baseline configurat
 To learn how to architect your solution for high availability and resiliency to prevent these scenarios, see [High availability and resiliency](/security/high-availability-resiliency).
 
 If you're looking for recommendations on how to recover from platform or regional outages, see [Platform outage recovery](/security/agent-service-platform-disaster-recovery) for warm standby, regional failover, and failback.
+
 </Info>
 
 ## Prerequisites
@@ -58,6 +60,7 @@ The following sections describe recovery strategies for incidents that affect a 
 **Recovery steps:**
 
 <Warning>
+
 These steps completely orphan all agent data within all projects in this account:
 
 - Agent definitions
@@ -65,6 +68,7 @@ These steps completely orphan all agent data within all projects in this account
 - File-based knowledge defined at the agent level
 
 This data resides in the currently associated Azure Cosmos DB, Azure AI Search, and Azure Storage account resources. That data no longer associates with this account's projects. The data is permanently orphaned and *can't be recovered through any supported action*.
+
 </Warning>
 
 1. Don't purge the Foundry account resource. A purge makes recovery involve additional steps and considerations not documented here.
@@ -105,7 +109,9 @@ This data resides in the currently associated Azure Cosmos DB, Azure AI Search, 
    1. Redeploy the project's agents (definitions, knowledge files, and tool connections) from source control or application code. They function as new agents with new IDs and no access to prior threads or data. This *fresh start* restores workload functionality without any historical state.
 
 <Tip>
+
 To facilitate this recovery, ensure you maintain your agent definitions, knowledge files, and tool connections in source control. For more information, see [Use repeatable deployment techniques](/security/high-availability-resiliency#use-repeatable-deployment-techniques).
+
 </Tip>
 
    1. Restore role assignments on the project for clients, operators, and automation principals.
@@ -133,6 +139,7 @@ To facilitate this recovery, ensure you maintain your agent definitions, knowled
 **Recovery steps:**
 
 <Warning>
+
 These steps completely orphan all agent data within this project:
 
 - Agent definitions
@@ -140,6 +147,7 @@ These steps completely orphan all agent data within this project:
 - File-based knowledge defined at the agent level
 
 This data resides in the currently associated Azure Cosmos DB, Azure AI Search, and Azure Storage account resources. This data no longer associates with this project.
+
 </Warning>
 
 1. Recreate the project and its capability host from your infrastructure-as-code assets. Use the same project name you had before and reuse the same capability host dependencies (Azure Cosmos DB, Azure AI Search, and Azure Storage) that connected to this project before the incident.
@@ -162,7 +170,9 @@ This data resides in the currently associated Azure Cosmos DB, Azure AI Search, 
 - Recovery point: Total loss of thread text and uploaded files for all agents that were in the project. No recovery of this data is supported.
 
 <Info>
+
 Even if you use the same Azure Cosmos DB, Azure AI Search, or Azure Storage accounts, lingering data from the previous project's agents isn't reused and is unreachable. There's no supported method to migrate orphaned data to the new project's new capability host.
+
 </Info>
 
 **Verify recovery:** Invoke an agent in the restored project to confirm it can create threads and respond to requests.
@@ -254,11 +264,15 @@ The following sections describe recovery strategies for incidents that are local
    **Reference:** [Restore an Azure Cosmos DB account](https://learn.microsoft.com/azure/cosmos-db/restore-account-continuous-backup)
 
 <Tip>
+
 To find available restore points, use `az cosmosdb restorable-database-accounts list` or navigate to the **Restore** pane for your Cosmos DB account in the Azure portal. Choose the latest available timestamp for `{timestamp-in-UTC}`.
+
 </Tip>
 
 <Tip>
+
 When you delete your account, you release your account name to the public. Act quickly because if another customer claims your account name before you restore, you experience complete data loss and need to [perform a destructive reset of the capability host](#perform-a-destructive-reset-of-the-azure-ai-agent-service-capability-host).
+
 </Tip>
 
 1. Apply a [*delete* resource lock](https://learn.microsoft.com/azure/azure-resource-manager/management/lock-resources) on the Cosmos DB account.
@@ -384,7 +398,9 @@ Use the Azure portal, Azure CLI, or Azure PowerShell cmdlet to initiate a point-
 Generally, no specific recovery capabilities exist for this scenario. If you lost thread database records, see [a production thread is deleted](#a-production-thread-is-deleted) for details about this scenario. If you lost agent records, follow the [a production agent is deleted recovery process](#a-production-agent-is-deleted).
 
 <Note>
+
 The point-in-time restore capability in Cosmos DB isn't helpful against data-level loss or corruption such as those described here; it only supports recovery from container, database, or account deletes.
+
 </Note>
 
 **Results:**
@@ -412,7 +428,9 @@ Don't confuse this instance with AI Search indexes that connect to products and 
    - Ensure Azure Diagnostics configuration is restored.
 
 <Tip>
+
 When you delete your service, you release your service name to the public. Act quickly because if another customer claims your service name before you restore it, you'll experience complete data loss and need to [perform a destructive reset of the capability host](#perform-a-destructive-reset-of-the-azure-ai-agent-service-capability-host).
+
 </Tip>
 
 1. Apply a *delete* resource lock on the AI Search service.
@@ -477,7 +495,9 @@ If the index was tied to knowledge uploaded as part of a thread, there are no re
    **Reference:** [Recover a deleted storage account](https://learn.microsoft.com/azure/storage/common/storage-account-recover)
 
 <Tip>
+
 When you delete your Storage account, you release the account name. Act quickly because if another customer claims the name before you recover, you experience complete data loss and need to [perform a destructive reset of the capability host](#perform-a-destructive-reset-of-the-azure-ai-agent-service-capability-host).
+
 </Tip>
 
 1. If soft delete isn't enabled or the retention period expired, use your IaC to deploy a new Storage account.
@@ -508,9 +528,11 @@ When you delete your Storage account, you release the account name. Act quickly 
 When other recovery options aren't available, you can perform a complete reset of your project's AI Agent Service capability host. This reset is a *fresh start* that restores functionality but permanently orphans all agents, threads, and related state.
 
 <Danger>
+
 Performing these steps permanently orphans all existing agent state, making all agent data permanently unretrievable through any Foundry Agent Service API call. This process restores functionality but *provides no data recovery point*.
 
 This reset is a **last resort** after you exhaust all other options. **All agents and threads are permanently lost.**
+
 </Danger>
 
 1. Remove the *delete* lock from the Foundry account.
@@ -518,6 +540,7 @@ This reset is a **last resort** after you exhaust all other options. **All agent
 1. Delete the project's capability host by sending a [`Project Capability Hosts - Delete`](https://learn.microsoft.com/rest/api/aifoundry/accountmanagement/project-capability-hosts/delete) API request for the project that you're resetting.
 
 <Warning>
+
 This operation permanently orphans all agent data:
 
 - Agent definitions
@@ -525,6 +548,7 @@ This operation permanently orphans all agent data:
 - File-based knowledge defined at the agent level
 
 This data resides in the currently associated Azure Cosmos DB, Azure AI Search, and Azure Storage account resources. The data is no longer associated with this project. The data is permanently orphaned and *can't be recovered through any supported action*.
+
 </Warning>
 
 1. Reapply the *delete* lock to the Foundry account.
@@ -537,7 +561,9 @@ This data resides in the currently associated Azure Cosmos DB, Azure AI Search, 
    - The project's managed identity has the same permissions to these resources as before the reset.
 
 <Info>
+
 Even if you reuse the same Azure Cosmos DB, Azure AI Search, or Azure Storage accounts, lingering data from the previous association isn't reused and is unreachable. No supported method exists to migrate orphaned data to the new capability host.
+
 </Info>
 
 1. Redeploy agents from source control or from application code. They function as new agents with new IDs and no access to prior threads or data. This *fresh start* restores workload functionality without any historical data.

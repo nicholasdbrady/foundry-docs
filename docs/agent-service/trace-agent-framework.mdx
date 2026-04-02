@@ -7,11 +7,15 @@ description: "Debug issues and monitor AI agent performance in production by con
 # Configure tracing for AI agent frameworks (preview)
 
 <Info>
+
 Items marked (preview) in this article are currently in public preview. This preview is provided without a service-level agreement, and we don't recommend it for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
+
 </Info>
 
 <Note>
+
 Tracing is generally available for prompt agents only. Workflow, hosted, and custom agents are in preview.
+
 </Note>
 
 When AI agents behave unexpectedly in production, tracing gives you the visibility to quickly identify the root cause. Tracing captures detailed telemetry—including LLM calls, tool invocations, and agent decision flows—so you can debug issues, monitor latency, and understand agent behavior across requests.
@@ -53,7 +57,9 @@ Tracing can capture sensitive information (for example, user inputs, model outpu
 For more guidance, see [Security and privacy](/agent-service/trace-agent-concept#security-and-privacy).
 
 <Note>
+
 Trace data stored in Application Insights is subject to your workspace's data retention settings and Azure Monitor pricing. For cost management, consider adjusting sampling rates or retention periods in production. See [Azure Monitor pricing](https://azure.microsoft.com/pricing/details/monitor/) and [Configure data retention and archive](https://learn.microsoft.com/azure/azure-monitor/logs/data-retention-configure).
+
 </Note>
 
 ## Configure tracing for Microsoft Agent Framework
@@ -73,7 +79,9 @@ Traces typically appear within 2–5 minutes after agent execution. For advanced
 ## Configure tracing for LangChain and LangGraph
 
 <Note>
+
 Tracing integration for LangChain and LangGraph is currently available only in Python.
+
 </Note>
 
 Use the `langchain-azure-ai` package to emit OpenTelemetry-compliant spans for LangChain and LangGraph operations. These traces appear in the **Observability** > **Traces** view in the Foundry portal.
@@ -247,7 +255,9 @@ if __name__ == "__main__":
 With `langchain-azure-ai` enabled, all LangChain v1 operations (LLM calls, tool invocations, agent steps) emit OpenTelemetry spans using the latest semantic conventions. These traces appear in the **Observability** > **Traces** view in the Foundry portal and are linked to your Application Insights resource.
 
 <Tip>
+
 After running the agent, wait a few minutes for traces to appear. If you don't see traces, verify your Application Insights connection string is correct and check the [Troubleshoot common issues](#troubleshoot-common-issues) section.
+
 </Tip>
 
 #### Verify your LangChain v1 traces
@@ -395,7 +405,9 @@ for event in app.stream({"messages": [input_message]}, config, stream_mode="valu
 With `langchain-azure-ai` enabled, your LangGraph execution emits OpenTelemetry-compliant spans for model calls, tool invocations, and graph transitions. These traces flow to Application Insights and appear in the **Observability** > **Traces** view in the Foundry portal.
 
 <Tip>
+
 Each graph node and edge transition creates a separate span, making it easy to visualize the agent's decision flow.
+
 </Tip>
 
 #### Verify your LangGraph traces
@@ -432,7 +444,9 @@ pip install \
 - `AZURE_OPENAI_API_KEY`: Azure OpenAI API key.
 
 <Note>
+
 This sample uses API key authentication for simplicity. For production workloads, use `DefaultAzureCredential` with `get_bearer_token_provider` as shown in the LangChain v1 and LangGraph samples.
+
 </Note>
 
 #### LangChain 0.3: Tracer and model setup

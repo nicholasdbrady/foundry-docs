@@ -26,8 +26,10 @@ pip install -U langchain langchain-azure-ai azure-identity
 ```
 
 <Info>
+
 `langchain-azure-ai` uses the new Microsoft Foundry SDK (v2). If you're using Foundry classic, use `langchain-azure-ai[v1]`,
 which uses Azure AI Inference SDK (legacy). [Learn more](https://learn.microsoft.com/en-us/azure/foundry-classic/how-to/develop/langchain).
+
 </Info>
 
 ## Configure the environment
@@ -66,7 +68,9 @@ model = init_chat_model("azure_ai:gpt-4.1")
 ```
 
 <Info>
+
 Using `init_chat_model` requires `langchain>=1.2.13`. If you can't update your version, [configure clients directly](#configure-clients-directly).
+
 </Info>
 
 All Foundry models supporting OpenAI-compatible APIs can be used with the client, but they need to be deployed to your Foundry resource first. Using `project_endpoint` (environment variable `AZURE_AI_PROJECT_ENDPOINT`) requires Microsoft Entra ID for authentication and the role **Azure AI User**.
@@ -196,7 +200,9 @@ asyncio.run(main())
 ```
 
 <Tip>
+
 If you run this code in a Jupyter notebook, you can use `await main()` directly instead of `asyncio.run(main())`.
+
 </Tip>
 
 ```output
@@ -240,7 +246,9 @@ OpenAI models deployed in Foundry support server-side tool-calling loops: models
 If a model invokes a tool server-side, the content of the response message will include content representing the invocation and result of the tool.
 
 <Info>
+
 Tools in the namespace `langchain_azure_ai.tools.builtin` are only supported in OpenAI models.
+
 </Info>
 
 These are tools provided by OpenAI that extend the model's capabilities. To see the full list of supported tools, see [built-in tools](https://platform.openai.com/docs/guides/tools).
@@ -360,10 +368,12 @@ agent = create_agent(
 ```
 
 <Tip>
+
 The image generation tool in Foundry requires passing the model deployment name for image generation
 as part of a header, `x-ms-oai-image-generation-deployment`. When using `langchain-azure-ai`, this is handled
 automatically. However, if you plan to use this tool with `langchain-openai`, you must pass the header
 manually.
+
 </Tip>
 
 ## Use embedding models
@@ -487,7 +497,9 @@ You can configure the following environment variables. These values can also be 
 | `AZURE_OPENAI_API_VERSION` | The API version to use. When an `api_version` is available we construct the OpenAI clients and inject the `api-version` query parameter via `default_query`. | `v1` or `preview` | `api_version` |
 
 <Info>
+
 Environment variables `AZURE_AI_INFERENCE_ENDPOINT` and `AZURE_AI_CREDENTIALS` used for `AzureAIChatCompletionsModel` or `AzureAIEmbeddingsModel` (legacy) are no longer used.
+
 </Info>
 
 ## Next step

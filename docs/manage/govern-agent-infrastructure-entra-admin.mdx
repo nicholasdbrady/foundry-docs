@@ -8,7 +8,9 @@ As a Microsoft Entra global administrator, you might need to take action on Micr
 This article helps you get the access you need, understand how admin center actions map to Azure resource operations, and make informed decisions about when and how to intervene. The guidance here focuses on infrastructure-level governance of agents built with [Foundry Agent Service](/agent-service/overview) as a fallback for situations that require direct administrative action.
 
 <Info>
+
 Always prefer **Stop** over **Delete** when you need to disable an agent. Stopping is reversible. Deletion permanently removes Azure resources and can affect other tenants.
+
 </Info>
 
 ## Prerequisites
@@ -16,7 +18,9 @@ Always prefer **Stop** over **Delete** when you need to disable an agent. Stoppi
 - A [Microsoft Entra Global Administrator](/entra/identity/role-based-access-control/permissions-reference#global-administrator) role assignment. If your organization uses [Privileged Identity Management (PIM)](/entra/id-governance/privileged-identity-management/pim-configure), activate your Global Administrator role assignment before proceeding.
 
 <Note>
+
 You don't need existing access to Azure subscriptions. This article walks you through how to [elevate your access](#elevate-access-to-manage-azure-subscriptions) to get visibility into the Azure resources that back Foundry agents.
+
 </Note>
 
 ## Understand how agent infrastructure works
@@ -51,7 +55,9 @@ Elevation assigns you the **User Access Administrator** role at root scope (`/`)
 For the full procedure, see [Elevate access to manage all Azure subscriptions and management groups](https://learn.microsoft.com/azure/role-based-access-control/elevate-access-global-admin).
 
 <Info>
+
 Remove your elevated access as soon as you finish. Elevation at root scope is a powerful permission, and the principle of least privilege applies. If your organization uses PIM, deactivate your Global Administrator role assignment after you remove the elevation toggle.
+
 </Info>
 
 ## Coordinate with resource owners
@@ -153,7 +159,9 @@ az rest --method delete \
 ```
 
 <Danger>
+
 Deleting a deployment permanently removes the Azure resource. If the agent serves multiple tenants, this action affects all of them. Always prefer stopping a deployment over deleting it.
+
 </Danger>
 
 ## Related content

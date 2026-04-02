@@ -11,7 +11,9 @@ In this article, you:
 - Configure key-based, Microsoft Entra, or OAuth authentication
 - Set up and validate your MCP server connection
 <Note>
+
 If you don't already have an account with the MCP server publisher, create one through the publisher's website.
+
 </Note>
 
 ## Prerequisites
@@ -43,9 +45,11 @@ Use the following guidance to choose a method:
 | Connect to an MCP server that doesn't require auth | Unauthenticated access |
 
 <Tip>
+
 When in doubt, start with Microsoft Entra authentication if the MCP server supports it. Microsoft Entra authentication eliminates the need to manage secrets and provides built-in token rotation.
 
 For [private MCP servers within a virtual network](/setup/virtual-networks), Microsoft Entra authentication is a natural fit because both the agent and MCP server are on the same private network.
+
 </Tip>
 
 ## Supported authentication methods
@@ -63,7 +67,9 @@ For [private MCP servers within a virtual network](/setup/virtual-networks), Mic
 Use key-based authentication when the MCP server requires an API key, personal access token, or similar credential, and you don't need to preserve individual user context.
 
 <Note>
+
 People who have access to the project can access an API key stored in a project connection. Store only shared secrets in a project connection. For user-specific access, use OAuth identity passthrough.
+
 </Note>
 
 Pass an API key, a personal access token (PAT), or other credentials to MCP servers that support key-based authentication. For improved security, store shared credentials in a project connection instead of passing them at runtime.
@@ -110,7 +116,9 @@ When the agent invokes the MCP server, Agent Service uses the project's managed 
 ## OAuth identity passthrough
 
 <Note>
+
 To use OAuth identity passthrough, users interacting with your agent need at least the **Azure AI User** role on the project.
+
 </Note>
 
 OAuth identity passthrough is available for authentication to Microsoft and non-Microsoft MCP servers and underlying services that are compliant with OAuth, including Microsoft Entra.
@@ -125,7 +133,9 @@ Agent Service supports two OAuth options: **managed OAuth** and **custom OAuth**
 - With custom OAuth, you bring your own OAuth app registration.
 
 <Note>
+
 If you use custom OAuth, you receive a redirect URL after configuration. Add the redirect URL to your OAuth app so Agent Service can complete the flow.
+
 </Note>
 
 When you set up **custom OAuth**, provide the following information:
@@ -187,13 +197,17 @@ The scope of OAuth is per tool (connection) name per Foundry project. Each new u
 Once the user has signed in and given consent once, they don't need to give consent in the future.
 
 <Note>
+
 If the user declines consent, the MCP tool call fails and returns an error. Your application should handle this case gracefully and inform the user that the tool requires authorization to function.
+
 </Note>
 
 ### Bring your own Microsoft Entra app registration
 
 <Note>
+
 Agent 365 MCP servers are only available to [Frontier tenants](https://adoption.microsoft.com/en-us/copilot/frontier-program/).
+
 </Note>
 
 To use identity passthrough with Microsoft services, bring your own [Microsoft Entra app registration](/entra/identity-platform/quickstart-register-app). By bringing your own Microsoft Entra app registration, you control what permissions you grant.
@@ -233,7 +247,9 @@ The following steps use the Agent 365 MCP server as an example:
 Use unauthenticated access only when the MCP server doesn't require authentication. This method is appropriate for public MCP servers that provide open access to their tools, or for private MCP servers within your virtual network that rely on network-level isolation instead of explicit authentication.
 
 <Info>
+
 Even when authentication isn't required, ensure you understand the MCP server's terms of service and rate limits before connecting.
+
 </Info>
 
 ## Set up authentication for an MCP server

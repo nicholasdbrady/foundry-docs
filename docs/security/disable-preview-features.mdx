@@ -24,9 +24,11 @@ Use tags for portal-level suppression, and use custom RBAC roles when you need t
 Apply the preview-feature suppression tag at the scope your organization governs.
 
 <Info>
+
 Use the exact tag key and value:
 - Tag key: `AZML_DISABLE_PREVIEW_FEATURE`
 - Tag value: `true`
+
 </Info>
 
 Apply the tag at the scope that matches your governance needs:
@@ -173,7 +175,9 @@ Create a JSON file named `custom-role.json` with the following content. Replace 
 ```
 
 <Tip>
+
 If you clone an existing role or use wildcard permissions in `dataActions`, add the preview feature data actions to `notDataActions` so the role excludes them. For Tracing, use `notActions` instead because Tracing uses control plane actions.
+
 </Tip>
 
 #### Step 2: Create the role
@@ -284,7 +288,9 @@ If your team labels documents in Foundry, also block the labeling data actions. 
 - `Microsoft.CognitiveServices/accounts/MultiModalIntelligence/labelingProjects/delete`
 
 <Note>
+
 Verify the exact `labelingProjects` data actions in the Azure portal, because the available operations might change as the feature evolves.
+
 </Note>
 
 #### Fine-tuning
@@ -303,13 +309,17 @@ Optionally, if your team runs RLHF jobs, also add:
 - `Microsoft.CognitiveServices/accounts/OpenAI/1p-jobs/*`
 
 <Info>
+
 Each path listed is a separate data action scope. The `fine-tunes/*` wildcard matches only operations under `fine-tunes/`. To fully block fine-tuning, include all the paths listed.
+
 </Info>
 
 #### Tracing
 
 <Info>
+
 Tracing uses Azure Monitor, which is a control plane service. The permissions listed in this section are **actions, not data actions**. Add them to `notActions` (not `notDataActions`) in your custom role definition.
+
 </Info>
 
 Add these actions to `notActions` in your custom role definition:

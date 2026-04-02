@@ -3,7 +3,9 @@ title: "Batch Evaluation with the Microsoft Foundry SDK"
 description: "Run scalable evaluations for generative AI applications using the Microsoft Foundry SDK. Learn how to integrate evaluations into your development pipeline."
 ---
 <Info>
+
 Items marked (preview) in this article are currently in public preview. This preview is provided without a service-level agreement, and we don't recommend it for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
+
 </Info>
 
 In this article, you learn how to run evaluations in the cloud (preview) for predeployment testing on a test dataset. 
@@ -13,7 +15,9 @@ Use batch evaluations for most scenarios—especially when testing at scale, int
 Batch evaluation results are stored in your Foundry project. You can review results in the portal, retrieve them through the SDK, or route them to Application Insights if connected. Batch evaluation supports all Microsoft-curated [built-in evaluators](/observability/observability#what-are-evaluators) and your own [custom evaluators](/observability/custom-evaluators). Evaluators are managed in the [evaluator catalog](/observability/evaluate-generative-ai-app) with the same project-scope, role-based access control.
 
 <Tip>
+
 For complete runnable examples, see the [Python SDK evaluation samples](https://github.com/Azure/azure-sdk-for-python/blob/main/sdk/ai/azure-ai-projects/samples/evaluations/README.md) on GitHub.
+
 </Tip>
 
 When you use the Foundry SDK, it logs evaluation results in your Foundry project for better observability. This feature supports all Microsoft-curated [built in evaluators](/observability/built-in-evaluators) and your own [custom evaluators](/observability/custom-evaluators). Your evaluators can be located in the [evaluator library](/observability/evaluate-generative-ai-app) and have the same project-scope, role-based access control.
@@ -54,7 +58,9 @@ Each scenario requires evaluators that define your testing criteria. For guidanc
 - Optionally, you can [use your own storage account](/observability/evaluation-regions-limits-virtual-network#bring-your-own-storage) to run evaluations.
 
 <Note>
+
 Some evaluation features have regional restrictions. See [supported regions](/observability/risk-safety-evaluators#foundry-project-configuration-and-region-support) for details.
+
 </Note>
 
 ## Get started
@@ -154,7 +160,9 @@ Pass `source` as the `"source"` field in your data source configuration when cre
 Evaluate pre-computed responses in a JSONL file using the `jsonl` data source type. This scenario is useful when you already have model outputs and want to assess their quality.
 
 <Tip>
+
 Before you begin, complete [Get started](#get-started) and [Prepare input data](#uploading-evaluation-data).
+
 </Tip>
 
 ### Define the data schema and evaluators
@@ -342,7 +350,9 @@ For a complete runnable example, see [sample_evaluations_builtin_with_dataset_id
 Send queries to a deployed model at runtime and evaluate the responses using the `azure_ai_target_completions` data source type with an `azure_ai_model` target. Your input data contains queries; the model generates responses which are then evaluated.
 
 <Tip>
+
 Before you begin, complete [Get started](#get-started) and [Prepare input data](#uploading-evaluation-data).
+
 </Tip>
 
 ### Define the message template and target
@@ -485,9 +495,11 @@ testing_criteria = [
 For a complete runnable example, see [sample_model_evaluation.py](https://github.com/Azure/azure-sdk-for-python/blob/main/sdk/ai/azure-ai-projects/samples/evaluations/sample_model_evaluation.py) on GitHub. To poll for completion and interpret results, see [Get results](#get-results).
 
 <Tip>
+
 To add another evaluation run, run the same evaluation again using the same evaluation group.  Each execution creates a new run under the same group, which lets you compare >results across runs after changing things like the model, prompt, or dataset—without creating a new evaluation or using a different API.
 
 See [the sample](https://github.com/Azure/azure-sdk-for-python/blob/7b953844412cae5dfe8e1a4be610bb71fa0849b7/sdk/ai/azure-ai-projects/samples/evaluations/sample_evaluations_builtin_with_dataset_id.py#L119C1-L126C6) that reuses the same evaluation group to create multiple runs for comparison.
+
 </Tip>
 
 ## Agent target evaluation
@@ -495,7 +507,9 @@ See [the sample](https://github.com/Azure/azure-sdk-for-python/blob/7b953844412c
 Send queries to a Foundry agent at runtime and evaluate the responses using the `azure_ai_target_completions` data source type with an `azure_ai_agent` target.
 
 <Tip>
+
 Before you begin, complete [Get started](#get-started) and [Prepare input data](#uploading-evaluation-data).
+
 </Tip>
 
 ### Define the message template and target
@@ -543,7 +557,9 @@ When the agent generates responses at runtime, use `{{sample.*}}` variables in `
 | `{{item.field}}` | A field from your input data. | Input fields like `query` or `ground_truth`. |
 
 <Tip>
+
 The `query` field can contain structured JSON, including system messages and conversation history. Some agent evaluators such as `task_adherence` use this context for more accurate scoring. For details on query formatting, see [agent evaluators](/observability/agent-evaluators).
+
 </Tip>
 
 ```python
@@ -670,9 +686,11 @@ testing_criteria = [
 For a complete runnable example, see [sample_agent_evaluation.py](https://github.com/Azure/azure-sdk-for-python/blob/main/sdk/ai/azure-ai-projects/samples/evaluations/sample_agent_evaluation.py) on GitHub. To poll for completion and interpret results, see [Get results](#get-results).
 
 <Tip>
+
 To add another evaluation run, run the same evaluation again using the same evaluation group.  Each execution creates a new run under the same group, which lets you compare >results across runs after changing things like the model, prompt, or dataset—without creating a new evaluation or using a different API.
 
 See [the sample](https://github.com/Azure/azure-sdk-for-python/blob/7b953844412cae5dfe8e1a4be610bb71fa0849b7/sdk/ai/azure-ai-projects/samples/evaluations/sample_evaluations_builtin_with_dataset_id.py#L119C1-L126C6) that reuses the same evaluation group to create multiple runs for comparison.
+
 </Tip>
 
 ## Agent response evaluation
@@ -680,7 +698,9 @@ See [the sample](https://github.com/Azure/azure-sdk-for-python/blob/7b953844412c
 Retrieve and evaluate Foundry agent responses by response IDs using the `azure_ai_responses` data source type. Use this scenario to evaluate specific agent interactions after they occur.
 
 <Tip>
+
 Before you begin, complete [Get started](#get-started).
+
 </Tip>
 
 A **response ID** is a unique identifier returned each time a Foundry agent generates a response. You can collect response IDs from agent interactions by using the [Responses API](https://learn.microsoft.com/rest/api/aifoundry) or from your application's trace logs. Provide the IDs inline as file content, or upload them as a dataset (see [Prepare input data](#uploading-evaluation-data)).
@@ -778,9 +798,11 @@ You can also collect response IDs from agent interactions in your application's 
 For a complete runnable example, see [sample_agent_response_evaluation.py](https://github.com/Azure/azure-sdk-for-python/blob/main/sdk/ai/azure-ai-projects/samples/evaluations/sample_agent_response_evaluation.py) on GitHub. To poll for completion and interpret results, see [Get results](#get-results).
 
 <Tip>
+
 To add another evaluation run, run the same evaluation again using the same evaluation group.  Each execution creates a new run under the same group, which lets you compare >results across runs after changing things like the model, prompt, or dataset—without creating a new evaluation or using a different API.
 
 See [the sample](https://github.com/Azure/azure-sdk-for-python/blob/7b953844412cae5dfe8e1a4be610bb71fa0849b7/sdk/ai/azure-ai-projects/samples/evaluations/sample_evaluations_builtin_with_dataset_id.py#L119C1-L126C6) that reuses the same evaluation group to create multiple runs for comparison.
+
 </Tip>
 
 ## Synthetic data evaluation (preview)
@@ -788,7 +810,9 @@ See [the sample](https://github.com/Azure/azure-sdk-for-python/blob/7b953844412c
 Generate synthetic test queries, send them to a deployed model or Foundry agent, and evaluate the responses using the `azure_ai_synthetic_data_gen_preview` data source type. Use this scenario when you don't have a test dataset — the service generates queries based on a prompt you provide (and/or from the agent's instructions), runs them against your target, and evaluates the responses.
 
 <Tip>
+
 Before you begin, complete [Get started](#get-started).
+
 </Tip>
 
 ### How synthetic data evaluation works

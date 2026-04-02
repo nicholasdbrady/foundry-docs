@@ -6,6 +6,7 @@ description: "Plan disaster recovery for Foundry Agent Service: limitations, rea
 Use this article as the starting point for disaster recovery (DR) planning for Foundry Agent Service in the [Standard deployment mode](https://learn.microsoft.com/azure/ai-foundry/agents/concepts/standard-agent-setup). It explains what you can and can't recover, what to prepare before an incident, and where to find recovery procedures for platform outages and resource or data loss.
 
 <Info>
+
 This is the overview article in a three-part series.
 
 - You're here: Understand limitations, prevention controls, and required baseline configuration.
@@ -13,6 +14,7 @@ This is the overview article in a three-part series.
 - For human-caused or automation-caused deletions and localized data loss, see [Agent Service resource and data loss recovery strategies](/security/agent-service-operator-disaster-recovery).
 
 To reduce the likelihood of recovery events, see [High availability and resiliency for Foundry projects and agent services](/security/high-availability-resiliency).
+
 </Info>
 
 ## Scope and definitions
@@ -24,7 +26,9 @@ This series focuses on DR for Foundry projects that use Agent Service in Standar
 - **Data plane APIs**: APIs used to create, update, and invoke agents and threads. For details, see [Azure AI Foundry REST API reference](https://learn.microsoft.com/rest/api/aifoundry/).
 
 <Note>
+
 This series doesn't cover the Basic deployment mode. Basic mode uses Microsoft-managed infrastructure with different DR characteristics. For details, see [Basic vs. Standard agent setup](https://learn.microsoft.com/azure/ai-foundry/agents/concepts/standard-agent-setup).
+
 </Note>
 
 For general recovery design concepts (including setting recovery objectives such as RPO and RTO), see [Design for recovery](https://learn.microsoft.com/azure/well-architected/reliability/principles#design-for-recovery).
@@ -58,9 +62,11 @@ Agent Service is stateful. Recovery focuses on preserving and restoring state st
 The Agent Service has important limitations that shape your workload's disaster recovery (DR) design. Consider these factors when you set realistic recovery point objectives (RPOs) and recovery time objectives (RTOs).
 
 <Info>
+
 Agent Service doesn't provide built-in disaster recovery capabilities. It doesn't replicate state, create backups, or support point-in-time restore. One project can't use the data of another project. The service doesn't have any supported method for active-active, multi-region replication. Microsoft Support can't recover orphaned data, migrate data between projects, or combine state from multiple sources.
 
 The recommendations in this guide are compensating controls. Recovery might not be possible. An incident can permanently remove an agent and its data, such as threads and knowledge.
+
 </Info>
 
 ## Unrecoverable scenarios and expectations

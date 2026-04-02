@@ -5,11 +5,15 @@ sidebarTitle: "How to build a voice agent"
 ---
 
 <Note>
+
 This feature is currently in public preview. This preview is provided without a service-level agreement, and is not recommended for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
+
 </Note>
 
 <Note>
+
 Foundry agent integration currently only supports agents available on public endpoints. Foundry agents deployed in private VNet aren't supported.
+
 </Note>
 
 Learn how to use Voice Live with [Microsoft Foundry Agent Service](https://learn.microsoft.com/azure/ai-foundry/agents/overview) using the VoiceLive SDK for Python. This article builds on the [Quickstart: Create a Voice Agent with Foundry Agent Service and Voice Live](../../../voice-live-agents-quickstart) with advanced features and integration options.
@@ -28,13 +32,17 @@ Agents provide several advantages:
 To use Voice Live without Foundry agents, see the [Voice Live API quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/voice-live-quickstart).
 
 <Tip>
+
 You don't need to deploy an audio model with Microsoft Foundry to use Voice Live. Voice Live is fully managed and automatically deploys the model for you. For model availability, see the [Voice Live overview documentation](../../../voice-live).
+
 </Tip>
 
 ## Prerequisites
 
 <Note>
+
 This document refers to the [Microsoft Foundry (new)](https://learn.microsoft.com/en-us/azure/ai-foundry/what-is-foundry#microsoft-foundry-portals) portal and the latest Foundry Agent Service version.
+
 </Note>
 
 - An Azure subscription. [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
@@ -111,7 +119,9 @@ This configuration is resolved in `main()` and then applied when the assistant i
 - In `BasicVoiceAssistant.__init__`, the values are added to `self.agent_config`, which is sent in `connect(..., agent_config=self.agent_config)`.
 
 <Info>
+
 Cross-resource connections require proper role assignments. Ensure the Voice Live resource's managed identity has the `Azure AI User` role on the target agent resource.
+
 </Info>
 
 ## Add a proactive message at session start
@@ -155,7 +165,9 @@ When users interrupt agent audio, conversation text can drift from what users ac
 This sample currently shows interruption handling with `response.cancel()` during speech start, but it doesn't configure `auto_truncate` in `turn_detection`.
 
 <Note>
+
 In Foundry Agent Service, thread messages and tracing agent threads are based on text content in the thread. Without auto truncation, those records can differ from the exact portion of audio the user actually heard before interruption.
+
 </Note>
 
 For setup details and supported options, see [Handle voice interruptions in chat history (preview)](../../../how-to-voice-live-auto-truncation).
@@ -189,7 +201,9 @@ In this sample, conversation reconnect is applied in three places:
 When a valid `conversation_id` is provided, the agent retrieves the previous conversation context and can reference earlier exchanges in its responses.
 
 <Note>
+
 Conversation IDs are tied to the agent and project. Attempting to use a conversation ID with a different agent results in a new conversation being created.
+
 </Note>
 
 ## Log session metadata for continuity and diagnostics
@@ -230,13 +244,17 @@ Agents provide several advantages:
 To use Voice Live without Foundry agents, see the [Voice Live API quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/voice-live-quickstart).
 
 <Tip>
+
 You don't need to deploy an audio model with Microsoft Foundry to use Voice Live. Voice Live is fully managed and automatically deploys the model for you. For model availability, see the [Voice Live overview documentation](../../../voice-live).
+
 </Tip>
 
 ## Prerequisites
 
 <Note>
+
 This guide refers to the [Microsoft Foundry (new)](https://learn.microsoft.com/en-us/azure/ai-foundry/what-is-foundry#microsoft-foundry-portals) portal and the latest Foundry Agent Service version.
+
 </Note>
 
 - An Azure subscription. [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
@@ -314,7 +332,9 @@ The configuration is resolved in `Main()` and applied when the assistant is crea
 - In the constructor, set both values on `AgentSessionConfig` via `config.FoundryResourceOverride` and `config.AuthenticationIdentityClientId`. Send them in `StartSessionAsync(SessionTarget.FromAgent(agentConfig))`.
 
 <Info>
+
 Cross-resource connections require proper role assignments. Ensure the Voice Live resource's managed identity has the `Azure AI User` role on the target agent resource.
+
 </Info>
 
 ## Add a proactive message at session start
@@ -359,7 +379,9 @@ When users interrupt agent audio, conversation text can drift from what users ac
 The sample currently shows interruption handling with `CancelResponseAsync()` during speech start, but it doesn't configure `auto_truncate` in `turn_detection`.
 
 <Note>
+
 In Foundry Agent Service, thread messages and trace records are based on text content. Without auto truncation, these records can differ from the exact portion of audio users heard before interruption.
+
 </Note>
 
 See [Handle voice interruptions in chat history (preview)](../../../how-to-voice-live-auto-truncation) for setup details and supported options.
@@ -393,7 +415,9 @@ Conversation reconnect is applied in three places:
 When a valid `conversationId` is provided, the agent retrieves the previous conversation context and can reference earlier exchanges.
 
 <Note>
+
 Conversation IDs are tied to the agent and project. Using a conversation ID with a different agent creates a new conversation.
+
 </Note>
 
 ## Log session metadata for continuity and diagnostics
@@ -434,17 +458,23 @@ Agents provide several advantages:
 To use Voice Live without Foundry agents, see the [Voice Live API quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/voice-live-quickstart).
 
 <Tip>
+
 You don't need to deploy an audio model with Microsoft Foundry to use Voice Live. Voice Live is fully managed and automatically deploys the model for you. For model availability, see the [Voice Live overview documentation](../../../voice-live).
+
 </Tip>
 
 <Note>
+
 The JavaScript Voice Live SDK is designed for browser-based applications with built-in WebSocket and Web Audio support. This how-to guide uses Node.js with `node-record-lpcm16` and `speaker` for a console experience. For a full browser-based voice UI, see the [Voice Live universal assistant sample](https://github.com/microsoft-foundry/voicelive-samples/tree/main/voice-live-universal-assistant).
+
 </Note>
 
 ## Prerequisites
 
 <Note>
+
 This document refers to the [Microsoft Foundry (new)](https://learn.microsoft.com/en-us/azure/ai-foundry/what-is-foundry#microsoft-foundry-portals) portal and the latest Foundry Agent Service version.
+
 </Note>
 
 - An Azure subscription. [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
@@ -522,7 +552,9 @@ This configuration is resolved in `main()` and then applied when the assistant i
 - In the constructor, the values are conditionally set on the `agentConfig` object, which is sent in `client.createSession({ agent: this.agentConfig })`.
 
 <Info>
+
 Cross-resource connections require proper role assignments. Ensure the Voice Live resource's managed identity has the `Azure AI User` role on the target agent resource.
+
 </Info>
 
 ## Add a proactive message at session start
@@ -561,7 +593,9 @@ When users interrupt agent audio, conversation text can drift from what users ac
 This sample currently shows interruption handling with `response.cancel` during speech start, but it doesn't configure `auto_truncate` in `turn_detection`.
 
 <Note>
+
 In Foundry Agent Service, thread messages and tracing agent threads are based on text content in the thread. Without auto truncation, those records can differ from the exact portion of audio the user actually heard before interruption.
+
 </Note>
 
 For setup details and supported options, see [Handle voice interruptions in chat history (preview)](../../../how-to-voice-live-auto-truncation).
@@ -595,7 +629,9 @@ In this sample, conversation reconnect is applied in three places:
 When a valid `conversationId` is provided, the agent retrieves the previous conversation context and can reference earlier exchanges in its responses.
 
 <Note>
+
 Conversation IDs are tied to the agent and project. Attempting to use a conversation ID with a different agent results in a new conversation being created.
+
 </Note>
 
 ## Log session metadata for continuity and diagnostics
@@ -638,13 +674,17 @@ Agents provide several advantages:
 To use Voice Live without Foundry agents, see the [Voice Live API quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/voice-live-quickstart).
 
 <Tip>
+
 You don't need to deploy an audio model with Microsoft Foundry to use Voice Live. Voice Live is fully managed and automatically deploys the model for you. For model availability, see the [Voice Live overview documentation](../../../voice-live).
+
 </Tip>
 
 ## Prerequisites
 
 <Note>
+
 This document refers to the [Microsoft Foundry (new)](https://learn.microsoft.com/en-us/azure/ai-foundry/what-is-foundry#microsoft-foundry-portals) portal and the latest Foundry Agent Service version.
+
 </Note>
 
 - An Azure subscription. [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
@@ -722,7 +762,9 @@ This configuration is resolved in `main()` and then applied when the assistant i
 - In the constructor, the values are set on `AgentSessionConfig` via `config.setFoundryResourceOverride(...)` and `config.setAuthenticationIdentityClientId(...)`, which is sent in `client.startSession(agentConfig)`.
 
 <Info>
+
 Cross-resource connections require proper role assignments. Ensure the Voice Live resource's managed identity has the `Azure AI User` role on the target agent resource.
+
 </Info>
 
 ## Add a proactive message at session start
@@ -766,7 +808,9 @@ When users interrupt agent audio, conversation text can drift from what users ac
 This sample currently shows interruption handling with `ClientEventResponseCancel` during speech start, but it doesn't configure `auto_truncate` in `turn_detection`.
 
 <Note>
+
 In Foundry Agent Service, thread messages and tracing agent threads are based on text content in the thread. Without auto truncation, those records can differ from the exact portion of audio the user actually heard before interruption.
+
 </Note>
 
 For setup details and supported options, see [Handle voice interruptions in chat history (preview)](../../../how-to-voice-live-auto-truncation).
@@ -800,7 +844,9 @@ In this sample, conversation reconnect is applied in three places:
 When a valid `conversationId` is provided, the agent retrieves the previous conversation context and can reference earlier exchanges in its responses.
 
 <Note>
+
 Conversation IDs are tied to the agent and project. Attempting to use a conversation ID with a different agent results in a new conversation being created.
+
 </Note>
 
 ## Log session metadata for continuity and diagnostics

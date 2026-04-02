@@ -6,11 +6,15 @@ description: "Reference guide for all Foundry MCP Server tools, including tool d
 Foundry MCP Server exposes 38 tools across 10 categories that let you manage agents, datasets, evaluations, model deployments, and more — all through conversational prompts instead of API calls. Use this reference to explore each tool and try the example prompts in your own project.
 
 <Tip>
+
 Before using these tools, complete the [Foundry MCP Server setup](/developer-experience/get-started).
+
 </Tip>
 
 <Note>
+
 This feature is currently in public preview. This preview is provided without a service-level agreement, and we don't recommend it for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
+
 </Note>
 
 ## How tools work
@@ -248,7 +252,7 @@ Example prompts:
 
 Foundry MCP Server is in public preview. The following limitations apply:
 
-- **No network isolation** — The server uses the public endpoint `https://mcp.ai.azure.com`. Resources behind Azure Private Links aren't accessible.
+- **No network isolation** — Foundry MCP Server uses the public endpoint `https://mcp.ai.azure.com`. Resources behind Azure Private Links aren't accessible. For private MCP connectivity, [build your own MCP server](/agent-service/build-your-own-mcp-server) and connect it to Agent Service with [private networking](/agent-service/model-context-protocol#public-and-private-mcp-server-endpoints).
 - **Data residency** — Requests and responses might be processed in EU or US data centers. The server itself doesn't store data, but cross-region processing can occur.
 - **No SLA** — Preview features don't include a service-level agreement. Don't use the server for production workloads that require guaranteed availability.
 - **Tool set might change** — Tools, parameters, and return values might change during the preview period without notice.
@@ -263,7 +267,7 @@ For more information, see [Supplemental Terms of Use for Microsoft Azure Preview
 | Authentication failure | Expired or invalid Entra ID token. | Sign out and sign back in to your Azure account in Visual Studio Code, or the tool you're using. |
 | Quota exceeded | Not enough capacity to create a deployment or run an evaluation. | Use `model_quota_list` to check available quota before the operation. |
 | Resource not found | The specified deployment, dataset, agent, or connection doesn't exist. | Use the corresponding `get` or `list` tool to verify the resource name. |
-| Private endpoint not reachable | Foundry resources use Azure Private Links that the server can't reach. | Remove private endpoint restrictions or use SDKs/REST APIs instead. |
+| Private endpoint not reachable | Foundry resources use Azure Private Links that the hosted Foundry MCP Server can't reach. | Remove private endpoint restrictions, use SDKs/REST APIs, or use a [custom MCP server with Agent Service private networking](/agent-service/model-context-protocol#public-and-private-mcp-server-endpoints). |
 
 For more troubleshooting guidance, see [Foundry MCP Server security and best practices](/developer-experience/security-best-practices#troubleshooting).
 

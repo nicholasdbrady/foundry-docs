@@ -8,11 +8,13 @@ In this article, you learn how to recover your Foundry Agent Service projects fr
 The recommended approach to [design for recovery](https://learn.microsoft.com/azure/well-architected/reliability/principles#design-for-recovery) in your workload is a warm standby, failover, and failback plan for mass outages combined with per-service recovery capabilities for localized outages.
 
 <Info>
+
 This article is part of a three-part series.
 
 To understand platform limitations, prevention controls, and required baseline configuration, see the overview guide. For prerequisites and context, see [Foundry Agent Service disaster recovery](/security/agent-service-disaster-recovery). This article explains why some losses are unrecoverable and why recovery often means reconstruction rather than restoration.
 
 For recommendations on recovering from human-caused or automation-caused deletions and localized data loss, see [Resource and data loss recovery](/security/agent-service-operator-disaster-recovery).
+
 </Info>
 
 ## Prerequisites
@@ -99,7 +101,9 @@ For *each project* you choose to recover, follow these steps:
    If an AI gateway pattern is used, then clients continue to use the gateway's FQDN. The gateway configuration instead needs to be updated to route requests to the newly created project on behalf of its clients.
 
 <Info>
+
 If clients support in-product messaging, notify users they're in a standby environment. Prior conversation history is unavailable, and new conversations *are lost* after failback.
+
 </Info>
 
 **Results:**
@@ -153,7 +157,9 @@ Using Azure Storage multiregion recovery also doesn't improve recovery outcomes.
 The Azure Cosmos DB team initiates a service-managed failover automatically based on internal decisions that you can't directly influence. Normally, you wait until this failover occurs and don't take self-directed action. After the incident, possibly three or more days later, the team fails your instance back to the primary region.
 
 <Tip>
+
 If you have a business-critical need to fail over sooner, you can initiate a [forced failover](https://learn.microsoft.com/azure/cosmos-db/how-to-manage-database-account#perform-forced-failover-for-your-azure-cosmos-db-account) to your failover region. This action causes data loss for any writes that aren't replicated to the failover region yet.
+
 </Tip>
 
 **Results:**
@@ -173,9 +179,11 @@ If you have a business-critical need to fail over sooner, you can initiate a [fo
 **Recovery steps:** None. Wait until the Azure AI Search service is restored in your primary region. Consider going into a graceful degradation state in your workload that avoids any file uploads during this period.
 
 <Info>
+
 If you have a business-critical need to fail over sooner, [Perform a destructive reset of the Azure AI Agent Service capability host](/security/agent-service-operator-disaster-recovery#perform-a-destructive-reset-of-the-azure-ai-agent-service-capability-host) and use a new AI Search instance in your failover region. This action causes *complete data loss* in your production instance. When AI Search is available again in your primary region, perform the same destructive reset action again.
 
 We don't advise this approach unless your users are tolerant of thread loss and your agents can easily rehydrate their file-based knowledge.
+
 </Info>
 
 **Results:**
@@ -226,7 +234,9 @@ We don't advise this approach unless your users are tolerant of thread loss and 
 Remember that an unplanned failover is a temporary state, and you must fail back to your primary region. Follow [the unplanned failback process](https://learn.microsoft.com/azure/storage/common/storage-failover-customer-managed-unplanned) once the Storage service fully recovers.
 
 <Tip>
+
 If possible, use a planned maintenance window and shut down traffic to your AI Agent Service data endpoints 10 minutes before failback. This traffic pause ensures that you minimize any data loss during the recovery.
+
 </Tip>
 
 **Results:**

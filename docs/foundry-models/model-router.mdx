@@ -11,7 +11,9 @@ Use model router through the Chat Completions API like you'd use a single base m
 With the `2025-11-18` version, Model Router adds nine new models including Anthropic's Claude, DeepSeek, Llama, Grok models to support a total of 18 models available for routing your prompts.
 
 <Note>
+
 You don't need to separately deploy the supported LLMs for use with model router, with the exception of the Claude models. To use model router with your Claude models, first deploy them from the model catalog. The deployments will get invoked by Model router if they're selected for routing.
+
 </Note>
 
 |Model router version|Underlying models| Underlying model version
@@ -35,10 +37,12 @@ In the model catalog, find `model-router` in the **Models** list and select it. 
 </Frame>
 
 <Note>
+
 Your deployment settings apply to all underlying chat models that model router uses.
 - Don't deploy the underlying chat models separately. Model router works independently of your other deployed models.
 - Select a content filter when you deploy the model router model or apply a filter later. The content filter applies to all content passed to and from the model router; don't set content filters for each underlying chat model.
 - Your tokens-per-minute rate limit setting applies to all activity to and from the model router; don't set rate limits for each underlying chat model.
+
 </Note>
 
 ### Select a routing mode
@@ -59,7 +63,9 @@ Use the **Routing mode** dropdown to select a routing profile. This sets the rou
 - **Cost**: High-volume, budget-sensitive workloads like content classification or simple Q&A.
 
 <Note>
+
 Changes to the routing mode can take up to five minutes to take effect.
+
 </Note>
 
 ### Select your model subset
@@ -79,11 +85,15 @@ In the model router deployment pane, select **Route to a subset of models**. The
 New models introduced later are excluded by default until explicitly added.
 
 <Info>
+
 To include models by Anthropic (Claude) in your model router deployment, you need to deploy them yourself to your Foundry resource. See [Deploy and use Claude models](https://learn.microsoft.com/azure/ai-foundry/foundry-models/how-to/use-foundry-models-claude).
+
 </Info>
 
 <Note>
+
 Changes to the model subset can take up to five minutes to take effect.
+
 </Note>
 
 ## Test model router with the Completions API
@@ -95,13 +105,17 @@ You can use model router through the [chat completions API](https://learn.micros
 In the [Foundry portal](https://ai.azure.com/?cid=learnDocs), go to your model router deployment on the **Models + endpoints** page and select it to open the model playground. In the playground, enter messages and see the model's responses. Each response shows which underlying model the router selected.
 
 <Info>
+
 You can set the `Temperature` and `Top_P` parameters to the values you prefer (see the [concepts guide](https://learn.microsoft.com/azure/ai-foundry/openai/concepts/prompt-engineering)), but note that reasoning models (o-series) don't support these parameters. If model router selects a reasoning model for your prompt, it ignores the `Temperature` and `Top_P` input parameters.
 
 The parameters `stop`, `presence_penalty`, `frequency_penalty`, `logit_bias`, and `logprobs` are similarly dropped for o-series models but used otherwise.
+
 </Info>
 
 <Info>
+
 Starting with the `2025-11-18` version, the `reasoning_effort` parameter (see the [Reasoning models guide](https://learn.microsoft.com/azure/ai-foundry/openai/how-to/reasoning)) is now **supported** in model router. If the model router selects a reasoning model for your prompt, it will use your `reasoning_effort` input value with the underlying model.
+
 </Info>
 
 ## Connect model router to a Foundry agent
@@ -113,7 +127,9 @@ Sign in to [Microsoft Foundry](https://ai.azure.com/?cid=learnDocs). Make sure t
 If you've created an AI agent in Foundry, you can connect your model router deployment to be used as the agent's base model. Select it from the **model** dropdown menu in the agent playground. Your agent will have all the tools and instructions you've configured for it, but the underlying model that processes its responses will be selected by model router.
 
 <Info>
+
 If you use Agent service tools in your flows, only OpenAI models will be used for routing.
+
 </Info>
 
 ### Output format 
@@ -262,7 +278,9 @@ The following open-source repositories demonstrate model router in different sce
 | [On-Call Copilot Multi-Agent Demo](https://github.com/leestott/On-Call-Copilot-Multi-Agent) (Python) | See how model router dynamically selects the right model per agent step — a fast, low-cost model for classification and a reasoning model for root-cause analysis. | Adapt the multi-agent architecture, agent roles, and escalation paths for your own operations or support scenarios. |
 
 <Info>
+
 These samples are intended for learning and experimentation only and are not production-ready. Before deploying any code derived from these repositories, review it against your organization's security, compliance, and responsible AI policies. See the [Microsoft Responsible AI principles](https://www.microsoft.com/ai/responsible-ai) for guidance.
+
 </Info>
 
 ## Next steps

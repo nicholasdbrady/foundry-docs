@@ -8,7 +8,9 @@ These techniques aren't recommended for reasoning models like gpt-5 and o-series
 Prompt construction can be difficult. In practice, the prompt acts to help the model complete the desired task, but it's more of an art than a science, often requiring experience and intuition to craft a successful prompt. The goal of this article is to help get you started with this learning process. This article attempts to capture general concepts and patterns that apply to all GPT models. However, it's important to understand that each model behaves differently, so the learnings might not apply equally to all models.
 
 <Note>
+
 For current API guidance and examples, see [Responses API](/foundry-models/responses) and [Azure OpenAI in Microsoft Foundry Models API reference](/api-sdk/latest).
+
 </Note>
 
 ## Basics
@@ -100,7 +102,9 @@ The techniques in this section will teach you strategies for increasing the accu
 This guide doesn't go in-depth into the mechanics behind the message structure for Chat Completions. If you aren't familiar with interacting with Chat Completions models programmatically, we recommend reading our [how-to guide on the Chat Completion API first](/foundry-models/chatgpt).  
 
 <Note>
+
 All of the examples in this section of the guide were tested against a base GPT-4 model in English. Some techniques may produce different results with newer models like `gpt-4.1`, and `gpt-4.5`. If you're reading a localized version of this article in another language, these responses represent a localized translation of the English results. To learn more about potential limitations depending on what language you're using to prompt a model, consult our [Responsible AI transparency note](https://learn.microsoft.com/azure/ai-foundry/responsible-ai/openai/transparency-note#limitations).
+
 </Note>
 
 ## Few-shot learning
@@ -128,7 +132,9 @@ While the Chat Completion API is optimized to work with multi-turn conversations
 The sequence information appears in the prompt matters. This is because GPT style models are built in a certain way that defines how they process the input. Our research suggests that telling the model the task you want it to do at the beginning of the prompt, before sharing additional contextual information or examples, can help produce higher-quality outputs.
 
 <Note>
+
 Although following this technique is still generally recommended, in contrast to previous model versions (GPT-3 and prior), our testing showed that the model response with ChatGPT and GPT-4 models was the same regardless of whether the technique is utilized. In this example, we see that adding the statement “Several sources … eruption” at the beginning or the end of the prompt didn't cause any change in the final model response.
+
 </Note>
 
 | System message |User     | Assistant  |
@@ -184,7 +190,9 @@ One simple way to use an affordance is to stop generation once the affordance ca
 ## Chain of thought prompting
 
 <Info>
+
 This technique is only applicable non-reasoning models. Attempting to extract model reasoning through methods other than the reasoning summary parameter aren't supported, may violate the Acceptable Use Policy, and may result in throttling or suspension when detected.
+
 </Info>
 
 This is a variation on the **break the task down** technique. Instead of splitting a task into smaller steps, in this approach, the model response is instructed to proceed step-by-step and present all the steps involved. Doing so reduces the possibility of inaccuracy of outcomes and makes assessing the model response easier.

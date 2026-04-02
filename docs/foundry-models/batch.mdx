@@ -22,15 +22,19 @@ Key use cases include:
 * **Marketing and Personalization:** Generate personalized content and recommendations at scale.
 
 <Tip>
+
 If your batch jobs are so large that you are hitting the enqueued token limit even after maxing out the quota for your deployment, certain regions now support a new feature that allows you to queue multiple batch jobs with exponential backoff. 
 
 Once your enqueued token quota is available, the next batch job can be created and kicked off automatically. To learn more, see [**automating retries of large batch jobs with exponential backoff**](#queueing-batch-jobs).
+
 </Tip>
 
 <Info>
+
 We aim to process batch requests within 24 hours; we don't expire the jobs that take longer. You can [cancel](#cancel-batch) the job anytime. When you cancel the job, any remaining work is canceled and any already completed work is returned. You'll be charged for any completed work.
 
 Data stored at rest remains in the designated Azure geography, while data may be processed for inferencing in any Azure OpenAI location. [Learn more about data residency](https://azure.microsoft.com/explore/global-infrastructure/data-residency/).
+
 </Info>
 
 ## Batch support
@@ -93,7 +97,9 @@ Data stored at rest remains in the designated Azure geography, while data may be
 </Tabs>
 
 <Note>
+
 While Global Batch supports older API versions, some models require newer API versions. For example, `o3-mini` isn't supported with `2024-10-21` since it was released after this date. To access newer models with Global Batch, use the v1 API.
+
 </Note>
 
 ### Feature support
@@ -106,11 +112,15 @@ The following aren't currently supported:
 ### Batch deployment
 
 <Note>
+
 In the [Microsoft Foundry portal](https://ai.azure.com/?cid=learnDocs) the batch deployment types appear as `Global-Batch` and `Data Zone Batch`. To learn more about Azure OpenAI deployment types, see the [deployment types guide](/foundry-models/deployment-types).
+
 </Note>
 
 <Tip>
+
 We recommend enabling **dynamic quota** for all global batch model deployments to help avoid job failures due to insufficient enqueued token quota. Using dynamic quota allows your deployment to opportunistically take advantage of more quota when extra capacity is available. When dynamic quota is set to off, your deployment will only be able to process requests up to the enqueued token limit that was defined when you created the deployment.
+
 </Tip>
 
 ## Prerequisites
@@ -210,9 +220,11 @@ The `custom_id` is required to allow you to identify which individual batch requ
 `model` attribute should be set to match the name of the Global Batch deployment you wish to target for inference responses. 
 
 <Info>
+
 The `model` attribute must be set to match the name of the Global Batch deployment you wish to target for inference responses. The **same Global Batch model deployment name must be present on each line of the batch file.** If you want to target a different deployment you must do so in a separate batch file/job.
 
 For the best performance we recommend submitting large files for batch processing, rather than a large number of small files with only a few lines in each file.
+
 </Info>
 
 ### Create input file
@@ -356,9 +368,11 @@ The `custom_id` is required to allow you to identify which individual batch requ
 `model` attribute should be set to match the name of the Global Batch deployment you wish to target for inference responses.
 
 <Info>
+
 The `model` attribute must be set to match the name of the Global Batch deployment you wish to target for inference responses. The **same Global Batch model deployment name must be present on each line of the batch file.** If you want to target a different deployment you must do so in a separate batch file/job.
 
 For the best performance we recommend submitting large files for batch processing, rather than a large number of small files with only a few lines in each file.
+
 </Info>
 
 ### Create input file
@@ -464,7 +478,9 @@ print(batch_response.model_dump_json(indent=2))
 ```
 
 <Note>
+
 Currently the completion window must be set to `24h`. If you set any other value than `24h` your job will fail. Jobs taking longer than 24 hours will continue to execute until canceled.
+
 </Note>
 
 **Output:**
@@ -1215,9 +1231,11 @@ The `custom_id` is required to allow you to identify which individual batch requ
 `model` attribute should be set to match the name of the Global Batch deployment you wish to target for inference responses.
 
 <Info>
+
 The `model` attribute must be set to match the name of the Global Batch deployment you wish to target for inference responses. The **same Global Batch model deployment name must be present on each line of the batch file.** If you want to target a different deployment you must do so in a separate batch file/job.
 
 For the best performance we recommend submitting large files for batch processing, rather than a large number of small files with only a few lines in each file.
+
 </Info>
 
 ### Create input file
@@ -1306,7 +1324,9 @@ curl -X POST https://YOUR_RESOURCE_NAME.openai.azure.com/openai/v1/batches \
 Here you can optionally add  `"output_expires_after":{"seconds": 1209600},` and `"anchor": "created_at"` so that your output files expire in 14 days.
 
 <Note>
+
 Currently the completion window must be set to `24h`. If you set any other value than `24h` your job will fail. Jobs taking longer than 24 hours will continue to execute until canceled.
+
 </Note>
 
 **Output:**
@@ -1446,7 +1466,9 @@ To avoid the error `URL rejected: Malformed input to a URL function` spaces are 
 | Maximum requests per file | 100,000 |
 
 <Note>
+
 Batch file limits don't apply to output files (for example, `result.jsonl`, and `error.jsonl`). To remove batch input file limits, use [Batch with Azure Blob Storage](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/how-to/batch-blob-storage).
+
 </Note>
 
 ## Batch quota
