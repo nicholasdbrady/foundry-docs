@@ -491,7 +491,8 @@ def convert_zone_pivots(content: str) -> str:
         line = lines[i]
 
         # Match zone start: :::zone pivot="python" or ::: zone pivot="python"
-        zone_start = re.match(r':::\s*zone\s+pivot="([^"]+)"\s*$', line)
+        # Use .strip() to handle indented zone markers
+        zone_start = re.match(r':::\s*zone\s+pivot="([^"]+)"\s*$', line.strip())
         if zone_start:
             pivot_name = zone_start.group(1)
             zones.append((pivot_name, []))
@@ -499,7 +500,7 @@ def convert_zone_pivots(content: str) -> str:
             continue
 
         # Match zone end: :::zone-end or ::: zone-end
-        if re.match(r':::\s*zone-end\s*$', line):
+        if re.match(r':::\s*zone-end\s*$', line.strip()):
             if zones:
                 pivot_name, zone_content = zones.pop()
                 zone_groups.append((pivot_name, zone_content))
