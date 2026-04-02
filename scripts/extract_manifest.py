@@ -222,9 +222,21 @@ def scan_doc_for_images(source_path: str) -> list[str]:
     return images
 
 
+def _sanitize_slug(raw: str) -> str:
+    """Sanitize a string into a URL-safe slug.
+
+    Strips characters that break URL routing (``?``, ``#``, ``&``, ``%``)
+    and collapses runs of hyphens.
+    """
+    slug = raw.lower().replace(' ', '-')
+    slug = re.sub(r'[?#&%!\'\"()\[\]{}]', '', slug)
+    slug = re.sub(r'-{2,}', '-', slug)
+    return slug.strip('-')
+
+
 def build_output_path(entry: dict) -> str:
     """Build Mintlify output path from entry metadata."""
-    section_slug = SECTION_SLUG_MAP.get(entry['section'], entry['section'].lower().replace(' ', '-'))
+    section_slug = SECTION_SLUG_MAP.get(entry['section'], _sanitize_slug(entry['section']))
     source = PurePosixPath(entry['source_path'])
     stem = source.stem
     # Use section slug + filename
@@ -250,7 +262,7 @@ def main():
         cat = categorize_href(href)
         toc_section = {
             'name': section_name,
-            'slug': SECTION_SLUG_MAP.get(section_name, section_name.lower().replace(' ', '-')),
+            'slug': SECTION_SLUG_MAP.get(section_name, _sanitize_slug(section_name)),
             'pages': [],
         }
 

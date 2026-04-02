@@ -180,7 +180,7 @@ def convert_callouts(content: str) -> str:
             stripped = re.sub(r"^>\s?", "", line)
             lines.append(stripped)
         inner = "\n".join(lines).strip()
-        return f"{indent}<{component}>\n{indent}{inner}\n{indent}</{component}>\n"
+        return f"{indent}<{component}>\n{indent}\n{indent}{inner}\n{indent}\n{indent}</{component}>\n"
 
     content = re.sub(pattern, replace_callout, content, flags=re.IGNORECASE | re.MULTILINE)
     return content
@@ -272,7 +272,8 @@ def convert_columns(content: str) -> str:
         n = len(columns)
         cards = []
         for col in columns:
-            cards.append(f"  <Card>\n    {col}\n  </Card>")
+            # Blank lines around markdown content inside JSX components
+            cards.append(f"  <Card>\n\n    {col}\n\n  </Card>")
         return f'<Columns cols={{{n}}}>\n' + "\n".join(cards) + "\n</Columns>\n"
 
     content = re.sub(
@@ -478,8 +479,10 @@ def convert_zone_pivots(content: str) -> str:
             for pivot_name, zone_lines in zone_groups:
                 title = pivot_name.replace("-", " ").title()
                 result.append(f'  <Tab title="{title}">')
+                result.append("")  # blank line so MDX parses markdown inside JSX
                 for line in zone_lines:
                     result.append(f"  {line}" if line.strip() else "")
+                result.append("")  # blank line before closing tag
                 result.append("  </Tab>")
             result.append("</Tabs>")
         zone_groups.clear()
@@ -635,6 +638,8 @@ def replace_html_comments(content: str) -> str:
     Skips content inside code fences to avoid mangling code examples.
     For multi-line comments, ensures all inner lines are indented to at
     least the same level as the opening {/* so they don't break list contexts.
+    Strips JSX-like component tags from comment bodies to prevent MDX parse
+    errors (e.g. unclosed <Tabs>/<Tab> inside a comment).
     """
     parts = _split_code_and_comments(content)
     for i, part in enumerate(parts):
@@ -642,6 +647,12 @@ def replace_html_comments(content: str) -> str:
 
             def _convert_comment(m, _part=part):
                 inner = m.group(1)
+                # Strip JSX component tags that would confuse the MDX parser
+                inner = re.sub(r'</?[A-Z][a-zA-Z]*[^>]*/?>', '', inner)
+                # If nothing meaningful remains, emit a minimal comment
+                cleaned = inner.strip()
+                if not cleaned:
+                    return ''
                 if '\n' not in inner:
                     return '{/*' + inner + '*/}'
                 # Detect indent of the <!-- from the part text
