@@ -37,9 +37,13 @@ For more information about supported models, see the [models and versions docume
 
 Use the GA protocol for WebRTC.
 
-You can still use the beta protocol, but we recommend that you start with the GA Protocol. If you're a current customer, plan to migrate to the GA Protocol. 
+The GA endpoints described in this article use different URLs than the Preview API:
+- GA uses `/openai/v1/realtime/client_secrets` and `/openai/v1/realtime/calls`
+- Preview (deprecated) used `/openai/realtimeapi/sessions` and regional URLs
 
-This article describes how to use WebRTC with the GA Protocol. We preserve the legacy protocol documentation [here](/previous-versions/azure/foundry-models/realtime-audio-webrtc-legacy).
+If you're a current customer using Preview endpoints, [migrate to the GA Protocol](/foundry-models/realtime-audio-preview-api-migration-guide). 
+
+We preserve the legacy protocol documentation [here](/previous-versions/azure/foundry-models/realtime-audio-webrtc-legacy).
 
 </Info>
 
@@ -74,6 +78,16 @@ The key to generating an ephemeral token is the REST API using
 ```text
 url = https://{your azure resource}.openai.azure.com/openai/v1/realtime/client_secrets
 ```
+
+<Note>
+
+This is the **GA endpoint** for WebRTC. If you're migrating from the Preview API, the endpoint has changed:
+- **Preview (deprecated)**: `/openai/realtimeapi/sessions?api-version=2025-04-01-preview`
+- **GA (current)**: `/openai/v1/realtime/client_secrets` (no API version parameter needed)
+
+For migration details, see [Migration from Preview to GA version of Realtime API](/foundry-models/realtime-audio-preview-api-migration-guide#update-webrtc-endpoints).
+
+</Note>
 
 You use this URL with either an api-key or Microsoft Entra ID token. This request retrieves an ephemeral token and sets up the session configuration you want the web browser to use, including the prompt instructions and output voice. 
 
@@ -234,6 +248,14 @@ Your browser application calls your token service to get the token and then init
 ```text
 https://<your azure resource>.openai.azure.com/openai/v1/realtime/calls
 ```
+
+<Note>
+
+This is the **GA endpoint** for WebRTC connections. If you're migrating from the Preview API:
+- **Preview (deprecated)**: `https://<region>.realtimeapi-preview.ai.azure.com/v1/realtimertc`
+- **GA (current)**: `https://<your azure resource>.openai.azure.com/openai/v1/realtime/calls`
+
+</Note>
 
 Once connected, the browser application sends text over the data channel and audio over the media channel. Here's a sample HTML document to get you started.
 
