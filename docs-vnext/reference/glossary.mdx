@@ -7,8 +7,14 @@ Key terms and concepts used throughout the Microsoft Foundry documentation.
 
 ## A
 
+### A2A (Agent2Agent)
+An open protocol enabling AI agents to connect to and invoke remote agent endpoints. In Microsoft Foundry, an A2A tool can be attached to a Foundry agent so it can discover the capabilities of and call an external A2A-compatible agent by its endpoint URL. Useful for multi-agent architectures where specialized agents are hosted separately and exposed via the A2A protocol.
+
 ### Agent
 An AI-powered entity that can perform tasks autonomously using tools, models, and instructions. In Microsoft Foundry, agents are created via the Azure AI Projects SDK and can use built-in tools like Code Interpreter, File Search, and Function Calling.
+
+### Agent Evaluators
+Built-in evaluators in Microsoft Foundry that measure agent quality by producing Pass/Fail scores (or numeric scores thresholded to Pass/Fail). Agent evaluators support both system evaluation (end-to-end outcomes: Task Completion, Task Adherence, Task Navigation Efficiency, Intent Resolution) and process evaluation (step-by-step tool usage: Tool Call Accuracy, Tool Selection, Tool Input Accuracy, Tool Output Utilization, Tool Call Success). Each evaluator requires specific input fields and a judge model deployment.
 
 ### Agentic Retrieval
 A multi-query retrieval pipeline that uses a language model to decompose complex questions into focused subqueries, executes them in parallel, applies semantic reranking, and returns structured grounding data with citations. Used in Foundry IQ and Azure AI Search to improve retrieval quality over classic single-query RAG patterns.
@@ -77,6 +83,11 @@ Microsoft's cloud identity and access management service, formerly Azure Active 
 ### OpenTelemetry
 An open-source observability framework for collecting traces, metrics, and logs. Foundry Agent Service integrates with OpenTelemetry to emit agent traces to Application Insights or other compatible backends, enabling debugging, latency analysis, and production monitoring.
 
+## P
+
+### Process Evaluation
+An evaluation methodology that examines the quality and efficiency of each step in an agentic workflow. Process evaluation focuses on tool calls: whether the agent selected the right tools (Tool Selection), called them with correct parameters (Tool Input Accuracy), successfully executed them (Tool Call Success), and used their results appropriately in its reasoning (Tool Output Utilization). Complements system evaluation, which assesses end-to-end outcomes.
+
 ## R
 
 ### RAG (Retrieval Augmented Generation)
@@ -90,6 +101,16 @@ The output of a single agent invocation in Foundry Agent Service. A response inc
 
 ### Responses API
 The API surface for generating agent outputs in Foundry Agent Service. The Responses API accepts a conversation (or previous response output) and returns a new response with the agent's result. It supersedes the older Assistants API runs endpoint.
+
+## S
+
+### System Evaluation
+An evaluation methodology that examines the end-to-end outcomes of an agentic workflow. System evaluation assesses whether the agent achieved the user's goal and complied with instructions, using evaluators such as Task Completion, Task Adherence, Task Navigation Efficiency, and Intent Resolution. Applicable to single agents and to the final orchestrator in multi-agent systems. Complements process evaluation, which examines step-by-step tool usage.
+
+## T
+
+### Task Navigation Efficiency
+An agent evaluator that measures whether an agent took an optimal sequence of actions by comparing its trajectory against a ground-truth expected sequence. Returns a binary Pass/Fail result plus precision, recall, and F1 scores. Supports three matching modes: `exact_match` (trajectory must match ground truth exactly), `in_order_match` (ground truth steps appear in order, extras allowed), and `any_order_match` (all ground truth steps appear, order ignored).
 
 ## V
 
