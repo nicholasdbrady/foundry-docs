@@ -53,6 +53,17 @@ export const ModelCatalog = () => {
     "fine-tuning": "Fine-tuning",
     assistants: "Assistants",
   }
+  const SKU_LABELS = {
+    GlobalStandard: "Global Standard",
+    Standard: "Standard",
+    DataZoneStandard: "Data Zone Standard",
+    GlobalBatch: "Global Batch",
+    DataZoneBatch: "Data Zone Batch",
+    ProvisionedManaged: "Provisioned Managed",
+    GlobalProvisionedManaged: "Global Provisioned Managed",
+    DataZoneProvisionedManaged: "Data Zone Provisioned",
+    DeveloperTier: "Developer Tier",
+  }
   const MODALITY_ICONS = { text: "Aa", image: "◩", audio: "♪", video: "▶" }
 
   const facetConfig = [
@@ -60,12 +71,29 @@ export const ModelCatalog = () => {
     { key: "tasks", label: "Task" },
     { key: "capabilities", label: "Capability" },
     { key: "deploymentTypes", label: "Deployment" },
+    { key: "_skuTypes", label: "SKU Type", derived: true },
+    { key: "_regions", label: "Region", derived: true },
   ]
+
+  // Helper to extract derived facet values from nested regions dict
+  const getModelFacetValues = (m, key) => {
+    if (key === "_skuTypes") return Object.keys(m.regions || {})
+    if (key === "_regions") {
+      const allRegions = new Set()
+      for (const regions of Object.values(m.regions || {})) {
+        for (const r of regions) allRegions.add(r)
+      }
+      return [...allRegions]
+    }
+    const val = m[key]
+    return Array.isArray(val) ? val : val ? [val] : []
+  }
 
   const formatLabel = (key, value) => {
     if (key === "deploymentTypes") return DEPLOY_LABELS[value] || value
     if (key === "tasks") return TASK_LABELS[value] || value
     if (key === "capabilities") return CAP_LABELS[value] || value
+    if (key === "_skuTypes") return SKU_LABELS[value] || value
     return value
   }
 
@@ -92,9 +120,8 @@ export const ModelCatalog = () => {
     for (const [key, values] of Object.entries(activeFilters)) {
       if (values && values.length > 0) {
         result = result.filter((m) => {
-          const mVal = m[key]
-          if (Array.isArray(mVal)) return values.some((v) => mVal.includes(v))
-          return values.includes(mVal)
+          const mVals = getModelFacetValues(m, key)
+          return values.some((v) => mVals.includes(v))
         })
       }
     }
@@ -128,15 +155,14 @@ export const ModelCatalog = () => {
       for (const [key, values] of Object.entries(otherFilters)) {
         if (values && values.length > 0) {
           subset = subset.filter((m) => {
-            const mVal = m[key]
-            if (Array.isArray(mVal)) return values.some((v) => mVal.includes(v))
-            return values.includes(mVal)
+            const mVals = getModelFacetValues(m, key)
+            return values.some((v) => mVals.includes(v))
           })
         }
       }
       const map = {}
       for (const m of subset) {
-        const vals = Array.isArray(m[f.key]) ? m[f.key] : [m[f.key]]
+        const vals = getModelFacetValues(m, f.key)
         for (const v of vals) {
           if (v) map[v] = (map[v] || 0) + 1
         }
