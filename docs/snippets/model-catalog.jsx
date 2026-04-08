@@ -121,7 +121,8 @@ export const ModelCatalog = () => {
             m.displayName?.toLowerCase().includes(q) ||
             m.publisher?.toLowerCase().includes(q) ||
             m.summary?.toLowerCase().includes(q) ||
-            m.id?.toLowerCase().includes(q)
+            m.id?.toLowerCase().includes(q) ||
+            m.keywords?.some((k) => k.toLowerCase().includes(q))
         )
       }
       for (const [key, values] of Object.entries(otherFilters)) {
@@ -180,7 +181,7 @@ export const ModelCatalog = () => {
     navigator.clipboard.writeText(id).then(() => {
       setCopiedId(id)
       setTimeout(() => setCopiedId(null), 1500)
-    })
+    }).catch(() => {})
   }
 
   const hasActiveFilters =
@@ -257,6 +258,7 @@ export const ModelCatalog = () => {
             <div key={facet.key} className="relative">
               <button
                 onClick={() => setOpenDropdown(isOpen ? null : facet.key)}
+                aria-label={`Filter by ${facet.label}${activeVals.length > 0 ? `, ${activeVals.length} selected` : ""}`}
                 className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
                   activeVals.length > 0
                     ? "bg-blue-50 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300"
@@ -279,6 +281,7 @@ export const ModelCatalog = () => {
                       const isActive = activeVals.includes(value)
                       return (
                         <button key={value} onClick={() => toggleFilter(facet.key, value)}
+                          aria-label={`${isActive ? "Remove" : "Add"} ${formatLabel(facet.key, value)} filter`}
                           className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs transition-colors text-left ${
                             isActive
                               ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-medium"
@@ -297,6 +300,7 @@ export const ModelCatalog = () => {
         })}
         {hasActiveFilters && (
           <button onClick={clearFilters}
+            aria-label="Clear all filters"
             className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
             <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -312,6 +316,7 @@ export const ModelCatalog = () => {
           {Object.entries(activeFilters).map(([key, values]) =>
             (values || []).map((v) => (
               <button key={`${key}-${v}`} onClick={() => toggleFilter(key, v)}
+                aria-label={`Remove ${formatLabel(key, v)} filter`}
                 className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/50 transition-colors">
                 {formatLabel(key, v)}
                 <svg className="h-2.5 w-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -390,7 +395,7 @@ export const ModelCatalog = () => {
                         <code className="text-[11px] text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded font-mono">
                           {m.id}
                         </code>
-                        <button onClick={(e) => copyModelId(e, m.id)} title="Copy model ID"
+                        <button onClick={(e) => copyModelId(e, m.id)} aria-label={`Copy model ID ${m.id}`} title="Copy model ID"
                           className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">
                           {copiedId === m.id ? (
                             <svg className="h-3.5 w-3.5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
