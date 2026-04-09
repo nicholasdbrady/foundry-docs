@@ -262,7 +262,7 @@ export const ModelCatalog = () => {
   if (loading) {
     return (
       <div className="not-prose">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-4">
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <div key={i} className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 p-5 animate-pulse">
               <div className="h-4 bg-zinc-200 dark:bg-zinc-700 rounded w-3/4 mb-3" />
@@ -285,7 +285,7 @@ export const ModelCatalog = () => {
   }
 
   return (
-    <div className="not-prose">
+    <div className="not-prose px-6 lg:px-10 xl:px-16 pb-10">
       {/* Search + Controls bar */}
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
         <div className="relative flex-1">
@@ -551,7 +551,7 @@ export const ModelCatalog = () => {
               </div>
             ) : (
               /* ── Card view ── */
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {group.models.map((m) => {
                 const isExpanded = expandedModel === modelKey(m)
                 const allBadges = [
