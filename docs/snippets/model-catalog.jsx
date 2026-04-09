@@ -14,6 +14,7 @@ export const ModelCatalog = () => {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   const [hfLoaded, setHfLoaded] = useState(false)
   const [hfLoading, setHfLoading] = useState(false)
+  const [viewMode, setViewMode] = useState("cards")
 
   useEffect(() => {
     fetch("/static/data/models-core.json")
@@ -315,6 +316,37 @@ export const ModelCatalog = () => {
             <option value="none">Group: None</option>
             <option value="publisher">Group: Provider</option>
           </select>
+          {/* View toggle */}
+          <div className="inline-flex rounded-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden" role="radiogroup" aria-label="View mode">
+            <button
+              onClick={() => setViewMode("cards")}
+              aria-label="Card view"
+              aria-checked={viewMode === "cards"}
+              role="radio"
+              className={`px-2.5 py-2 transition-colors ${viewMode === "cards" ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100" : "bg-white dark:bg-zinc-900 text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300"}`}
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                <rect x="3" y="3" width="7" height="7" rx="1" />
+                <rect x="14" y="3" width="7" height="7" rx="1" />
+                <rect x="3" y="14" width="7" height="7" rx="1" />
+                <rect x="14" y="14" width="7" height="7" rx="1" />
+              </svg>
+            </button>
+            <button
+              onClick={() => setViewMode("list")}
+              aria-label="List view"
+              aria-checked={viewMode === "list"}
+              role="radio"
+              className={`px-2.5 py-2 border-l border-zinc-200 dark:border-zinc-700 transition-colors ${viewMode === "list" ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100" : "bg-white dark:bg-zinc-900 text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300"}`}
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                <line x1="3" y1="5" x2="21" y2="5" />
+                <line x1="3" y1="10" x2="21" y2="10" />
+                <line x1="3" y1="15" x2="21" y2="15" />
+                <line x1="3" y1="20" x2="21" y2="20" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -440,7 +472,7 @@ export const ModelCatalog = () => {
           </button>
         </div>
       ) : (
-        /* Model cards — grouped or flat */
+        /* Model cards or list — grouped or flat */
         groupedModels.map((group) => (
           <div key={group.label || "all"} className="mb-6">
             {group.label && (
@@ -449,7 +481,77 @@ export const ModelCatalog = () => {
                 <span className="ml-2 text-xs font-normal text-zinc-400">{group.models.length}</span>
               </h3>
             )}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+
+            {viewMode === "list" ? (
+              /* ── List view ── */
+              <div className="border border-zinc-200 dark:border-zinc-700 rounded-xl overflow-hidden">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-zinc-50 dark:bg-zinc-800/60 text-left text-zinc-500 dark:text-zinc-400">
+                      <th className="px-4 py-2.5 font-medium">Model</th>
+                      <th className="px-4 py-2.5 font-medium hidden sm:table-cell">Provider</th>
+                      <th className="px-4 py-2.5 font-medium hidden md:table-cell">Task</th>
+                      <th className="px-4 py-2.5 font-medium hidden lg:table-cell">Context</th>
+                      <th className="px-4 py-2.5 font-medium hidden lg:table-cell">Deployment</th>
+                      <th className="px-4 py-2.5 font-medium w-16">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                    {group.models.map((m) => (
+                      <tr key={modelKey(m)}
+                        className="bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer transition-colors"
+                        onClick={() => setExpandedModel(expandedModel === modelKey(m) ? null : modelKey(m))}
+                      >
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2.5">
+                            {publisherIcons[m.publisher] && (
+                              <img src={`data:image/svg+xml;base64,${publisherIcons[m.publisher]}`} alt="" className="w-5 h-5 rounded bg-zinc-100 dark:bg-zinc-800 p-0.5 shrink-0" />
+                            )}
+                            <div className="min-w-0">
+                              <div className="font-medium text-zinc-900 dark:text-zinc-100 truncate">{m.displayName}</div>
+                              <code className="text-[10px] text-zinc-400 dark:text-zinc-500 font-mono">{m.id}</code>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400 hidden sm:table-cell">{m.publisher}</td>
+                        <td className="px-4 py-3 hidden md:table-cell">
+                          <div className="flex flex-wrap gap-1">
+                            {(m.tasks || []).slice(0, 2).map((t) => (
+                              <span key={t} className="px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 text-[10px] font-medium">
+                                {TASK_LABELS[t] || t}
+                              </span>
+                            ))}
+                            {(m.tasks || []).length > 2 && <span className="text-zinc-400 text-[10px]">+{m.tasks.length - 2}</span>}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400 hidden lg:table-cell tabular-nums">
+                          {m.contextWindow ? formatNumber(m.contextWindow) : "—"}
+                        </td>
+                        <td className="px-4 py-3 hidden lg:table-cell">
+                          <div className="flex flex-wrap gap-1">
+                            {(m.deploymentTypes || []).slice(0, 2).map((d) => (
+                              <span key={d} className="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 text-[10px]">
+                                {DEPLOY_LABELS[d] || d}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          {m.lifecycleStatus === "preview" && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">Preview</span>
+                          )}
+                          {m.lifecycleStatus === "generally-available" && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300">GA</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              /* ── Card view ── */
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {group.models.map((m) => {
                 const isExpanded = expandedModel === modelKey(m)
                 const allBadges = [
@@ -648,6 +750,7 @@ export const ModelCatalog = () => {
                 )
               })}
             </div>
+            )}
           </div>
         ))
       )}
