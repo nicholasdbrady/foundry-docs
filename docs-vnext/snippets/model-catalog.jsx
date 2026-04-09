@@ -12,7 +12,7 @@ export const ModelCatalog = () => {
   const [openDropdown, setOpenDropdown] = useState(null)
 
   useEffect(() => {
-    fetch("/static/data/models.json")
+    fetch(`/static/data/models.json?v=${Math.floor(Date.now() / 3600000)}`)
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`)
         return r.json()
@@ -140,7 +140,12 @@ export const ModelCatalog = () => {
       }
     }
     result = [...result].sort((a, b) => {
-      if (sortBy === "newest") return (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0)
+      if (sortBy === "newest") {
+        const da = Date.parse(a.createdAt) || 0
+        const db = Date.parse(b.createdAt) || 0
+        if (da !== db) return db - da
+        return (a.displayName || "").localeCompare(b.displayName || "")
+      }
       if (sortBy === "name") return (a.displayName || "").localeCompare(b.displayName || "")
       if (sortBy === "context") return (b.contextWindow || 0) - (a.contextWindow || 0)
       if (sortBy === "publisher") return (a.publisher || "").localeCompare(b.publisher || "")
