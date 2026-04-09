@@ -104,9 +104,8 @@ def fetch_models_for_region(region: str) -> dict:
             print(f"  ⚠ {region}: {result.stderr.strip()[:120]}", file=sys.stderr)
             return {"region": region, "models": []}
         models = json.loads(result.stdout)
-        openai_models = [m for m in models if m.get("kind") == "OpenAI"]
-        print(f"  ✓ {region}: {len(openai_models)} OpenAI models")
-        return {"region": region, "models": openai_models}
+        print(f"  ✓ {region}: {len(models)} models")
+        return {"region": region, "models": models}
     except subprocess.TimeoutExpired:
         print(f"  ⚠ {region}: timeout", file=sys.stderr)
         return {"region": region, "models": []}

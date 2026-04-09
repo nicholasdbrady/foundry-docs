@@ -292,17 +292,22 @@ def deduplicate_models(models: list[CatalogModel]) -> list[CatalogModel]:
     return sorted(deduped, key=lambda m: (m.publisher.lower(), m.id.lower()))
 
 
-def merge_region_data(models: list[CatalogModel], raw_data_path: str) -> None:
-    """Merge region availability from generate_model_availability.py output."""
+def merge_region_data(models: list[CatalogModel], raw_data_path: str) -> list[CatalogModel]:
+    """Merge region availability and filter deprecated models using region data as authoritative source.
+
+    Returns the filtered list of non-deprecated models with region data merged.
+    """
     if not os.path.exists(raw_data_path):
         log.warning("  ⚠ Region data file not found: %s — skipping region merge", raw_data_path)
-        return
+        return models
 
     with open(raw_data_path) as f:
         region_data = json.load(f)
 
     # Build lookup: model_name -> { sku_name -> [regions] }
     region_map: dict[str, dict[str, list[str]]] = defaultdict(lambda: defaultdict(list))
+    # Build authoritative deprecated set from region data
+    deprecated_names: set[str] = set()
     for rd in region_data:
         region = rd.get("region", "")
         for entry in rd.get("models", []):
@@ -310,11 +315,19 @@ def merge_region_data(models: list[CatalogModel], raw_data_path: str) -> None:
             name = m.get("name", "").lower()
             lifecycle = m.get("lifecycleStatus", "")
             if lifecycle == "Deprecated":
+                deprecated_names.add(name)
                 continue
             for sku in m.get("skus", []):
                 sku_name = sku.get("name", "")
                 if sku_name and region:
                     region_map[name][sku_name].append(region)
+
+    # Filter out deprecated models
+    before_count = len(models)
+    removed = [m for m in models if m.id.lower() in deprecated_names]
+    models = [m for m in models if m.id.lower() not in deprecated_names]
+    if removed:
+        log.info("  🗑️  Removed %d deprecated models: %s", len(removed), ", ".join(m.id for m in removed))
 
     matched = 0
     for model in models:
@@ -332,6 +345,8 @@ def merge_region_data(models: list[CatalogModel], raw_data_path: str) -> None:
         log.info("  ℹ  Unmatched models: %s", ", ".join(unmatched[:20]))
         if len(unmatched) > 20:
             log.info("     ... and %d more", len(unmatched) - 20)
+
+    return models
 
 
 def validate_output(models: list[CatalogModel]) -> bool:
@@ -417,7 +432,7 @@ def main():
 
     if args.merge_regions:
         log.info("📍 Merging region availability data...")
-        merge_region_data(deduped, args.merge_regions)
+        deduped = merge_region_data(deduped, args.merge_regions)
 
     log.info("✔️  Validating output...")
     if not validate_output(deduped):
