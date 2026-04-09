@@ -678,8 +678,8 @@ export const ModelCatalog = () => {
                         </button>
                       </div>
 
-                      {/* Description — flex-1 to fill remaining space */}
-                      <div className="flex-1 mb-2" style={{minHeight: "2.5rem"}}>
+                      {/* Description — fixed height for consistent card alignment */}
+                      <div className="mb-2" style={{height: isExpanded ? "auto" : "2.5rem"}}>
                         <p className={`model-desc text-xs text-zinc-500 dark:text-zinc-400 ${isExpanded ? "block max-h-24 overflow-y-auto" : "line-clamp-2"}`}>
                           {m.summary || "\u00A0"}
                         </p>
