@@ -679,7 +679,7 @@ export const ModelCatalog = () => {
                       </div>
 
                       {/* Description — fixed height for consistent card alignment */}
-                      <div className="mb-2" style={{height: isExpanded ? "auto" : "2.5rem"}}>
+                      <div className="mb-2 overflow-hidden" style={{height: isExpanded ? "auto" : "2.5rem"}}>
                         <p className={`model-desc text-xs text-zinc-500 dark:text-zinc-400 ${isExpanded ? "block max-h-24 overflow-y-auto" : "line-clamp-2"}`}>
                           {m.summary || "\u00A0"}
                         </p>
