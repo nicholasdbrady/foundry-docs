@@ -19,7 +19,12 @@ export const ModelCatalog = () => {
       })
       .then((data) => {
         setModels(data.models || [])
-        setPublisherIcons(data.publisherIcons || {})
+        // Decode base64 SVGs once on load for inline rendering
+        const decoded = {}
+        for (const [pub, b64] of Object.entries(data.publisherIcons || {})) {
+          try { decoded[pub] = atob(b64) } catch (_) {}
+        }
+        setPublisherIcons(decoded)
         setLoading(false)
       })
       .catch((err) => {
@@ -68,8 +73,14 @@ export const ModelCatalog = () => {
   }
   const MODALITY_ICONS = { text: "Aa", image: "◩", audio: "♪", video: "▶" }
 
+  const LIFECYCLE_LABELS = {
+    "generally-available": "Generally Available",
+    "preview": "Preview",
+  }
+
   const facetConfig = [
     { key: "publisher", label: "Provider" },
+    { key: "lifecycleStatus", label: "Lifecycle" },
     { key: "tasks", label: "Task" },
     { key: "capabilities", label: "Capability" },
     { key: "deploymentTypes", label: "Deployment" },
@@ -96,6 +107,7 @@ export const ModelCatalog = () => {
     if (key === "tasks") return TASK_LABELS[value] || value
     if (key === "capabilities") return CAP_LABELS[value] || value
     if (key === "_skuTypes") return SKU_LABELS[value] || value
+    if (key === "lifecycleStatus") return LIFECYCLE_LABELS[value] || value
     return value
   }
 
@@ -128,7 +140,7 @@ export const ModelCatalog = () => {
       }
     }
     result = [...result].sort((a, b) => {
-      if (sortBy === "newest") return (b.latestVersion || "").localeCompare(a.latestVersion || "")
+      if (sortBy === "newest") return (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0)
       if (sortBy === "name") return (a.displayName || "").localeCompare(b.displayName || "")
       if (sortBy === "context") return (b.contextWindow || 0) - (a.contextWindow || 0)
       if (sortBy === "publisher") return (a.publisher || "").localeCompare(b.publisher || "")
@@ -407,9 +419,8 @@ export const ModelCatalog = () => {
                       {/* Header row with icon */}
                       <div className="flex items-start gap-3 mb-2">
                         {publisherIcons[m.publisher] && (
-                          <div className="shrink-0 w-8 h-8 mt-0.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 p-1.5 flex items-center justify-center overflow-hidden">
-                            <img src={`data:image/svg+xml;base64,${publisherIcons[m.publisher]}`} alt={m.publisher} className="w-full h-full object-contain" />
-                          </div>
+                          <div className="shrink-0 w-8 h-8 mt-0.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 p-1.5 flex items-center justify-center overflow-hidden"
+                            dangerouslySetInnerHTML={{ __html: publisherIcons[m.publisher] }} />
                         )}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2">
@@ -417,8 +428,11 @@ export const ModelCatalog = () => {
                               {m.displayName}
                             </h3>
                             <div className="flex items-center gap-1.5 shrink-0">
-                              {m.isPreview && (
+                              {m.lifecycleStatus === "preview" && (
                                 <span className="px-1.5 py-0.5 rounded text-[11px] font-medium bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">Preview</span>
+                              )}
+                              {m.lifecycleStatus === "generally-available" && (
+                                <span className="px-1.5 py-0.5 rounded text-[11px] font-medium bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300">GA</span>
                               )}
                               <svg className={`h-4 w-4 text-zinc-400 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}
                                 fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -211,13 +211,16 @@ def normalize_model(raw: dict) -> CatalogModel | None:
     is_preview = "Preview" in tags or any("preview" in str(l).lower() for l in labels)
     lifecycle = "preview" if is_preview else "generally-available"
 
-    # Extract createdAt from systemData
-    system_data = raw.get("annotations", {}).get("systemData") or {}
-    if not system_data:
-        # Try from the model-level properties
-        props = raw.get("properties", {})
-        system_data = props.get("systemData") or {}
-    created_at = _safe_str(system_data.get("createdAt", ""))
+    # Extract createdAt from properties.creationContext (most reliable source)
+    props = raw.get("properties", {})
+    creation_ctx = props.get("creationContext") or {}
+    created_at = _safe_str(creation_ctx.get("createdTime", ""))
+    if not created_at:
+        # Fallback to systemData
+        system_data = raw.get("annotations", {}).get("systemData") or {}
+        if not system_data:
+            system_data = props.get("systemData") or {}
+        created_at = _safe_str(system_data.get("createdAt", ""))
 
     return CatalogModel(
         id=model_name,
@@ -280,6 +283,10 @@ def deduplicate_models(models: list[CatalogModel]) -> list[CatalogModel]:
         latest.deploymentTypes = sorted(all_dt)
         latest.azureOffers = sorted(all_offers)
         latest.toolsSupported = sorted(all_tools)
+        # Use the earliest createdAt across all versions for proper release-date sorting
+        all_dates = [v.createdAt for v in versions if v.createdAt]
+        if all_dates:
+            latest.createdAt = min(all_dates)
         deduped.append(latest)
 
     return sorted(deduped, key=lambda m: (m.publisher.lower(), m.id.lower()))
