@@ -58,7 +58,7 @@ tools:
 
 safe-outputs:
   create-pull-request:
-    expires: 2d
+    expires: 7d
     title-prefix: "[docs-vnext] "
     labels: [documentation, automation, docs-vnext, upstream-sync]
     reviewers: [copilot]

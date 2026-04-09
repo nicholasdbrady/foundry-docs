@@ -30,7 +30,7 @@ safe-outputs:
     title-prefix: "[model-catalog] "
     labels: [automation, model-catalog]
     auto-merge: true
-    expires: 2d
+    expires: 7d
     draft: false
   noop:
 

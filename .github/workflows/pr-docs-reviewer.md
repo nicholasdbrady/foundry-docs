@@ -5,7 +5,7 @@ on:
   pull_request:
     types: [opened, synchronize]
   reaction: "eyes"
-  skip-bots: [github-actions, dependabot]
+  skip-bots: [dependabot]
 
 permissions:
   contents: read
@@ -37,8 +37,9 @@ tools:
     - "head *"
 
 safe-outputs:
-  add-comment:
-    max: 1
+  submit-pull-request-review:
+  create-pull-request-review-comment:
+    max: 10
   add-labels:
     allowed: [documentation, docs-vnext, needs-review, approved-docs]
     max: 3
@@ -46,13 +47,13 @@ safe-outputs:
 
 timeout-minutes: 10
 concurrency:
-  group: "gh-aw-${{ github.workflow }}"
+  group: "gh-aw-${{ github.workflow }}-${{ github.event.pull_request.number }}"
   cancel-in-progress: true
 ---
 
 # PR Documentation Reviewer
 
-You review pull requests that modify `docs-vnext/` documentation to ensure MDX quality, style compliance, and content accuracy.
+You review pull requests that modify `docs-vnext/` documentation to ensure MDX quality, style compliance, and content accuracy. You are the autonomous reviewer — your approval enables auto-merge.
 
 ## Context
 
@@ -109,58 +110,72 @@ For each changed `.mdx` file in `docs-vnext/`, check:
 - [ ] Internal links use root-relative paths without extensions
 - [ ] External links are valid (spot-check 2-3)
 
-## Step 4: Generate Review
+## Step 4: Submit Review
 
-### If Issues Found
+### If All Checks Pass (no 🔴 issues)
 
-Add a comment with the review:
+Submit an **APPROVE** review:
+
+1. Add label `approved-docs`
+2. Submit a pull request review with event `APPROVE` and body:
 
 ```markdown
-### 📝 Documentation Review
+### ✅ Documentation Review — Approved
 
 **Files reviewed**: N files in `docs-vnext/`
 
-### Issues Found
+All documentation files pass MDX syntax, style, and content checks. Auto-merge enabled.
+```
+
+### If Critical Issues Found (any 🔴 items)
+
+Submit a **REQUEST_CHANGES** review:
+
+1. Add label `needs-review`
+2. For each issue, add an inline review comment on the specific file and line
+3. Submit a pull request review with event `REQUEST_CHANGES` and body:
+
+```markdown
+### ❌ Documentation Review — Changes Requested
+
+**Files reviewed**: N files in `docs-vnext/`
+
+Found M issue(s) that must be fixed before merging:
 
 | File | Issue | Severity |
 |------|-------|----------|
 | `docs-vnext/path/file.mdx` | Uses `<!-- -->` instead of `{/* */}` | 🔴 Must fix |
-| `docs-vnext/path/file.mdx` | Missing `description` in frontmatter | 🟡 Should fix |
 
-### Details
-
-<details>
-<summary><b>File: docs-vnext/path/file.mdx</b></summary>
-
-- Line 15: HTML comment should be JSX comment
-- Line 42: Missing self-closing on `<br>`
-
-</details>
-
-### Summary
-
-N issues found across M files. Please address 🔴 items before merging.
+See inline comments for details.
 ```
 
-Also add label `needs-review`.
+### If Only Minor Issues (🟡 only, no 🔴)
 
-### If No Issues Found
+Submit an **APPROVE** review with notes:
 
-Add a comment:
+1. Add label `approved-docs`
+2. Submit a pull request review with event `APPROVE` and body:
+
 ```markdown
-### ✅ Documentation Review — Passed
+### ✅ Documentation Review — Approved with Notes
 
 **Files reviewed**: N files in `docs-vnext/`
 
-All documentation files pass MDX syntax, style, and content checks.
-```
+Minor style suggestions (non-blocking):
 
-Also add label `approved-docs`.
+| File | Suggestion | Severity |
+|------|-----------|----------|
+| `docs-vnext/path/file.mdx` | Consider adding description | 🟡 Nice to have |
+
+Approved — these are suggestions for future improvement.
+```
 
 ## Guidelines
 
 - Only review files under `docs-vnext/` — ignore all other paths
 - Be specific: include file paths and line numbers for every issue
-- Distinguish severity: 🔴 Must fix (broken MDX) vs 🟡 Should fix (style)
+- Distinguish severity: 🔴 Must fix (broken MDX, missing required fields) vs 🟡 Nice to have (style)
+- APPROVE when there are no 🔴 issues — don't block on minor style suggestions
+- REQUEST_CHANGES only for genuinely broken content (invalid MDX, missing frontmatter, broken links)
 - Don't comment on unrelated code changes in the same PR
 - Be constructive and actionable

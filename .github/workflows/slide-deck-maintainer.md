@@ -28,7 +28,9 @@ tools:
 safe-outputs:
   create-pull-request:
     title-prefix: "[slides] "
-    expires: 3d
+    auto-merge: true
+    draft: false
+    expires: 7d
   report-incomplete:
   noop:
 network:

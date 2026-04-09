@@ -28,7 +28,7 @@ network:
 
 safe-outputs:
   create-pull-request:
-    expires: 2d
+    expires: 7d
     title-prefix: "[changelog] "
     labels: [documentation, automation, changelog]
     reviewers: [copilot]

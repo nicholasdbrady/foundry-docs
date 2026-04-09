@@ -32,9 +32,10 @@ imports:
 
 safe-outputs:
   create-pull-request:
-    expires: 2d
+    expires: 7d
     title-prefix: "[docs-vnext] "
     labels: [documentation, glossary, docs-vnext]
+    auto-merge: true
     draft: false
   noop:
 

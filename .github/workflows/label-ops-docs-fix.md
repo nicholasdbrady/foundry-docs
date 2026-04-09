@@ -45,10 +45,11 @@ tools:
 
 safe-outputs:
   create-pull-request:
-    expires: 3d
+    expires: 7d
     title-prefix: "[docs-vnext] "
     labels: [documentation, automation, docs-vnext]
     reviewers: [copilot]
+    auto-merge: true
     draft: false
   add-comment:
     max: 1

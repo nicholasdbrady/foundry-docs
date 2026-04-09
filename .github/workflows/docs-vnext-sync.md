@@ -20,7 +20,9 @@ safe-outputs:
   create-pull-request:
     title-prefix: "[docs-vnext-sync] "
     labels: [documentation, docs-vnext, sync]
-    expires: 3d
+    auto-merge: true
+    draft: false
+    expires: 7d
   noop:
 
 engine: copilot
