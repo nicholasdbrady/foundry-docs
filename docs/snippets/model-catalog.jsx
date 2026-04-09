@@ -89,7 +89,46 @@ export const ModelCatalog = () => {
     DataZoneProvisionedManaged: "Data Zone Provisioned",
     DeveloperTier: "Developer Tier",
   }
-  const MODALITY_ICONS = { text: "Aa", image: "◩", audio: "♪", video: "▶" }
+  const MODALITY_ICONS = { text: "Aa", image: "◩", audio: "♪", video: "▶", code: "</>", pdf: "⊞", json: "{}", csv: "⊟", data: "◈" }
+
+  // Icon system — compact SVG-based indicators for at-a-glance scanning
+  const CAPABILITY_ICONS = {
+    reasoning: { icon: "🧠", tip: "Reasoning" },
+    streaming: { icon: "⚡", tip: "Streaming" },
+    "tool-calling": { icon: "🔧", tip: "Tool Calling" },
+    "fine-tuning": { icon: "🎯", tip: "Fine-tuning" },
+    agentsV2: { icon: "🤖", tip: "Agents" },
+    agents: { icon: "🤖", tip: "Agents (v1)" },
+    assistants: { icon: "💬", tip: "Assistants" },
+    routing: { icon: "🔀", tip: "Routing" },
+  }
+  const TOOL_ICONS = {
+    web_search: { icon: "🌐", tip: "Web Search" },
+    file_search: { icon: "📂", tip: "File Search" },
+    code_interpreter: { icon: "⌨️", tip: "Code Interpreter" },
+    image_generation: { icon: "🎨", tip: "Image Generation" },
+    mcp: { icon: "🔌", tip: "MCP" },
+    browser_automation: { icon: "🖥️", tip: "Computer Use" },
+    function: { icon: "ƒ", tip: "Functions" },
+    azure_ai_search: { icon: "🔍", tip: "Azure AI Search" },
+    bing_grounding: { icon: "🅱️", tip: "Bing Grounding" },
+    sharepoint_grounding: { icon: "📋", tip: "SharePoint" },
+    fabric_dataagent: { icon: "📊", tip: "Fabric Data Agent" },
+    openapi: { icon: "📡", tip: "OpenAPI" },
+    a2a_preview: { icon: "↔️", tip: "A2A (Preview)" },
+  }
+  const TASK_ICONS = {
+    "chat-completion": { icon: "💬", tip: "Chat Completions" },
+    responses: { icon: "↩️", tip: "Responses API" },
+    embeddings: { icon: "📐", tip: "Embeddings" },
+    "text-to-image": { icon: "🖼️", tip: "Image Generation" },
+    "image-to-image": { icon: "✏️", tip: "Image Editing" },
+    "audio-generation": { icon: "🔊", tip: "Audio Generation" },
+    "speech-to-text": { icon: "🎤", tip: "Speech-to-Text" },
+    "text-to-speech": { icon: "🗣️", tip: "Text-to-Speech" },
+    "video-generation": { icon: "🎬", tip: "Video Generation" },
+    "text-generation": { icon: "📝", tip: "Text Generation" },
+  }
 
   const LIFECYCLE_LABELS = {
     "generally-available": "Generally Available",
@@ -554,12 +593,6 @@ export const ModelCatalog = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {group.models.map((m) => {
                 const isExpanded = expandedModel === modelKey(m)
-                const allBadges = [
-                  ...(m.tasks || []).map((t) => ({ label: TASK_LABELS[t] || t, color: "emerald" })),
-                  ...(m.capabilities || []).map((c) => ({ label: CAP_LABELS[c] || c, color: "purple" })),
-                ]
-                const visibleBadges = allBadges.slice(0, 4)
-                const overflowCount = allBadges.length - 4
 
                 return (
                   <div key={modelKey(m)}
@@ -572,7 +605,7 @@ export const ModelCatalog = () => {
                     role="button" tabIndex={0}
                     onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setExpandedModel(isExpanded ? null : modelKey(m)) } }}
                     aria-expanded={isExpanded}>
-                    <div className="p-5">
+                    <div className="p-4">
                       {/* Header row with icon */}
                       <div className="flex items-start gap-3 mb-2">
                         {publisherIcons[m.publisher] && (
@@ -584,15 +617,15 @@ export const ModelCatalog = () => {
                         )}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2">
-                            <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 leading-tight">
+                            <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 leading-tight line-clamp-2 min-h-[2.5rem]">
                               {m.displayName}
                             </h3>
                             <div className="flex items-center gap-1.5 shrink-0">
                               {m.lifecycleStatus === "preview" && (
-                                <span className="px-1.5 py-0.5 rounded text-[11px] font-medium bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">Preview</span>
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">Preview</span>
                               )}
                               {m.lifecycleStatus === "generally-available" && (
-                                <span className="px-1.5 py-0.5 rounded text-[11px] font-medium bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300">GA</span>
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300">GA</span>
                               )}
                               <svg className={`h-4 w-4 text-zinc-400 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}
                                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -600,19 +633,19 @@ export const ModelCatalog = () => {
                               </svg>
                             </div>
                           </div>
-                          <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                          <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
                             {m.publisher} · v{m.latestVersion}
                           </div>
                         </div>
                       </div>
 
                       {/* Model ID + copy */}
-                      <div className="flex items-center gap-2 mb-3">
-                        <code className="text-[11px] text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded font-mono">
+                      <div className="flex items-center gap-2 mb-2">
+                        <code className="text-[10px] text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded font-mono truncate">
                           {m.id}
                         </code>
                         <button onClick={(e) => copyModelId(e, m.id)} aria-label={`Copy model ID ${m.id}`} title="Copy model ID"
-                          className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">
+                          className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors shrink-0">
                           {copiedId === m.id ? (
                             <svg className="h-3.5 w-3.5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -625,45 +658,70 @@ export const ModelCatalog = () => {
                         </button>
                       </div>
 
-                      {/* Summary */}
-                      <p className="text-xs text-zinc-600 dark:text-zinc-400 line-clamp-2 mb-3 min-h-[2rem]">
+                      {/* Description — clamp when collapsed, full when expanded */}
+                      <p className={`text-xs text-zinc-600 dark:text-zinc-400 mb-3 ${isExpanded ? "" : "line-clamp-2"}`}>
                         {m.summary || "No description available."}
                       </p>
 
-                      {/* Specs row */}
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-zinc-500 dark:text-zinc-400 mb-2.5">
-                        {m.contextWindow && <span>{formatNumber(m.contextWindow)} context</span>}
-                        {m.contextWindow && m.maxOutputTokens && <span className="text-zinc-300 dark:text-zinc-600">·</span>}
-                        {m.maxOutputTokens && <span>{formatNumber(m.maxOutputTokens)} output</span>}
-                        {(m.contextWindow || m.maxOutputTokens) && m.inputModalities?.length > 0 && <span className="text-zinc-300 dark:text-zinc-600">·</span>}
-                        {m.inputModalities?.map((mod) => (
-                          <span key={mod} className="inline-flex items-center gap-0.5" title={`Input: ${mod}`}>
-                            <span className="text-[10px] font-mono text-zinc-400">{MODALITY_ICONS[mod] || mod}</span>
-                          </span>
-                        ))}
-                        {m.license && m.license !== "custom" && (
-                          <>
-                            <span className="text-zinc-300 dark:text-zinc-600">·</span>
-                            <span className="uppercase tracking-wider text-[10px]">{m.license}</span>
-                          </>
-                        )}
-                      </div>
+                      {/* Specs row — context + output */}
+                      {(m.contextWindow || m.maxOutputTokens) && (
+                        <div className="flex items-center gap-2 text-[11px] text-zinc-500 dark:text-zinc-400 mb-2.5 tabular-nums">
+                          {m.contextWindow && <span>{formatNumber(m.contextWindow)} ctx</span>}
+                          {m.contextWindow && m.maxOutputTokens && <span className="text-zinc-300 dark:text-zinc-600">·</span>}
+                          {m.maxOutputTokens && <span>{formatNumber(m.maxOutputTokens)} out</span>}
+                          {m.license && m.license !== "custom" && (
+                            <>
+                              <span className="text-zinc-300 dark:text-zinc-600">·</span>
+                              <span className="uppercase tracking-wider text-[10px]">{m.license}</span>
+                            </>
+                          )}
+                        </div>
+                      )}
 
-                      {/* Badges */}
-                      <div className="flex flex-wrap gap-1">
-                        {visibleBadges.map((b) => (
-                          <span key={b.label}
-                            className={`px-1.5 py-0.5 rounded text-xs font-medium ${
-                              b.color === "emerald"
-                                ? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300"
-                                : "bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300"
-                            }`}>
-                            {b.label}
+                      {/* Icon strip — modalities, tasks, capabilities, tools */}
+                      <div className="flex flex-wrap items-center gap-1">
+                        {/* Input modalities */}
+                        {m.inputModalities?.map((mod) => (
+                          <span key={`in-${mod}`} title={`Input: ${mod}`}
+                            className="inline-flex items-center justify-center w-6 h-6 rounded bg-blue-50 dark:bg-blue-900/20 text-[11px]" role="img" aria-label={`Input: ${mod}`}>
+                            {MODALITY_ICONS[mod] || mod.slice(0,2)}
                           </span>
                         ))}
-                        {overflowCount > 0 && (
-                          <span className="px-1.5 py-0.5 rounded text-xs text-zinc-400 dark:text-zinc-500 bg-zinc-100 dark:bg-zinc-800">
-                            +{overflowCount}
+                        {/* Output modalities (only if different from input) */}
+                        {m.outputModalities?.filter((mod) => !m.inputModalities?.includes(mod)).map((mod) => (
+                          <span key={`out-${mod}`} title={`Output: ${mod}`}
+                            className="inline-flex items-center justify-center w-6 h-6 rounded bg-indigo-50 dark:bg-indigo-900/20 text-[11px]" role="img" aria-label={`Output: ${mod}`}>
+                            {MODALITY_ICONS[mod] || mod.slice(0,2)}
+                          </span>
+                        ))}
+                        {/* Separator */}
+                        {(m.inputModalities?.length > 0 || m.outputModalities?.length > 0) && (m.tasks?.length > 0 || m.capabilities?.length > 0) && (
+                          <span className="w-px h-4 bg-zinc-200 dark:bg-zinc-700 mx-0.5" />
+                        )}
+                        {/* Tasks (top 3) */}
+                        {(m.tasks || []).slice(0, 3).map((t) => {
+                          const ti = TASK_ICONS[t]
+                          return ti ? (
+                            <span key={t} title={ti.tip}
+                              className="inline-flex items-center justify-center w-6 h-6 rounded bg-emerald-50 dark:bg-emerald-900/20 text-[11px]" role="img" aria-label={ti.tip}>
+                              {ti.icon}
+                            </span>
+                          ) : null
+                        })}
+                        {/* Capabilities (top 4) */}
+                        {(m.capabilities || []).slice(0, 4).map((c) => {
+                          const ci = CAPABILITY_ICONS[c]
+                          return ci ? (
+                            <span key={c} title={ci.tip}
+                              className="inline-flex items-center justify-center w-6 h-6 rounded bg-purple-50 dark:bg-purple-900/20 text-[11px]" role="img" aria-label={ci.tip}>
+                              {ci.icon}
+                            </span>
+                          ) : null
+                        })}
+                        {/* Overflow count */}
+                        {((m.tasks || []).length + (m.capabilities || []).length) > 7 && (
+                          <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-zinc-100 dark:bg-zinc-800 text-[10px] text-zinc-400">
+                            +{(m.tasks || []).length + (m.capabilities || []).length - 7}
                           </span>
                         )}
                       </div>
@@ -671,7 +729,7 @@ export const ModelCatalog = () => {
 
                     {/* Expanded details */}
                     {isExpanded && (
-                      <div className="px-5 pb-5 pt-0">
+                      <div className="px-4 pb-4 pt-0">
                         <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800">
                           <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
                             {m.deploymentTypes?.length > 0 && (
@@ -713,11 +771,18 @@ export const ModelCatalog = () => {
                           </div>
                           {m.toolsSupported?.length > 0 && (
                             <div className="mt-3">
-                              <span className="text-xs text-zinc-400 dark:text-zinc-500 block mb-1">Supported tools</span>
+                              <span className="text-xs text-zinc-400 dark:text-zinc-500 block mb-1">Tools</span>
                               <div className="flex flex-wrap gap-1">
-                                {m.toolsSupported.map((t) => (
-                                  <span key={t} className="px-1.5 py-0.5 rounded text-[11px] bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">{t}</span>
-                                ))}
+                                {m.toolsSupported.map((t) => {
+                                  const ti = TOOL_ICONS[t]
+                                  return (
+                                    <span key={t} title={ti?.tip || t}
+                                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
+                                      {ti && <span>{ti.icon}</span>}
+                                      {ti?.tip || t}
+                                    </span>
+                                  )
+                                })}
                               </div>
                             </div>
                           )}
