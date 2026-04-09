@@ -674,9 +674,9 @@ export const ModelCatalog = () => {
                         </button>
                       </div>
 
-                      {/* Description — clamp when collapsed, full when expanded */}
-                      <p className={`text-xs leading-snug text-zinc-600 dark:text-zinc-400 ${isExpanded ? "mb-2 max-h-24 overflow-y-auto" : "line-clamp-2 mb-2"}`} style={{minHeight: "2rem"}}>
-                        {m.summary || "No description available."}
+                      {/* Description */}
+                      <p className={`text-xs text-zinc-500 dark:text-zinc-400 ${isExpanded ? "mb-2 max-h-24 overflow-y-auto" : "line-clamp-2 mb-2"}`} style={{lineHeight: "1.4", minHeight: "2.25rem"}}>
+                        {m.summary || "\u00A0"}
                       </p>
 
                       {/* Specs row — context + output (always rendered for alignment) */}
@@ -692,52 +692,50 @@ export const ModelCatalog = () => {
                         )}
                       </div>
 
-                      {/* Icon strip — modalities, tasks, capabilities, tools */}
-                      <div className="flex flex-wrap items-center gap-1">
-                        {/* Input modalities */}
-                        {m.inputModalities?.map((mod) => (
-                          <span key={`in-${mod}`} title={`Input: ${mod}`}
-                            className="inline-flex items-center justify-center w-6 h-6 rounded bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
-                            {MODALITY_ICON[mod] ? <FI {...MODALITY_ICON[mod]} /> : <span className="text-[10px]">{mod.slice(0,2)}</span>}
-                          </span>
-                        ))}
-                        {/* Output modalities (only if different from input) */}
-                        {m.outputModalities?.filter((mod) => !m.inputModalities?.includes(mod)).map((mod) => (
-                          <span key={`out-${mod}`} title={`Output: ${mod}`}
-                            className="inline-flex items-center justify-center w-6 h-6 rounded bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400">
-                            {MODALITY_ICON[mod] ? <FI {...MODALITY_ICON[mod]} /> : <span className="text-[10px]">{mod.slice(0,2)}</span>}
-                          </span>
-                        ))}
-                        {/* Separator */}
+                      {/* Icon strip — modalities, tasks, capabilities */}
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {m.inputModalities?.map((mod) => {
+                          const mi = MODALITY_ICON[mod]
+                          return mi ? (
+                            <span key={`in-${mod}`} title={mi.tip}
+                              className="inline-flex items-center justify-center w-5 h-5 text-zinc-500 dark:text-zinc-400">
+                              <FI {...mi} />
+                            </span>
+                          ) : null
+                        })}
+                        {m.outputModalities?.filter((mod) => !m.inputModalities?.includes(mod)).map((mod) => {
+                          const mi = MODALITY_ICON[mod]
+                          return mi ? (
+                            <span key={`out-${mod}`} title={`Output: ${mi.tip}`}
+                              className="inline-flex items-center justify-center w-5 h-5 text-zinc-500 dark:text-zinc-400">
+                              <FI {...mi} />
+                            </span>
+                          ) : null
+                        })}
                         {(m.inputModalities?.length > 0 || m.outputModalities?.length > 0) && (m.tasks?.length > 0 || m.capabilities?.length > 0) && (
-                          <span className="w-px h-4 bg-zinc-200 dark:bg-zinc-700 mx-0.5" />
+                          <span className="w-px h-3.5 bg-zinc-300 dark:bg-zinc-600 mx-0.5" />
                         )}
-                        {/* Tasks (top 3) */}
                         {(m.tasks || []).slice(0, 3).map((t) => {
                           const ti = TASK_ICON[t]
                           return ti ? (
                             <span key={t} title={ti.tip}
-                              className="inline-flex items-center justify-center w-6 h-6 rounded bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400">
+                              className="inline-flex items-center justify-center w-5 h-5 text-zinc-500 dark:text-zinc-400">
                               <FI {...ti} />
                             </span>
                           ) : null
                         })}
-                        {/* Capabilities (top 4) */}
+                        {(m.tasks?.length > 0 && m.capabilities?.length > 0) && (
+                          <span className="w-px h-3.5 bg-zinc-300 dark:bg-zinc-600 mx-0.5" />
+                        )}
                         {(m.capabilities || []).slice(0, 4).map((c) => {
                           const ci = CAP_ICON[c]
                           return ci ? (
                             <span key={c} title={ci.tip}
-                              className="inline-flex items-center justify-center w-6 h-6 rounded bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400">
+                              className="inline-flex items-center justify-center w-5 h-5 text-zinc-500 dark:text-zinc-400">
                               <FI {...ci} />
                             </span>
                           ) : null
                         })}
-                        {/* Overflow count */}
-                        {((m.tasks || []).length + (m.capabilities || []).length) > 7 && (
-                          <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-zinc-100 dark:bg-zinc-800 text-[10px] text-zinc-400">
-                            +{(m.tasks || []).length + (m.capabilities || []).length - 7}
-                          </span>
-                        )}
                       </div>
                     </div>
 
