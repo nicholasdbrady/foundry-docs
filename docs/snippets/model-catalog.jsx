@@ -625,7 +625,7 @@ export const ModelCatalog = () => {
                     role="button" tabIndex={0}
                     onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setExpandedModel(isExpanded ? null : modelKey(m)) } }}
                     aria-expanded={isExpanded}>
-                    <div className="p-4 flex flex-col" style={{minHeight: "14rem"}}>
+                    <div className="p-4 flex flex-col">
                       {/* Header row with icon */}
                       <div className="flex items-start gap-3 mb-2">
                         {publisherIcons[m.publisher] && (
@@ -686,7 +686,7 @@ export const ModelCatalog = () => {
                       </div>
 
                       {/* Specs row — context + output */}
-                      <div className="flex items-center gap-2 text-[11px] text-zinc-500 dark:text-zinc-400 mb-2 tabular-nums" style={{minHeight: "1rem"}}>
+                      <div className="w-full flex items-center gap-2 text-[11px] text-zinc-500 dark:text-zinc-400 mb-2 tabular-nums" style={{minHeight: "1rem"}}>
                         {m.contextWindow && <span>{formatNumber(m.contextWindow)} ctx</span>}
                         {m.contextWindow && m.maxOutputTokens && <span className="text-zinc-300 dark:text-zinc-600">·</span>}
                         {m.maxOutputTokens && <span>{formatNumber(m.maxOutputTokens)} out</span>}
