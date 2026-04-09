@@ -35,6 +35,7 @@ logging.basicConfig(level=logging.INFO, format="%(message)s")
 log = logging.getLogger(__name__)
 
 CATALOG_API_URL = "https://ai.azure.com/api/westus2/asset-gallery/v1.0/models"
+PUBLISHERS_API_URL = "https://ai.azure.com/api/westus2/asset-gallery/v1.0/publishers/list"
 CATALOG_HEADERS = {
     "Content-Type": "application/json",
     "x-ms-use-full-service-contracts": "true",
@@ -75,6 +76,7 @@ class CatalogModel:
     lifecycleStatus: str = "generally-available"
     isPreview: bool = False
     trainingDataDate: str = ""
+    createdAt: str = ""
     regions: dict[str, list[str]] = field(default_factory=dict)
 
 
@@ -103,6 +105,27 @@ def _api_post(url: str, body: dict, headers: dict) -> dict:
             raise
 
     raise RuntimeError(f"Failed after {MAX_RETRIES} retries: {url}")
+
+
+def fetch_publisher_icons() -> dict[str, str]:
+    """Fetch publisher icons (base64-encoded SVGs) from the publishers API."""
+    import base64
+
+    log.info("  🎨 Fetching publisher icons...")
+    data = _api_post(PUBLISHERS_API_URL, {}, {"Content-Type": "application/json"})
+    icons = {}
+    for p in data.get("value", []):
+        name = p.get("publisherName", "") or p.get("displayName", "")
+        icon_b64 = (p.get("icons") or {}).get("light", "")
+        if name and icon_b64:
+            try:
+                svg = base64.b64decode(icon_b64).decode("utf-8")
+                if "<svg" in svg:
+                    icons[name] = icon_b64
+            except Exception:
+                pass
+    log.info("  ✅ Got icons for %d publishers", len(icons))
+    return icons
 
 
 def fetch_all_models() -> list[dict]:
@@ -188,6 +211,14 @@ def normalize_model(raw: dict) -> CatalogModel | None:
     is_preview = "Preview" in tags or any("preview" in str(l).lower() for l in labels)
     lifecycle = "preview" if is_preview else "generally-available"
 
+    # Extract createdAt from systemData
+    system_data = raw.get("annotations", {}).get("systemData") or {}
+    if not system_data:
+        # Try from the model-level properties
+        props = raw.get("properties", {})
+        system_data = props.get("systemData") or {}
+    created_at = _safe_str(system_data.get("createdAt", ""))
+
     return CatalogModel(
         id=model_name,
         displayName=display_name,
@@ -212,6 +243,7 @@ def normalize_model(raw: dict) -> CatalogModel | None:
         lifecycleStatus=lifecycle,
         isPreview=is_preview,
         trainingDataDate=_safe_str(scd.get("trainingDataDate") or tags.get("trainingDataDate")),
+        createdAt=created_at,
     )
 
 
@@ -356,6 +388,7 @@ def main():
     args = parser.parse_args()
 
     log.info("🔍 Fetching model catalog from Azure AI Asset Gallery...")
+    publisher_icons = fetch_publisher_icons()
     raw_models = fetch_all_models()
 
     log.info("🔄 Normalizing %d raw records...", len(raw_models))
@@ -388,6 +421,7 @@ def main():
     output_data = {
         "generatedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "totalModels": len(deduped),
+        "publisherIcons": publisher_icons,
         "models": [asdict(m) for m in deduped],
     }
 
