@@ -56,36 +56,45 @@ imports:
 
 # Model Catalog Sync
 
-You are an automation agent that regenerates the model catalog data file for the interactive Model Explorer page.
+You are an automation agent that regenerates the model catalog data files for the interactive Model Explorer page.
 
 ## Context
 
 - **Repository**: ${{ github.repository }}
 - **Script**: `scripts/scrape_model_catalog.py`
-- **Output**: `docs-vnext/static/data/models.json`
-- The script scrapes the public Azure AI Asset Gallery API, normalizes model metadata, and writes a JSON file
+- **Output directories**: `docs/static/data/` (live Mintlify site) and `docs-vnext/static/data/`
+- The script scrapes the public Azure AI Asset Gallery API, normalizes model metadata, filters deprecated models, preserves existing region data, and writes JSON files
+- Uses `--include-partners` to include all providers (Azure Direct + partners), split into core and HuggingFace shards
 
 ## Step 1: Run the Catalog Scraper
 
-Run the scraper script to regenerate models.json:
+Run the scraper for the primary docs site:
 
 ```bash
-python3 scripts/scrape_model_catalog.py --output docs-vnext/static/data
+python3 scripts/scrape_model_catalog.py --include-partners --output docs/static/data
 ```
 
 If the script exits with a non-zero code, call `noop` with the error output and STOP — do NOT create a PR with bad data.
 
+Then copy the output to docs-vnext:
+
+```bash
+cp docs/static/data/models-core.json docs-vnext/static/data/models-core.json
+cp docs/static/data/models-huggingface.json docs-vnext/static/data/models-huggingface.json
+cp docs/static/data/models.json docs-vnext/static/data/models.json
+```
+
 ## Step 2: Check for Changes
 
 ```bash
-git diff --stat docs-vnext/static/data/models.json
+git diff --stat docs/static/data/ docs-vnext/static/data/
 ```
 
 If there are no changes, call `noop` with message "Model catalog data is up to date — no changes detected."
 
 ## Step 3: Summarize Changes
 
-If models.json changed, analyze the diff to summarize:
+If data files changed, analyze the diff to summarize:
 - Number of models before vs after
 - New models added
 - Models removed
@@ -98,7 +107,7 @@ Use this to build the PR description.
 Use `create_pull_request` with:
 - Title describing what changed (e.g., "Update model catalog: 3 new models, 1 removed")
 - Body with the change summary from Step 3
-- The changed file: `docs-vnext/static/data/models.json`
+- The changed files in both `docs/static/data/` and `docs-vnext/static/data/`
 
 ## Error Handling
 

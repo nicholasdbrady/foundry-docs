@@ -300,9 +300,10 @@ def deduplicate_models(models: list[CatalogModel]) -> list[CatalogModel]:
 
 
 def merge_region_data(models: list[CatalogModel], raw_data_path: str) -> list[CatalogModel]:
-    """Merge region availability and filter deprecated models using region data as authoritative source.
+    """Merge region availability from generate_model_availability.py output.
 
-    Returns the filtered list of non-deprecated models with region data merged.
+    Returns models with region data merged. Does NOT filter deprecated models —
+    use filter_deprecated() for that (runs unconditionally via enrichment config).
     """
     if not os.path.exists(raw_data_path):
         log.warning("  ⚠ Region data file not found: %s — skipping region merge", raw_data_path)
@@ -313,8 +314,7 @@ def merge_region_data(models: list[CatalogModel], raw_data_path: str) -> list[Ca
 
     # Build lookup: model_name -> { sku_name -> [regions] }
     region_map: dict[str, dict[str, list[str]]] = defaultdict(lambda: defaultdict(list))
-    # Build authoritative deprecated set from region data
-    deprecated_names: set[str] = set()
+    deprecated_in_api: list[str] = []
     for rd in region_data:
         region = rd.get("region", "")
         for entry in rd.get("models", []):
@@ -322,24 +322,24 @@ def merge_region_data(models: list[CatalogModel], raw_data_path: str) -> list[Ca
             name = m.get("name", "").lower()
             lifecycle = m.get("lifecycleStatus", "")
             if lifecycle == "Deprecated":
-                deprecated_names.add(name)
+                deprecated_in_api.append(m.get("name", name))
                 continue
             for sku in m.get("skus", []):
                 sku_name = sku.get("name", "")
                 if sku_name and region:
                     region_map[name][sku_name].append(region)
 
-    # Filter out deprecated models
-    removed = [m for m in models if m.id.lower() in deprecated_names]
-    models = [m for m in models if m.id.lower() not in deprecated_names]
-    if removed:
-        log.info("  🗑️  Removed %d deprecated models: %s", len(removed), ", ".join(m.id for m in removed))
+    if deprecated_in_api:
+        unique_deprecated = sorted(set(deprecated_in_api))
+        log.info("  ℹ  Region API reports %d deprecated models — ensure these are in model_enrichment.json[deprecated]:",
+                 len(unique_deprecated))
+        for name in unique_deprecated[:30]:
+            log.info("      - %s", name)
 
     matched = 0
     for model in models:
         key = model.id.lower()
         if key in region_map:
-            # Sort regions within each SKU
             model.regions = {
                 sku: sorted(set(regions)) for sku, regions in region_map[key].items()
             }
@@ -445,6 +445,48 @@ def apply_icon_fallbacks(publisher_icons: dict[str, str], config: dict) -> dict[
     return publisher_icons
 
 
+def filter_deprecated(models: list[CatalogModel], config: dict) -> list[CatalogModel]:
+    """Remove deprecated models listed in enrichment config. Runs unconditionally."""
+    deprecated_cfg = config.get("deprecated", {})
+    deprecated_ids = {mid.lower() for mid in deprecated_cfg.get("models", [])}
+    if not deprecated_ids:
+        return models
+
+    removed = [m for m in models if m.id.lower() in deprecated_ids]
+    kept = [m for m in models if m.id.lower() not in deprecated_ids]
+    if removed:
+        log.info("  🗑️  Removed %d deprecated models: %s", len(removed), ", ".join(m.id for m in removed))
+    return kept
+
+
+def _preserve_existing_regions(models: list[CatalogModel], output_path: str) -> list[CatalogModel]:
+    """Carry forward region data from existing output file for models that would otherwise lose it."""
+    if not os.path.exists(output_path):
+        return models
+
+    with open(output_path) as f:
+        existing = json.load(f)
+
+    existing_regions: dict[str, dict] = {}
+    for m in existing.get("models", []):
+        regions = m.get("regions", {})
+        if regions and any(regions.values()):
+            existing_regions[m["id"].lower()] = regions
+
+    if not existing_regions:
+        return models
+
+    preserved = 0
+    for model in models:
+        if (not model.regions or not any(model.regions.values())) and model.id.lower() in existing_regions:
+            model.regions = existing_regions[model.id.lower()]
+            preserved += 1
+
+    if preserved:
+        log.info("  🔄 Preserved existing region data for %d models", preserved)
+    return models
+
+
 def _write_json(data: dict, path: str) -> None:
     """Write JSON data to a file, log size."""
     with open(path, "w") as f:
@@ -505,6 +547,11 @@ def main():
         deduped = apply_enrichment(deduped, enrichment)
         publisher_icons = apply_icon_fallbacks(publisher_icons, enrichment)
 
+    # Filter deprecated models unconditionally (from enrichment config)
+    if enrichment:
+        log.info("🗑️  Filtering deprecated models...")
+        deduped = filter_deprecated(deduped, enrichment)
+
     log.info("✔️  Validating output...")
     if not validate_output(deduped):
         log.error("💥 Aborting: validation failed. No output written.")
@@ -514,6 +561,11 @@ def main():
 
     if args.output:
         os.makedirs(args.output, exist_ok=True)
+
+        # Preserve existing region data for models that would otherwise lose it
+        log.info("🔄 Checking for existing region data to preserve...")
+        deduped = _preserve_existing_regions(deduped, os.path.join(args.output, "models.json"))
+        deduped = _preserve_existing_regions(deduped, os.path.join(args.output, "models-core.json"))
 
         if args.include_partners:
             # Split into core (non-HF) and HuggingFace shards
