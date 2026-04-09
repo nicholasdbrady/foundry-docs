@@ -1,3 +1,5 @@
+const PAGE_SIZE = 50
+
 export const ModelCatalog = () => {
   const [models, setModels] = useState([])
   const [publisherIcons, setPublisherIcons] = useState({})
@@ -10,21 +12,19 @@ export const ModelCatalog = () => {
   const [expandedModel, setExpandedModel] = useState(null)
   const [copiedId, setCopiedId] = useState(null)
   const [openDropdown, setOpenDropdown] = useState(null)
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
+  const [hfLoaded, setHfLoaded] = useState(false)
+  const [hfLoading, setHfLoading] = useState(false)
 
   useEffect(() => {
-    fetch(`/static/data/models.json?v=${Math.floor(Date.now() / 3600000)}`)
+    fetch("/static/data/models-core.json")
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`)
         return r.json()
       })
       .then((data) => {
         setModels(data.models || [])
-        // Decode base64 SVGs once on load for inline rendering
-        const decoded = {}
-        for (const [pub, b64] of Object.entries(data.publisherIcons || {})) {
-          try { decoded[pub] = atob(b64) } catch (_) {}
-        }
-        setPublisherIcons(decoded)
+        setPublisherIcons(data.publisherIcons || {})
         setLoading(false)
       })
       .catch((err) => {
@@ -32,6 +32,24 @@ export const ModelCatalog = () => {
         setLoading(false)
       })
   }, [])
+
+  const loadHuggingFace = () => {
+    if (hfLoaded || hfLoading) return
+    setHfLoading(true)
+    fetch("/static/data/models-huggingface.json")
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`)
+        return r.json()
+      })
+      .then((data) => {
+        setModels((prev) => [...prev, ...(data.models || [])])
+        setHfLoaded(true)
+        setHfLoading(false)
+      })
+      .catch(() => {
+        setHfLoading(false)
+      })
+  }
 
   const DEPLOY_LABELS = {
     "aoai-deployment": "Azure OpenAI",
@@ -154,6 +172,11 @@ export const ModelCatalog = () => {
     return result
   }, [models, searchQuery, activeFilters, sortBy])
 
+  // Reset pagination when filters, search, or sort change
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE)
+  }, [searchQuery, activeFilters, sortBy, groupBy])
+
   // Facet counts computed from filtered results (excluding the facet's own filter)
   const facetCounts = useMemo(() => {
     const counts = {}
@@ -195,9 +218,10 @@ export const ModelCatalog = () => {
   }, [models, searchQuery, activeFilters])
 
   const groupedModels = useMemo(() => {
-    if (groupBy === "none") return [{ label: null, models: filteredModels }]
+    const paginated = filteredModels.slice(0, visibleCount)
+    if (groupBy === "none") return [{ label: null, models: paginated }]
     const groups = {}
-    for (const m of filteredModels) {
+    for (const m of paginated) {
       const key = m.publisher || "Other"
       if (!groups[key]) groups[key] = []
       groups[key].push(m)
@@ -205,7 +229,7 @@ export const ModelCatalog = () => {
     return Object.entries(groups)
       .sort((a, b) => b[1].length - a[1].length)
       .map(([label, models]) => ({ label, models }))
-  }, [filteredModels, groupBy])
+  }, [filteredModels, groupBy, visibleCount])
 
   const toggleFilter = (facetKey, value) => {
     setActiveFilters((prev) => {
@@ -375,10 +399,37 @@ export const ModelCatalog = () => {
         </div>
       )}
 
-      {/* Results count */}
-      <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">
-        {filteredModels.length} model{filteredModels.length !== 1 ? "s" : ""}
-        {hasActiveFilters ? " matching filters" : ""}
+      {/* Results count + HuggingFace toggle */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="text-xs text-zinc-500 dark:text-zinc-400">
+          Showing {Math.min(visibleCount, filteredModels.length)} of {filteredModels.length} model{filteredModels.length !== 1 ? "s" : ""}
+          {hasActiveFilters ? " matching filters" : ""}
+        </div>
+        {!hfLoaded && (
+          <button
+            onClick={loadHuggingFace}
+            disabled={hfLoading}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50"
+          >
+            {hfLoading ? (
+              <>
+                <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                Loading…
+              </>
+            ) : (
+              <>
+                <span>🤗</span>
+                Include Hugging Face models (10,000+)
+              </>
+            )}
+          </button>
+        )}
+        {hfLoaded && (
+          <span className="text-xs text-green-600 dark:text-green-400">🤗 Hugging Face models loaded</span>
+        )}
       </div>
 
       {/* Empty state */}
@@ -424,8 +475,11 @@ export const ModelCatalog = () => {
                       {/* Header row with icon */}
                       <div className="flex items-start gap-3 mb-2">
                         {publisherIcons[m.publisher] && (
-                          <div className="shrink-0 w-8 h-8 mt-0.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 p-1.5 flex items-center justify-center overflow-hidden"
-                            dangerouslySetInnerHTML={{ __html: publisherIcons[m.publisher] }} />
+                          <img
+                            src={`data:image/svg+xml;base64,${publisherIcons[m.publisher]}`}
+                            alt={`${m.publisher} icon`}
+                            className="shrink-0 w-8 h-8 mt-0.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 p-1.5"
+                          />
                         )}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2">
@@ -572,7 +626,7 @@ export const ModelCatalog = () => {
                               <div className="flex flex-wrap gap-1">
                                 {Object.entries(m.regions).map(([sku, regions]) => (
                                   <span key={sku} className="px-1.5 py-0.5 rounded text-[11px] bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
-                                    {sku}: {regions.length} region{regions.length !== 1 ? "s" : ""}
+                                    {SKU_LABELS[sku] || sku}: {regions.includes("all") ? "All regions" : `${regions.length} region${regions.length !== 1 ? "s" : ""}`}
                                   </span>
                                 ))}
                               </div>
@@ -597,6 +651,18 @@ export const ModelCatalog = () => {
             </div>
           </div>
         ))
+      )}
+
+      {/* Show More button */}
+      {filteredModels.length > visibleCount && (
+        <div className="flex justify-center mt-6 mb-4">
+          <button
+            onClick={() => setVisibleCount((prev) => prev + PAGE_SIZE)}
+            className="px-6 py-2.5 rounded-lg text-sm font-medium border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+          >
+            Show more ({Math.min(PAGE_SIZE, filteredModels.length - visibleCount)} of {filteredModels.length - visibleCount} remaining)
+          </button>
+        </div>
       )}
     </div>
   )
