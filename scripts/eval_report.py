@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate markdown evaluation report from scored results.
 
-Produces a report comparing 4 MCP servers across 3 models with:
+Produces a report comparing 4 MCP servers across 2 models with:
 - Server × model scoreboard matrix
 - Hypothesis test results (H1-H4)
 - Category breakdown
@@ -42,7 +42,7 @@ HYPOTHESES = {
         "control": "microsoft-learn",
     },
     "H4": {
-        "description": "Results are consistent across all 3 models",
+        "description": "Results are consistent across both models",
         "type": "consistency",
     },
 }
