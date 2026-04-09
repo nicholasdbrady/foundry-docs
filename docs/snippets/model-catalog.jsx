@@ -621,7 +621,7 @@ export const ModelCatalog = () => {
                     role="button" tabIndex={0}
                     onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setExpandedModel(isExpanded ? null : modelKey(m)) } }}
                     aria-expanded={isExpanded}>
-                    <div className="p-4">
+                    <div className="p-4 flex flex-col" style={{minHeight: "14rem"}}>
                       {/* Header row with icon */}
                       <div className="flex items-start gap-3 mb-2">
                         {publisherIcons[m.publisher] && (
@@ -633,7 +633,7 @@ export const ModelCatalog = () => {
                         )}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2">
-                            <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 leading-tight line-clamp-2 min-h-[2.5rem]">
+                            <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 leading-tight line-clamp-2" style={{minHeight: "1.25rem"}}>
                               {m.displayName}
                             </h3>
                             <div className="flex items-center gap-1.5 shrink-0">
@@ -674,13 +674,15 @@ export const ModelCatalog = () => {
                         </button>
                       </div>
 
-                      {/* Description */}
-                      <p className={`text-xs text-zinc-500 dark:text-zinc-400 ${isExpanded ? "mb-2 max-h-24 overflow-y-auto" : "line-clamp-2 mb-2"}`} style={{lineHeight: "1.4", minHeight: "2.25rem"}}>
-                        {m.summary || "\u00A0"}
-                      </p>
+                      {/* Description — flex-1 to fill remaining space */}
+                      <div className="flex-1 mb-2" style={{minHeight: "2.5rem"}}>
+                        <p className={`text-xs text-zinc-500 dark:text-zinc-400 ${isExpanded ? "max-h-24 overflow-y-auto" : "line-clamp-2"}`} style={{lineHeight: "1.4"}}>
+                          {m.summary || "\u00A0"}
+                        </p>
+                      </div>
 
-                      {/* Specs row — context + output (always rendered for alignment) */}
-                      <div className="flex items-center gap-2 text-[11px] text-zinc-500 dark:text-zinc-400 mb-2 tabular-nums" style={{minHeight: "1.25rem"}}>
+                      {/* Specs row — context + output */}
+                      <div className="flex items-center gap-2 text-[11px] text-zinc-500 dark:text-zinc-400 mb-2 tabular-nums" style={{minHeight: "1rem"}}>
                         {m.contextWindow && <span>{formatNumber(m.contextWindow)} ctx</span>}
                         {m.contextWindow && m.maxOutputTokens && <span className="text-zinc-300 dark:text-zinc-600">·</span>}
                         {m.maxOutputTokens && <span>{formatNumber(m.maxOutputTokens)} out</span>}
