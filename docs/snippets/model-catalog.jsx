@@ -1,6 +1,5 @@
-const PAGE_SIZE = 50
-
 export const ModelCatalog = () => {
+  const PAGE_SIZE = 50
   const [models, setModels] = useState([])
   const [publisherIcons, setPublisherIcons] = useState({})
   const [loading, setLoading] = useState(true)
