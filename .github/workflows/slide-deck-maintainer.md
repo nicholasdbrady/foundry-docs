@@ -29,6 +29,7 @@ safe-outputs:
   create-pull-request:
     title-prefix: "[slides] "
     expires: 3d
+  report-incomplete:
   noop:
 network:
   allowed:

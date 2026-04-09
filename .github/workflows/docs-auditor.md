@@ -36,6 +36,7 @@ safe-outputs:
     max: 1
     close-older-issues: true
     expires: 14d
+  report-incomplete:
   noop:
 timeout-minutes: 25
 concurrency:

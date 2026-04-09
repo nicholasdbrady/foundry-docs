@@ -28,6 +28,7 @@ safe-outputs:
     labels: [documentation, automation, noob-test]
     close-older-issues: true
     expires: 14d
+  report-incomplete:
   noop:
 
 network:
