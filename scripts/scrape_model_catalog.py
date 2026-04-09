@@ -7,6 +7,13 @@ filters to Azure-sold ("Direct from Azure") models, normalizes into a compact
 JSON schema, validates output, and optionally merges region availability
 from `generate_model_availability.py`.
 
+When --include-partners is used, the output is split into two files:
+  - models-core.json   (non-HuggingFace models — Azure Direct + curated partners)
+  - models-huggingface.json  (HuggingFace managed-compute models, lazy-loaded by UI)
+
+An enrichment config (model_enrichment.json) is applied to fix missing metadata
+from the upstream API (e.g., Anthropic and Fireworks deployment types/regions).
+
 Prerequisites:
   - Python 3.11+ (uses stdlib only — no pip install needed)
   - Optional: `az` CLI for region availability merge
@@ -208,7 +215,7 @@ def normalize_model(raw: dict) -> CatalogModel | None:
 
     # Detect preview/deprecated from labels and tags
     labels = annotations.get("labels", [])
-    is_preview = "Preview" in tags or any("preview" in str(l).lower() for l in labels)
+    is_preview = "Preview" in tags or any("preview" in str(label).lower() for label in labels)
     lifecycle = "preview" if is_preview else "generally-available"
 
     # Extract createdAt from properties.creationContext (most reliable source)
@@ -323,7 +330,6 @@ def merge_region_data(models: list[CatalogModel], raw_data_path: str) -> list[Ca
                     region_map[name][sku_name].append(region)
 
     # Filter out deprecated models
-    before_count = len(models)
     removed = [m for m in models if m.id.lower() in deprecated_names]
     models = [m for m in models if m.id.lower() not in deprecated_names]
     if removed:
@@ -390,6 +396,64 @@ def validate_output(models: list[CatalogModel]) -> bool:
     return True
 
 
+def load_enrichment_config() -> dict:
+    """Load the enrichment config from model_enrichment.json (sibling to this script)."""
+    config_path = os.path.join(os.path.dirname(__file__), "model_enrichment.json")
+    if not os.path.exists(config_path):
+        log.warning("  ⚠ No enrichment config found at %s", config_path)
+        return {}
+    with open(config_path) as f:
+        return json.load(f)
+
+
+def apply_enrichment(models: list[CatalogModel], config: dict) -> list[CatalogModel]:
+    """Apply publisher-level metadata overrides from enrichment config."""
+    publishers = config.get("publishers", {})
+    if not publishers:
+        return models
+
+    enriched = 0
+    for model in models:
+        overrides = publishers.get(model.publisher)
+        if not overrides:
+            continue
+
+        if not model.deploymentTypes and overrides.get("deploymentTypes"):
+            model.deploymentTypes = overrides["deploymentTypes"]
+
+        if not model.regions and overrides.get("regions"):
+            model.regions = dict(overrides["regions"])
+
+        enriched += 1
+
+    log.info("  🔧 Enriched %d models from config (%s)", enriched, ", ".join(publishers.keys()))
+    return models
+
+
+def apply_icon_fallbacks(publisher_icons: dict[str, str], config: dict) -> dict[str, str]:
+    """Copy icons for publishers that should inherit another publisher's icon."""
+    fallbacks = config.get("iconFallbacks", {})
+    applied = 0
+    for source_pub, target_pub in fallbacks.items():
+        if source_pub == "$comment":
+            continue
+        if source_pub not in publisher_icons and target_pub in publisher_icons:
+            publisher_icons[source_pub] = publisher_icons[target_pub]
+            applied += 1
+    if applied:
+        log.info("  🎨 Applied %d icon fallbacks", applied)
+    return publisher_icons
+
+
+def _write_json(data: dict, path: str) -> None:
+    """Write JSON data to a file, log size."""
+    with open(path, "w") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+    size_kb = os.path.getsize(path) / 1024
+    count = len(data.get("models", []))
+    log.info("  📦 Wrote %s (%.1f KB, %d models)", path, size_kb, count)
+
+
 def main():
     parser = argparse.ArgumentParser(description="Scrape Azure AI Model Catalog")
     parser.add_argument(
@@ -434,27 +498,73 @@ def main():
         log.info("📍 Merging region availability data...")
         deduped = merge_region_data(deduped, args.merge_regions)
 
+    # Apply enrichment overrides (deployment types, regions, icons)
+    enrichment = load_enrichment_config()
+    if enrichment:
+        log.info("🔧 Applying enrichment overrides...")
+        deduped = apply_enrichment(deduped, enrichment)
+        publisher_icons = apply_icon_fallbacks(publisher_icons, enrichment)
+
     log.info("✔️  Validating output...")
     if not validate_output(deduped):
         log.error("💥 Aborting: validation failed. No output written.")
         sys.exit(1)
 
-    # Serialize
-    output_data = {
-        "generatedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        "totalModels": len(deduped),
-        "publisherIcons": publisher_icons,
-        "models": [asdict(m) for m in deduped],
-    }
+    generated_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
     if args.output:
         os.makedirs(args.output, exist_ok=True)
-        path = os.path.join(args.output, "models.json")
-        with open(path, "w") as f:
-            json.dump(output_data, f, indent=2, ensure_ascii=False)
-        size_kb = os.path.getsize(path) / 1024
-        log.info("✨ Wrote %s (%.1f KB, %d models)", path, size_kb, len(deduped))
+
+        if args.include_partners:
+            # Split into core (non-HF) and HuggingFace shards
+            core_models = [m for m in deduped if m.publisher != "Hugging Face"]
+            hf_models = [m for m in deduped if m.publisher == "Hugging Face"]
+
+            log.info("📂 Splitting output: %d core + %d HuggingFace models", len(core_models), len(hf_models))
+
+            core_data = {
+                "generatedAt": generated_at,
+                "totalModels": len(core_models),
+                "publisherIcons": publisher_icons,
+                "models": [asdict(m) for m in core_models],
+            }
+            _write_json(core_data, os.path.join(args.output, "models-core.json"))
+
+            hf_data = {
+                "generatedAt": generated_at,
+                "totalModels": len(hf_models),
+                "publisherIcons": {},
+                "models": [asdict(m) for m in hf_models],
+            }
+            _write_json(hf_data, os.path.join(args.output, "models-huggingface.json"))
+
+            # Also write the combined models.json for backward compatibility
+            combined_data = {
+                "generatedAt": generated_at,
+                "totalModels": len(deduped),
+                "publisherIcons": publisher_icons,
+                "models": [asdict(m) for m in deduped],
+            }
+            _write_json(combined_data, os.path.join(args.output, "models.json"))
+
+            log.info("✨ Done! Core: %d models, HuggingFace: %d models, Combined: %d models",
+                     len(core_models), len(hf_models), len(deduped))
+        else:
+            output_data = {
+                "generatedAt": generated_at,
+                "totalModels": len(deduped),
+                "publisherIcons": publisher_icons,
+                "models": [asdict(m) for m in deduped],
+            }
+            _write_json(output_data, os.path.join(args.output, "models.json"))
+            log.info("✨ Done! %d models", len(deduped))
     else:
+        output_data = {
+            "generatedAt": generated_at,
+            "totalModels": len(deduped),
+            "publisherIcons": publisher_icons,
+            "models": [asdict(m) for m in deduped],
+        }
         json.dump(output_data, sys.stdout, indent=2, ensure_ascii=False)
         print()
 
