@@ -89,45 +89,61 @@ export const ModelCatalog = () => {
     DataZoneProvisionedManaged: "Data Zone Provisioned",
     DeveloperTier: "Developer Tier",
   }
-  const MODALITY_ICONS = { text: "Aa", image: "◩", audio: "♪", video: "▶", code: "</>", pdf: "⊞", json: "{}", csv: "⊟", data: "◈" }
+  // Fluent UI System Icons (Microsoft, MIT) — monochrome filled SVGs
+  // Source: github.com/microsoft/fluentui-system-icons
+  const FI = ({ d, tip, vb = 16 }) => (
+    <svg className="shrink-0" width="14" height="14" viewBox={`0 0 ${vb} ${vb}`} fill="currentColor" aria-hidden="true">
+      <title>{tip}</title>
+      <path d={d} />
+    </svg>
+  )
 
-  // Icon system — compact SVG-based indicators for at-a-glance scanning
-  const CAPABILITY_ICONS = {
-    reasoning: { icon: "🧠", tip: "Reasoning" },
-    streaming: { icon: "⚡", tip: "Streaming" },
-    "tool-calling": { icon: "🔧", tip: "Tool Calling" },
-    "fine-tuning": { icon: "🎯", tip: "Fine-tuning" },
-    agentsV2: { icon: "🤖", tip: "Agents" },
-    agents: { icon: "🤖", tip: "Agents (v1)" },
-    assistants: { icon: "💬", tip: "Assistants" },
-    routing: { icon: "🔀", tip: "Routing" },
+  const MODALITY_ICON = {
+    text: { d: "M4.5 5C4.22386 5 4 5.22386 4 5.5C4 5.77614 4.22386 6 4.5 6H11.5C11.7761 6 12 5.77614 12 5.5C12 5.22386 11.7761 5 11.5 5H4.5ZM4 8.5C4 8.22386 4.22386 8 4.5 8H11.5C11.7761 8 12 8.22386 12 8.5C12 8.77614 11.7761 9 11.5 9H4.5C4.22386 9 4 8.77614 4 8.5ZM4.5 11C4.22386 11 4 11.2239 4 11.5C4 11.7761 4.22386 12 4.5 12H8.5C8.77614 12 9 11.7761 9 11.5C9 11.2239 8.77614 11 8.5 11H4.5Z", tip: "Text" },
+    image: { d: "M2 4.5C2 3.11929 3.11929 2 4.5 2H11.5C12.8807 2 14 3.11929 14 4.5V11.5C14 12.8807 12.8807 14 11.5 14H4.5C3.11929 14 2 12.8807 2 11.5V4.5ZM10.4979 6.50414C11.0514 6.50414 11.5 6.0555 11.5 5.50207C11.5 4.94864 11.0514 4.5 10.4979 4.5C9.94449 4.5 9.49585 4.94864 9.49585 5.50207C9.49585 6.0555 9.94449 6.50414 10.4979 6.50414Z", tip: "Image" },
+    audio: { d: "M8.69435 2.03934C8.87957 2.11749 8.99998 2.29898 8.99998 2.50001V13.5C8.99998 13.701 8.87957 13.8825 8.69435 13.9607C8.50913 14.0388 8.29428 14.0046 8.14282 13.872L4.72179 10.9H2.49998C2.22384 10.9 1.99998 10.6761 1.99998 10.4V5.60001C1.99998 5.32387 2.22384 5.10001 2.49998 5.10001H4.72179L8.14282 2.12803C8.29428 1.99543 8.50913 1.96119 8.69435 2.03934Z", tip: "Audio" },
+    video: { d: "M3.5 3C2.11929 3 1 4.11929 1 5.5V10.5C1 11.8807 2.11929 13 3.5 13H8.5C9.88071 13 11 11.8807 11 10.5V5.5C11 4.11929 9.88071 3 8.5 3H3.5Z", tip: "Video" },
+    code: { d: "M9.80307 3.04322C10.0554 3.15537 10.1691 3.45085 10.0569 3.70319L6.05691 12.7032C5.94477 12.9555 5.64928 13.0692 5.39694 12.957C5.14461 12.8449 5.03095 12.5494 5.14309 12.2971L9.14309 3.29706C9.25524 3.04472 9.55073 2.93107 9.80307 3.04322Z", tip: "Code" },
   }
-  const TOOL_ICONS = {
-    web_search: { icon: "🌐", tip: "Web Search" },
-    file_search: { icon: "📂", tip: "File Search" },
-    code_interpreter: { icon: "⌨️", tip: "Code Interpreter" },
-    image_generation: { icon: "🎨", tip: "Image Generation" },
-    mcp: { icon: "🔌", tip: "MCP" },
-    browser_automation: { icon: "🖥️", tip: "Computer Use" },
-    function: { icon: "ƒ", tip: "Functions" },
-    azure_ai_search: { icon: "🔍", tip: "Azure AI Search" },
-    bing_grounding: { icon: "🅱️", tip: "Bing Grounding" },
-    sharepoint_grounding: { icon: "📋", tip: "SharePoint" },
-    fabric_dataagent: { icon: "📊", tip: "Fabric Data Agent" },
-    openapi: { icon: "📡", tip: "OpenAPI" },
-    a2a_preview: { icon: "↔️", tip: "A2A (Preview)" },
+
+  const TASK_ICON = {
+    "chat-completion": { d: "M8 2C4.68629 2 2 4.68629 2 8C2 9.82141 2.82675 11.4438 4.12602 12.5102L2.57602 14.424C2.30894 14.7539 2.54558 15.2354 2.96568 15.2093L7.04813 14.9544C7.36208 14.9848 7.67915 15 8 15C11.3137 15 14 12.3137 14 9C14 5.68629 11.3137 2 8 2Z", tip: "Chat Completions" },
+    responses: { d: "M6.35355 3.64645C6.54882 3.84171 6.54882 4.15829 6.35355 4.35355L3.70711 7H8.5C11.5376 7 14 9.46243 14 12.5C14 12.7761 13.7761 13 13.5 13C13.2239 13 13 12.7761 13 12.5C13 10.0147 10.9853 8 8.5 8H3.70711L6.35355 10.6464C6.54882 10.8417 6.54882 11.1583 6.35355 11.3536C6.15829 11.5488 5.84171 11.5488 5.64645 11.3536L2.14645 7.85355C1.95118 7.65829 1.95118 7.34171 2.14645 7.14645L5.64645 3.64645C5.84171 3.45118 6.15829 3.45118 6.35355 3.64645Z", tip: "Responses API" },
+    embeddings: { d: "M2 4.5C2 3.11929 3.11929 2 4.5 2H11.5C12.8807 2 14 3.11929 14 4.5V11.5C14 12.8807 12.8807 14 11.5 14H4.5C3.11929 14 2 12.8807 2 11.5V4.5ZM4.5 3C3.67157 3 3 3.67157 3 4.5V5H7.5V3H4.5ZM8.5 3V10H13V4.5C13 3.67157 12.3284 3 11.5 3H8.5Z", tip: "Embeddings" },
+    "text-to-image": { d: "M2 4.5C2 3.11929 3.11929 2 4.5 2H11.5C12.8807 2 14 3.11929 14 4.5V11.5C14 12.8807 12.8807 14 11.5 14H4.5C3.11929 14 2 12.8807 2 11.5V4.5Z", tip: "Image Generation" },
+    "text-generation": { d: "M4.5 5C4.22386 5 4 5.22386 4 5.5C4 5.77614 4.22386 6 4.5 6H11.5C11.7761 6 12 5.77614 12 5.5C12 5.22386 11.7761 5 11.5 5H4.5Z", tip: "Text Generation" },
+    "speech-to-text": { d: "M5.5 4.5C5.5 3.11929 6.61929 2 8 2C9.38071 2 10.5 3.11929 10.5 4.5V8C10.5 9.38071 9.38071 10.5 8 10.5C6.61929 10.5 5.5 9.38071 5.5 8V4.5Z", tip: "Speech-to-Text" },
+    "text-to-speech": { d: "M8.69435 2.03934C8.87957 2.11749 8.99998 2.29898 8.99998 2.50001V13.5C8.99998 13.701 8.87957 13.8825 8.69435 13.9607C8.50913 14.0388 8.29428 14.0046 8.14282 13.872L4.72179 10.9H2.49998C2.22384 10.9 1.99998 10.6761 1.99998 10.4V5.60001C1.99998 5.32387 2.22384 5.10001 2.49998 5.10001H4.72179L8.14282 2.12803C8.29428 1.99543 8.50913 1.96119 8.69435 2.03934Z", tip: "Text-to-Speech" },
+    "video-generation": { d: "M3.5 3C2.11929 3 1 4.11929 1 5.5V10.5C1 11.8807 2.11929 13 3.5 13H8.5C9.88071 13 11 11.8807 11 10.5V5.5C11 4.11929 9.88071 3 8.5 3H3.5Z", tip: "Video Generation" },
+    "audio-generation": { d: "M8.69435 2.03934C8.87957 2.11749 8.99998 2.29898 8.99998 2.50001V13.5C8.99998 13.701 8.87957 13.8825 8.69435 13.9607C8.50913 14.0388 8.29428 14.0046 8.14282 13.872L4.72179 10.9H2.49998C2.22384 10.9 1.99998 10.6761 1.99998 10.4V5.60001C1.99998 5.32387 2.22384 5.10001 2.49998 5.10001H4.72179L8.14282 2.12803C8.29428 1.99543 8.50913 1.96119 8.69435 2.03934Z", tip: "Audio Generation" },
   }
-  const TASK_ICONS = {
-    "chat-completion": { icon: "💬", tip: "Chat Completions" },
-    responses: { icon: "↩️", tip: "Responses API" },
-    embeddings: { icon: "📐", tip: "Embeddings" },
-    "text-to-image": { icon: "🖼️", tip: "Image Generation" },
-    "image-to-image": { icon: "✏️", tip: "Image Editing" },
-    "audio-generation": { icon: "🔊", tip: "Audio Generation" },
-    "speech-to-text": { icon: "🎤", tip: "Speech-to-Text" },
-    "text-to-speech": { icon: "🗣️", tip: "Text-to-Speech" },
-    "video-generation": { icon: "🎬", tip: "Video Generation" },
-    "text-generation": { icon: "📝", tip: "Text Generation" },
+
+  const CAP_ICON = {
+    reasoning: { d: "M5.70049 3.94804C5.92703 2.81534 6.92158 2 8.07672 2C8.86031 2 9.55704 2.37193 10 2.94888C10.443 2.37193 11.1397 2 11.9233 2C13.0784 2 14.073 2.81534 14.2995 3.94804L14.4249 4.57508L14.8311 4.65632C16.0922 4.90854 17 6.01586 17 7.30196V7.5C17 8.22648 16.6901 8.88058 16.1954 9.33735C17.2649 9.86867 18 10.9723 18 12.2475C18 13.7835 16.9244 15.1075 15.425 15.4247L15.3879 15.6102C15.1099 16.9998 13.8899 18 12.4728 18C11.4417 18 10.5332 17.4751 10 16.6779C9.46679 17.4751 8.5583 18 7.52721 18C6.11013 18 4.89005 16.9998 4.61214 15.6102L4.57504 15.4247C3.07561 15.1075 2 13.7835 2 12.2475C2 10.9723 2.73508 9.86867 3.80465 9.33735C3.30987 8.88058 3 8.22648 3 7.5V7.30196C3 6.01586 3.90778 4.90854 5.16891 4.65632L5.57508 4.57508L5.70049 3.94804Z", tip: "Reasoning", vb: 20 },
+    streaming: { d: "M4.91447 1.71442C5.04078 1.29055 5.43053 1 5.87282 1H10.2786C10.9768 1 11.4601 1.69737 11.2149 2.35112L10.2216 5H12.2511C12.8791 5 13.229 5.72572 12.8379 6.21709L6.23096 14.5173C5.37726 15.5898 3.66907 14.7047 4.05299 13.3888L5.33338 9H3.74951C3.24769 9 2.88743 8.51673 3.03074 8.03581L4.91447 1.71442Z", tip: "Streaming" },
+    "tool-calling": { d: "M6.99952 5C6.99952 2.79086 8.79038 1 10.9995 1C11.5083 1 11.996 1.09525 12.4457 1.26951C12.6994 1.36796 12.8246 1.65042 12.7262 1.90409C12.6277 2.15777 12.3453 2.28301 12.0916 2.18456C11.7522 2.05282 11.3841 1.98214 10.9995 1.98214C9.33203 1.98214 7.98167 3.3325 7.98167 5C7.98167 6.6675 9.33203 8.01786 10.9995 8.01786C12.667 8.01786 14.0174 6.6675 14.0174 5C14.0174 4.72386 14.2412 4.5 14.5174 4.5C14.7935 4.5 15.0174 4.72386 15.0174 5C15.0174 7.20914 13.2086 9 10.9995 9C8.79038 9 6.99952 7.20914 6.99952 5Z", tip: "Tool Calling" },
+    "fine-tuning": { d: "M13.5 1C13.7761 1 14 1.22386 14 1.5V2H14.5C14.7761 2 15 2.22386 15 2.5C15 2.77614 14.7761 3 14.5 3H14V3.5C14 3.77614 13.7761 4 13.5 4C13.2239 4 13 3.77614 13 3.5V3H12.5C12.2239 3 12 2.77614 12 2.5C12 2.22386 12.2239 2 12.5 2H13V1.5C13 1.22386 13.2239 1 13.5 1Z", tip: "Fine-tuning" },
+    agentsV2: { d: "M8.5 1.5C8.5 1.22386 8.27614 1 8 1C7.72386 1 7.5 1.22386 7.5 1.5V2H5.5C4.67157 2 4 2.67157 4 3.5V5.5C4 7.70914 5.79086 9.5 8 9.5C10.2091 9.5 12 7.70914 12 5.5V3.5C12 2.67157 11.3284 2 10.5 2H8.5V1.5Z", tip: "Agents" },
+    agents: { d: "M8.5 1.5C8.5 1.22386 8.27614 1 8 1C7.72386 1 7.5 1.22386 7.5 1.5V2H5.5C4.67157 2 4 2.67157 4 3.5V5.5C4 7.70914 5.79086 9.5 8 9.5C10.2091 9.5 12 7.70914 12 5.5V3.5C12 2.67157 11.3284 2 10.5 2H8.5V1.5Z", tip: "Agents (v1)" },
+    assistants: { d: "M8 2C4.68629 2 2 4.68629 2 8C2 9.82141 2.82675 11.4438 4.12602 12.5102L2.57602 14.424C2.30894 14.7539 2.54558 15.2354 2.96568 15.2093L7.04813 14.9544C7.36208 14.9848 7.67915 15 8 15C11.3137 15 14 12.3137 14 9C14 5.68629 11.3137 2 8 2Z", tip: "Assistants" },
+  }
+
+  const TOOL_ICON = {
+    web_search: { d: "M8 14C11.3137 14 14 11.3137 14 8C14 4.68629 11.3137 2 8 2C4.68629 2 2 4.68629 2 8C2 11.3137 4.68629 14 8 14Z", tip: "Web Search" },
+    file_search: { d: "M5 1C3.89543 1 3 1.89543 3 3V13C3 14.1046 3.89543 15 5 15H11C12.1046 15 13 14.1046 13 13V5L9 1H5Z", tip: "File Search" },
+    code_interpreter: { d: "M9.80307 3.04322C10.0554 3.15537 10.1691 3.45085 10.0569 3.70319L6.05691 12.7032C5.94477 12.9555 5.64928 13.0692 5.39694 12.957C5.14461 12.8449 5.03095 12.5494 5.14309 12.2971L9.14309 3.29706C9.25524 3.04472 9.55073 2.93107 9.80307 3.04322Z", tip: "Code Interpreter" },
+    mcp: { d: "M6.01323 6.77501C5.52723 6.28801 4.73223 6.28801 4.24523 6.77501C3.75923 7.26201 3.75923 8.05701 4.24523 8.54401L7.45623 11.755C7.94323 12.242 8.73823 12.242 9.22523 11.755C9.71223 11.268 9.71223 10.473 9.22523 9.98601L6.01323 6.77501Z", tip: "MCP" },
+    browser_automation: { d: "M1 3.5C1 2.11929 2.11929 1 3.5 1H10.5C11.8807 1 13 2.11929 13 3.5V12.5C13 13.8807 11.8807 15 10.5 15H3.5C2.11929 15 1 13.8807 1 12.5V3.5Z", tip: "Computer Use" },
+    function: { d: "M9.80307 3.04322C10.0554 3.15537 10.1691 3.45085 10.0569 3.70319L6.05691 12.7032C5.94477 12.9555 5.64928 13.0692 5.39694 12.957C5.14461 12.8449 5.03095 12.5494 5.14309 12.2971L9.14309 3.29706C9.25524 3.04472 9.55073 2.93107 9.80307 3.04322Z", tip: "Functions" },
+    azure_ai_search: { d: "M11.0195 11.7266C10.0658 12.5217 8.83875 13 7.5 13C4.46243 13 2 10.5376 2 7.5C2 4.46243 4.46243 2 7.5 2C10.5376 2 13 4.46243 13 7.5C13 8.83875 12.5217 10.0658 11.7266 11.0195L14.3536 13.6464C14.5488 13.8417 14.5488 14.1583 14.3536 14.3536C14.1583 14.5488 13.8417 14.5488 13.6464 14.3536L11.0195 11.7266Z", tip: "Azure AI Search" },
+    bing_grounding: { d: "M11.0195 11.7266C10.0658 12.5217 8.83875 13 7.5 13C4.46243 13 2 10.5376 2 7.5C2 4.46243 4.46243 2 7.5 2C10.5376 2 13 4.46243 13 7.5C13 8.83875 12.5217 10.0658 11.7266 11.0195L14.3536 13.6464C14.5488 13.8417 14.5488 14.1583 14.3536 14.3536C14.1583 14.5488 13.8417 14.5488 13.6464 14.3536L11.0195 11.7266Z", tip: "Bing Grounding" },
+    bing_custom_search: { d: "M11.0195 11.7266C10.0658 12.5217 8.83875 13 7.5 13C4.46243 13 2 10.5376 2 7.5C2 4.46243 4.46243 2 7.5 2C10.5376 2 13 4.46243 13 7.5C13 8.83875 12.5217 10.0658 11.7266 11.0195L14.3536 13.6464C14.5488 13.8417 14.5488 14.1583 14.3536 14.3536C14.1583 14.5488 13.8417 14.5488 13.6464 14.3536L11.0195 11.7266Z", tip: "Bing Custom Search" },
+    sharepoint_grounding: { d: "M4.5 5C4.22386 5 4 5.22386 4 5.5C4 5.77614 4.22386 6 4.5 6H11.5C11.7761 6 12 5.77614 12 5.5C12 5.22386 11.7761 5 11.5 5H4.5ZM4 8.5C4 8.22386 4.22386 8 4.5 8H11.5C11.7761 8 12 8.22386 12 8.5C12 8.77614 11.7761 9 11.5 9H4.5C4.22386 9 4 8.77614 4 8.5Z", tip: "SharePoint" },
+    fabric_dataagent: { d: "M2 4.5C2 3.11929 3.11929 2 4.5 2H11.5C12.8807 2 14 3.11929 14 4.5V11.5C14 12.8807 12.8807 14 11.5 14H4.5C3.11929 14 2 12.8807 2 11.5V4.5Z", tip: "Fabric Data Agent" },
+    openapi: { d: "M9.80307 3.04322C10.0554 3.15537 10.1691 3.45085 10.0569 3.70319L6.05691 12.7032C5.94477 12.9555 5.64928 13.0692 5.39694 12.957C5.14461 12.8449 5.03095 12.5494 5.14309 12.2971L9.14309 3.29706C9.25524 3.04472 9.55073 2.93107 9.80307 3.04322Z", tip: "OpenAPI" },
+    image_generation: { d: "M2 4.5C2 3.11929 3.11929 2 4.5 2H11.5C12.8807 2 14 3.11929 14 4.5V11.5C14 12.8807 12.8807 14 11.5 14H4.5C3.11929 14 2 12.8807 2 11.5V4.5Z", tip: "Image Generation" },
+    a2a_preview: { d: "M6.35355 3.64645C6.54882 3.84171 6.54882 4.15829 6.35355 4.35355L3.70711 7H8.5C11.5376 7 14 9.46243 14 12.5C14 12.7761 13.7761 13 13.5 13C13.2239 13 13 12.7761 13 12.5C13 10.0147 10.9853 8 8.5 8H3.70711L6.35355 10.6464C6.54882 10.8417 6.54882 11.1583 6.35355 11.3536C6.15829 11.5488 5.84171 11.5488 5.64645 11.3536L2.14645 7.85355C1.95118 7.65829 1.95118 7.34171 2.14645 7.14645L5.64645 3.64645C5.84171 3.45118 6.15829 3.45118 6.35355 3.64645Z", tip: "A2A" },
+    azure_function: { d: "M9.80307 3.04322C10.0554 3.15537 10.1691 3.45085 10.0569 3.70319L6.05691 12.7032C5.94477 12.9555 5.64928 13.0692 5.39694 12.957C5.14461 12.8449 5.03095 12.5494 5.14309 12.2971L9.14309 3.29706C9.25524 3.04472 9.55073 2.93107 9.80307 3.04322Z", tip: "Azure Function" },
   }
 
   const LIFECYCLE_LABELS = {
@@ -659,7 +675,7 @@ export const ModelCatalog = () => {
                       </div>
 
                       {/* Description — clamp when collapsed, full when expanded */}
-                      <p className={`text-xs text-zinc-600 dark:text-zinc-400 mb-3 ${isExpanded ? "" : "line-clamp-2"}`}>
+                      <p className={`text-xs leading-normal text-zinc-600 dark:text-zinc-400 ${isExpanded ? "mb-3 max-h-24 overflow-y-auto" : "line-clamp-2 h-8 mb-3"}`}>
                         {m.summary || "No description available."}
                       </p>
 
@@ -683,15 +699,15 @@ export const ModelCatalog = () => {
                         {/* Input modalities */}
                         {m.inputModalities?.map((mod) => (
                           <span key={`in-${mod}`} title={`Input: ${mod}`}
-                            className="inline-flex items-center justify-center w-6 h-6 rounded bg-blue-50 dark:bg-blue-900/20 text-[11px]" role="img" aria-label={`Input: ${mod}`}>
-                            {MODALITY_ICONS[mod] || mod.slice(0,2)}
+                            className="inline-flex items-center justify-center w-6 h-6 rounded bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
+                            {MODALITY_ICON[mod] ? <FI {...MODALITY_ICON[mod]} /> : <span className="text-[10px]">{mod.slice(0,2)}</span>}
                           </span>
                         ))}
                         {/* Output modalities (only if different from input) */}
                         {m.outputModalities?.filter((mod) => !m.inputModalities?.includes(mod)).map((mod) => (
                           <span key={`out-${mod}`} title={`Output: ${mod}`}
-                            className="inline-flex items-center justify-center w-6 h-6 rounded bg-indigo-50 dark:bg-indigo-900/20 text-[11px]" role="img" aria-label={`Output: ${mod}`}>
-                            {MODALITY_ICONS[mod] || mod.slice(0,2)}
+                            className="inline-flex items-center justify-center w-6 h-6 rounded bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400">
+                            {MODALITY_ICON[mod] ? <FI {...MODALITY_ICON[mod]} /> : <span className="text-[10px]">{mod.slice(0,2)}</span>}
                           </span>
                         ))}
                         {/* Separator */}
@@ -700,21 +716,21 @@ export const ModelCatalog = () => {
                         )}
                         {/* Tasks (top 3) */}
                         {(m.tasks || []).slice(0, 3).map((t) => {
-                          const ti = TASK_ICONS[t]
+                          const ti = TASK_ICON[t]
                           return ti ? (
                             <span key={t} title={ti.tip}
-                              className="inline-flex items-center justify-center w-6 h-6 rounded bg-emerald-50 dark:bg-emerald-900/20 text-[11px]" role="img" aria-label={ti.tip}>
-                              {ti.icon}
+                              className="inline-flex items-center justify-center w-6 h-6 rounded bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400">
+                              <FI {...ti} />
                             </span>
                           ) : null
                         })}
                         {/* Capabilities (top 4) */}
                         {(m.capabilities || []).slice(0, 4).map((c) => {
-                          const ci = CAPABILITY_ICONS[c]
+                          const ci = CAP_ICON[c]
                           return ci ? (
                             <span key={c} title={ci.tip}
-                              className="inline-flex items-center justify-center w-6 h-6 rounded bg-purple-50 dark:bg-purple-900/20 text-[11px]" role="img" aria-label={ci.tip}>
-                              {ci.icon}
+                              className="inline-flex items-center justify-center w-6 h-6 rounded bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400">
+                              <FI {...ci} />
                             </span>
                           ) : null
                         })}
@@ -774,11 +790,11 @@ export const ModelCatalog = () => {
                               <span className="text-xs text-zinc-400 dark:text-zinc-500 block mb-1">Tools</span>
                               <div className="flex flex-wrap gap-1">
                                 {m.toolsSupported.map((t) => {
-                                  const ti = TOOL_ICONS[t]
+                                  const ti = TOOL_ICON[t]
                                   return (
                                     <span key={t} title={ti?.tip || t}
                                       className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
-                                      {ti && <span>{ti.icon}</span>}
+                                      {ti && <FI {...ti} />}
                                       {ti?.tip || t}
                                     </span>
                                   )
