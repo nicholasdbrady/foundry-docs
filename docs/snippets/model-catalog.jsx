@@ -680,7 +680,7 @@ export const ModelCatalog = () => {
 
                       {/* Description — flex-1 to fill remaining space */}
                       <div className="flex-1 mb-2" style={{minHeight: "2.5rem"}}>
-                        <p className={`text-xs text-zinc-500 dark:text-zinc-400 ${isExpanded ? "max-h-24 overflow-y-auto" : "line-clamp-2"}`} style={{lineHeight: "1.4"}}>
+                        <p className={`model-desc text-xs text-zinc-500 dark:text-zinc-400 ${isExpanded ? "max-h-24 overflow-y-auto" : "line-clamp-2"}`}>
                           {m.summary || "\u00A0"}
                         </p>
                       </div>
