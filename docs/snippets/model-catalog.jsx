@@ -675,24 +675,22 @@ export const ModelCatalog = () => {
                       </div>
 
                       {/* Description — clamp when collapsed, full when expanded */}
-                      <p className={`text-xs leading-normal text-zinc-600 dark:text-zinc-400 ${isExpanded ? "mb-3 max-h-24 overflow-y-auto" : "line-clamp-2 h-8 mb-3"}`}>
+                      <p className={`text-xs leading-snug text-zinc-600 dark:text-zinc-400 ${isExpanded ? "mb-2 max-h-24 overflow-y-auto" : "line-clamp-2 mb-2"}`} style={{minHeight: "2rem"}}>
                         {m.summary || "No description available."}
                       </p>
 
-                      {/* Specs row — context + output */}
-                      {(m.contextWindow || m.maxOutputTokens) && (
-                        <div className="flex items-center gap-2 text-[11px] text-zinc-500 dark:text-zinc-400 mb-2.5 tabular-nums">
-                          {m.contextWindow && <span>{formatNumber(m.contextWindow)} ctx</span>}
-                          {m.contextWindow && m.maxOutputTokens && <span className="text-zinc-300 dark:text-zinc-600">·</span>}
-                          {m.maxOutputTokens && <span>{formatNumber(m.maxOutputTokens)} out</span>}
-                          {m.license && m.license !== "custom" && (
-                            <>
-                              <span className="text-zinc-300 dark:text-zinc-600">·</span>
-                              <span className="uppercase tracking-wider text-[10px]">{m.license}</span>
-                            </>
-                          )}
-                        </div>
-                      )}
+                      {/* Specs row — context + output (always rendered for alignment) */}
+                      <div className="flex items-center gap-2 text-[11px] text-zinc-500 dark:text-zinc-400 mb-2 tabular-nums" style={{minHeight: "1.25rem"}}>
+                        {m.contextWindow && <span>{formatNumber(m.contextWindow)} ctx</span>}
+                        {m.contextWindow && m.maxOutputTokens && <span className="text-zinc-300 dark:text-zinc-600">·</span>}
+                        {m.maxOutputTokens && <span>{formatNumber(m.maxOutputTokens)} out</span>}
+                        {m.license && m.license !== "custom" && (
+                          <>
+                            {(m.contextWindow || m.maxOutputTokens) && <span className="text-zinc-300 dark:text-zinc-600">·</span>}
+                            <span className="uppercase tracking-wider text-[10px]">{m.license}</span>
+                          </>
+                        )}
+                      </div>
 
                       {/* Icon strip — modalities, tasks, capabilities, tools */}
                       <div className="flex flex-wrap items-center gap-1">
