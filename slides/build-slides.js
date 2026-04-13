@@ -39,21 +39,21 @@ const C = {
 
 // ── LIVE DATA — computed from repo ────────────────────────────────────────
 const DATA = {
-  mdxDocs:           274,
-  agenticWorkflows:  26,
-  totalWorkflows:    31,
+  mdxDocs:           280,
+  agenticWorkflows:  23,
+  totalWorkflows:    29,
   slashCommands:     7,
-  workflowChains:    4,
-  scheduleWorkflows: 12,
-  pushWorkflows:     1,
+  workflowChains:    3,
+  scheduleWorkflows: 13,
+  pushWorkflows:     2,
   prWorkflows:       3,
   issueWorkflows:    25,
-  dispatchWorkflows: 22,
+  dispatchWorkflows: 21,
   sdkRepos:          4,
-  docSections:       16,
+  docSections:       15,
   sections: [
-    { name: "Models",            count: 72 },
-    { name: "Agents",            count: 57 },
+    { name: "Models",            count: 73 },
+    { name: "Agents",            count: 60 },
     { name: "Observability",     count: 24 },
     { name: "Setup",             count: 20 },
     { name: "Security",          count: 20 },
@@ -62,12 +62,11 @@ const DATA = {
     { name: "Dev Experience",    count: 11 },
     { name: "Manage",            count: 9  },
     { name: "Responsible AI",    count: 8  },
-    { name: "Operate",           count: 7  },
+    { name: "Operate",           count: 8  },
     { name: "Best Practices",    count: 5  },
-    { name: "Get Started",       count: 4  },
+    { name: "Get Started",       count: 6  },
     { name: "Overview",          count: 3  },
     { name: "Reference",         count: 1  },
-    { name: "Glossary",          count: 1  },
   ],
 };
 
@@ -432,11 +431,11 @@ async function buildPresentation() {
 
     // Category cards — 2 rows × 3 cols
     const categories = [
-      { icon: FaEye,           label: "Monitoring",     count: 6,  desc: "Upstream, SDK, community,\nReddit, diff reports, Dependabot" },
+      { icon: FaEye,           label: "Monitoring",     count: 6,  desc: "Upstream, SDK, community,\nReddit, diff reports, model catalog" },
       { icon: FaFlask,         label: "Testing",        count: 4,  desc: "Noob tester, multi-device,\nsearch quality, testbench" },
-      { icon: MdUpdate,        label: "Content Updates",count: 7,  desc: "Healer, updater, unbloat,\nglossary, labels, sync" },
-      { icon: FaShieldAlt,     label: "Quality Review", count: 5,  desc: "Auditor, PR reviewer,\nmerge verify, push check" },
-      { icon: FaUsers,         label: "Community",      count: 3,  desc: "Discussion monitor,\nresponder, auto-triage" },
+      { icon: MdUpdate,        label: "Content Updates",count: 7,  desc: "Daily updater, unbloat,\nglossary, changelog, sync" },
+      { icon: FaShieldAlt,     label: "Quality Review", count: 3,  desc: "PR reviewer, merge verify,\naudit-file check" },
+      { icon: FaUsers,         label: "Community",      count: 2,  desc: "Discussion monitor,\nauto-triage issues" },
       { icon: FaCog,           label: "Operations",     count: 1,  desc: "Slide deck maintainer\n(this deck!)" },
     ];
 
