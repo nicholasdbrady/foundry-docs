@@ -571,7 +571,7 @@ In this sample, proactive messaging is applied in three steps:
 - In the `onSessionUpdated` handler, `if (!this._greetingSent)` gates proactive execution to run once per session.
 - `session.addConversationItem(...)` adds the greeting instruction to conversation context, and `session.sendEvent({ type: "response.create" })` generates spoken output.
 
-## Improving tool calling and latency wait times
+## Improve tool calling and latency wait times
 
 Voice Live provides a feature called `interimResponse` to bridge wait times when tool calling is required or a high latency is experienced to generate an agent response.
 
@@ -622,7 +622,7 @@ To reconnect to that conversation, pass the conversation ID as the `CONVERSATION
 
 In this sample, conversation reconnect is applied in three places:
 
-- In `main()`, `CONVERSATION_ID` is read from `process.env` (line 542).
+- In `main()`, `CONVERSATION_ID` is read from `process.env` (line 558).
 - The value is passed to the `BasicVoiceAssistant` constructor.
 - In the constructor, `conversationId` is conditionally spread into the `agentConfig` object.
 
@@ -650,9 +650,9 @@ The following code creates the log filename and writes session metadata when `on
 
 In this sample, session metadata logging is applied in three places:
 
-- A `logs/` directory is created if it doesn't exist, and a timestamped conversation log file (`conversation_YYYYMMDD_HHmmss.log`) is created per run (lines 20–28).
-- On `onSessionUpdated`, the handler extracts the session ID from `context.sessionId` and writes it along with agent metadata to the log (lines 302–305).
-- `writeConversationLog(...)` appends entries to the same log file throughout the conversation lifecycle (lines 30–33).
+- A `logs/` directory is created if it doesn't exist, and a timestamped conversation log file (`conversation_YYYYMMDD_HHmmss.log`) is created per run (lines 21–29).
+- On `onSessionUpdated`, the handler extracts the session ID from `context.sessionId` and writes it along with agent metadata to the log (lines 306–321).
+- `writeConversationLog(...)` appends entries to the same log file throughout the conversation lifecycle (lines 31–33).
 
 Use the logged session metadata with `CONVERSATION_ID` to resume the same agent conversation in a later session.
 
