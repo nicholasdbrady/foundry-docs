@@ -29,9 +29,15 @@ To use this extension, provide a data set with test queries and a list of evalua
 
 ## Prerequisites
 
-  
 - A project. To learn more, see [Create a project](/setup/create-projects).
-- Install the [AI Agent AI evaluation extension](https://marketplace.visualstudio.com/items?itemName=ms-azure-exp-external.microsoft-extension-ai-agent-evaluation).
+- A [Foundry agent](/agent-service/overview).
+- The [AI Agent Evaluation extension](https://marketplace.visualstudio.com/items?itemName=ms-azure-exp-external.microsoft-extension-ai-agent-evaluation) installed in your Azure DevOps organization.
+
+<Tip>
+
+The recommended authentication method is Microsoft Entra ID via an Azure Resource Manager service connection. Create a [service connection](https://learn.microsoft.com/azure/devops/pipelines/library/connect-to-azure) in your Azure DevOps project, then reference it in your pipeline using the `AzureCLI@2` task before `AIAgentEvaluation@2`.
+
+</Tip>
 
 ## Inputs
 
@@ -39,18 +45,24 @@ To use this extension, provide a data set with test queries and a list of evalua
 
 | Name | Required? | Description |
 | - | - | - |
-| azure-ai-project-endpoint | Yes | Endpoint of your Microsoft Foundry Project. |
-| deployment-name | Yes | The name of the Azure AI model deployment to use for evaluation. |
+| azure-ai-project-endpoint | Yes | Endpoint of your Microsoft Foundry Project. To find this value, open your project in [Foundry portal](https://ai.azure.com) and copy the endpoint from the **Overview** page. |
+| deployment-name | Yes | The name of an Azure AI model deployment to use for evaluation. Find existing deployments under **Models + endpoints** in the Foundry portal. |
 | data-path | Yes | Path to the data file that contains the evaluators and input queries for evaluations. |
-| agent-IDs | Yes | ID of one or more agents to evaluate in format `agent-name:version` (for example, `my-agent:1` or `my-agent:1,my-agent:2`). Multiple agents are comma-separated and compared with statistical test results. |
+| agent-ids | Yes | ID of one or more agents to evaluate in format `agent-name:version` (for example, `my-agent:1` or `my-agent:1,my-agent:2`). Multiple agents are comma-separated and compared with statistical test results. |
 | baseline-agent-id | No | ID of the baseline agent to compare against when evaluating multiple agents. If not provided, the first agent is used. |
 
-### Data file
+<Note>
+
+To find your agent ID and version, open your project in [Foundry portal](https://ai.azure.com), go to **Agents**, select your agent, and copy the **Agent ID** from the details pane. The version is the deployment version number (for example, `my-agent:1`).
+
+</Note>
+
+#### Data file
 
 The input data file should be a JSON file with the following structure:
 
 | Field | Type | Required? | Description |
-| - | - | - |
+| - | - | - | - |
 | name | string | Yes | Name of the evaluation dataset. |
 | evaluators | string[] | Yes | List of evaluator names to use. Check out the list of available evaluators in your project's evaluator catalog in Foundry portal: **Build > Evaluations > Evaluator catalog**. |
 | data | object[] | Yes | Array of input objects with `query` and optional evaluator fields like `ground_truth`, `context`. Automapped to evaluators; use `data_mapping` to override. |
@@ -67,7 +79,7 @@ The input data file should be a JSON file with the following structure:
   "evaluators": [
     "builtin.fluency",
     "builtin.task_adherence",
-    "builtin.violence",
+    "builtin.violence"
   ],
   "data": [
     {
@@ -94,7 +106,7 @@ The input data file should be a JSON file with the following structure:
 
 ## Sample pipeline
 
-To use this Azure DevOps extension, add the task to your Azure Pipeline and configure authentication to access your Microsoft Foundry project.
+To use this extension, add the `AIAgentEvaluation@2` task to your Azure Pipeline. The following example shows a complete pipeline that authenticates using an Azure Resource Manager service connection and evaluates an agent.
 
 ```yaml
 steps:
@@ -109,17 +121,16 @@ steps:
 
 ## Evaluation results and outputs
 
-Evaluation results appear in the Azure DevOps pipeline summary with detailed metrics and comparisons between agents when multiple are evaluated.
+Evaluation results appear in the Azure DevOps pipeline summary. The report shows evaluation scores for each metric, confidence intervals, and — when you evaluate multiple agents — a pairwise statistical comparison that indicates whether differences are meaningful or within random variation.
 
-Evaluation results output to the summary section for each AI Evaluation task run in your Azure DevOps pipeline.
-
-The following screenshot is a sample report for comparing two agents.
+The following screenshot shows a sample report comparing two agents.
 
 <Frame>
-  <img src="/images/github-action-agent-output.png" alt="Screenshot of agent evaluation result." />
+  <img src="/images/github-action-agent-output.png" alt="Screenshot of Azure DevOps pipeline summary showing agent evaluation scores with confidence intervals and pairwise statistical comparison for two agents." />
 </Frame>
 
 ## Related content
 
+- [Evaluation in GitHub Actions](/observability/evaluation-github-action)
 - [How to evaluate generative AI models and applications with Foundry](/observability/evaluate-generative-ai-app)
 - [How to view evaluation results in Foundry portal](/observability/evaluate-results)
