@@ -13,7 +13,11 @@ If your organization requires customized Azure configurations like alternative n
 
 * An Azure account with an active subscription. If you don't have one, create a [free Azure account, which includes a free trial subscription](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
 
-* Access to a role that allows you to create a Foundry resource, such as **Azure Account AI Owner** or **Azure AI Owner** on the subscription or resource group. For more information about permissions, see [Role-based access control for Microsoft Foundry](/security/rbac-foundry#permissions-for-each-built-in-role).
+* If you're creating the project for yourself: 
+    * Access to a role that allows you to create a Foundry resource, such as **Azure Account AI Owner** or **Azure AI Owner** on the subscription or resource group. For more information about permissions, see [Role-based access control for Microsoft Foundry](/security/rbac-foundry#permissions-for-each-built-in-role).
+* If you're creating the project for a team: 
+    * Access to a role that allows you to complete role assignments, such as **Owner**. For more information about permissions, see [Role-based access control for Microsoft Foundry](/security/rbac-foundry#permissions-for-each-built-in-role).
+    * A list of user email addresses or Microsoft Entra security group IDs for team members who need access.
 
 Use the following tabs to select the method you want to use to create a Foundry project:
 
@@ -589,6 +593,91 @@ While not all Foundry capabilities support organizing work in projects yet, your
 
   </Tab>
 </Tabs>
+
+## Grant access to team members
+
+If you created the project for a team, assign the **Azure AI User** role to team members so they can use the project and its resources. This role provides the minimum permissions needed to build and test AI applications. For other roles you might need to assign, see [Role-based access control for Microsoft Foundry](/security/rbac-foundry).
+
+<Info>
+
+To complete role assignments, you need a role such as **Owner** on the project. For more information, see [Role-based access control for Microsoft Foundry](/security/rbac-foundry#permissions-for-each-built-in-role).
+
+</Info>
+
+<Tabs>
+  <Tab title="Foundry portal">
+
+    1. In the Foundry portal, select **Operate** in the upper-right navigation.
+    1. Select **Admin** in the left pane.
+    1. Select your project name in the table.
+    1. Select **Add user** in the upper right.
+    1. Enter the email address of the team member.
+    1. Select **Add**.
+
+    Repeat these steps for each team member or security group.
+
+<Tip>
+
+To add multiple users at once, use a Microsoft Entra security group instead of individual email addresses.
+
+</Tip>
+
+  </Tab>
+  <Tab title="Python SDK">
+
+    Use the Azure CLI or Foundry portal to manage role assignments. The Python SDK doesn't support role assignment operations.
+
+  </Tab>
+  <Tab title="Azure CLI">
+
+    1. Get the project's resource ID:
+
+         ```azurecli
+       PROJECT_ID=$(az cognitiveservices account project show \
+           --name my-foundry-resource \
+           --resource-group my-foundry-rg \
+           --project-name my-foundry-project \
+           --query id -o tsv)
+       ```
+
+    1. Assign the **Azure AI User** role to a team member:
+
+       ```azurecli
+       az role assignment create \
+           --role "Azure AI User" \
+           --assignee "user@contoso.com" \
+           --scope $PROJECT_ID
+       ```
+
+       To add a security group instead of an individual user:
+
+       ```azurecli
+       az role assignment create \
+           --role "Azure AI User" \
+           --assignee-object-id "<security-group-object-id>" \
+           --assignee-principal-type Group \
+           --scope $PROJECT_ID
+       ```
+
+    1. Verify the role assignment:
+
+       ```azurecli
+       az role assignment list \
+           --scope $PROJECT_ID \
+           --role "Azure AI User" \
+           --output table
+       ```
+
+    Reference: [az role assignment](https://learn.microsoft.com/cli/azure/role/assignment)
+
+  </Tab>
+</Tabs>
+
+### Verify team member access
+
+Ask a team member to verify their access by signing in to [Microsoft Foundry](https://ai.azure.com) and selecting the project from the project list.
+
+If the team member can't access the project, verify that the role assignment completed successfully. Check that you used the correct email address or security group ID. Make sure the team member's Azure account is in the same Microsoft Entra tenant.
 
 ## Delete projects
 
