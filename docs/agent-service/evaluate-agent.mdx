@@ -5,7 +5,7 @@ description: "Learn how to evaluate AI agents using built-in evaluators for qual
 
 Evaluation is essential for ensuring your agent meets quality and safety standards before deployment. By running evaluations during development, you establish a baseline for your agent's performance and can set acceptance thresholds, such as an 85% task adherence passing rate, before releasing it to users.
 
-In this article, you learn how to run an agent-targeted evaluation against a [Foundry agent](/agent-service/overview) using built-in evaluators for quality, safety, and agent behavior. Specifically, you:
+In this article, you learn how to run an agent-targeted evaluation against a [Foundry agent](/agent-service/overview) or [hosted agent](/agent-service/hosted-agents) using built-in evaluators for quality, safety, and agent behavior. Specifically, you:
 
 - Set up the SDK client for evaluation.
 - Choose evaluators for quality, safety, and agent behavior.
@@ -20,7 +20,7 @@ For general-purpose evaluation of generative AI models and applications, includi
 
 ## Prerequisites
 
-- A [Foundry project](/setup/create-projects) with an [agent](/agent-service/overview).
+- A [Foundry project](/setup/create-projects) with an [agent](/agent-service/overview) or [hosted agent](/agent-service/hosted-agents).
 - An Azure OpenAI deployment with a GPT model that supports chat completion (for example, `gpt-4o` or `gpt-4o-mini`).
 - **Azure AI User** role on the Foundry project.
 
@@ -185,6 +185,12 @@ eval_run = client.evals.runs.create(
 
 print(f"Evaluation run started: {eval_run.id}")
 ```
+
+<Tip>
+
+This sample works for both prompt agents and hosted agents that use the responses protocol. For hosted agents that use the invocations protocol, the `input_messages` format is different — provide a freeform JSON object instead of the structured template. For details and code samples, see [Hosted agent invocations protocol](/observability/cloud-evaluation#hosted-agent-invocations-protocol) in the cloud evaluation guide.
+
+</Tip>
 
 <Tip>
 

@@ -5,7 +5,7 @@ description: "Learn how to generate and edit images using Azure OpenAI image gen
 
 <Info>
 
-The DALL-E image generation model `dall-e-3` was retired on March 4, 2026, and is no longer available for new deployments. Existing deployments are non-functional. Use `gpt-image-1` or `gpt-image-1.5` for image generation instead. See the [image generation how-to guide](https://learn.microsoft.com/azure/ai-foundry/openai/how-to/dall-e) for updated instructions.
+The DALL-E image generation model `dall-e-3` was retired on March 4, 2026, and is no longer available for new deployments. Existing deployments are non-functional. Use a `gpt-image-` series model for image generation instead. See the [image generation how-to guide](https://learn.microsoft.com/azure/ai-foundry/openai/how-to/dall-e) for updated instructions.
 
 </Info>
 
@@ -13,23 +13,23 @@ OpenAI's image generation models create images from user-provided text prompts a
 
 You can do image generation via [image generation API](https://learn.microsoft.com/azure/ai-foundry/openai/dall-e-quickstart) or [responses API](https://learn.microsoft.com/azure/ai-foundry/openai/how-to/responses). Or you can experiment with image generation in the [Foundry portal](https://ai.azure.com)
 
-Use the tabs at the start of this page to select your preferred API approach and model.
+To select your preferred API approach and model, use the tabs at the start of this page.
 
 ## Models and capabilities
 
 Use this table to learn the differences between the different image generation models, and to help you choose the best model for your image generation needs.
 
-| Aspect | GPT-Image-1.5 | GPT-Image-1 | GPT-Image-1-Mini |
-|--------|---------------|--------------|------------------|
-|**Availability** | Limited access preview ([Apply for GPT-image-1.5 access](https://aka.ms/oai/gptimage1.5access)) | Limited access preview ([Apply for GPT-image-1 access](https://aka.ms/oai/gptimage1access)) | Limited access preview ([Apply for GPT-image-1 access](https://aka.ms/oai/gptimage1access)) |
-| **Strengths** | Best for realism, instruction following, multimodal context, and improved speed/cost | Best for realism, instruction following, and multimodal context | Best for fast prototyping, bulk generation, or cost-sensitive use cases |
-| **Input / Output Modalities & Format** | Accepts **text + image** inputs; outputs images only in **base64** (no URL option). | Accepts **text + image** inputs; outputs images only in **base64** (no URL option). | Accepts **text + image** inputs; outputs images only in **base64** (no URL option). |
-| **Image Sizes / Resolutions** | 1024×1024, 1024×1536, 1536×1024 | 1024×1024, 1024×1536, 1536×1024 | 1024×1024, 1024×1536, 1536×1024 |
-| **Quality Options** | `low`, `medium`, `high` (default = high) | `low`, `medium`, `high` (default = high) | `low`, `medium`, `high` (default = medium) |
-| **Number of Images per Request** | 1–10 images per request (`n` parameter) | 1–10 images per request (`n` parameter) | 1–10 images per request (`n` parameter) |
-| **Editing (inpainting / variations)** | ✅ Supports inpainting and variations with mask + prompt | ✅ Supports inpainting and variations with mask + prompt | ✅ Supports inpainting and variations with mask + prompt |
-| **Face Preservation** | ✅ Advanced **face preservation** for realistic, consistent results | ✅ Advanced **face preservation** for realistic, consistent results | ❌ No dedicated face preservation; better for **non-portrait/general creative** imagery |
-| **Performance & Cost** | High-fidelity, **realism-optimized** model; improved efficiency and latency over GPT-Image-1 | High-fidelity, **realism-optimized** model; higher latency and cost | **Cost-efficient** and **faster** for large-scale or iterative generation |
+| Aspect | GPT-Image-2 | GPT-Image-1.5 | GPT-Image-1 | GPT-Image-1-Mini |
+|--------|-------------|---------------|--------------|------------------|
+|**Availability** | Public preview | Limited access preview ([Apply for GPT-image-1.5 access](https://aka.ms/oai/gptimage1.5access)) | Limited access preview ([Apply for GPT-image-1 access](https://aka.ms/oai/gptimage1access)) | Limited access preview ([Apply for GPT-image-1 access](https://aka.ms/oai/gptimage1access)) |
+| **Strengths** | Best for high-resolution and 4K generation, improved image editing, and broad aspect-ratio support | Best for realism, instruction-following, multimodal context, and improved speed/cost | Best for realism, instruction-following, and multimodal context | Best for fast prototyping, bulk generation, or cost-sensitive use cases |
+| **Input / Output Modalities & Format** | Accepts **text + image** inputs; outputs images only in **base64** (no URL option). | Accepts **text + image** inputs; outputs images only in **base64** (no URL option). | Accepts **text + image** inputs; outputs images only in **base64** (no URL option). | Accepts **text + image** inputs; outputs images only in **base64** (no URL option). |
+| **Image Sizes / Resolutions** | Arbitrary resolutions: both edges must be multiples of 16 px; long edge up to 3,840 px (4K); aspect ratio up to 3:1; pixel count 655,360–8,294,400 | 1024×1024, 1024×1536, 1536×1024 | 1024×1024, 1024×1536, 1536×1024 | 1024×1024, 1024×1536, 1536×1024 |
+| **Quality Options** | Reworked quality controls: `low`, `medium`, `high`; `low` is optimized for latency-sensitive use cases | `low`, `medium`, `high` (default = high) | `low`, `medium`, `high` (default = high) | `low`, `medium`, `high` (default = medium) |
+| **Number of Images per Request** | 1–10 images per request (`n` parameter) | 1–10 images per request (`n` parameter) | 1–10 images per request (`n` parameter) | 1–10 images per request (`n` parameter) |
+| **Editing (inpainting / variations)** | ✅ Improved editing performance with inpainting and variations | ✅ Supports inpainting and variations with mask + prompt | ✅ Supports inpainting and variations with mask + prompt | ✅ Supports inpainting and variations with mask + prompt |
+| **Face Preservation** | ✅ Advanced **face preservation** for realistic, consistent results | ✅ Advanced **face preservation** for realistic, consistent results | ✅ Advanced **face preservation** for realistic, consistent results | ❌ No dedicated face preservation; better for **non-portrait/general creative** imagery |
+| **Performance & Cost** | High-fidelity, **realism-optimized** model; higher latency and cost | High-fidelity, **realism-optimized** model; improved efficiency and latency over GPT-Image-1 | High-fidelity, **realism-optimized** model; higher latency and cost | **Cost-efficient** and **faster** for large-scale or iterative generation |
 
 ## Quickstart
 
@@ -41,7 +41,7 @@ Use this guide to get started calling the Azure OpenAI in Microsoft Foundry Mode
 - <a href="https://www.python.org/" target="_blank">Python 3.8 or later version</a>.
 - The following Python libraries installed: `os`, `requests`, `json`.
 - An Azure OpenAI resource created in a supported region. See [Region availability](https://learn.microsoft.com/azure/ai-foundry/openai/concepts/models#model-summary-table-and-region-availability).
-- Then, you need to deploy a `gpt-image-1`-series model with your Azure resource. For more information, see [Create a resource and deploy a model with Azure OpenAI](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/how-to/create-resource).
+- Then, you need to deploy a gpt-image series model with your Azure resource. For more information, see [Create a resource and deploy a model with Azure OpenAI](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/how-to/create-resource).
 
 ### Setup 
 
@@ -85,7 +85,7 @@ Create and assign persistent environment variables for your key and endpoint.
 
 Create a new Python file named _quickstart.py_. Open the new file in your preferred editor or IDE.
 
-1. Replace the contents of _quickstart.py_ with the following code. Change the value of `prompt` to your preferred text. Also set `deployment` to the deployment name you chose when you deployed the GPT-image-1 series model.
+1. Replace the contents of _quickstart.py_ with the following code. Change the value of `prompt` to your preferred text. Also set `deployment` to the deployment name you chose when you deployed the image generation model.
     
     ```python
     import os
@@ -98,7 +98,7 @@ Create a new Python file named _quickstart.py_. Open the new file in your prefer
     endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
     subscription_key = os.getenv("AZURE_OPENAI_API_KEY")
     
-    deployment = "gpt-image-1.5" # the name of your GPT-image-1 series deployment
+    deployment = "gpt-image-1.5" # the name of your GPT-image series deployment
     api_version = "2025-04-01-preview" # or later version
     
     def decode_and_save_image(b64_data, output_filename):
@@ -255,8 +255,7 @@ Remember to remove the key from your code when you're done, and never post your 
     - An Azure OpenAI resource created in a compatible region. See [Region availability](https://learn.microsoft.com/azure/ai-foundry/openai/concepts/models#model-summary-table-and-region-availability).
         - Access the Azure OpenAI resource endpoint and keys in the Azure portal.
     - A deployed image generation model:
-        - **GPT-image-1 series**: Deploy a `gpt-image-1`-series model. Available in limited access.
-        - **GPT-image-1 series**: Deploy a `gpt-image-1` model. Requires [limited access registration](https://aka.ms/oai/access).
+        - **GPT-image-1 series**: Deploy a `gpt-image-1`-series model. Requires [limited access registration](https://aka.ms/oai/access).
 
     For more information, see [Create a resource and deploy a model with Azure OpenAI](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/how-to/create-resource).
 
@@ -341,7 +340,7 @@ client = AzureOpenAI(
 )
 
 result = client.images.generate(
-    model="gpt-image-1", # the name of your GPT-image-1 series deployment
+    model="gpt-image-1", # the name of your GPT-image series deployment
     prompt="a close-up of a bear walking through the forest",
     n=1,
     size="1024x1024",
@@ -374,7 +373,7 @@ image.show()
 
 1. Make sure the `AZURE_OPENAI_ENDPOINT` and `AZURE_OPENAI_API_KEY` environment variables are set.
 1. Change the value of `prompt` to your preferred text.
-1. Change the value of `model` to the name of your deployed GPT-image-1 series model.
+1. Change the value of `model` to the name of your deployed GPT-image series model.
 
 <Info>
 
@@ -550,7 +549,7 @@ The base64-encoded image data is printed to the console.
 
 <Info>
 
-GPT-image-1 also supports additional parameters such as `quality` (`low`, `medium`, `high`), `output_format` (`png`, `jpeg`), `background` (`auto`, `transparent`), and `output_compression` (0-100, JPEG only). For details, see [API options](https://learn.microsoft.com/azure/ai-foundry/openai/how-to/dall-e#specify-api-options).
+GPT-image-1 and GPT-image-2 also support additional parameters such as `quality` (`low`, `medium`, `high`), `output_format` (`png`, `jpeg`), `background` (`auto`, `transparent`), and `output_compression` (0-100, JPEG only). For details, see [API options](https://learn.microsoft.com/azure/ai-foundry/openai/how-to/dall-e#specify-api-options).
 
 </Info>
 
@@ -1823,7 +1822,7 @@ Use this guide to get started generating images with Azure OpenAI in your browse
 
 Browse to [Foundry](https://ai.azure.com/?cid=learnDocs) and sign in with the credentials associated with your Azure OpenAI resource. During or after the sign-in workflow, select the appropriate directory, Azure subscription, and Azure OpenAI resource.
 
-From the Foundry landing page, create or select a new project. Navigate to the **Models + endpoints** page on the left nav. Select **Deploy model** and then choose one of the GPT-Image-1 series models from the list. Complete the deployment process. 
+From the Foundry landing page, create or select a new project. Navigate to the **Models + endpoints** page on the left nav. Select **Deploy model** and then choose one of the image generation models from the list. Complete the deployment process. 
 
 On the model's page, select **Open in playground**.
 
@@ -1853,6 +1852,7 @@ Image generation has default rate limits per deployment:
 | Model | Default quota (images/min) |
 |-------|---------------------------|
 | GPT-image-1 series | 5 |
+| GPT-image-2 | 5 |
 
 To view your current quota or request an increase, see [Manage Azure OpenAI quotas](https://learn.microsoft.com/azure/ai-foundry/openai/how-to/quota).
 
@@ -1870,8 +1870,9 @@ Image generation typically takes 10-30 seconds depending on the model, size, and
 
 - An Azure subscription. You can [create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
 - An Azure OpenAI resource created in a supported region. See [Region availability](https://learn.microsoft.com/azure/ai-foundry/openai/concepts/models#model-summary-table-and-region-availability).
-- Deploy a `gpt-image-1`-series model with your Azure OpenAI resource. For more information on deployments, see [Create a resource and deploy a model with Azure OpenAI](https://learn.microsoft.com/azure/ai-foundry/openai/how-to/create-resource).
+- Deploy a `gpt-image-1`-series or `gpt-image-2` model with your Azure OpenAI resource. For more information on deployments, see [Create a resource and deploy a model with Azure OpenAI](https://learn.microsoft.com/azure/ai-foundry/openai/how-to/create-resource).
     - GPT-image-1 series models are available in limited access: [Apply for GPT-image-1 access](https://aka.ms/oai/gptimage1access); [Apply for GPT-image-1.5 access](https://aka.ms/oai/gptimage1.5access).
+    - GPT-image-2 is available in public preview.
 - Python 3.8 or later.
     - Install the required packages: `pip install openai azure-identity`
 
@@ -1886,7 +1887,7 @@ https://<your_resource_name>.openai.azure.com/openai/deployments/<your_deploymen
 Replace the following values:
 
 - `<your_resource_name>` is the name of your Azure OpenAI resource.
-- `<your_deployment_name>` is the name of your GPT-image-1 series model deployment.
+- `<your_deployment_name>` is the name of your model deployment.
 - `<api_version>` is the version of the API you want to use. For example, `2025-04-01-preview`.
 
 **Required headers**:
@@ -1938,7 +1939,7 @@ The `response_format` parameter isn't supported for GPT-image-1 series models, w
 
 Streaming lets you receive partial images as they're generated, providing faster visual feedback for your users. This is useful for applications where you want to show generation progress. The `partial_images` parameter (1-3) controls how many intermediate images are returned before the final result.
 
-You can stream image generation requests to `gpt-image-1`-series models by setting the `stream` parameter to `true`, and setting the `partial_images` parameter to a value between 0 and 3.
+You can stream image generation requests to `gpt-image-1`-series and `gpt-image-2` models by setting the `stream` parameter to `true`, and setting the `partial_images` parameter to a value between 0 and 3.
 
 ```python
 import base64
@@ -1980,7 +1981,13 @@ The following API body parameters are available for image generation models.
 
 #### Size
 
-Specify the size of the generated images. Must be one of `1024x1024`, `1024x1536`, or `1536x1024` for GPT-image-1 series models. Square images are faster to generate.
+For GPT-image-1 series models, specify the size of the generated images as one of `1024x1024`, `1024x1536`, or `1536x1024`. Square images are faster to generate.
+
+For `gpt-image-2`, arbitrary resolutions are supported with the following constraints:
+- Both edges must be a multiple of 16 pixels.
+- Long edge up to 3840 px (4K support).
+- Aspect ratio up to 3:1.
+- Total pixel count between 655,360 and 8,294,400.
 
 #### Quality
 
@@ -2038,7 +2045,7 @@ https://<your_resource_name>.openai.azure.com/openai/deployments/<your_deploymen
 
 Replace the following values:
 - `<your_resource_name>` is the name of your Azure OpenAI resource.
-- `<your_deployment_name>` is the name of your GPT-image-1 series model deployment.
+- `<your_deployment_name>` is the name of your GPT-image series model deployment.
 - `<api_version>` is the version of the API you want to use. For example, `2025-04-01-preview`.
 
 **Required headers**:
