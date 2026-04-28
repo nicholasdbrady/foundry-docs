@@ -123,7 +123,7 @@ Create a new Python file named _quickstart.py_. Open the new file in your prefer
       "size": "1024x1024",
       "quality": "medium",
       "output_format": "png",
-      # "background": "transparent",  # "auto" or "transparent" (requires PNG output)
+      # "background": "transparent",  # "auto" or "transparent" (GPT-image-1 only; requires PNG output)
       # "output_compression": 100,  # 0-100 compression level (JPEG output only)
     }
     generation_response = requests.post(
@@ -346,7 +346,7 @@ result = client.images.generate(
     size="1024x1024",
     quality="high",
     output_format="png",
-    # background="transparent",  # Set to "transparent" for transparent backgrounds (requires PNG)
+    # background="transparent",  # Set to "transparent" for transparent backgrounds (GPT-image-1 only; requires PNG)
     # output_compression=100,  # 0-100 compression level (JPEG output only)
 )
 
@@ -1758,7 +1758,7 @@ You need to retrieve the following information to authenticate your application 
         n      = 1
         quality = 'high'
         output_format = 'png'
-        # background = 'transparent'  # 'auto' or 'transparent' (requires PNG output)
+        # background = 'transparent'  # 'auto' or 'transparent' (GPT-image-1 only; requires PNG output)
         # output_compression = 100    # 0-100 compression level (JPEG output only)
     } | ConvertTo-Json
     
@@ -1953,7 +1953,6 @@ token_provider = get_bearer_token_provider(
 client = OpenAI(  
   base_url = "https://RESOURCE-NAME-HERE/openai/v1/",  
   api_key=token_provider,
-  default_headers={"api_version":"preview"}
 )
 
 stream = client.images.generate(
@@ -2115,7 +2114,7 @@ Use the *stream* parameter to enable streaming responses. When set to `true`, th
 
 #### Transparency
 
-Set the *background* parameter to `transparent` and *output_format* to `PNG` on an image generate request to get an image with a transparent background.
+GPT-image-1 only: set the *background* parameter to `transparent` and *output_format* to `PNG` on an image generate request to get an image with a transparent background.
 
 ## Write effective text-to-image prompts
 
