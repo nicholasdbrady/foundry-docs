@@ -137,9 +137,6 @@ pip install --upgrade openai
       "id": "resp_67cb32528d6881909eb2859a55e18a85",
       "created_at": 1741369938.0,
       "error": null,
-      "incomplete_details": null,
-      "instructions": null,
-      "metadata": {},
       "model": "gpt-4o-2024-08-06",
       "object": "response",
       "output": [
@@ -153,32 +150,17 @@ pip install --upgrade openai
             }
           ],
           "role": "assistant",
-          "status": null,
           "type": "message"
         }
       ],
       "output_text": "Great! How can I help you today?",
-      "parallel_tool_calls": null,
-      "temperature": 1.0,
-      "tool_choice": null,
-      "tools": [],
-      "top_p": 1.0,
-      "max_output_tokens": null,
-      "previous_response_id": null,
-      "reasoning": null,
       "status": "completed",
-      "text": null,
-      "truncation": null,
       "usage": {
         "input_tokens": 20,
         "output_tokens": 11,
-        "output_tokens_details": {
-          "reasoning_tokens": 0
-        },
+        "output_tokens_details": { "reasoning_tokens": 0 },
         "total_tokens": 31
-      },
-      "user": null,
-      "reasoning_effort": null
+      }
     }
     ```
 
@@ -187,7 +169,7 @@ pip install --upgrade openai
 
 ## Retrieve a response
 
-To retrieve a response from a previous call to the responses API.
+To retrieve a stored response by ID.
 
 <Tabs>
   <Tab title="Python (API Key)">
@@ -245,58 +227,6 @@ To retrieve a response from a previous call to the responses API.
     ```
 
   </Tab>
-  <Tab title="Output">
-
-    ```json
-    {
-      "id": "resp_67cb61fa3a448190bcf2c42d96f0d1a8",
-      "created_at": 1741382138.0,
-      "error": null,
-      "incomplete_details": null,
-      "instructions": null,
-      "metadata": {},
-      "model": "gpt-4o-2024-08-06",
-      "object": "response",
-      "output": [
-        {
-          "id": "msg_67cb61fa95588190baf22ffbdbbaaa9d",
-          "content": [
-            {
-              "annotations": [],
-              "text": "Hello! How can I assist you today?",
-              "type": "output_text"
-            }
-          ],
-          "role": "assistant",
-          "status": null,
-          "type": "message"
-        }
-      ],
-      "parallel_tool_calls": null,
-      "temperature": 1.0,
-      "tool_choice": null,
-      "tools": [],
-      "top_p": 1.0,
-      "max_output_tokens": null,
-      "previous_response_id": null,
-      "reasoning": null,
-      "status": "completed",
-      "text": null,
-      "truncation": null,
-      "usage": {
-        "input_tokens": 20,
-        "output_tokens": 11,
-        "output_tokens_details": {
-          "reasoning_tokens": 0
-        },
-        "total_tokens": 31
-      },
-      "user": null,
-      "reasoning_effort": null
-    }
-    ```
-
-  </Tab>
 </Tabs>
 
 ## Delete response
@@ -343,7 +273,7 @@ second_response = client.responses.create(
 print(second_response.model_dump_json(indent=2)) 
 ```
 
-Note from the output that even though we never shared the first input question with the `second_response` API call, by passing the `previous_response_id` the model has full context of previous question and response to answer the new question.
+The output confirms that even though the first input question was not passed directly to the `second_response` call, the `previous_response_id` gives the model full context of the prior exchange.
 
 **Output:**
 
@@ -625,13 +555,7 @@ print(second_response.model_dump_json(indent=2))
 
 ## Code Interpreter
 
-The Code Interpreter tool enables models to write and execute Python code in a secure, sandboxed environment. It supports a range of advanced tasks, including:
-
-* Processing files with varied data formats and structures
-* Generating files that include data and visualizations (for example, graphs)
-* Iteratively writing and running code to solve problems—models can debug and retry code until successful
-* Enhancing visual reasoning in supported models (for example, o3, o4-mini) by enabling image transformations such as cropping, zooming, and rotation
-* This tool is especially useful for scenarios involving data analysis, mathematical computation, and code generation.
+The Code Interpreter tool enables models to write and execute Python code in a secure, sandboxed environment. It supports data processing, file generation (including charts), iterative debugging, and visual reasoning (for example, image cropping and zooming in models like o3 and o4-mini). It is especially useful for data analysis, mathematical computation, and code generation.
 
 ```bash
 curl https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/responses?api-version=preview \
@@ -1047,13 +971,13 @@ response = client.responses.create(
 print(response.output_text)
 ```
 
-The MCP tool works only in the Responses API, and is available across all newer models (gpt-4o, gpt-4.1, and our reasoning models). When you're using the MCP tool, you only pay for tokens used when importing tool definitions or making tool calls—there are no additional fees involved.
+The MCP tool works only in the Responses API, and is available across all newer models (gpt-4o, gpt-4.1, and reasoning models). You only pay for tokens used when importing tool definitions or making tool calls.
 
 ### Approvals
 
 By default, the Responses API requires explicit approval before any data is shared with a remote MCP server. This approval step helps ensure transparency and gives you control over what information is sent externally.
 
-We recommend reviewing all data being shared with remote MCP servers and optionally logging it for auditing purposes.
+Review all data being shared with remote MCP servers and optionally log it for auditing.
 
 When an approval is required, the model returns a `mcp_approval_request` item in the response output. This object contains the details of the pending request and allows you to inspect or modify the data before proceeding.
 
@@ -1351,10 +1275,7 @@ curl https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/responses \
 
 The Responses API enables image generation as part of conversations and multi-step workflows. It supports image inputs and outputs within context and includes built-in tools for generating and editing images.
 
-Compared to the standalone Image API, the Responses API offers several advantages:
-
-* **Streaming**: Display partial image outputs during generation to improve perceived latency.
-* **Flexible inputs**: Accept image File IDs as inputs, in addition to raw image bytes.
+Compared to the standalone Image API, the Responses API supports streaming partial outputs during generation and accepts image File IDs as inputs in addition to raw image bytes.
 
 <Note>
 The image generation tool in the Responses API is only supported by the `gpt-image-1`-series models. You can however call this model from this list of supported models - `gpt-4o`, `gpt-4o-mini`, `gpt-4.1`, `gpt-4.1-mini`, `gpt-4.1-nano`, `o3`, `gpt-5` and `gpt-5.1` series models.<br /><br />The Responses API image generation tool does not currently support streaming mode. To use streaming mode and generate partial images, call the [image generation API](/models/catalog/dall-e) directly outside of the Responses API.
