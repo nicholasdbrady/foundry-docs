@@ -31,7 +31,7 @@ imports:
 concurrency:
   group: "gh-aw-${{ github.workflow }}"
   cancel-in-progress: true
-timeout-minutes: 10
+timeout-minutes: 30
 ---
 
 # Docs-vnext Baseline Sync
