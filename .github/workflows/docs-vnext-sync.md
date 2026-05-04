@@ -17,6 +17,8 @@ tools:
     - "git"
 
 safe-outputs:
+  max-patch-files: 500
+  max-patch-size: 10240
   create-pull-request:
     title-prefix: "[docs-vnext-sync] "
     labels: [documentation, docs-vnext, sync]
