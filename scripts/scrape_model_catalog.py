@@ -213,10 +213,21 @@ def normalize_model(raw: dict) -> CatalogModel | None:
         or _safe_str(tags.get("isDirectFromAzure")).lower() == "true"
     )
 
-    # Detect preview/deprecated from labels and tags
+    # Detect preview/deprecated from labels, tags, and systemCatalogData
     labels = annotations.get("labels", [])
     is_preview = "Preview" in tags or any("preview" in str(label).lower() for label in labels)
-    lifecycle = "preview" if is_preview else "generally-available"
+    scd_lifecycle = _safe_str(scd.get("lifecycleStatus")).lower()
+    is_deprecated = (
+        scd_lifecycle == "deprecated"
+        or "Deprecated" in tags
+        or any("deprecated" in str(label).lower() for label in labels)
+    )
+    if is_deprecated:
+        lifecycle = "deprecated"
+    elif is_preview:
+        lifecycle = "preview"
+    else:
+        lifecycle = "generally-available"
 
     # Extract createdAt from properties.creationContext (most reliable source)
     props = raw.get("properties", {})
@@ -355,7 +366,7 @@ def merge_region_data(models: list[CatalogModel], raw_data_path: str) -> list[Ca
     return models
 
 
-def validate_output(models: list[CatalogModel]) -> bool:
+def validate_output(models: list[CatalogModel], output_dir: str | None = None) -> bool:
     """Validate the output data. Returns True if valid, False otherwise."""
     errors = []
 
@@ -366,6 +377,23 @@ def validate_output(models: list[CatalogModel]) -> bool:
             f"Only {len(azure_direct)} Azure Direct models found "
             f"(minimum: {MIN_AZURE_DIRECT_MODELS})"
         )
+
+    # Regression guard: if existing output exists, check for large drops
+    if output_dir:
+        for fname in ("models.json", "models-core.json"):
+            existing_path = os.path.join(output_dir, fname)
+            if os.path.exists(existing_path):
+                with open(existing_path) as f:
+                    existing = json.load(f)
+                prev_count = len(existing.get("models", []))
+                if prev_count > 0:
+                    drop_pct = (prev_count - len(models)) / prev_count * 100
+                    if drop_pct > 20:
+                        errors.append(
+                            f"Model count dropped >20%: {prev_count} → {len(models)} "
+                            f"({drop_pct:.0f}% drop vs {fname})"
+                        )
+                break  # Only check the first file found
 
     # Check required fields
     for m in models:
@@ -446,16 +474,28 @@ def apply_icon_fallbacks(publisher_icons: dict[str, str], config: dict) -> dict[
 
 
 def filter_deprecated(models: list[CatalogModel], config: dict) -> list[CatalogModel]:
-    """Remove deprecated models listed in enrichment config. Runs unconditionally."""
+    """Remove deprecated models. Uses both enrichment config blocklist and API lifecycle status."""
     deprecated_cfg = config.get("deprecated", {})
     deprecated_ids = {mid.lower() for mid in deprecated_cfg.get("models", [])}
-    if not deprecated_ids:
-        return models
 
-    removed = [m for m in models if m.id.lower() in deprecated_ids]
-    kept = [m for m in models if m.id.lower() not in deprecated_ids]
-    if removed:
-        log.info("  🗑️  Removed %d deprecated models: %s", len(removed), ", ".join(m.id for m in removed))
+    removed_by_config = []
+    removed_by_api = []
+    kept = []
+    for m in models:
+        if m.id.lower() in deprecated_ids:
+            removed_by_config.append(m)
+        elif m.lifecycleStatus == "deprecated":
+            removed_by_api.append(m)
+        else:
+            kept.append(m)
+
+    if removed_by_config:
+        log.info("  🗑️  Removed %d deprecated models (config): %s",
+                 len(removed_by_config), ", ".join(m.id for m in removed_by_config))
+    if removed_by_api:
+        log.info("  🗑️  Removed %d deprecated models (API lifecycle): %s",
+                 len(removed_by_api), ", ".join(m.id for m in removed_by_api))
+        log.info("  ℹ  Consider adding these to model_enrichment.json[deprecated] for durability")
     return kept
 
 
@@ -542,18 +582,17 @@ def main():
 
     # Apply enrichment overrides (deployment types, regions, icons)
     enrichment = load_enrichment_config()
-    if enrichment:
+    if enrichment.get("publishers"):
         log.info("🔧 Applying enrichment overrides...")
         deduped = apply_enrichment(deduped, enrichment)
         publisher_icons = apply_icon_fallbacks(publisher_icons, enrichment)
 
-    # Filter deprecated models unconditionally (from enrichment config)
-    if enrichment:
-        log.info("🗑️  Filtering deprecated models...")
-        deduped = filter_deprecated(deduped, enrichment)
+    # Filter deprecated models unconditionally (config blocklist + API lifecycle)
+    log.info("🗑️  Filtering deprecated models...")
+    deduped = filter_deprecated(deduped, enrichment)
 
     log.info("✔️  Validating output...")
-    if not validate_output(deduped):
+    if not validate_output(deduped, args.output):
         log.error("💥 Aborting: validation failed. No output written.")
         sys.exit(1)
 
