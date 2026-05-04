@@ -7,6 +7,9 @@ Key terms and concepts used throughout the Microsoft Foundry documentation.
 
 ## A
 
+### AI Gateway
+An enterprise AI gateway such as Azure API Management (APIM) or a non-Azure model gateway that sits in front of model endpoints. Foundry Agent Service can route model requests through a gateway connection, allowing organizations to apply governance, security policies, and compliance controls to AI model access while still using Foundry agent capabilities.
+
 ### Agent
 An AI-powered entity that can perform tasks autonomously using tools, models, and instructions. In Microsoft Foundry, agents are created via the Azure AI Projects SDK and can use built-in tools like Code Interpreter, File Search, and Function Calling.
 
@@ -19,13 +22,27 @@ The primary Python client class in the Azure AI Projects SDK for connecting to a
 ### Azure AI Search
 A cloud search service providing keyword, vector, and semantic search capabilities. Used as the underlying indexing and retrieval infrastructure for RAG patterns, Foundry IQ knowledge bases, and vector stores.
 
+## B
+
+### Basic Agent Setup
+A Foundry Agent Service deployment mode that uses Microsoft-managed, multitenant Azure resources (storage, Cosmos DB, AI Search) to store agent state. Suitable for development and scenarios where data sovereignty is not a requirement. Compare with Standard Agent Setup.
+
 ## C
+
+### Capability Host
+A sub-resource attached to both a Foundry account and a Foundry project that activates Foundry Agent Service. The account-level capability host enables agents globally, while the project-level capability host specifies which Azure resources (Microsoft-managed or customer-owned) store agent state. The capability host configuration is immutable after creation.
 
 ### Code Interpreter
 A built-in Foundry agent tool that lets agents write and execute Python code in a sandboxed environment. Useful for data analysis, mathematical calculations, chart generation, and file processing tasks.
 
+### Connection
+An authenticated reference to an Azure or external resource (such as Azure AI Search, Azure Storage, Azure Cosmos DB, or an AI gateway) stored within a Foundry project. Connections supply the credentials and endpoint configuration that Foundry Agent Service needs to access external resources at runtime. Some connection types can be created in the Foundry portal; others require deployment via Bicep or SDK.
+
 ### Conversation
 A durable object in Foundry Agent Service that persists interaction state across turns and sessions. Conversations store items (messages, tool calls, tool outputs) and have unique identifiers that can be reused across sessions. Replaces the thread concept from the Assistants API.
+
+### Customer-Managed Keys (CMK)
+Encryption keys that you own and store in Azure Key Vault, used to encrypt data at rest in your Foundry resource. CMK encryption applies to project artifacts, uploaded files, and evaluation data stored in associated storage accounts. CMK lets you rotate or revoke keys to meet compliance and data sovereignty requirements.
 
 ## E
 
@@ -66,11 +83,17 @@ A top-level Foundry IQ resource that orchestrates agentic retrieval over one or 
 
 ## M
 
+### Managed Virtual Network
+A Microsoft-managed virtual network that provides outbound traffic isolation for Foundry Agent Service. When enabled, all agent outbound traffic is secured within this managed boundary. Supports two isolation modes: *allow internet outbound* (unrestricted egress) and *allow only approved outbound* (restricted via Azure Firewall and service tags). The isolation mode cannot be changed after it is set.
+
 ### MCP (Model Context Protocol)
 An open protocol that enables AI agents to connect to external data sources and tools through a standardized interface. In Microsoft Foundry, agents can use MCP servers as tools via the Model Context Protocol tool type, allowing integration with custom data sources and services.
 
 ### Microsoft Entra ID
 Microsoft's cloud identity and access management service, formerly Azure Active Directory. Used in Foundry for keyless authentication (instead of API keys) and as the identity provider for role-based access control (RBAC) assignments.
+
+### Network Security Perimeter (NSP)
+An Azure networking feature that groups PaaS resources (including Foundry) into a logical boundary to restrict data-plane access. NSPs enforce inbound and outbound access rules, reduce data exfiltration risk, and provide centralized access logging across all associated resources. Foundry NSP support is currently in public preview.
 
 ## O
 
@@ -90,6 +113,11 @@ The output of a single agent invocation in Foundry Agent Service. A response inc
 
 ### Responses API
 The API surface for generating agent outputs in Foundry Agent Service. The Responses API accepts a conversation (or previous response output) and returns a new response with the agent's result. It supersedes the older Assistants API runs endpoint.
+
+## S
+
+### Standard Agent Setup
+A Foundry Agent Service deployment mode that uses customer-managed, single-tenant Azure resources (Azure Storage, Azure AI Search, and Azure Cosmos DB for NoSQL) to store all agent state. Enforces project-level data isolation, enables compliance with enterprise security policies, and gives full control over data residency. Compare with Basic Agent Setup.
 
 ## V
 
