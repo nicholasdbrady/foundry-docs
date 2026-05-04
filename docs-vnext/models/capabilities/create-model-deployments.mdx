@@ -3,7 +3,7 @@ title: "Deploy models using Azure CLI and Bicep"
 description: "Learn how to add and configure Microsoft Foundry Models in your Foundry resource for use in inference applications using Azure CLI and Bicep templates."
 ---
 <Info>
-Azure AI Inference beta SDK is deprecated and will be retired on May 30, 2026. Switch to the generally available [OpenAI/v1 API](https://aka.ms/openai/v1) with a stable OpenAI SDK. Follow the [migration guide](../how-to/model-inference-to-openai-migration) to switch to OpenAI/v1, using the SDK for your preferred programming language.
+Azure AI Inference beta SDK is deprecated and will be retired on May 30, 2026. Switch to the generally available [OpenAI/v1 API](https://aka.ms/openai/v1) with a stable OpenAI SDK. Follow the [migration guide](../how-to/model-inference-to-openai-migration.md) to switch to OpenAI/v1, using the SDK for your preferred programming language.
 </Info>
 
 In this article, you learn how to add a new model deployment to a Foundry Models endpoint. The deployment is available for inference in your Foundry resource when you specify the deployment name in your requests.
@@ -12,7 +12,7 @@ In this article, you learn how to add a new model deployment to a Foundry Models
 
 To complete this article, you need the following:
 
-* An Azure subscription. If you're using [GitHub Models](https://docs.github.com/en/github-models/), you can upgrade your experience and create an Azure subscription in the process. For more information, see [Upgrade from GitHub Models to Foundry Models](/models/capabilities/quickstart-github-models).
+* An Azure subscription. If you're using GitHub Models, you can upgrade your experience and create an Azure subscription in the process. For more information, see [Upgrade from GitHub Models to Foundry Models](/models/capabilities/quickstart-github-models).
 
 * A Foundry project. This project type is managed under a Foundry resource (formerly known as Azure AI Services resource). If you don't have a Foundry project, see [Create a project for Microsoft Foundry](/setup/create-projects).
 
@@ -215,19 +215,19 @@ cd azureai-model-inference-bicep/infra
 
 ## Permissions required to subscribe to Models from Partners and Community
 
-[Foundry Models from partners and community](../../concepts/models-from-partners) available for deployment (for example, Cohere models) require Azure Marketplace. Model providers define the license terms and set the price for use of their models using Azure Marketplace.
+[Foundry Models from partners and community](../../concepts/models-from-partners.md) available for deployment (for example, Cohere models) require Azure Marketplace. Model providers define the license terms and set the price for use of their models using Azure Marketplace.
 
 When deploying third-party models, ensure you have the following permissions in your account:
 
-<Check>On the Azure subscription:</Check>
-<Check>`Microsoft.MarketplaceOrdering/agreements/offers/plans/read`</Check>
-<Check>`Microsoft.MarketplaceOrdering/agreements/offers/plans/sign/action`</Check>
-<Check>`Microsoft.MarketplaceOrdering/offerTypes/publishers/offers/plans/agreements/read`</Check>
-<Check>`Microsoft.Marketplace/offerTypes/publishers/offers/plans/agreements/read`</Check>
-<Check>`Microsoft.SaaS/register/action`</Check>
-<Check>On the resource group—to create and use the SaaS resource:</Check>
-<Check>`Microsoft.SaaS/resources/read`</Check>
-<Check>`Microsoft.SaaS/resources/write`</Check>
+- On the Azure subscription:
+- `Microsoft.MarketplaceOrdering/agreements/offers/plans/read`
+- `Microsoft.MarketplaceOrdering/agreements/offers/plans/sign/action`
+- `Microsoft.MarketplaceOrdering/offerTypes/publishers/offers/plans/agreements/read`
+- `Microsoft.Marketplace/offerTypes/publishers/offers/plans/agreements/read`
+- `Microsoft.SaaS/register/action`
+- On the resource group—to create and use the SaaS resource:
+- `Microsoft.SaaS/resources/read`
+- `Microsoft.SaaS/resources/write`
 The **Owner** and **Contributor** built-in roles on the Azure subscription include these permissions. If you don't have the required permissions, ask your subscription administrator to assign you the **Contributor** role, or [create a custom role](https://learn.microsoft.com/azure/role-based-access-control/custom-roles) that includes the listed actions.
 
 To verify your permissions, go to the [Azure portal](https://portal.azure.com), open your subscription, select **Access control (IAM)** > **Check access**, and review your assigned roles.

@@ -2,17 +2,20 @@
 title: "Azure OpenAI in Microsoft Foundry Models v1 API"
 description: "Learn how to use the Azure OpenAI v1 API, which simplifies authentication, removes api-version parameters, and supports cross-provider model calls."
 ---
+
 This article shows you how to use the v1 Azure OpenAI API. The v1 API simplifies authentication, removes the need for dated `api-version` parameters, and supports cross-provider model calls.
 
 <Note>
+
 New API response objects might be added to the API response at any time. We recommend you only parse the response objects you require.
+
 </Note>
 
 ## Prerequisites
 
-- An Azure subscription - [Create one for free](https://azure.microsoft.com/free/cognitive-services)
-- A [Foundry resource](/setup/multi-service-resource) or [Azure OpenAI resource](https://learn.microsoft.com/azure/ai-foundry/openai/how-to/create-resource) deployed in a [supported region](https://azure.microsoft.com/explore/global-infrastructure/products-by-region/?products=cognitive-services)
-- At least one [model deployment](/models/capabilities/deploy-foundry-models)
+- An Azure subscription - [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn)
+- A [Foundry resource](../../../ai-services/multi-service-resource) or [Azure OpenAI resource](https://learn.microsoft.com/azure/ai-foundry/openai/how-to/create-resource) deployed in a [supported region](https://azure.microsoft.com/explore/global-infrastructure/products-by-region/?products=cognitive-services)
+- At least one [model deployment](../../foundry-models/how-to/deploy-foundry-models)
 - For Microsoft Entra ID authentication: the `Cognitive Services OpenAI User` role assigned to your identity. For more information, see [Role-based access control for Azure OpenAI](https://learn.microsoft.com/azure/ai-foundry/openai/how-to/role-based-access-control)
 
 ## API evolution
@@ -31,7 +34,7 @@ Access to new API calls that are still in preview will be controlled by passing 
 
 Examples:
 
-- `/openai/v1/evals` is in preview and requires passing an `"aoai-evals":"preview"` header.
+- When `/openai/v1/evals` was previously in preview it required passing an `"aoai-evals":"preview"` header. **/evals is no longer in preview.**
 - `/openai/v1/fine_tuning/alpha/graders/` is in preview and requires no custom header due to the presence of `alpha` in the API path.
 
 For the initial v1 Generally Available (GA) API launch, only a subset of the inference and authoring API capabilities are supported. All GA features are supported for use in production. Support for more capabilities is being added rapidly.
@@ -43,7 +46,7 @@ For the initial v1 Generally Available (GA) API launch, only a subset of the inf
 
     ### v1 API
 
-    [Python v1 examples](/models/capabilities/supported-languages)
+    [Python v1 examples](../supported-languages)
 
     **API Key**:
 
@@ -88,7 +91,9 @@ For the initial v1 Generally Available (GA) API launch, only a subset of the inf
     **Microsoft Entra ID**:
 
 <Info>
+
 Handling automatic token refresh was previously handled through use of the `AzureOpenAI()` client. The v1 API removes this dependency, by adding automatic token refresh support to the `OpenAI()` client.
+
 </Info>
 
     ```python
@@ -96,7 +101,7 @@ Handling automatic token refresh was previously handled through use of the `Azur
     from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 
     token_provider = get_bearer_token_provider(
-        DefaultAzureCredential(), "https://cognitiveservices.azure.com/.default"
+        DefaultAzureCredential(), "https://ai.azure.com/.default"
     )
 
     client = OpenAI(  
@@ -120,7 +125,7 @@ Handling automatic token refresh was previously handled through use of the `Azur
 
     ### v1 API
 
-    [C# v1 examples](/models/capabilities/supported-languages)
+    [C# v1 examples](../supported-languages)
 
     **API Key**:
 
@@ -140,7 +145,7 @@ Handling automatic token refresh was previously handled through use of the `Azur
 
     BearerTokenPolicy tokenPolicy = new(
         new DefaultAzureCredential(),
-        "https://cognitiveservices.azure.com/.default");
+        "https://ai.azure.com/.default");
     OpenAIClient client = new(
         authenticationPolicy: tokenPolicy,
         options: new OpenAIClientOptions()
@@ -154,7 +159,7 @@ Handling automatic token refresh was previously handled through use of the `Azur
 
     ### v1 API
 
-    [JavaScript v1 examples](/models/capabilities/supported-languages)
+    [JavaScript v1 examples](../supported-languages)
 
     **API Key**:
 
@@ -176,7 +181,7 @@ Handling automatic token refresh was previously handled through use of the `Azur
     ```javascript
     const tokenProvider = getBearerTokenProvider(
         new DefaultAzureCredential(),
-        'https://cognitiveservices.azure.com/.default');
+        'https://ai.azure.com/.default');
     const client = new OpenAI({
         baseURL: "https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/",
         apiKey: tokenProvider
@@ -188,7 +193,7 @@ Handling automatic token refresh was previously handled through use of the `Azur
 
     ### v1 API
 
-    [Go v1 examples](/models/capabilities/supported-languages)
+    [Go v1 examples](../supported-languages)
 
     **API Key**:
 
@@ -219,7 +224,7 @@ Handling automatic token refresh was previously handled through use of the `Azur
   </Tab>
   <Tab title="Java">
 
-    [Java v1 examples](/models/capabilities/supported-languages)
+    [Java v1 examples](../supported-languages)
 
     ### v1 API
 
@@ -247,7 +252,7 @@ Handling automatic token refresh was previously handled through use of the `Azur
     Credential tokenCredential = BearerTokenCredential.create(
             AuthenticationUtil.getBearerTokenSupplier(
                     new DefaultAzureCredentialBuilder().build(),
-                    "https://cognitiveservices.azure.com/.default"));
+                    "https://ai.azure.com/.default"));
     OpenAIClient client = OpenAIOkHttpClient.builder()
             .baseUrl("https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/")
             .credential(tokenCredential)
@@ -288,12 +293,14 @@ Handling automatic token refresh was previously handled through use of the `Azur
 
 ## Model support
 
-For Azure OpenAI models we recommend using the [Responses API](/models/capabilities/supported-languages), however, the v1 API also allows you to make chat completions calls with models from other providers like DeepSeek and Grok which support the OpenAI v1 chat completions syntax.
+For Azure OpenAI models we recommend using the [Responses API](../supported-languages), however, the v1 API also allows you to make chat completions calls with models from other providers like DeepSeek and Grok which support the OpenAI v1 chat completions syntax.
 
 `base_url` will accept both `https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/` and `https://YOUR-RESOURCE-NAME.services.ai.azure.com/openai/v1/` formats.
 
 <Note>
-Responses API also works with Foundry Models sold directly by Azure, such as Microsoft AI, DeepSeek, and Grok models. To learn how to use the Responses API with these models, see [How to generate text responses with Microsoft Foundry Models](/models/catalog/generate-responses).
+
+Responses API also works with Foundry Models sold directly by Azure, such as Microsoft AI, DeepSeek, and Grok models. To learn how to use the Responses API with these models, see [How to generate text responses with Microsoft Foundry Models](../../foundry-models/how-to/generate-responses).
+
 </Note>
 
 <CodeGroup>
@@ -302,7 +309,7 @@ Responses API also works with Foundry Models sold directly by Azure, such as Mic
     from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 
     token_provider = get_bearer_token_provider(
-        DefaultAzureCredential(), "https://cognitiveservices.azure.com/.default"
+        DefaultAzureCredential(), "https://ai.azure.com/.default"
     )
 
     client = OpenAI(  
@@ -331,7 +338,7 @@ Responses API also works with Foundry Models sold directly by Azure, such as Mic
 
     BearerTokenPolicy tokenPolicy = new(
         new DefaultAzureCredential(),
-        "https://cognitiveservices.azure.com/.default");
+        "https://ai.azure.com/.default");
 
     ChatClient client = new(
         model: "MAI-DS-R1", // Replace with your model deployment name.
@@ -353,7 +360,7 @@ Responses API also works with Foundry Models sold directly by Azure, such as Mic
 
     const tokenProvider = getBearerTokenProvider(
         new DefaultAzureCredential(),
-        'https://cognitiveservices.azure.com/.default');
+        'https://ai.azure.com/.default');
     const client = new OpenAI({
         baseURL: "https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/",
         apiKey: tokenProvider
@@ -477,30 +484,6 @@ Responses API also works with Foundry Models sold directly by Azure, such as Mic
 
 - [v1 OpenAPI 3.0 spec](https://github.com/Azure/azure-rest-api-specs/blob/main/specification/ai/data-plane/OpenAI.v1/azure-v1-v1-generated.json)
 
-### Status
-
-Generally Available features are supported for use in production.
-
-| API Path                               | Status              |
-|----------------------------------------|---------------------|
-| `/openai/v1/chat/completions`          | Generally Available |
-| `/openai/v1/embeddings`                | Generally Available |
-| `/openai/v1/evals`                     | Preview             |
-| `/openai/v1/files`                     | Generally Available |
-| `/openai/v1/fine_tuning/jobs/{fine_tuning_job_id}/checkpoints/{fine_tuning_checkpoint_id}/copy` | Preview |
-| `/openai/v1/fine_tuning/alpha/graders/`| Preview             |
-| `/openai/v1/fine_tuning/`              | Generally Available |
-| `/openai/v1/models`                    | Generally Available |
-| `/openai/v1/responses`                 | Generally Available |
-| `/openai/v1/vector_stores`             | Generally Available |
-
-### Preview headers
-
-| API Path                              | Header                   |
-|---------------------------------------|:-------------------------|
-| `/openai/v1/evals`                    | `"aoai-evals":"preview"` |
-| `/openai/v1/fine_tuning/jobs/{fine_tuning_job_id}/checkpoints/{fine_tuning_checkpoint_id}/copy` | `"aoai-copy-ft-checkpoints" : "preview"` |
-
 ## API version changelog
 
 The following sections summarize changes between API versions.
@@ -508,7 +491,7 @@ The following sections summarize changes between API versions.
 ### Changes between v1 preview release and 2025-04-01-preview
 
 - [v1 preview API](#api-evolution)
-- [Video generation support](/models/catalog/video-generation)
+- [Video generation support](../concepts/video-generation)
 - **NEW** Responses API features:
     * Remote Model Context Protocol (MCP) servers tool integration
     * Support for asynchronous background tasks
@@ -523,7 +506,7 @@ The following sections summarize changes between API versions.
 
 ### Changes between 2025-03-01-preview and 2025-02-01-preview
 
-- [Responses API](/models/capabilities/responses)
+- [Responses API](../how-to/responses)
 - Computer use
 
 ### Changes between 2025-02-01-preview and 2025-01-01-preview
@@ -532,13 +515,13 @@ The following sections summarize changes between API versions.
 
 ### Changes between 2025-01-01-preview and 2024-12-01-preview
 
-- `prediction` parameter added for [predicted outputs](/models/capabilities/predicted-outputs) support.
-- `gpt-4o-audio-preview` [model support](/models/capabilities/audio-completions-quickstart).
+- `prediction` parameter added for [predicted outputs](../how-to/predicted-outputs) support.
+- `gpt-4o-audio-preview` [model support](../audio-completions-quickstart).
 
 ### Changes between 2024-12-01-preview and 2024-10-01-preview
 
 - `store`, and `metadata` parameters added for stored completions support.
-- `reasoning_effort` added for latest [reasoning models](/models/capabilities/reasoning).
+- `reasoning_effort` added for latest [reasoning models](../how-to/reasoning).
 - `user_security_context` added for [Microsoft Defender for Cloud integration](https://aka.ms/TP4AI/Documentation/EndUserContext).
 
 ### Changes between 2024-09-01-preview and 2024-08-01-preview
@@ -550,7 +533,7 @@ The following sections summarize changes between API versions.
 
 ### Changes between 2024-07-01-preview and 2024-08-01-preview API specification
 
-- [Structured outputs support](/models/capabilities/structured-outputs).
+- [Structured outputs support](../how-to/structured-outputs).
 - Large file upload API added.
 - On your data changes:
     * Mongo DB integration.
@@ -561,7 +544,7 @@ The following sections summarize changes between API versions.
 
 ### Changes between 2024-05-01-preview and 2024-07-01-preview API specification
 
-- [Batch API support added](/models/capabilities/batch)
+- [Batch API support added](../how-to/batch)
 - [Vector store chunking strategy parameters](https://learn.microsoft.com/azure/ai-foundry/openai/reference-preview)
 - `max_num_results` that the file search tool should output.
 
@@ -580,24 +563,14 @@ The following sections summarize changes between API versions.
 - [`audioWord`](https://github.com/Azure/azure-rest-api-specs/blob/fbc90d63f236986f7eddfffe3dca6d9d734da0b2/specification/cognitiveservices/data-plane/AzureOpenAI/inference/preview/2024-04-01-preview/inference.json#L5286) object added.
 - Additional TTS [`response_formats: wav & pcm`](https://github.com/Azure/azure-rest-api-specs/blob/fbc90d63f236986f7eddfffe3dca6d9d734da0b2/specification/cognitiveservices/data-plane/AzureOpenAI/inference/preview/2024-04-01-preview/inference.json#L5333).
 
-## Troubleshooting
-
-| Issue | Cause | Solution |
-| ----- | ----- | -------- |
-| `404 Not Found` when calling the v1 API | Incorrect `base_url` format | Verify the URL ends with `/openai/v1/`. Both `https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/` and `https://YOUR-RESOURCE-NAME.services.ai.azure.com/openai/v1/` are valid. |
-| `401 Unauthorized` with Entra ID | Missing or incorrect role assignment | Assign the `Cognitive Services OpenAI User` role to your identity. Role assignments can take up to 5 minutes to propagate. |
-| `AzureOpenAI()` client doesn't work with v1 | v1 API uses the `OpenAI()` client | Replace `AzureOpenAI()` with `OpenAI()` and set `base_url` to your Azure endpoint with `/openai/v1/` appended. |
-| `api-version` parameter rejected | v1 API doesn't use `api-version` | Remove any `api-version` query parameters from your requests. The v1 API doesn't require or accept them. |
-| Preview features not available | Missing preview header | For preview APIs like `/openai/v1/evals`, pass the required preview header (for example, `"aoai-evals":"preview"`). See [Preview headers](#preview-headers). |
-
 ## Known issues
 
 - The `2025-04-01-preview` Azure OpenAI spec uses OpenAPI 3.1. It's a known issue that this version isn't fully supported by [Azure API Management](https://learn.microsoft.com/azure/api-management/api-management-key-concepts).
 
 ## Next steps
 
-- [Supported programming languages for the v1 API](/models/capabilities/supported-languages)
-- [Foundry Models sold directly by Azure](/models/catalog/models-sold-directly-by-azure)
-- [Working with Azure OpenAI models](/models/catalog/working-with-models)
+- [Supported programming languages for the v1 API](../supported-languages)
+- [Foundry Models sold directly by Azure](../../foundry-models/concepts/models-sold-directly-by-azure)
+- [Working with Azure OpenAI models](../how-to/working-with-models)
 - [Azure OpenAI quotas and limits](https://learn.microsoft.com/azure/ai-foundry/openai/quotas-limits)
 - [v1 OpenAPI 3.0 spec](https://github.com/Azure/azure-rest-api-specs/blob/main/specification/ai/data-plane/OpenAI.v1/azure-v1-v1-generated.json)

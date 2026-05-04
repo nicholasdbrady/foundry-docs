@@ -2,21 +2,8 @@
 title: "Get started with Microsoft Foundry SDKs and Endpoints"
 description: "This article provides an overview of the Microsoft Foundry SDKs and endpoints and how to get started using them."
 ---
+
 A Foundry resource provides unified access to models, agents, and tools. This article explains which SDK and endpoint to use for your scenario.
-
-<Warning>
-**Use the 2.x preview SDK for new Foundry projects.** Running `pip install azure-ai-projects` (without `--pre`) installs the stable 1.x package, which targets the legacy Foundry classic experience. New projects created at [ai.azure.com](https://ai.azure.com) require the **2.x preview** SDK. Install it with:
-
-```bash
-pip install --pre azure-ai-projects azure-identity
-```
-
-Code written for 2.x is **not compatible** with 1.x. See the [Foundry SDK](#foundry-sdk) section for version details.
-</Warning>
-
-<Tip>
-**Just getting started?** Run `pip install --pre azure-ai-projects azure-identity` and jump to [Foundry SDK](#foundry-sdk).
-</Tip>
 
 | SDK | What it's for | Endpoint |
 | --- | --- | --- |
@@ -31,12 +18,12 @@ Code written for 2.x is **not compatible** with 1.x. See the [Foundry SDK](#foun
 - Use **Foundry Tools SDKs** when working with specific AI services (Vision, Speech, Language, etc.)
 - Use **Agent Framework** when building multi-agent systems in code (local orchestration)
 
-This SDK structure reflects a deliberate consolidation. Previously, building an end-to-end AI application required installing and configuring multiple packages — each with its own endpoint, authentication pattern, and API conventions. The Foundry SDK (`azure-ai-projects`) provides a single entry point that replaces this fragmented approach. For a full mapping of previous packages to their current equivalents, see [SDK evolution: from fragmented packages to a unified project client](/api-sdk/sdk-classic-vs-new).
-
 <Note>
+
 **Resource types:** A Foundry resource provides all endpoints previously listed. An Azure OpenAI resource provides only the `/openai/v1` endpoint.
 
 **Authentication:** Samples here use Microsoft Entra ID (`DefaultAzureCredential`). API keys work on `/openai/v1`. Pass the key as `api_key` instead of a token provider.
+
 </Note>
 
 ## Prerequisites
@@ -48,26 +35,49 @@ This SDK structure reflects a deliberate consolidation. Previously, building an 
   - **Azure AI Project Manager** (for managing Foundry projects)
   - **Contributor** or **Owner** (for subscription-level permissions)
   
-  For details on each role's permissions, see [Role-based access control for Microsoft Foundry](https://learn.microsoft.com/azure/ai-foundry/concepts/rbac-azure-ai-foundry).
+  For details on each role's permissions, see [Role-based access control for Microsoft Foundry](../concepts/rbac-foundry).
 
-- Install the required language runtimes, global tools, and VS Code extensions as described in [Prepare your development environment](/developer-experience/install-cli-sdk).
+- Install the required language runtimes, global tools, and VS Code extensions as described in [Prepare your development environment](../how-to/develop/install-cli-sdk).
 
 <Info>
+
 Before starting, make sure your development environment is ready.  
 This article focuses on **scenario-specific steps** like SDK installation, authentication, and running sample code.
+
 </Info>
 
 ### Verify prerequisites
 
 Before proceeding, confirm:
 
-- [ ] Azure subscription is active: `az account show`
-- [ ] You have the required RBAC role: Check Azure portal → Foundry resource → Access control (IAM)
-- [ ] Language runtime installed:
-  - Python: `python --version` (≥3.8)
-  - Node.js: `node --version` (≥18)
-  - .NET: `dotnet --version` (≥6.0)
-  - Java: `java --version` (≥11)
+- Azure subscription is active: `az account show`
+- You have the required RBAC role: Check Azure portal → Foundry resource → Access control (IAM)
+<Tabs>
+  <Tab title="Programming Language Python">
+
+  - Language runtime installed:
+    - Python: `python --version` (≥3.8)
+
+  </Tab>
+  <Tab title="Programming Language Javascript">
+
+  - Language runtime installed:
+    - Node.js: `node --version` (≥18)
+
+  </Tab>
+  <Tab title="Programming Language Csharp">
+
+  - Language runtime installed:
+    - .NET: `dotnet --version` (≥6.0)
+
+  </Tab>
+  <Tab title="Programming Language Java">
+
+  - Language runtime installed:
+    - Java: `java --version` (≥11)
+
+  </Tab>
+</Tabs>
 
 ## Foundry SDK
 
@@ -78,53 +88,48 @@ https://<resource-name>.services.ai.azure.com/api/projects/<project-name>
 ```
 
 <Note>
+
 If your organization uses a custom subdomain, replace `<resource-name>` with `<your-custom-subdomain>` in the endpoint URL.
+
 </Note>
 
 This approach simplifies application configuration. Instead of managing multiple endpoints, you configure one.
 
 ### Install the SDK
 
-<Note>
-**SDK versions:** The 2.x preview SDK targets the new Foundry portal and API. The 1.x GA SDK targets Foundry classic. Make sure the samples you follow match your installed package.
-</Note>
-
-<Tip>
-If you created a new Foundry project at [ai.azure.com](https://ai.azure.com), use the **2.x preview SDK**. The 1.x GA SDK targets the classic Foundry experience and is not compatible with new projects.
-</Tip>
-
-| SDK Version   | Portal Version  | Status  | Python Package                |
-|---------------|-----------------|---------|-------------------------------|
-| 2.x (preview) | Foundry (new)   | Preview | `azure-ai-projects>=2.0.0b1 --pre`  |
-| 1.x (GA)      | Foundry classic | Stable  | `azure-ai-projects==1.0.0`    |
+| SDK Version   | Portal Version  | Status  | Python Package    |
+| -- | -- | --| -- |
+| 2.x  | Foundry (new)   | Stable | `azure-ai-projects>=2.0.0`  |
+| 1.x  | Foundry (classic) | Stable  | `azure-ai-projects==1.0.0`    |
 
 The [Azure AI Projects client library for Python](https://learn.microsoft.com/python/api/overview/azure/ai-projects-readme) is a unified library that enables you to use multiple client libraries together by connecting to a single project endpoint.
 
-Run these commands to install the preview packages for Foundry projects.
+Run this command to install the packages for Foundry projects.
 ```bash
-pip install --pre azure-ai-projects
-pip install azure-identity openai
+pip install "azure-ai-projects>=2.0.0"
 ```
 
 | SDK Version   | Portal Version  | Status  | Java Package                    |
 |---------------|-----------------|---------|---------------------------------|
-| 1.0.0-beta.3<br />1.0.0-beta.1 | Foundry (new)   | Preview | `azure-ai-projects`<br />`azure-ai-agents` |
+| 2.0.0 | Foundry (new)   | Stable | `azure-ai-projects`<br />`azure-ai-agents` |
 
 | SDK Version   | Portal Version  | Status  | JavaScript Package                    |
 |---------------|-----------------|---------|---------------------------------|
-| 2.0.0-beta.4 (preview) | Foundry (new)   | Preview | `@azure/ai-projects 'prerelease'` |
+| 2.0.1 | Foundry (new)   | Stable | `@azure/ai-projects` |
 | 1.0.1 | Foundry classic | Stable | `@azure/ai-projects`             |
 
 | SDK Version   | Portal Version  | Status  | .NET Package                    |
 |---------------|-----------------|---------|---------------------------------|
-| 1.2.0-beta.5 (preview) | Foundry (new)   | Preview | `Azure.AI.Projects`<br />`Azure.AI.Projects.Openai` |
-| 1.x (GA)      | Foundry classic | Stable  | `Azure.AI.Projects`             |
-
-The [Azure AI Projects client library for Java (preview)](https://learn.microsoft.com/java/api/overview/azure/ai-projects-readme) is a unified library that enables you to use multiple client libraries together by connecting to a single project endpoint.
+| 2.0.0 (GA) | Foundry (new)   | Stable | `Azure.AI.Projects`<br />`Azure.AI.Projects.Agents`<br />`Azure.AI.Extensions.OpenAI` |
+| 1.1.0 (GA)      | Foundry classic | Stable  | `Azure.AI.Projects`             |
 
 <Info>
-Items marked (preview) in this article are currently in public preview. This preview is provided without a service-level agreement, and we don't recommend it for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
+
+Don't install `Azure.AI.Projects.OpenAI` (preview) alongside `Azure.AI.Extensions.OpenAI` (GA). Both packages define the same types in different namespaces, which causes ambiguous reference errors. Use only `Azure.AI.Extensions.OpenAI` for agent scenarios.
+
 </Info>
+
+The [Azure AI Projects client library for Java](https://learn.microsoft.com/java/api/overview/azure/ai-projects-readme) is a unified library that enables you to use multiple client libraries together by connecting to a single project endpoint.
 
 Add these packages to your installation for Foundry projects.
 
@@ -139,18 +144,19 @@ import com.openai.models.responses.ResponseCreateParams;
 
 The [Azure AI Projects client library for JavaScript](https://learn.microsoft.com/javascript/api/overview/azure/ai-projects-readme) is a unified library that enables you to use multiple client libraries together by connecting to a single project endpoint.
 
-Run this command to install the preview JavaScript packages for Foundry projects.
+Run this command to install the JavaScript packages for Foundry projects.
 ```bash
-npm install @azure/ai-projects@beta @azure/identity dotenv
+npm install @azure/ai-projects @azure/identity dotenv
 ```
 
 The [Azure AI Projects client library for .NET](https://learn.microsoft.com/dotnet/api/overview/azure/ai.projects-readme) is a unified library that enables you to use multiple client libraries together by connecting to a single project endpoint.
 
-Run this command to add the Azure.AI.Projects package to your .NET project.
+Run these commands to add the required packages to your .NET project.
 
 ```bash
-dotnet add package Azure.AI.Projects --prerelease
-dotnet add package Azure.AI.Projects.OpenAI --prerelease
+dotnet add package Azure.AI.Projects
+dotnet add package Azure.AI.Projects.Agents
+dotnet add package Azure.AI.Extensions.OpenAI
 dotnet add package Azure.Identity
 ```
 
@@ -230,9 +236,9 @@ console.log(`Response output: ${response.output_text}`);
 **Create a project client:**
 
 ```csharp
-using Azure.AI.Projects.OpenAI; 
+using Azure.AI.Projects;
+using Azure.AI.Extensions.OpenAI;
 using Azure.Identity;
-using OpenAI.Responses;
 
 string endpoint = "https://<resource-name>.services.ai.azure.com/api/projects/<project-name>";
 
@@ -243,19 +249,17 @@ AIProjectClient projectClient = new(
 **Create an OpenAI-compatible client from your project:**
 
 ```csharp
-#pragma warning disable OPENAI001
-OpenAIResponseClient responseClient = projectClient.OpenAI.GetProjectResponsesClientForModel("gpt-5.2");
-OpenAIResponse response = responseClient.CreateResponse("What is the speed of light?");
+var responseClient = projectClient.ProjectOpenAIClient.GetProjectResponsesClientForModel("gpt-5.2");
+var response = responseClient.CreateResponse("What is the speed of light?");
 Console.WriteLine(response.GetOutputText());
-#pragma warning restore OPENAI001
 ```
 
 ### What you can do with the Foundry SDK
 
 - [Access Foundry Models](/get-started/get-started-code), including Azure OpenAI
 - [Use the Foundry Agent Service](../../../ai-services/agents/quickstart)
-- [Run cloud evaluations](/observability/cloud-evaluation)
-- [Enable app tracing](https://learn.microsoft.com/en-us/azure/foundry-classic/how-to/develop/trace-application)
+- [Run batch evaluations](/observability/cloud-evaluation)
+- [Enable app tracing](/agent-service/trace-agent-setup)
 - [Fine-tune a model](https://learn.microsoft.com/azure/ai-foundry/openai/how-to/fine-tuning)
 - Get endpoints and keys for Foundry Tools, local orchestration, and more
 
@@ -277,7 +281,7 @@ If you see `DefaultAzureCredential failed to retrieve a token`:
 
 3. **For managed identity in production**:
    - Ensure the managed identity has the appropriate role assigned
-   - See [Configure managed identities](/security/authentication-authorization-foundry#identity-types)
+   - See [Configure managed identities](../concepts/authentication-authorization-foundry#identity-types)
 
 ### Endpoint configuration errors
 
@@ -297,7 +301,7 @@ If code samples fail with `AttributeError` or `ModuleNotFoundError`:
   npm list @azure/ai-projects  # JavaScript
   dotnet list package  # .NET
   ```
-- **Verify moniker alignment**: 2.x SDK requires Foundry portal, 1.x SDK requires Foundry classic
+
 - **Reinstall with correct version flags**: See installation commands in each language section above
 
 ## OpenAI SDK
@@ -311,7 +315,7 @@ from openai import OpenAI
 from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 
 token_provider = get_bearer_token_provider(
-    DefaultAzureCredential(), "https://cognitiveservices.azure.com/.default"
+    DefaultAzureCredential(), "https://ai.azure.com/.default"
 )
 
 client = OpenAI(  
@@ -340,9 +344,6 @@ print(response.model_dump_json(indent=2))
 
 For more information, see [Azure OpenAI supported programming languages](https://learn.microsoft.com/azure/ai-foundry/openai/supported-languages)
 
-<Info>
-Items marked (preview) in this article are currently in public preview. This preview is provided without a service-level agreement, and we don't recommend it for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
-</Info>
 The following snippet shows how to use the Azure OpenAI `/openai/v1` endpoint directly.
 
 ```java
@@ -359,7 +360,7 @@ DefaultAzureCredential tokenCredential = new DefaultAzureCredentialBuilder().bui
 String endpoint = "https://<resource-name>.openai.azure.com/openai/v1";
 String deploymentName = "gpt-5.2";
 Supplier<String> bearerTokenSupplier = AuthenticationUtil.getBearerTokenSupplier(
-        tokenCredential, "https://cognitiveservices.azure.com/.default");
+        tokenCredential, "https://ai.azure.com/.default");
 OpenAIClient openAIClient = OpenAIOkHttpClient.builder()
         .baseUrl(endpoint)
         .credential(BearerTokenCredential.create(bearerTokenSupplier))
@@ -378,7 +379,7 @@ For more information on using the OpenAI SDK, see [Azure OpenAI supported progra
 
 ```javascript
 const endpoint = "https://<resource-name>.openai.azure.com/openai/v1";
-const scope = "https://cognitiveservices.azure.com/.default";
+const scope = "https://ai.azure.com/.default";
 const azureADTokenProvider = getBearerTokenProvider(new DefaultAzureCredential(), scope);
 const client = new OpenAI({ baseURL: endpoint, apiKey: azureADTokenProvider });
 const response = await client.responses.create({
@@ -396,12 +397,11 @@ For more information on using the OpenAI SDK, see [Azure OpenAI supported progra
    dotnet add package OpenAI
    ```When it succeeds, the .NET CLI confirms that it installed the `OpenAI` package.
 
-   This snippet configures `DefaultAzureCredential`, builds `OpenAIClientOptions`, and creates a `ResponseClient` for the Azure OpenAI v1 endpoint.
+   This snippet configures `DefaultAzureCredential`, builds `OpenAIClientOptions`, and creates a `ResponsesClient` for the Azure OpenAI v1 endpoint.
    ```csharp
    using Azure.Identity;
-   using Azure.Core;
    using OpenAI;
-   using System;
+   using OpenAI.Responses;
    using System.ClientModel.Primitives;
    
    #pragma warning disable OPENAI001
@@ -411,29 +411,27 @@ For more information on using the OpenAI SDK, see [Azure OpenAI supported progra
 
    BearerTokenPolicy tokenPolicy = new(
         new DefaultAzureCredential(),
-        "https://cognitiveservices.azure.com/.default");
+        "https://ai.azure.com/.default");
     
-   OpenAIResponseClient client = new(
-        model: deploymentName,
-        authenticationPolicy: tokenPolicy, // To use Entra 
-     // credential: new ApiKeyCredential("<YOUR-AZURE-OPENAI-API-KEY>") // To use APIKEY 
+   OpenAIClient openAIClient = new(
+        authenticationPolicy: tokenPolicy,
         options: new OpenAIClientOptions()
         {
             Endpoint = new($"{directModelEndpoint}"),
         });
-   ResponseCreationOptions options = new ResponseCreationOptions
+   ResponsesClient client = openAIClient.GetResponsesClient();
+
+   CreateResponseOptions options = new()
     {
+        Model = deploymentName,
+        InputItems = { ResponseItem.CreateUserMessageItem("What is the size of France in square miles?") },
         Temperature = (float)0.7,
     };
     
-   OpenAIResponse modelDirectResponse = client.CreateResponse(
-         [
-            ResponseItem.CreateUserMessageItem("What is the size of France in square miles?"),
-         ], options);
+   var modelDirectResponse = client.CreateResponse(options);
     
-   Console.WriteLine($"[ASSISTANT]: {modelDirectResponse.GetOutputText()}");
+   Console.WriteLine($"[ASSISTANT]: {modelDirectResponse.Value.GetOutputText()}");
    #pragma warning restore OPENAI001
-   // The ResponseClient lets you interact with models and services in your project.
    ```
 For more information on using the OpenAI SDK, see [Azure OpenAI supported programming languages](https://learn.microsoft.com/azure/ai-foundry/openai/supported-languages)
 
@@ -458,8 +456,12 @@ Use the Azure AI Services endpoint to access Computer Vision, Content Safety, Do
 Foundry Tools endpoint: `https://<your-resource-name>.cognitiveservices.azure.com/`
 
 <Note>
+
 Endpoints use either your resource name or a custom subdomain. If your organization set up a custom subdomain, replace `your-resource-name` with `your-custom-subdomain` in all endpoint examples.
+
 </Note>
+
+If your workloads use retiring Azure AI Language features—for example, sentiment analysis, key phrase extraction, summarization, entity linking, CLU, or CQA—plan to migrate to Microsoft Foundry alternatives. For new development, consider using the Foundry SDK or the OpenAI-compatible endpoint as described earlier in this article. See [Migrate from Language Studio to Microsoft Foundry](https://learn.microsoft.com/azure/ai-services/language-service/migration-studio-to-foundry).
 
 For Speech and Translation Foundry Tools, use the endpoints in the following tables. Replace placeholders with your resource information.
 
@@ -478,7 +480,32 @@ For Speech and Translation Foundry Tools, use the endpoints in the following tab
 |Text Translation|`https://api.cognitive.microsofttranslator.com/`|
 |Document Translation|`https://<YOUR-RESOURCE-NAME>.cognitiveservices.azure.com/`|
 
-The following sections include quickstart links for the Foundry Tools SDKs and reference information.
+#### Language Endpoints
+
+| Foundry Tool | Endpoint |
+| --- | --- |
+| Text analysis| `https://<YOUR-RESOURCE-NAME>.cognitiveservices.azure.com`|
+
+<Info>
+
+On March 20, 2027, Azure Language Studio will retire and migrate to Microsoft Foundry; all capabilities and future enhancements will be available in Microsoft Foundry.
+
+On March 31, 2029, the following Azure Language capabilities will retire (end of support). Before that date, users should migrate existing workloads and onboard new projects to [Microsoft Foundry models](../concepts/foundry-models-overview) for enhanced natural language understanding and simplified application integration:
+
+- Key Phrase Extraction
+- Sentiment Analysis and Opinion Mining
+- Custom Text Classification
+- Conversational Language Understanding (CLU)
+- Custom Question Answering (CQA)
+- Orchestration Workflow
+- Summarization (extractive and abstractive, for documents and conversations)
+- Entity Linking
+
+Core features with continued support: Language Detection, PII Detection, Text Analytics for Health, Prebuilt NER, and Custom NER.
+
+For migration options, see [Migrate from Language Studio to Microsoft Foundry](https://learn.microsoft.com/azure/ai-services/language-service/migration-studio-to-foundry).
+
+</Info>
 
 {/* ::: zone pivot="programming-language-cpp"
 ### C++ supported services
@@ -494,7 +521,7 @@ The following sections include quickstart links for the Foundry Tools SDKs and r
 | Foundry Tool | Description | Quickstarts and reference documentation |
 | --- | --- | --- |
 | ![Speech icon](/images/ai-services/speech.svg) [Speech](https://learn.microsoft.com/azure/ai-services/speech-service/overview) | Add speech to text, text to speech, translation, and speaker recognition capabilities to applications. | &bullet;&NonBreakingSpace;[Speech to text quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/get-started-speech-to-text) <br /><br />&bullet;&NonBreakingSpace;[Text to speech quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/get-started-text-to-speech) <br /><br />&bullet;&NonBreakingSpace;[Speech translation quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/get-started-speech-translation) <br /><br />&bullet;&NonBreakingSpace;[Speech SDK for .NET](https://learn.microsoft.com/dotnet/api/microsoft.cognitiveservices.speech) <br /><br />&bullet;&NonBreakingSpace;[Speech NuGet package (Speech CLI)](https://www.nuget.org/packages/Microsoft.CognitiveServices.Speech.CLI)|
-| ![Language icon](/images/ai-services/language.svg) [Language](https://learn.microsoft.com/azure/ai-services/language-service/overview) | Build applications with natural language understanding capabilities. | &bullet;&NonBreakingSpace;[Custom question answering (CQA) quickstart](https://learn.microsoft.com/azure/ai-services/language-service/question-answering/quickstart/sdk) <br /><br />&bullet;&NonBreakingSpace;[Entity linking quickstart](https://learn.microsoft.com/azure/ai-services/language-service/entity-linking/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Language detection quickstart](https://learn.microsoft.com/azure/ai-services/language-service/language-detection/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Key Phrase extraction quickstart](https://learn.microsoft.com/azure/ai-services/language-service/key-phrase-extraction/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Detecting named entities (NER) quickstart](https://learn.microsoft.com/azure/ai-services/language-service/named-entity-recognition/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Detect Personally Identifiable Information (PII) quickstart](https://learn.microsoft.com/azure/ai-services/language-service/personally-identifiable-information/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Sentiment analysis and opinion mining quickstart](https://learn.microsoft.com/azure/ai-services/language-service/sentiment-opinion-mining/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Using text, document and conversation summarization quickstart](https://learn.microsoft.com/azure/ai-services/language-service/summarization/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Using Text Analytics for health quickstart](https://learn.microsoft.com/azure/ai-services/language-service/text-analytics-for-health/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Language SDK for .NET (text analysis)](https://learn.microsoft.com/dotnet/api/overview/azure/ai.textanalytics-readme) <br /><br />&bullet;&NonBreakingSpace;[Language NuGet package (text analysis)](https://www.nuget.org/packages/Azure.AI.TextAnalytics)<br /><br />&bullet;&NonBreakingSpace;[Language SDK for .NET (Question Answering)](https://learn.microsoft.com/dotnet/api/overview/azure/ai.language.questionanswering-readme)<br /><br />&bullet;&NonBreakingSpace;[Language NuGet package (question answering)](https://www.nuget.org/packages/Azure.AI.Language.QuestionAnswering) |
+| ![Language icon](/images/ai-services/language.svg) [Language](https://learn.microsoft.com/azure/ai-services/language-service/overview) | Build applications with natural language understanding capabilities. Supported features: Language Detection, PII Detection, Text Analytics for Health, Prebuilt NER, and Custom NER. **Retiring March 31, 2029**: Sentiment Analysis and Opinion Mining, Key Phrase Extraction, Summarization, Entity Linking, CQA, and CLU. | &bullet;&NonBreakingSpace;[Custom question answering (CQA) quickstart](https://learn.microsoft.com/azure/ai-services/language-service/question-answering/quickstart/sdk) *(retiring March 31, 2029)* <br /><br />&bullet;&NonBreakingSpace;[Entity linking quickstart](https://learn.microsoft.com/azure/ai-services/language-service/entity-linking/quickstart) *(retiring March 31, 2029)* <br /><br />&bullet;&NonBreakingSpace;[Language detection quickstart](https://learn.microsoft.com/azure/ai-services/language-service/language-detection/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Key Phrase extraction quickstart](https://learn.microsoft.com/azure/ai-services/language-service/key-phrase-extraction/quickstart) *(retiring March 31, 2029)* <br /><br />&bullet;&NonBreakingSpace;[Detecting named entities (NER) quickstart](https://learn.microsoft.com/azure/ai-services/language-service/named-entity-recognition/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Detect Personally Identifiable Information (PII) quickstart](https://learn.microsoft.com/azure/ai-services/language-service/personally-identifiable-information/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Sentiment analysis and opinion mining quickstart](https://learn.microsoft.com/azure/ai-services/language-service/sentiment-opinion-mining/quickstart) *(retiring March 31, 2029)* <br /><br />&bullet;&NonBreakingSpace;[Using text, document and conversation summarization quickstart](https://learn.microsoft.com/azure/ai-services/language-service/summarization/quickstart) *(retiring March 31, 2029)* <br /><br />&bullet;&NonBreakingSpace;[Using Text Analytics for health quickstart](https://learn.microsoft.com/azure/ai-services/language-service/text-analytics-for-health/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Language SDK for .NET (text analysis)](https://learn.microsoft.com/dotnet/api/overview/azure/ai.textanalytics-readme) <br /><br />&bullet;&NonBreakingSpace;[Language NuGet package (text analysis)](https://www.nuget.org/packages/Azure.AI.TextAnalytics)<br /><br />&bullet;&NonBreakingSpace;[Language SDK for .NET (Question Answering)](https://learn.microsoft.com/dotnet/api/overview/azure/ai.language.questionanswering-readme)<br /><br />&bullet;&NonBreakingSpace;[Language NuGet package (question answering)](https://www.nuget.org/packages/Azure.AI.Language.QuestionAnswering)<br /><br />&bullet;&NonBreakingSpace;[Migrate from Language Studio to Microsoft Foundry](https://learn.microsoft.com/azure/ai-services/language-service/migration-studio-to-foundry) for guidance on migrating workloads with retiring features |
 | ![Translator icon](/images/ai-services/translator.svg) [Translator](https://learn.microsoft.com/azure/ai-services/translator/overview) |  Use AI-powered translation technology to translate more than 100 in-use, at-risk, and endangered languages and dialects. | &bullet;&NonBreakingSpace;[Translator SDK for .NET (text)](https://learn.microsoft.com/dotnet/api/overview/azure/ai.translation.text-readme)<br /><br />&bullet;&NonBreakingSpace;[Translator NuGet package (text)](https://www.nuget.org/packages/Azure.AI.Translation.Text/1.0.0-beta.1)<br /><br />&bullet;&NonBreakingSpace;[Translator SDK for .NET (batch)](https://learn.microsoft.com/dotnet/api/overview/azure/AI.Translation.Document-readme)<br /><br />&bullet;&NonBreakingSpace;[Translator NuGet package (batch)](https://www.nuget.org/packages/Azure.AI.Translation.Document)  |
 | ![Azure AI Search icon](/images/ai-services/search.svg) [Azure AI Search](https://learn.microsoft.com/azure/search/search-what-is-azure-search) | Bring AI-powered cloud search to your mobile and web apps. |&bullet;&NonBreakingSpace;[Use agentic retrieval quickstart](https://learn.microsoft.com/azure/search/search-get-started-agentic-retrieval) <br /><br />&bullet;&NonBreakingSpace;[Vector search quickstart](https://learn.microsoft.com/azure/search/search-get-started-vector) <br /><br />&bullet;&NonBreakingSpace;[Classic generative search (RAG) using grounding data quickstart](https://learn.microsoft.com/azure/search/search-get-started-rag) <br /><br />&bullet;&NonBreakingSpace;[Full-text search quickstart](https://learn.microsoft.com/azure/search/search-get-started-text) <br /><br />&bullet;&NonBreakingSpace;[Semantic ranking quickstart](https://learn.microsoft.com/azure/search/search-get-started-semantic) <br /><br />&bullet;&NonBreakingSpace;[Chat with Azure OpenAI models using your own data quickstart](https://learn.microsoft.com/azure/ai-foundry/openai/use-your-data-quickstart) <br /><br />&bullet;&NonBreakingSpace;[Azure AI Search SDK for .NET](https://learn.microsoft.com/dotnet/api/overview/azure/search.documents-readme)<br /><br />&bullet;&NonBreakingSpace;[Azure AI Search NuGet package](https://www.nuget.org/packages/Azure.Search.Documents/11.6.0-beta.2)  |
 | ![Content Safety icon](/images/ai-services/content-safety.svg) [Content Safety](https://learn.microsoft.com/azure/ai-services/content-safety/overview) | Detect harmful content in applications and services.| &bullet;&NonBreakingSpace;[Analyze text content quickstart](https://learn.microsoft.com/azure/ai-services/content-safety/quickstart-text) <br /><br />&bullet;&NonBreakingSpace;[Use a text blocklist quickstart](https://learn.microsoft.com/azure/ai-services/content-safety/quickstart-blocklist) <br /><br />&bullet;&NonBreakingSpace;[Analyze image content quickstart](https://learn.microsoft.com/azure/ai-services/content-safety/quickstart-image) <br /><br />&bullet;&NonBreakingSpace;[Content Safety SDK for .NET](https://learn.microsoft.com/dotnet/api/overview/azure/ai.contentsafety-readme) <br /><br />&bullet;&NonBreakingSpace;[Content Safety NuGet package](https://www.nuget.org/packages/Azure.AI.ContentSafety/1.0.0)  |
@@ -506,7 +533,7 @@ The following sections include quickstart links for the Foundry Tools SDKs and r
 
 | Service | Description | Reference documentation |
 | --- | --- | --- |
-| ![Custom Vision icon](/images/ai-services/custom-vision.svg) [Custom Vision](../../../ai-services/custom-vision-service/index.yml) | Customize image recognition for your applications and models. |&bullet;&NonBreakingSpace;[Custom Vision GO module (prediction)](https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/services/cognitiveservices/v1.1/customvision/prediction)  <br /><br />&bullet;&NonBreakingSpace;[GO module (training)](https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/services/cognitiveservices/v2.1/customvision/training)|
+| ![Custom Vision icon](/images/ai-services/custom-vision.svg) [Custom Vision](../../../ai-services/custom-vision-service/index.yml) | Customize image recognition for your applications and models. |&bullet;&NonBreakingSpace;[Custom Vision GO module (prediction)](https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/services/cognitiveservices/v1.1/customvision/prediction)  <br><br>&bullet;&NonBreakingSpace;[GO module (training)](https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/services/cognitiveservices/v2.1/customvision/training)|
 | ![Speech icon](/images/ai-services/speech.svg) [Speech](../../../ai-services/speech-service/index.yml) | Add speech to text, text to speech, translation, and speaker recognition capabilities to applications. | &bullet;&NonBreakingSpace;[Speech GO module](https://pkg.go.dev/github.com/Microsoft/cognitive-services-speech-sdk-go)|
 ::: zone-end 
 */}
@@ -516,7 +543,7 @@ The following sections include quickstart links for the Foundry Tools SDKs and r
 | Foundry Tool | Description | Quickstarts and reference documentation |
 | --- | --- | --- |
 | ![Speech icon](/images/ai-services/speech.svg) [Speech](https://learn.microsoft.com/azure/ai-services/speech-service/overview) | Add speech to text, text to speech, translation, and speaker recognition capabilities to applications. | &bullet;&NonBreakingSpace;[Speech to text quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/get-started-speech-to-text) <br /><br />&bullet;&NonBreakingSpace;[Text to speech quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/get-started-text-to-speech) <br /><br />&bullet;&NonBreakingSpace;[Speech translation quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/get-started-speech-translation) <br /><br />&bullet;&NonBreakingSpace;[Speech SDK for Java](https://learn.microsoft.com/java/api/com.microsoft.cognitiveservices.speech) <br /><br />&bullet;&NonBreakingSpace;[Speech Maven package](https://central.sonatype.com/artifact/com.microsoft.cognitiveservices.speech/client-sdk/1.34.0?smo=true)|
-| ![Language icon](/images/ai-services/language.svg) [Language](https://learn.microsoft.com/azure/ai-services/language-service/overview) | Build applications with natural language understanding capabilities. | &bullet;&NonBreakingSpace;[Entity linking quickstart](https://learn.microsoft.com/azure/ai-services/language-service/entity-linking/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Language detection quickstart](https://learn.microsoft.com/azure/ai-services/language-service/language-detection/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Key Phrase extraction quickstart](https://learn.microsoft.com/azure/ai-services/language-service/key-phrase-extraction/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Detecting named entities (NER) quickstart](https://learn.microsoft.com/azure/ai-services/language-service/named-entity-recognition/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Detect Personally Identifiable Information (PII) quickstart](https://learn.microsoft.com/azure/ai-services/language-service/personally-identifiable-information/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Sentiment analysis and opinion mining quickstart](https://learn.microsoft.com/azure/ai-services/language-service/sentiment-opinion-mining/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Using text, document and conversation summarization quickstart](https://learn.microsoft.com/azure/ai-services/language-service/summarization/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Using Text Analytics for health quickstart](https://learn.microsoft.com/azure/ai-services/language-service/text-analytics-for-health/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Language SDK for Java (text analysis)](https://learn.microsoft.com/java/api/overview/azure/ai-textanalytics-readme) <br /><br />&bullet;&NonBreakingSpace;[Language Maven package](https://central.sonatype.com/artifact/com.microsoft.azure.cognitiveservices/azure-cognitiveservices-language)  |
+| ![Language icon](/images/ai-services/language.svg) [Language](https://learn.microsoft.com/azure/ai-services/language-service/overview) | Build applications with natural language understanding capabilities. Supported features: Language Detection, PII Detection, Text Analytics for Health, Prebuilt NER, and Custom NER. **Retiring March 31, 2029**: Sentiment Analysis and Opinion Mining, Key Phrase Extraction, Summarization, Entity Linking, CQA, and CLU. | &bullet;&NonBreakingSpace;[Entity linking quickstart](https://learn.microsoft.com/azure/ai-services/language-service/entity-linking/quickstart) *(retiring March 31, 2029)* <br /><br />&bullet;&NonBreakingSpace;[Language detection quickstart](https://learn.microsoft.com/azure/ai-services/language-service/language-detection/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Key Phrase extraction quickstart](https://learn.microsoft.com/azure/ai-services/language-service/key-phrase-extraction/quickstart) *(retiring March 31, 2029)* <br /><br />&bullet;&NonBreakingSpace;[Detecting named entities (NER) quickstart](https://learn.microsoft.com/azure/ai-services/language-service/named-entity-recognition/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Detect Personally Identifiable Information (PII) quickstart](https://learn.microsoft.com/azure/ai-services/language-service/personally-identifiable-information/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Sentiment analysis and opinion mining quickstart](https://learn.microsoft.com/azure/ai-services/language-service/sentiment-opinion-mining/quickstart) *(retiring March 31, 2029)* <br /><br />&bullet;&NonBreakingSpace;[Using text, document and conversation summarization quickstart](https://learn.microsoft.com/azure/ai-services/language-service/summarization/quickstart) *(retiring March 31, 2029)* <br /><br />&bullet;&NonBreakingSpace;[Using Text Analytics for health quickstart](https://learn.microsoft.com/azure/ai-services/language-service/text-analytics-for-health/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Language SDK for Java (text analysis)](https://learn.microsoft.com/java/api/overview/azure/ai-textanalytics-readme) <br /><br />&bullet;&NonBreakingSpace;[Language Maven package](https://central.sonatype.com/artifact/com.microsoft.azure.cognitiveservices/azure-cognitiveservices-language)<br /><br />&bullet;&NonBreakingSpace;[Migrate from Language Studio to Microsoft Foundry](https://learn.microsoft.com/azure/ai-services/language-service/migration-studio-to-foundry) for guidance on migrating workloads with retiring features |
 | ![Translator icon](/images/ai-services/translator.svg) [Translator](https://learn.microsoft.com/azure/ai-services/translator/overview) |   Use AI-powered translation technology to translate more than 100 in-use, at-risk, and endangered languages and dialects. | &bullet;&NonBreakingSpace;[Translator SDK for Java (text)](https://learn.microsoft.com/java/api/overview/azure/ai-translation-text-readme) <br /><br />&bullet;&NonBreakingSpace;[Translator Maven package (text)](https://central.sonatype.com/artifact/com.azure/azure-ai-translation-text)  |
 | ![Azure AI Search icon](/images/ai-services/search.svg) [Azure AI Search](https://learn.microsoft.com/azure/search/search-what-is-azure-search) | Bring AI-powered cloud search to your mobile and web apps. |&bullet;&NonBreakingSpace;[Use agentic retrieval quickstart](https://learn.microsoft.com/azure/search/search-get-started-agentic-retrieval) <br /><br />&bullet;&NonBreakingSpace;[Vector search quickstart](https://learn.microsoft.com/azure/search/search-get-started-vector) <br /><br />&bullet;&NonBreakingSpace;[Classic generative search (RAG) using grounding data quickstart](https://learn.microsoft.com/azure/search/search-get-started-rag) <br /><br />&bullet;&NonBreakingSpace;[Full-text search quickstart](https://learn.microsoft.com/azure/search/search-get-started-text) <br /><br />&bullet;&NonBreakingSpace;[Semantic ranking quickstart](https://learn.microsoft.com/azure/search/search-get-started-semantic) <br /><br />&bullet;&NonBreakingSpace;[Chat with Azure OpenAI models using your own data quickstart](https://learn.microsoft.com/azure/ai-foundry/openai/use-your-data-quickstart) <br /><br />&bullet;&NonBreakingSpace;[Azure AI Search SDK for Java](https://learn.microsoft.com/java/api/overview/azure/search-documents-readme) <br /><br />&bullet;&NonBreakingSpace;[Azure AI Search Maven package](https://central.sonatype.com/artifact/com.azure/azure-search-documents/11.7.0-beta.1?smo=true) |
 | ![Content Safety icon](/images/ai-services/content-safety.svg) [Content Safety](https://learn.microsoft.com/azure/ai-services/content-safety/overview) | Detect harmful content in applications and services.| &bullet;&NonBreakingSpace;[Analyze text content quickstart](https://learn.microsoft.com/azure/ai-services/content-safety/quickstart-text) <br /><br />&bullet;&NonBreakingSpace;[Use a text blocklist quickstart](https://learn.microsoft.com/azure/ai-services/content-safety/quickstart-blocklist) <br /><br />&bullet;&NonBreakingSpace;[Analyze image content quickstart](https://learn.microsoft.com/azure/ai-services/content-safety/quickstart-image) <br /><br />&bullet;&NonBreakingSpace;[Content Safety SDK for Java](https://learn.microsoft.com/java/api/overview/azure/ai-contentsafety-readme) <br /><br />&bullet;&NonBreakingSpace;[Content Safety Maven package](https://central.sonatype.com/artifact/com.azure/azure-ai-contentsafety) |
@@ -528,7 +555,7 @@ The following sections include quickstart links for the Foundry Tools SDKs and r
 | Foundry Tool | Description | Quickstarts and reference documentation  |
 | --- | --- | --- |
 | ![Speech icon](/images/ai-services/speech.svg) [Speech](https://learn.microsoft.com/azure/ai-services/speech-service/overview) | Add speech to text, text to speech, translation, and speaker recognition capabilities to applications. | &bullet;&NonBreakingSpace;[Speech to text quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/get-started-speech-to-text) <br /><br />&bullet;&NonBreakingSpace;[Text to speech quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/get-started-text-to-speech) <br /><br />&bullet;&NonBreakingSpace;[Speech translation quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/get-started-speech-translation) <br /><br />&bullet;&NonBreakingSpace;[Speech SDK for JavaScript](https://learn.microsoft.com/javascript/api/microsoft-cognitiveservices-speech-sdk/) <br /><br />&bullet;&NonBreakingSpace;[Speech npm package](https://www.npmjs.com/package/microsoft-cognitiveservices-speech-sdk)|
-| ![Language icon](/images/ai-services/language.svg) [Language](https://learn.microsoft.com/azure/ai-services/language-service/overview) | Build applications with natural language understanding capabilities. | &bullet;&NonBreakingSpace;[Entity linking quickstart](https://learn.microsoft.com/azure/ai-services/language-service/entity-linking/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Language detection quickstart](https://learn.microsoft.com/azure/ai-services/language-service/language-detection/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Key Phrase extraction quickstart](https://learn.microsoft.com/azure/ai-services/language-service/key-phrase-extraction/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Detecting named entities (NER) quickstart](https://learn.microsoft.com/azure/ai-services/language-service/named-entity-recognition/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Detect Personally Identifiable Information (PII) quickstart](https://learn.microsoft.com/azure/ai-services/language-service/personally-identifiable-information/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Sentiment analysis and opinion mining quickstart](https://learn.microsoft.com/azure/ai-services/language-service/sentiment-opinion-mining/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Using text, document and conversation summarization quickstart](https://learn.microsoft.com/azure/ai-services/language-service/summarization/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Using Text Analytics for health quickstart](https://learn.microsoft.com/azure/ai-services/language-service/text-analytics-for-health/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Language SDK for JavaScript (text analysis)](https://learn.microsoft.com/javascript/api/overview/azure/ai-language-text-readme) <br /><br />&bullet;&NonBreakingSpace;[Language npm package](https://www.npmjs.com/package/@azure/ai-language-text) |
+| ![Language icon](/images/ai-services/language.svg) [Language](https://learn.microsoft.com/azure/ai-services/language-service/overview) | Build applications with natural language understanding capabilities. Supported features: Language Detection, PII Detection, Text Analytics for Health, Prebuilt NER, and Custom NER. **Retiring March 31, 2029**: Sentiment Analysis and Opinion Mining, Key Phrase Extraction, Summarization, Entity Linking, CQA, and CLU. | &bullet;&NonBreakingSpace;[Entity linking quickstart](https://learn.microsoft.com/azure/ai-services/language-service/entity-linking/quickstart) *(retiring March 31, 2029)* <br /><br />&bullet;&NonBreakingSpace;[Language detection quickstart](https://learn.microsoft.com/azure/ai-services/language-service/language-detection/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Key Phrase extraction quickstart](https://learn.microsoft.com/azure/ai-services/language-service/key-phrase-extraction/quickstart) *(retiring March 31, 2029)* <br /><br />&bullet;&NonBreakingSpace;[Detecting named entities (NER) quickstart](https://learn.microsoft.com/azure/ai-services/language-service/named-entity-recognition/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Detect Personally Identifiable Information (PII) quickstart](https://learn.microsoft.com/azure/ai-services/language-service/personally-identifiable-information/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Sentiment analysis and opinion mining quickstart](https://learn.microsoft.com/azure/ai-services/language-service/sentiment-opinion-mining/quickstart) *(retiring March 31, 2029)* <br /><br />&bullet;&NonBreakingSpace;[Using text, document and conversation summarization quickstart](https://learn.microsoft.com/azure/ai-services/language-service/summarization/quickstart) *(retiring March 31, 2029)* <br /><br />&bullet;&NonBreakingSpace;[Using Text Analytics for health quickstart](https://learn.microsoft.com/azure/ai-services/language-service/text-analytics-for-health/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Language SDK for JavaScript (text analysis)](https://learn.microsoft.com/javascript/api/overview/azure/ai-language-text-readme) <br /><br />&bullet;&NonBreakingSpace;[Language npm package](https://www.npmjs.com/package/@azure/ai-language-text)<br /><br />&bullet;&NonBreakingSpace;[Migrate from Language Studio to Microsoft Foundry](https://learn.microsoft.com/azure/ai-services/language-service/migration-studio-to-foundry) for guidance on migrating workloads with retiring features |
 | ![Translator icon](/images/ai-services/translator.svg) [Translator](https://learn.microsoft.com/azure/ai-services/translator/overview) |   Use AI-powered translation technology to translate more than 100 in-use, at-risk, and endangered languages and dialects. | &bullet;&NonBreakingSpace;[Translator SDK for JavaScript (text)](https://learn.microsoft.com/javascript/api/overview/azure/text-translation) <br /><br />&bullet;&NonBreakingSpace;[Translator npm package (text)](https://www.npmjs.com/package/@azure-rest/ai-translation-text/v/1.0.0-beta.1) |
 | ![Azure AI Search icon](/images/ai-services/search.svg) [Azure AI Search](https://learn.microsoft.com/azure/search/search-what-is-azure-search) | Bring AI-powered cloud search to your mobile and web apps. |&bullet;&NonBreakingSpace;[Use agentic retrieval quickstart](https://learn.microsoft.com/azure/search/search-get-started-agentic-retrieval) <br /><br />&bullet;&NonBreakingSpace;[Vector search quickstart](https://learn.microsoft.com/azure/search/search-get-started-vector) <br /><br />&bullet;&NonBreakingSpace;[Classic generative search (RAG) using grounding data quickstart](https://learn.microsoft.com/azure/search/search-get-started-rag) <br /><br />&bullet;&NonBreakingSpace;[Full-text search quickstart](https://learn.microsoft.com/azure/search/search-get-started-text) <br /><br />&bullet;&NonBreakingSpace;[Semantic ranking quickstart](https://learn.microsoft.com/azure/search/search-get-started-semantic) <br /><br />&bullet;&NonBreakingSpace;[Chat with Azure OpenAI models using your own data quickstart](https://learn.microsoft.com/azure/ai-foundry/openai/use-your-data-quickstart) <br /><br />&bullet;&NonBreakingSpace;[Azure AI Search SDK for JavaScript](https://learn.microsoft.com/javascript/api/overview/azure/search-documents-readme) <br /><br />&bullet;&NonBreakingSpace;[Azure AI Search npm package](https://www.npmjs.com/package/@azure/search-documents/v/12.0.0?activeTab=readme)  |
 | ![Content Safety icon](/images/ai-services/content-safety.svg) [Content Safety](https://learn.microsoft.com/azure/ai-services/content-safety/overview) | Detect harmful content in applications and services.| &bullet;&NonBreakingSpace;[Analyze text content quickstart](https://learn.microsoft.com/azure/ai-services/content-safety/quickstart-text) <br /><br />&bullet;&NonBreakingSpace;[Use a text blocklist quickstart](https://learn.microsoft.com/azure/ai-services/content-safety/quickstart-blocklist) <br /><br />&bullet;&NonBreakingSpace;[Analyze image content quickstart](https://learn.microsoft.com/azure/ai-services/content-safety/quickstart-image) <br /><br />&bullet;&NonBreakingSpace;[Content Safety npm package](https://www.npmjs.com/package/@azure-rest/ai-content-safety/v/1.0.0-beta.1) |
@@ -540,7 +567,7 @@ The following sections include quickstart links for the Foundry Tools SDKs and r
 
 | Service | Description | Reference documentation |
 | --- | --- | --- |
-| ![Speech icon](/images/ai-services/speech.svg) [Speech](../../../ai-services/speech-service/index.yml) | Add speech to text, text to speech, translation, and speaker recognition capabilities to applications. | &bullet;&NonBreakingSpace;[Speech SDK for Objective-C](/objectivec/cognitive-services/speech/)<br /><br />&bullet;&NonBreakingSpace;[Download Speech Objective-C package](https://aka.ms/csspeech/macosbinary) |
+| ![Speech icon](/images/ai-services/speech.svg) [Speech](../../../ai-services/speech-service/index.yml) | Add speech to text, text to speech, translation, and speaker recognition capabilities to applications. | &bullet;&NonBreakingSpace;[Speech SDK for Objective-C](/objectivec/cognitive-services/speech/)<br><br>&bullet;&NonBreakingSpace;[Download Speech Objective-C package](https://aka.ms/csspeech/macosbinary) |
 ::: zone-end 
 */}
 
@@ -549,7 +576,7 @@ The following sections include quickstart links for the Foundry Tools SDKs and r
 | Foundry Tool | Description | Quickstarts and reference documentation |
 | --- | --- | --- |
 | ![Speech icon](/images/ai-services/speech.svg) [Speech](https://learn.microsoft.com/azure/ai-services/speech-service/overview) | Add speech to text, text to speech, translation, and speaker recognition capabilities to applications. | &bullet;&NonBreakingSpace;[Speech to text quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/get-started-speech-to-text) <br /><br />&bullet;&NonBreakingSpace;[Text to speech quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/get-started-text-to-speech) <br /><br />&bullet;&NonBreakingSpace;[Speech translation quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/get-started-speech-translation) <br /><br />&bullet;&NonBreakingSpace;[Speech SDK for Python](https://learn.microsoft.com/python/api/azure-cognitiveservices-speech/) <br /><br />&bullet;&NonBreakingSpace;[Speech PyPi package](https://pypi.org/project/azure-cognitiveservices-speech/)|
-| ![Language icon](/images/ai-services/language.svg) [Language](https://learn.microsoft.com/azure/ai-services/language-service/overview) | Build applications with natural language understanding capabilities. | &bullet;&NonBreakingSpace;[Custom question answering (CQA) quickstart](https://learn.microsoft.com/azure/ai-services/language-service/question-answering/quickstart/sdk) <br /><br />&bullet;&NonBreakingSpace;[Entity linking quickstart](https://learn.microsoft.com/azure/ai-services/language-service/entity-linking/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Language detection quickstart](https://learn.microsoft.com/azure/ai-services/language-service/language-detection/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Key Phrase extraction quickstart](https://learn.microsoft.com/azure/ai-services/language-service/key-phrase-extraction/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Detect named entities (NER) quickstart](https://learn.microsoft.com/azure/ai-services/language-service/named-entity-recognition/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Detect Personally Identifiable Information (PII) quickstart](https://learn.microsoft.com/azure/ai-services/language-service/personally-identifiable-information/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Sentiment analysis and opinion mining quickstart](https://learn.microsoft.com/azure/ai-services/language-service/sentiment-opinion-mining/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Using text, document and conversation summarization quickstart](https://learn.microsoft.com/azure/ai-services/language-service/summarization/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Using Text Analytics for health quickstart](https://learn.microsoft.com/azure/ai-services/language-service/text-analytics-for-health/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Language SDK for Python (text analysis)](https://learn.microsoft.com/python/api/overview/azure/ai-textanalytics-readme) <br /><br />&bullet;&NonBreakingSpace;[Language PyPi package (text analysis)](https://pypi.org/project/azure-cognitiveservices-language-textanalytics/)<br /><br />&bullet;&NonBreakingSpace;[Language SDK for Python (question answering)](https://learn.microsoft.com/python/api/overview/azure/ai-language-questionanswering-readme)<br /><br />&bullet;&NonBreakingSpace;[Language PyPi package (question answering)](https://pypi.org/project/azure-ai-language-questionanswering/)<br /><br />&bullet;&NonBreakingSpace;[Language SDK for Python (language conversations)](https://learn.microsoft.com/python/api/overview/azure/ai-language-conversations-readme)<br /><br />&bullet;&NonBreakingSpace;[Language PyPi package (language conversations)](https://pypi.org/project/azure-ai-language-conversations/) |
+| ![Language icon](/images/ai-services/language.svg) [Language](https://learn.microsoft.com/azure/ai-services/language-service/overview) | Build applications with natural language understanding capabilities. Supported features: Language Detection, PII Detection, Text Analytics for Health, Prebuilt NER, and Custom NER. **Retiring March 31, 2029**: Sentiment Analysis and Opinion Mining, Key Phrase Extraction, Summarization, Entity Linking, CQA, and CLU. | &bullet;&NonBreakingSpace;[Custom question answering (CQA) quickstart](https://learn.microsoft.com/azure/ai-services/language-service/question-answering/quickstart/sdk) *(retiring March 31, 2029)* <br /><br />&bullet;&NonBreakingSpace;[Entity linking quickstart](https://learn.microsoft.com/azure/ai-services/language-service/entity-linking/quickstart) *(retiring March 31, 2029)* <br /><br />&bullet;&NonBreakingSpace;[Language detection quickstart](https://learn.microsoft.com/azure/ai-services/language-service/language-detection/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Key Phrase extraction quickstart](https://learn.microsoft.com/azure/ai-services/language-service/key-phrase-extraction/quickstart) *(retiring March 31, 2029)* <br /><br />&bullet;&NonBreakingSpace;[Detect named entities (NER) quickstart](https://learn.microsoft.com/azure/ai-services/language-service/named-entity-recognition/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Detect Personally Identifiable Information (PII) quickstart](https://learn.microsoft.com/azure/ai-services/language-service/personally-identifiable-information/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Sentiment analysis and opinion mining quickstart](https://learn.microsoft.com/azure/ai-services/language-service/sentiment-opinion-mining/quickstart) *(retiring March 31, 2029)* <br /><br />&bullet;&NonBreakingSpace;[Using text, document and conversation summarization quickstart](https://learn.microsoft.com/azure/ai-services/language-service/summarization/quickstart) *(retiring March 31, 2029)* <br /><br />&bullet;&NonBreakingSpace;[Using Text Analytics for health quickstart](https://learn.microsoft.com/azure/ai-services/language-service/text-analytics-for-health/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Language SDK for Python (text analysis)](https://learn.microsoft.com/python/api/overview/azure/ai-textanalytics-readme) <br /><br />&bullet;&NonBreakingSpace;[Language PyPi package (text analysis)](https://pypi.org/project/azure-cognitiveservices-language-textanalytics/)<br /><br />&bullet;&NonBreakingSpace;[Language SDK for Python (question answering)](https://learn.microsoft.com/python/api/overview/azure/ai-language-questionanswering-readme)<br /><br />&bullet;&NonBreakingSpace;[Language PyPi package (question answering)](https://pypi.org/project/azure-ai-language-questionanswering/)<br /><br />&bullet;&NonBreakingSpace;[Language SDK for Python (language conversations)](https://learn.microsoft.com/python/api/overview/azure/ai-language-conversations-readme) *(retiring March 31, 2029)*<br /><br />&bullet;&NonBreakingSpace;[Language PyPi package (language conversations)](https://pypi.org/project/azure-ai-language-conversations/) *(retiring March 31, 2029)*<br /><br />&bullet;&NonBreakingSpace;[Migrate from Language Studio to Microsoft Foundry](https://learn.microsoft.com/azure/ai-services/language-service/migration-studio-to-foundry) for guidance on migrating workloads with retiring features |
 | ![Translator icon](/images/ai-services/translator.svg) [Translator](https://learn.microsoft.com/azure/ai-services/translator/overview) |   Use AI-powered translation technology to translate more than 100 in-use, at-risk, and endangered languages and dialects. | &bullet;&NonBreakingSpace;[Translator SDK for Python (text)](https://learn.microsoft.com/python/api/azure-ai-translation-text/azure.ai.translation.text)<br /><br />&bullet;&NonBreakingSpace;[Translator PyPi package (text)](https://pypi.org/project/azure-ai-translation-text/1.0.0b1/)<br /><br />&bullet;&NonBreakingSpace;[Translator SDK for Python (batch)](https://learn.microsoft.com/python/api/overview/azure/ai-translation-document-readme) <br /><br />&bullet;&NonBreakingSpace;[Translator PyPi package (batch)](https://pypi.org/project/azure-ai-translation-document/1.0.0/) |
 | ![Azure AI Search icon](/images/ai-services/search.svg) [Azure AI Search](https://learn.microsoft.com/azure/search/search-what-is-azure-search) | Bring AI-powered cloud search to your mobile and web apps. |&bullet;&NonBreakingSpace;[Connect to a search service quickstart](https://learn.microsoft.com/azure/search/search-get-started-rbac) <br /><br />&bullet;&NonBreakingSpace;[Use agentic retrieval quickstart](https://learn.microsoft.com/azure/search/search-get-started-agentic-retrieval) <br /><br />&bullet;&NonBreakingSpace;[Vector search quickstart](https://learn.microsoft.com/azure/search/search-get-started-vector) <br /><br />&bullet;&NonBreakingSpace;[Classic generative search (RAG) using grounding data quickstart](https://learn.microsoft.com/azure/search/search-get-started-rag) <br /><br />&bullet;&NonBreakingSpace;[Full-text search quickstart](https://learn.microsoft.com/azure/search/search-get-started-text) <br /><br />&bullet;&NonBreakingSpace;[Semantic ranking quickstart](https://learn.microsoft.com/azure/search/search-get-started-semantic) <br /><br />&bullet;&NonBreakingSpace;[Chat with Azure OpenAI models using your own data quickstart](https://learn.microsoft.com/azure/ai-foundry/openai/use-your-data-quickstart) <br /><br />&bullet;&NonBreakingSpace;[Azure AI Search SDK for Python](https://learn.microsoft.com/python/api/overview/azure/search-documents-readme) <br /><br />&bullet;&NonBreakingSpace;[Azure AI Search PyPi package](https://pypi.org/project/azure-search-documents/11.6.0b1/) |
 | ![Content Safety icon](/images/ai-services/content-safety.svg) [Content Safety](https://learn.microsoft.com/azure/ai-services/content-safety/overview) | Detect harmful content in applications and services.| &bullet;&NonBreakingSpace;[Analyze text content quickstart](https://learn.microsoft.com/azure/ai-services/content-safety/quickstart-text) <br /><br />&bullet;&NonBreakingSpace;[Use a text blocklist quickstart](https://learn.microsoft.com/azure/ai-services/content-safety/quickstart-blocklist) <br /><br />&bullet;&NonBreakingSpace;[Analyze image content quickstart](https://learn.microsoft.com/azure/ai-services/content-safety/quickstart-image) <br /><br />&bullet;&NonBreakingSpace;[Content Safety SDK for Python](https://learn.microsoft.com/python/api/overview/azure/ai-contentsafety-readme) <br /><br />&bullet;&NonBreakingSpace;[Content Safety PyPi package](https://pypi.org/project/azure-ai-contentsafety/1.0.0/) |
@@ -561,6 +588,6 @@ The following sections include quickstart links for the Foundry Tools SDKs and r
 
 | Service | Description | Reference documentation |
 | --- | --- | --- |
-| ![Speech icon](/images/ai-services/speech.svg) [Speech](../../../ai-services/speech-service/index.yml) | Add speech to text, text to speech, translation, and speaker recognition capabilities to applications. | &bullet;&NonBreakingSpace;[Speech SDK for Swift (Objective-C)](/objectivec/cognitive-services/speech/)<br /><br />&bullet;&NonBreakingSpace;[Download Speech Swift package](https://aka.ms/csspeech/macosbinary)|
+| ![Speech icon](/images/ai-services/speech.svg) [Speech](../../../ai-services/speech-service/index.yml) | Add speech to text, text to speech, translation, and speaker recognition capabilities to applications. | &bullet;&NonBreakingSpace;[Speech SDK for Swift (Objective-C)](/objectivec/cognitive-services/speech/)<br><br>&bullet;&NonBreakingSpace;[Download Speech Swift package](https://aka.ms/csspeech/macosbinary)|
 ::: zone-end 
 */}

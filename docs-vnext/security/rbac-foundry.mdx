@@ -2,10 +2,13 @@
 title: "Role-based access control for Microsoft Foundry"
 description: "This article introduces role-based access control in Microsoft Foundry portal."
 ---
+
 In this article, you learn core role-based access control (RBAC) concepts for Microsoft Foundry, including scopes, built-in roles, and common enterprise assignment patterns.  
 
 <Tip>
+
 RBAC roles apply when you authenticate using Microsoft Entra ID. If you use key-based authentication instead, the key grants full access without role restrictions. Microsoft recommends using Entra ID authentication for improved security and granular access control.
+
 </Tip>
 
 For more information about authentication and authorization in Microsoft Foundry, see [Authentication and Authorization](/security/authentication-authorization-foundry).
@@ -51,7 +54,7 @@ In Microsoft Foundry, consider two scopes when completing role assignments.
 * **Foundry resource**: The top-level scope that defines the administrative, security, and monitoring boundary for a Microsoft Foundry environment.
 * **Foundry project**: A sub-scope within a Foundry resource used to organize work and enforce access control for Foundry APIs, tools, and developer workflows.
 
-## Built-in roles 
+## Built-in roles
 
 A **built-in role** in Foundry is a role created by Microsoft that covers common access scenarios that you can assign to your team members. Key built-in roles used across Azure include Owner, Contributor, and Reader. These roles aren't specific to Foundry resource permissions. 
 
@@ -66,17 +69,24 @@ For Foundry resources, use additional built-in roles to follow least-privilege a
 
 ### Permissions for each built-in role
 
-Use the following table and diagram to see the permissions allowed for each built-in role in Foundry, including the key Azure built-in roles. 
+Use the following table to see the permissions allowed for each built-in role in Microsoft Foundry. 
 
-|Built-in role|Create Foundry projects|Create Foundry accounts|Build and develop in a project (data actions)|Complete role assignments|Reader access to projects and accounts|Manage models|
-|---|---|---|---|---|---|---|
-|**Azure AI User**|||✔||✔||
-|**Azure AI Project Manager**|✔||✔|✔ (only assign Azure AI User role)|✔||
-|**Azure AI Account Owner**|✔|✔||✔ (only assign Azure AI User role)|✔|✔|
-|**Azure AI Owner**|✔|✔|✔|✔|✔|✔|
-|**Owner**|✔|✔||✔ (assign any role to any user)|✔|✔|
-|**Contributor**|✔|✔|||✔|✔|
-|**Reader**|||||✔||
+|Built-in role|Create Foundry projects|Create Foundry accounts|Build and develop in a project (data actions)|Complete role assignments|Reader access to projects and accounts|Manage models|Publish agents|
+|---|---|---|---|---|---|---|---|
+|**Azure AI User**|||✔||✔|||
+|**Azure AI Project Manager**|||✔|✔ (only assign Azure AI User role)|✔||✔|
+|**Azure AI Account Owner**|✔|✔||✔ (only assign Azure AI User role)|✔|✔||
+|**Azure AI Owner**|✔|✔|✔||✔|✔|✔|
+
+Use the following table to see the permissions allowed for each key Azure built-in roles (Owner, Contributor, Reader). 
+
+|Built-in role|Create Foundry projects|Create Foundry accounts|Build and develop in a project (data actions)|Complete role assignments|Reader access to projects and accounts|Manage models|Publish agents|
+|---|---|---|---|---|---|---|---|
+|**Owner**|✔|✔||✔ (assign any role to any user)|✔|✔|✔|
+|**Contributor**|✔|✔|||✔|✔||
+|**Reader**|||||✔|||
+
+To publish agents, you need the **Azure AI Project Manager** role (minimum) on the Foundry resource scope. For more information, see [Agent applications in Microsoft Foundry](/agent-service/agent-applications).
 
 <Frame>
   <img src="/images/detailed-rbac-diagram.png" alt="Diagram of the built-in roles in Foundry." />
@@ -101,7 +111,7 @@ To manage roles in Foundry, you must have permission to assign and remove roles 
 
 In the Foundry portal, manage permissions by:
 
-1. Open the **Admin** page in [Foundry](https://ai.azure.com/nextgen), then select **Operate** > **Admin**.
+1. Open the **Admin** page in [Foundry](https://ai.azure.com), then select **Operate** > **Admin**.
 1. Select your project name.
 1. Select **Add user** to manage project access. This action is available only if you have role-assignment permissions.
 1. Apply the same flow for Foundry resource-level access.
@@ -139,7 +149,7 @@ For more information on creating a custom role, see the following articles.
 - [Azure portal](https://learn.microsoft.com/azure/role-based-access-control/custom-roles-portal)
 - [Azure CLI](https://learn.microsoft.com/azure/role-based-access-control/custom-roles-cli)
 - [Azure PowerShell](https://learn.microsoft.com/azure/role-based-access-control/custom-roles-powershell)
-- [Disable Preview Features with Role-Based Access](/security/disable-preview-features-with-rbac). This article provides more details on specific permissions in Foundry across control and data plane which you can utilize when building custom roles.
+- [Disable preview features in Microsoft Foundry](/security/disable-preview-features). This article provides more details on specific permissions in Foundry across control and data plane which you can utilize when building custom roles.
 
 ## Notes and limitations
 
@@ -150,14 +160,15 @@ For more information on creating a custom role, see the following articles.
 * When you create a Foundry resource, the built-in role-based access control (RBAC) permissions give you access to the resource. To use resources created outside Foundry, ensure the resource has permissions that let you access it. Here are some examples: 
     * To use a new Azure Blob Storage account, add the Foundry account resource's managed identity to the Storage Blob Data Reader role on that storage account. 
     * To use a new Azure AI Search source, add Foundry to the Azure AI Search role assignments.
-* To fine-tune a model in Foundry, you need both data plane and control plane permissions. Deploying a fine-tuned model is a control plane permission. Therefore, the only built-in role with both data plane and control plane permissions is the **Azure AI Owner** role. Or, if you prefer, you can also assign the **Azure AI User** role for data plane permissions and the **Azure AI Account Owner** role for control plane permissions. 
+* To fine-tune a model in Foundry, you need both data plane and control plane permissions. Deploying a fine-tuned model is a control plane permission. Therefore, the only built-in role with both data plane and control plane permissions is the **Azure AI Owner** role. Or, if you prefer, you can also assign the **Azure AI User** role for data plane permissions and the **Azure AI Account Owner** role for control plane permissions.
 
 ## Related content
 
 - [Create a project](/setup/create-projects).
 - [Check access for a user to a single Azure resource](https://learn.microsoft.com/azure/role-based-access-control/check-access).
 - [Authentication and Authorization in Foundry](/security/authentication-authorization-foundry).
-- [Disable Preview Features with Role-Based Access](/security/disable-preview-features-with-rbac).
+- [Disable preview features in Microsoft Foundry](/security/disable-preview-features).
+- [Hosted agent permissions reference](/agent-service/hosted-agent-permissions).
 
 ## Appendix
 

@@ -22,29 +22,47 @@ In this article, you learn how to:
 
 ## Prerequisites
 
-- Read the [guide on when to use Foundry fine-tuning](../openai/concepts/fine-tuning-considerations).
+- Read the [guide on when to use Foundry fine-tuning](../openai/concepts/fine-tuning-considerations.md).
 - You need an Azure subscription. [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
 - You need a Foundry project resource. To create one, sign in to the [Foundry portal](https://ai.azure.com).
-- Fine-tuning requires the **Azure AI Owner** role. While Azure AI Users may train (fine-tune) models, only AI Owners may deploy them.
-- If you don't already have access to view quotas and deploy models in the Foundry portal, you need [more permissions](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/how-to/role-based-access-control).
+- Fine-tuning requires the **Azure AI Owner** role. While Azure AI Users may train (fine-tune) models, only AI Owners may deploy them. You may also create a [custom role](../../foundry-classic/concepts/rbac-foundry.md#create-custom-roles-for-projects) that combines required actions into a single role.
+- If you don't already have access to view quotas and deploy models in the Foundry portal, you need [more permissions](../../foundry-classic/openai/how-to/role-based-access-control.md).
 
 ### Supported models
 
-To check which regions currently support fine-tuning, consult the [article about models](../foundry-models/concepts/models-sold-directly-by-azure#fine-tuning-models).
+The following models are supported for fine-tuning:
+
+|  Model ID  | Standard regions | Global | Developer | Methods | Status | Modality |
+|  --- | --- | :---: | :---: | :---: | --- |
+| `gpt-4o-mini` <br /> (2024-07-18) | North Central US <br /> Sweden Central | ✅ | ✅ | SFT | GA | Text to text |
+| `gpt-4o` <br /> (2024-08-06) | East US2 <br /> North Central US <br /> Sweden Central | ✅ | ✅ | SFT, DPO | GA | Text and vision to text |
+| `gpt-4.1` <br /> (2025-04-14) | North Central US <br /> Sweden Central | ✅ | ✅ | SFT, DPO | GA | Text and vision to text |
+| `gpt-4.1-mini` <br /> (2025-04-14) | North Central US <br /> Sweden Central | ✅ | ✅ | SFT, DPO | GA | Text to text |
+| `gpt-4.1-nano` (2025-04-14) | North Central US <br /> Sweden Central | ✅ | ✅ | SFT, DPO | GA | Text to text |
+| `o4-mini` <br /> (2025-04-16) | East US2 <br /> Sweden Central | ✅ | ❌ | RFT | GA | Text to text |
+| `gpt-5` <br /> (2025-08-07) | North Central US <br /> Sweden Central | ✅ | ✅ | RFT | Private preview | Text to text |
+| `Ministral-3B` <br /> (2411) | Not supported | ✅ | ❌ | SFT | Public preview | Text to text |
+| `Qwen-32B` | Not supported | ✅ | ❌ | SFT | Public preview | Text to text |
+| `Llama-3.3-70B-Instruct` | Not supported | ✅ | ❌ | SFT | Public preview | Text to text |
+| `gpt-oss-20b` | Not supported | ✅ | ❌ | SFT | Public preview | Text to text |
 
 Or you can fine-tune a previously fine-tuned model, formatted as `base-model.ft-{jobid}`.
+
+<Note>
+Open-source models (Ministral-3B, Qwen-32B, Llama-3.3-70B-Instruct, gpt-oss-20b) are only supported on Foundry resources and in the new Foundry UI.
+</Note>
 
 ## Prepare your data
 
 Your training and validation datasets consist of input and output examples for how you want the model to perform.
 
-The training and validation data that you use *must* be formatted as a JSON Lines (JSONL) document. It must also be formatted in the conversational format that the [Chat Completions](../openai/how-to/chatgpt) API uses.
+The training and validation data that you use *must* be formatted as a JSON Lines (JSONL) document. It must also be formatted in the conversational format that the [Chat Completions](../openai/how-to/chatgpt.md) API uses.
 
 In addition to the JSONL format, training and validation data files must be encoded in UTF-8 and include a byte-order mark (BOM). Each file must be less than 512 MB in size.
 
 We recommend that you use the instructions and prompts that you found worked best in every training example. This approach helps you get the best results, especially if you have fewer than a hundred examples.
 
-If you don't have an existing dataset prepared, you can use the [data generation](../fine-tuning/data-generation) capabilities to create a new one.
+If you don't have an existing dataset prepared, you can use the [data generation](../fine-tuning/data-generation.md) capabilities to create a new one.
 
 ### Example file format
 
@@ -87,7 +105,7 @@ In general, doubling the dataset size can lead to a linear increase in model qua
 
 To fine-tune a model in an existing Foundry project, follow these steps:
 
-1. Sign in to [Foundry](https://ai.azure.com/) and select your project. If you don't have a project already, first [create a project](../how-to/create-projects).
+1. Sign in to [Foundry](https://ai.azure.com/) and select your project. If you don't have a project already, first [create a project](../how-to/create-projects.md).
 
 1. Go to the **Build** > **Fine-tune** page, and then select the **Fine-tune** button at the upper right.
 
@@ -110,7 +128,7 @@ The supported customization methods depend on the selected model:
 - **Reinforcement fine-tuning (RFT)**: Uses reward signals from model graders to optimize complex behaviors.
 
 <Note>
-The rest of this article covers steps for the SFT method. For instructions specific to other customization methods, see the [guide for DPO](../openai/how-to/fine-tuning-direct-preference-optimization) and the [guide for RFT](../openai/how-to/reinforcement-fine-tuning).
+The rest of this article covers steps for the SFT method. For instructions specific to other customization methods, see the [guide for DPO](../openai/how-to/fine-tuning-direct-preference-optimization.md) and the [guide for RFT](../openai/how-to/reinforcement-fine-tuning.md).
 </Note>
 
 ### Training type
@@ -202,7 +220,7 @@ To deploy models, you need the **Azure AI Owner** role or any role with the `Mic
 
 When you're satisfied with the metrics from your fine-tuning job, you can deploy the model by selecting the **Deploy** button on the details page and then configuring your deployment settings.
 
-For more information, see the [fine-tuning deployment guide](../openai/how-to/fine-tuning-deploy).
+For more information, see the [fine-tuning deployment guide](../openai/how-to/fine-tuning-deploy.md).
 
 ## Use a deployed fine-tuned model
 
@@ -251,17 +269,35 @@ You can't delete a fine-tuned model if it has an existing deployment. You must [
 
     - Read the [guide on when to use Azure OpenAI fine-tuning](/models/fine-tuning/fine-tuning-considerations).
     - You need an Azure subscription. [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
-    - You need an Azure OpenAI resource. For more information, see [Create a resource and deploy a model with Azure OpenAI](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/how-to/create-resource).
+    - You need an Azure OpenAI resource. For more information, see [Create a resource and deploy a model with Azure OpenAI](../../../foundry-classic/openai/how-to/create-resource.md).
     - You need the following Python libraries: `os`, `json`, `requests`, `openai`.
     - You need the OpenAI Python library.
-    - Fine-tuning requires the **Azure AI Owner** role. While Azure AI Users may train (fine-tune) models, only AI Owners may deploy them.
-    - If you don't already have access to view quotas and deploy models in the Foundry portal, you need [more permissions](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/how-to/role-based-access-control).  
+    - Fine-tuning requires the **Azure AI Owner** role. While Azure AI Users may train (fine-tune) models, only AI Owners may deploy them. You may also create a [custom role](../../../foundry-classic/concepts/rbac-foundry.md#create-custom-roles-for-projects) that combines required actions into a single role.
+    - If you don't already have access to view quotas and deploy models in the Foundry portal, you need [more permissions](../../../foundry-classic/openai/how-to/role-based-access-control.md).  
 
     ### Supported models
 
-    To check which regions currently support fine-tuning, consult the [article about models](/models/catalog/models-sold-directly-by-azure).
+    The following models are supported for fine-tuning:
+
+    |  Model ID  | Standard regions | Global | Developer | Methods | Status | Modality |
+    |  --- | --- | :---: | :---: | :---: | --- |
+    | `gpt-4o-mini` <br /> (2024-07-18) | North Central US <br /> Sweden Central | ✅ | ✅ | SFT | GA | Text to text |
+    | `gpt-4o` <br /> (2024-08-06) | East US2 <br /> North Central US <br /> Sweden Central | ✅ | ✅ | SFT, DPO | GA | Text and vision to text |
+    | `gpt-4.1` <br /> (2025-04-14) | North Central US <br /> Sweden Central | ✅ | ✅ | SFT, DPO | GA | Text and vision to text |
+    | `gpt-4.1-mini` <br /> (2025-04-14) | North Central US <br /> Sweden Central | ✅ | ✅ | SFT, DPO | GA | Text to text |
+    | `gpt-4.1-nano` (2025-04-14) | North Central US <br /> Sweden Central | ✅ | ✅ | SFT, DPO | GA | Text to text |
+    | `o4-mini` <br /> (2025-04-16) | East US2 <br /> Sweden Central | ✅ | ❌ | RFT | GA | Text to text |
+    | `gpt-5` <br /> (2025-08-07) | North Central US <br /> Sweden Central | ✅ | ✅ | RFT | Private preview | Text to text |
+    | `Ministral-3B` <br /> (2411) | Not supported | ✅ | ❌ | SFT | Public preview | Text to text |
+    | `Qwen-32B` | Not supported | ✅ | ❌ | SFT | Public preview | Text to text |
+    | `Llama-3.3-70B-Instruct` | Not supported | ✅ | ❌ | SFT | Public preview | Text to text |
+    | `gpt-oss-20b` | Not supported | ✅ | ❌ | SFT | Public preview | Text to text |
 
     Or you can fine-tune a previously fine-tuned model, formatted as `base-model.ft-{jobid}`.
+
+<Note>
+Open-source models (Ministral-3B, Qwen-32B, Llama-3.3-70B-Instruct, gpt-oss-20b) are only supported on Foundry resources and in the new Foundry UI.
+</Note>
 
     ## Review the workflow for the Python SDK
 
@@ -284,7 +320,7 @@ You can't delete a fine-tuned model if it has an existing deployment. You must [
 
     In addition to the JSONL format, training and validation data files must be encoded in UTF-8 and include a byte-order mark (BOM). Each file must be less than 512 MB in size.
 
-    If you want a step-by-step walkthrough of fine-tuning `gpt-4o-mini-2024-07-18`, see the [Azure OpenAI fine-tuning tutorial](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/tutorials/fine-tune).
+    If you want a step-by-step walkthrough of fine-tuning `gpt-4o-mini-2024-07-18`, see the [Azure OpenAI fine-tuning tutorial](../../../foundry-classic/openai/tutorials/fine-tune.md).
 
     ### Example file format
 
@@ -539,7 +575,7 @@ Look for your loss to decrease over time, and your accuracy to increase. If your
 
 When you're satisfied with the metrics from your fine-tuning job, or you just want to move on to inference, you must deploy the model.
 
-If you're deploying for further validation, consider deploying for [testing](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/how-to/fine-tune-test) by using a Developer deployment.
+If you're deploying for further validation, consider deploying for [testing](../../../foundry-classic/openai/how-to/fine-tune-test.md) by using a Developer deployment.
 
 Unlike with the previous SDK commands, you must use the control plane API for the deployment. This task requires separate authorization, a different API path, and a different API version.
 
@@ -688,14 +724,32 @@ for id in results:
     - You need an Azure subscription. [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
     - You need a Foundry project resource. To create one, sign in to the [Foundry portal](https://ai.azure.com).
     - You need the following Python libraries: `os`, `json`, `requests`, `azure-ai-projects`, `azure-identity`.
-    - Fine-tuning requires the **Azure AI Owner** role. While Azure AI Users may train (fine-tune) models, only AI Owners may deploy them.
-    - If you don't already have access to view quotas and deploy models in the Foundry portal, you need [more permissions](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/how-to/role-based-access-control).
+    - Fine-tuning requires the **Azure AI Owner** role. While Azure AI Users may train (fine-tune) models, only AI Owners may deploy them. You may also create a [custom role](../../../foundry-classic/concepts/rbac-foundry.md#create-custom-roles-for-projects) that combines required actions into a single role.
+    - If you don't already have access to view quotas and deploy models in the Foundry portal, you need [more permissions](../../../foundry-classic/openai/how-to/role-based-access-control.md).
 
     ### Supported models
 
-    To check which regions currently support fine-tuning, consult the [article about models](/models/catalog/models-sold-directly-by-azure).
+    The following models are supported for fine-tuning:
+
+    |  Model ID  | Standard regions | Global | Developer | Methods | Status | Modality |
+    |  --- | --- | :---: | :---: | :---: | --- |
+    | `gpt-4o-mini` <br /> (2024-07-18) | North Central US <br /> Sweden Central | ✅ | ✅ | SFT | GA | Text to text |
+    | `gpt-4o` <br /> (2024-08-06) | East US2 <br /> North Central US <br /> Sweden Central | ✅ | ✅ | SFT, DPO | GA | Text and vision to text |
+    | `gpt-4.1` <br /> (2025-04-14) | North Central US <br /> Sweden Central | ✅ | ✅ | SFT, DPO | GA | Text and vision to text |
+    | `gpt-4.1-mini` <br /> (2025-04-14) | North Central US <br /> Sweden Central | ✅ | ✅ | SFT, DPO | GA | Text to text |
+    | `gpt-4.1-nano` (2025-04-14) | North Central US <br /> Sweden Central | ✅ | ✅ | SFT, DPO | GA | Text to text |
+    | `o4-mini` <br /> (2025-04-16) | East US2 <br /> Sweden Central | ✅ | ❌ | RFT | GA | Text to text |
+    | `gpt-5` <br /> (2025-08-07) | North Central US <br /> Sweden Central | ✅ | ✅ | RFT | Private preview | Text to text |
+    | `Ministral-3B` <br /> (2411) | Not supported | ✅ | ❌ | SFT | Public preview | Text to text |
+    | `Qwen-32B` | Not supported | ✅ | ❌ | SFT | Public preview | Text to text |
+    | `Llama-3.3-70B-Instruct` | Not supported | ✅ | ❌ | SFT | Public preview | Text to text |
+    | `gpt-oss-20b` | Not supported | ✅ | ❌ | SFT | Public preview | Text to text |
 
     Or you can fine-tune a previously fine-tuned model, formatted as `base-model.ft-{jobid}`.
+
+<Note>
+Open-source models (Ministral-3B, Qwen-32B, Llama-3.3-70B-Instruct, gpt-oss-20b) are only supported on Foundry resources and in the new Foundry UI.
+</Note>
 
     ## Review the workflow for the Python SDK
 
@@ -718,7 +772,7 @@ for id in results:
 
     In addition to the JSONL format, training and validation data files must be encoded in UTF-8 and include a byte-order mark (BOM). Each file must be less than 512 MB in size.
 
-    If you want a step-by-step walkthrough of fine-tuning `gpt-4o-mini-2024-07-18`, see the [Microsoft Foundry fine-tuning tutorial](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/tutorials/fine-tune).
+    If you want a step-by-step walkthrough of fine-tuning `gpt-4o-mini-2024-07-18`, see the [Microsoft Foundry fine-tuning tutorial](../../../foundry-classic/openai/tutorials/fine-tune.md).
 
     ### Example file format
 
@@ -934,7 +988,7 @@ Look for your loss to decrease over time, and your accuracy to increase. If your
 
 When you're satisfied with the metrics from your fine-tuning job, or you just want to move on to inference, you must deploy the model.
 
-If you're deploying for further validation, consider deploying for [testing](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/how-to/fine-tune-test) by using a Developer deployment.
+If you're deploying for further validation, consider deploying for [testing](../../../foundry-classic/openai/how-to/fine-tune-test.md) by using a Developer deployment.
 
 Unlike with the previous SDK commands, you must use the control plane API for the deployment. This task requires separate authorization, a different API path, and a different API version.
 
@@ -1019,15 +1073,33 @@ If you're unsure of the ID of your existing fine-tuned model, you can find this 
 
 - Read the [guide on when to use Azure OpenAI fine-tuning](/models/fine-tuning/fine-tuning-considerations).
 - You need an Azure subscription. [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
-- You need an Azure OpenAI resource. For more information, see [Create a resource and deploy a model with Azure OpenAI](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/how-to/create-resource).
-- Fine-tuning requires the **Azure AI Owner** role. While Azure AI Users may train (fine-tune) models, only AI Owners may deploy them.
-- If you don't already have access to view quotas and deploy models in the Foundry portal, you need [more permissions](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/how-to/role-based-access-control).  
+- You need an Azure OpenAI resource. For more information, see [Create a resource and deploy a model with Azure OpenAI](../../../foundry-classic/openai/how-to/create-resource.md).
+- Fine-tuning requires the **Azure AI Owner** role. While Azure AI Users may train (fine-tune) models, only AI Owners may deploy them. You may also create a [custom role](../../../foundry-classic/concepts/rbac-foundry.md#create-custom-roles-for-projects) that combines required actions into a single role.
+- If you don't already have access to view quotas and deploy models in the Foundry portal, you need [more permissions](../../../foundry-classic/openai/how-to/role-based-access-control.md).  
 
 ### Supported models
 
-To check which regions currently support fine-tuning, consult the [article about models](/models/catalog/models-sold-directly-by-azure).
+The following models are supported for fine-tuning:
+
+|  Model ID  | Standard regions | Global | Developer | Methods | Status | Modality |
+|  --- | --- | :---: | :---: | :---: | --- |
+| `gpt-4o-mini` <br /> (2024-07-18) | North Central US <br /> Sweden Central | ✅ | ✅ | SFT | GA | Text to text |
+| `gpt-4o` <br /> (2024-08-06) | East US2 <br /> North Central US <br /> Sweden Central | ✅ | ✅ | SFT, DPO | GA | Text and vision to text |
+| `gpt-4.1` <br /> (2025-04-14) | North Central US <br /> Sweden Central | ✅ | ✅ | SFT, DPO | GA | Text and vision to text |
+| `gpt-4.1-mini` <br /> (2025-04-14) | North Central US <br /> Sweden Central | ✅ | ✅ | SFT, DPO | GA | Text to text |
+| `gpt-4.1-nano` (2025-04-14) | North Central US <br /> Sweden Central | ✅ | ✅ | SFT, DPO | GA | Text to text |
+| `o4-mini` <br /> (2025-04-16) | East US2 <br /> Sweden Central | ✅ | ❌ | RFT | GA | Text to text |
+| `gpt-5` <br /> (2025-08-07) | North Central US <br /> Sweden Central | ✅ | ✅ | RFT | Private preview | Text to text |
+| `Ministral-3B` <br /> (2411) | Not supported | ✅ | ❌ | SFT | Public preview | Text to text |
+| `Qwen-32B` | Not supported | ✅ | ❌ | SFT | Public preview | Text to text |
+| `Llama-3.3-70B-Instruct` | Not supported | ✅ | ❌ | SFT | Public preview | Text to text |
+| `gpt-oss-20b` | Not supported | ✅ | ❌ | SFT | Public preview | Text to text |
 
 Or you can fine-tune a previously fine-tuned model, formatted as `base-model.ft-{jobid}`.
+
+<Note>
+Open-source models (Ministral-3B, Qwen-32B, Llama-3.3-70B-Instruct, gpt-oss-20b) are only supported on Foundry resources and in the new Foundry UI.
+</Note>
 
 ## Review the workflow for the REST API
 
@@ -1050,7 +1122,7 @@ The training and validation data that you use *must* be formatted as a JSON Line
 
 In addition to the JSONL format, training and validation data files must be encoded in UTF-8 and include a byte-order mark (BOM). Each file must be less than 512 MB in size.
 
-If you want a step-by-step walkthrough of fine-tuning `gpt-4o-mini-2024-07-18`, see the [Azure OpenAI fine-tuning tutorial](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/tutorials/fine-tune).
+If you want a step-by-step walkthrough of fine-tuning `gpt-4o-mini-2024-07-18`, see the [Azure OpenAI fine-tuning tutorial](../../../foundry-classic/openai/tutorials/fine-tune.md).
 
 ### Example file format
 
@@ -1325,7 +1397,7 @@ Look for your loss to decrease over time, and your accuracy to increase. If your
 
 When you're satisfied with the metrics from your fine-tuning job, or you just want to move on to inference, you must deploy the model.
 
-If you're deploying for further validation, consider deploying for [testing](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/how-to/fine-tune-test) by using a Developer deployment.
+If you're deploying for further validation, consider deploying for [testing](../../../foundry-classic/openai/how-to/fine-tune-test.md) by using a Developer deployment.
 
 If you're ready to deploy for production or you have particular data-residency needs, follow the [deployment guide](/models/fine-tuning/fine-tuning-deploy).
 
@@ -1403,8 +1475,8 @@ You can optionally delete training and validation files that you uploaded for tr
 
 ## Related content
 
-- [Fine-tuning tutorial (step-by-step)](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/tutorials/fine-tune)
+- [Fine-tuning tutorial (step-by-step)](../../../foundry-classic/openai/tutorials/fine-tune.md)
 - [Model catalog and regional availability](/models/catalog/models-sold-directly-by-azure)
 - [Quotas and limits](/setup/quotas-limits)
 - [View and interpret evaluation results](/observability/evaluate-results)
-- [Trace AI application usage (OpenAI SDK)](https://learn.microsoft.com/en-us/azure/foundry-classic/how-to/develop/trace-application)
+- [Trace AI application usage (OpenAI SDK)](../../../foundry-classic/how-to/develop/trace-application.md)

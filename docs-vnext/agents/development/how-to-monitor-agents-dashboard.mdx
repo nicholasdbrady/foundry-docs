@@ -22,7 +22,7 @@ The Agent Monitoring Dashboard reads telemetry from the Application Insights res
 
 - [How to set up tracing in Microsoft Foundry](/agents/development/trace-agent-setup) 
 
-## View agent metrics
+## View agent metrics (preview)
 
 To view metrics for an agent in the Foundry portal:
 
@@ -71,17 +71,33 @@ To access Monitor settings, select the gear icon on the **Monitor** tab. The fol
 | Setting | Purpose | Configuration Options |
 |---------|---------|----------------------|
 | **Continuous evaluation** | Runs evaluations on sampled agent responses. | Enable or disable<br />Add evaluators<br />Set the sample rate |
-| **Scheduled evaluations** | Runs evaluations on a schedule to validate performance against benchmarks. | Enable or disable<br />Select an evaluation template and run<br />Set a schedule |
-| **Red team scans** | Runs adversarial tests to detect risks such as data leakage or prohibited actions. | Enable or disable<br />Select an evaluation template and run<br />Set a schedule |
-| **Alerts** | Detects performance anomalies, evaluation failures, and security risks. | Configure alerts for latency, token usage, evaluation scores, or red team findings |
+| **Scheduled evaluations (preview)** | Runs evaluations on a schedule to validate performance against benchmarks. | Enable or disable<br />Select an evaluation template and run<br />Set a schedule |
+| **Red team scans (preview)** | Runs adversarial tests to detect risks such as data leakage or prohibited actions. | Enable or disable<br />Select an evaluation template and run<br />Set a schedule |
+| **Alerts (preview)** | Detects performance anomalies, evaluation failures, and security risks. | Configure alerts for latency, token usage, evaluation scores, or red team findings |
 
-## Set up continuous evaluation (Python SDK)
+## Set up continuous evaluation
 
-Use the Python SDK to set up continuous evaluation rules for agent responses. This section requires Python 3.9 or later.
+Use the Python or .NET SDK to set up continuous evaluation rules for agent responses.
 
-```bash
-pip install "azure-ai-projects>=2.0.0b1" python-dotenv
-```
+<Tabs>
+  <Tab title="Python">
+
+    This section requires Python 3.9 or later.
+
+    ```bash
+    pip install "azure-ai-projects>=2.0.0" python-dotenv
+    ```
+
+  </Tab>
+  <Tab title="C#">
+
+    ```bash
+    dotnet add package Azure.AI.Projects --prerelease
+    dotnet add package Azure.Identity
+    ```
+
+  </Tab>
+</Tabs>
 
 Set these environment variables with your own values:
 
@@ -100,76 +116,182 @@ To enable continuous evaluation rules, assign the project managed identity the *
 
 ### Create an agent
 
-```python
-import os
-from dotenv import load_dotenv
-from azure.identity import DefaultAzureCredential
-from azure.ai.projects import AIProjectClient
-from azure.ai.projects.models import (
-    PromptAgentDefinition,
-)
+<Tabs>
+  <Tab title="Python">
 
-load_dotenv()
-
-endpoint = os.environ["AZURE_AI_PROJECT_ENDPOINT"]
-
-with (
-    DefaultAzureCredential() as credential,
-    AIProjectClient(endpoint=endpoint, credential=credential) as project_client,
-    project_client.get_openai_client() as openai_client,
-):
-    agent = project_client.agents.create_version(
-        agent_name=os.environ["AZURE_AI_AGENT_NAME"],
-        definition=PromptAgentDefinition(
-            model=os.environ["AZURE_AI_MODEL_DEPLOYMENT_NAME"],
-            instructions="You are a helpful assistant that answers general questions",
-        ),
+    ```python
+    import os
+    from dotenv import load_dotenv
+    from azure.identity import DefaultAzureCredential
+    from azure.ai.projects import AIProjectClient
+    from azure.ai.projects.models import (
+        PromptAgentDefinition,
     )
-    print(f"Agent created (id: {agent.id}, name: {agent.name}, version: {agent.version})")
-```
 
-References: [AIProjectClient](https://learn.microsoft.com/python/api/azure-ai-projects/azure.ai.projects.aiprojectclient), [DefaultAzureCredential](https://learn.microsoft.com/python/api/azure-identity/azure.identity.defaultazurecredential)
+    load_dotenv()
+
+    endpoint = os.environ["AZURE_AI_PROJECT_ENDPOINT"]
+
+    with (
+        DefaultAzureCredential() as credential,
+        AIProjectClient(endpoint=endpoint, credential=credential) as project_client,
+        project_client.get_openai_client() as openai_client,
+    ):
+        agent = project_client.agents.create_version(
+            agent_name=os.environ["AZURE_AI_AGENT_NAME"],
+            definition=PromptAgentDefinition(
+                model=os.environ["AZURE_AI_MODEL_DEPLOYMENT_NAME"],
+                instructions="You are a helpful assistant that answers general questions",
+            ),
+        )
+        print(f"Agent created (id: {agent.id}, name: {agent.name}, version: {agent.version})")
+    ```
+
+    References: [AIProjectClient](https://learn.microsoft.com/python/api/azure-ai-projects/azure.ai.projects.aiprojectclient), [DefaultAzureCredential](https://learn.microsoft.com/python/api/azure-identity/azure.identity.defaultazurecredential)
+
+  </Tab>
+  <Tab title="C#">
+
+    ```csharp
+    using Azure.AI.Projects;
+    using Azure.AI.Projects.OpenAI;
+    using Azure.Identity;
+    using OpenAI.Evals;
+
+    var endpoint = Environment.GetEnvironmentVariable("AZURE_AI_PROJECT_ENDPOINT")
+        ?? throw new InvalidOperationException("AZURE_AI_PROJECT_ENDPOINT environment variable is not set.");
+
+    AIProjectClient projectClient = new(new Uri(endpoint), new DefaultAzureCredential());
+    #pragma warning disable OPENAI001
+    EvaluationClient evaluationClient = projectClient.OpenAI.GetEvaluationClient();
+    #pragma warning restore OPENAI001
+
+    PromptAgentDefinition agentDefinition = new(
+        model: Environment.GetEnvironmentVariable("AZURE_AI_MODEL_DEPLOYMENT_NAME"))
+    {
+        Instructions = "You are a helpful assistant that answers general questions",
+    };
+
+    AgentVersion agentVersion = await projectClient.Agents.CreateAgentVersionAsync(
+        agentName: Environment.GetEnvironmentVariable("AZURE_AI_AGENT_NAME"),
+        options: new(agentDefinition));
+
+    Console.WriteLine(
+        $"Agent created (id: {agentVersion.Id}, name: {agentVersion.Name}," +
+        $" version: {agentVersion.Version})");
+    ```
+
+    References: [AIProjectClient](https://learn.microsoft.com/dotnet/api/azure.ai.projects.aiprojectclient), [DefaultAzureCredential](https://learn.microsoft.com/dotnet/api/azure.identity.defaultazurecredential)
+
+  </Tab>
+</Tabs>
 
 ### Create a continuous evaluation rule
 
 Define the evaluation and the rule that runs when a response completes. To learn more about supported evaluators, see [Built in evaluators](/observability/built-in-evaluators).
 
-```python
-from azure.ai.projects.models import (
-    EvaluationRule,
-    ContinuousEvaluationRuleAction,
-    EvaluationRuleFilter,
-    EvaluationRuleEventType,
-)
+<Tabs>
+  <Tab title="Python">
 
-data_source_config = {"type": "azure_ai_source", "scenario": "responses"}
-testing_criteria = [
-    {"type": "azure_ai_evaluator", "name": "violence_detection", "evaluator_name": "builtin.violence"}
-]
-eval_object = openai_client.evals.create(
-    name="Continuous Evaluation",
-    data_source_config=data_source_config,  # type: ignore
-    testing_criteria=testing_criteria,  # type: ignore
-)
-print(f"Evaluation created (id: {eval_object.id}, name: {eval_object.name})")
+    ```python
+    from azure.ai.projects.models import (
+        EvaluationRule,
+        ContinuousEvaluationRuleAction,
+        EvaluationRuleFilter,
+        EvaluationRuleEventType,
+    )
 
-continuous_eval_rule = project_client.evaluation_rules.create_or_update(
-    id="my-continuous-eval-rule",
-    evaluation_rule=EvaluationRule(
-        display_name="My Continuous Eval Rule",
-        description="An eval rule that runs on agent response completions",
-        action=ContinuousEvaluationRuleAction(eval_id=eval_object.id, max_hourly_runs=100),
-        event_type=EvaluationRuleEventType.RESPONSE_COMPLETED,
-        filter=EvaluationRuleFilter(agent_name=agent.name),
-        enabled=True,
-    ),
-)
-print(
-    f"Continuous Evaluation Rule created (id: {continuous_eval_rule.id}, name: {continuous_eval_rule.display_name})"
-)
-```
+    data_source_config = {"type": "azure_ai_source", "scenario": "responses"}
+    testing_criteria = [
+        {"type": "azure_ai_evaluator", "name": "violence_detection", "evaluator_name": "builtin.violence"}
+    ]
+    eval_object = openai_client.evals.create(
+        name="Continuous Evaluation",
+        data_source_config=data_source_config,  # type: ignore
+        testing_criteria=testing_criteria,  # type: ignore
+    )
+    print(f"Evaluation created (id: {eval_object.id}, name: {eval_object.name})")
 
-References: [EvaluationRuleEventType](https://learn.microsoft.com/python/api/azure-ai-projects/azure.ai.projects.models.evaluationruleeventtype), [EvaluationRule](https://learn.microsoft.com/python/api/azure-ai-projects/azure.ai.projects.models.evaluationrule)
+    continuous_eval_rule = project_client.evaluation_rules.create_or_update(
+        id="my-continuous-eval-rule",
+        evaluation_rule=EvaluationRule(
+            display_name="My Continuous Eval Rule",
+            description="An eval rule that runs on agent response completions",
+            action=ContinuousEvaluationRuleAction(eval_id=eval_object.id, max_hourly_runs=100),
+            event_type=EvaluationRuleEventType.RESPONSE_COMPLETED,
+            filter=EvaluationRuleFilter(agent_name=agent.name),
+            enabled=True,
+        ),
+    )
+    print(
+        f"Continuous Evaluation Rule created (id: {continuous_eval_rule.id}, name: {continuous_eval_rule.display_name})"
+    )
+    ```
+
+    References: [EvaluationRuleEventType](https://learn.microsoft.com/python/api/azure-ai-projects/azure.ai.projects.models.evaluationruleeventtype), [EvaluationRule](https://learn.microsoft.com/python/api/azure-ai-projects/azure.ai.projects.models.evaluationrule)
+
+  </Tab>
+  <Tab title="C#">
+
+    ```csharp
+    using System.ClientModel;
+    using System.Text.Json;
+    using Azure.AI.Projects;
+
+    // Build the evaluation configuration
+    BinaryData evaluationConfig = BinaryData.FromObjectAsJson(new
+    {
+        name = "Continuous Evaluation",
+        data_source_config = new { type = "azure_ai_source", scenario = "responses" },
+        testing_criteria = new[]
+        {
+            new
+            {
+                type = "azure_ai_evaluator",
+                name = "violence_detection",
+                evaluator_name = "builtin.violence",
+            },
+        }
+    });
+
+    // Create the evaluation object
+    using BinaryContent evaluationContent = BinaryContent.Create(evaluationConfig);
+    ClientResult evaluationResult = await evaluationClient.CreateEvaluationAsync(evaluationContent);
+
+    using JsonDocument evalDoc = JsonDocument.Parse(
+        evaluationResult.GetRawResponse().Content);
+    string evaluationId = evalDoc.RootElement.GetProperty("id").GetString()!;
+    string evaluationName = evalDoc.RootElement.GetProperty("name").GetString()!;
+    Console.WriteLine($"Evaluation created (id: {evaluationId}, name: {evaluationName})");
+
+    // Create the continuous evaluation rule
+    ContinuousEvaluationRuleAction continuousAction = new(evaluationId)
+    {
+        MaxHourlyRuns = 100,
+    };
+    EvaluationRule continuousRule = new(
+        action: continuousAction,
+        eventType: EvaluationRuleEventType.ResponseCompleted,
+        enabled: true)
+    {
+        Filter = new EvaluationRuleFilter(agentName: agentVersion.Name),
+        DisplayName = "My Continuous Eval Rule",
+        Description = "An eval rule that runs on agent response completions",
+    };
+
+    EvaluationRule continuousEvalRule = await projectClient.EvaluationRules.CreateOrUpdateAsync(
+        id: "my-continuous-eval-rule",
+        evaluationRule: continuousRule);
+
+    Console.WriteLine(
+        $"Continuous Evaluation Rule created" +
+        $" (id: {continuousEvalRule.Id}, name: {continuousEvalRule.DisplayName})");
+    ```
+
+    References: [EvaluationRuleEventType](https://learn.microsoft.com/dotnet/api/azure.ai.projects.evaluationruleeventtype), [EvaluationRule](https://learn.microsoft.com/dotnet/api/azure.ai.projects.evaluationrule)
+
+  </Tab>
+</Tabs>
 
 ## Verify continuous evaluation results
 
@@ -181,23 +303,47 @@ If the setup is successful, the evaluation-related charts display scores for you
 
 You can also list recent evaluation runs and open the report URL:
 
-```python
-eval_run_list = openai_client.evals.runs.list(
-    eval_id=eval_object.id,
-    order="desc",
-    limit=10,
-)
+<CodeGroup>
+```python Python
+    eval_run_list = openai_client.evals.runs.list(
+        eval_id=eval_object.id,
+        order="desc",
+        limit=10,
+    )
 
-if len(eval_run_list.data) > 0 and eval_run_list.data[0].report_url:
-    print(f"Report URL: {eval_run_list.data[0].report_url}")
-```
+    if len(eval_run_list.data) > 0 and eval_run_list.data[0].report_url:
+        print(f"Report URL: {eval_run_list.data[0].report_url}")
+    ```
+
+```csharp C#
+    using System.Text.Json;
+    using System.ClientModel;
+
+    // List recent evaluation runs using a protocol method
+    ClientResult runsResult = await evaluationClient.GetEvaluationRunsAsync(
+        evaluationId, null, null, null, null, new());
+
+    using JsonDocument runsDoc = JsonDocument.Parse(
+        runsResult.GetRawResponse().Content);
+    var runs = runsDoc.RootElement.GetProperty("data");
+
+    if (runs.GetArrayLength() > 0)
+    {
+        var firstRun = runs[0];
+        if (firstRun.TryGetProperty("report_url", out JsonElement reportUrlElement))
+        {
+            Console.WriteLine($"Report URL: {reportUrlElement.GetString()}");
+        }
+    }
+    ```
+</CodeGroup>
 
 ## Full sample code
 
 To view the full sample code, see:
 
-- [Continuous evaluation sample](https://github.com/Azure/azure-sdk-for-python/blob/main/sdk/ai/azure-ai-projects/samples/evaluations/sample_continuous_evaluation_rule.py).
-- [Scheduled evaluation and Schedule AI red teaming evaluation sample](https://github.com/Azure/azure-sdk-for-python/blob/main/sdk/ai/azure-ai-projects/samples/evaluations/sample_scheduled_evaluations.py).
+- [Continuous evaluation sample (Python)](https://github.com/Azure/azure-sdk-for-python/blob/main/sdk/ai/azure-ai-projects/samples/evaluations/sample_continuous_evaluation_rule.py).
+- [Scheduled evaluation and Schedule AI red teaming evaluation sample (Python)](https://github.com/Azure/azure-sdk-for-python/blob/main/sdk/ai/azure-ai-projects/samples/evaluations/sample_scheduled_evaluations.py).
 
 ## Troubleshooting
 

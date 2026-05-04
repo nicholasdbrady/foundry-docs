@@ -8,13 +8,13 @@ This article explains how to generate text responses for Foundry Models, such as
 
 To use the Responses API with deployed models in your application, you need:
 
-- An Azure subscription. If you're using [GitHub Models](https://docs.github.com/en/github-models/), you can upgrade your experience and create an Azure subscription in the process. Read [Upgrade from GitHub Models to Microsoft Foundry Models](/models/capabilities/quickstart-github-models) if that's your case.
+- An Azure subscription. If you're using GitHub Models, you can upgrade your experience and create an Azure subscription in the process. Read [Upgrade from GitHub Models to Microsoft Foundry Models](/models/capabilities/quickstart-github-models) if that's your case.
 
 - A Foundry project. This kind of project is managed under a Foundry resource. If you don't have a Foundry project, see [Create a project for Microsoft Foundry](/setup/create-projects).
 
 - Your Foundry project's endpoint URL, which is of the form `https://YOUR-RESOURCE-NAME.services.ai.azure.com/api/projects/YOUR_PROJECT_NAME`.
 
-- A deployment of a Foundry Model, such as the `MAI-DS-R1` model used in this article. If you don't have a deployment already, see [Add and configure Foundry Models](/models/capabilities/create-model-deployments) to a model deployment to your resource.
+- A deployment of a Foundry Model, such as the `DeepSeek-R1-0528` model used in this article. If you don't have a deployment already, see [Add and configure Foundry Models](/models/capabilities/create-model-deployments) to a model deployment to your resource.
 
 ### Use the AI model starter kit
 
@@ -39,7 +39,7 @@ Use keyless authentication with **Microsoft Entra ID**. To learn more about keyl
 
         ```bash
         pip install azure-identity
-        pip install openai
+        pip install -U openai
         ```
 
     1. Use the following code to configure the OpenAI client object in the project route, specify your deployment, and generate responses. 
@@ -52,20 +52,23 @@ Use keyless authentication with **Microsoft Entra ID**. To learn more about keyl
         # Build the base URL: project_endpoint + /openai/v1 (no api-version needed)
         base_url = project_endpoint.rstrip("/") + "/openai/v1"
 
-        # Use get_bearer_token_provider for automatic token refresh
+        # get_bearer_token_provider returns a callable; call it to get automatic refresh of the token string
         credential = DefaultAzureCredential()
+        token_provider = get_bearer_token_provider(credential, "https://ai.azure.com/.default")
         client = OpenAI(
             base_url=base_url,
-            api_key=get_bearer_token_provider(credential, "https://ai.azure.com/.default"),
+            api_key=token_provider(),
         )   
 
         response = client.responses.create(
-            model="MAI-DS-R1", # Replace with your deployment name, not the model ID 
+            model="DeepSeek-R1-0528", # Replace with your deployment name, not the model ID 
             input="What are the top 3 benefits of cloud computing? Be concise.",
             max_output_tokens=500,
         )
 
-        print(response.model_dump_json(indent=2)) 
+        print(f"Response: {response.output_text}")
+        print(f"Status:   {response.status}")
+        print(f"Output tokens: {response.usage.output_tokens}") 
         ```
 
   </Tab>
@@ -85,7 +88,7 @@ Use keyless authentication with **Microsoft Entra ID**. To learn more about keyl
         using OpenAI;
         using OpenAI.Responses;
 
-        var deploymentName = "MAIDSR1"; // Replace with your deployment name, not the model ID 
+        var deploymentName = "DeepSeek-R1-0528"; // Replace with your deployment name, not the model ID 
         var project_endpoint = "https://YOUR-RESOURCE-NAME.services.ai.azure.com/api/projects/YOUR_PROJECT_NAME";
 
         // Get EntraID token for keyless auth
@@ -100,6 +103,7 @@ Use keyless authentication with **Microsoft Entra ID**. To learn more about keyl
             new ApiKeyCredential(token.Token),
             new OpenAIClientOptions { Endpoint = new Uri(baseUrl) });    
 
+        // GetResponsesClient takes no parameter; model goes in CreateResponseOptions
         var responseClient = client.GetResponsesClient(deploymentName);
         var result = await responseClient.CreateResponseAsync(new CreateResponseOptions(
             [ResponseItem.CreateUserMessageItem("What are the top 3 benefits of cloud computing? Be concise.")])
@@ -137,7 +141,7 @@ Use keyless authentication with **Microsoft Entra ID**. To learn more about keyl
 
         async function main() {
             const projectEndpoint = "https://YOUR-RESOURCE-NAME.services.ai.azure.com/api/projects/YOUR_PROJECT_NAME";
-            const deploymentName = "MAI-DS-R1"; // Replace with your deployment name, not the model ID 
+            const deploymentName = "DeepSeek-R1-0528"; // Replace with your deployment name, not the model ID 
 
             const baseURL = projectEndpoint.replace(/\/+$/, "") + "/openai/v1";
             const token = await getToken();
@@ -183,7 +187,7 @@ Use keyless authentication with **Microsoft Entra ID**. To learn more about keyl
         </dependencies>
         ```
 
-        After setup, choose which type of credential from `azure.identity` to use. For example, use `DefaultAzureCredential` to authenticate the client. Authentication is easiest with `DefaultAzureCredential`, as it finds the best credential to use in its running environment.
+        After setup, choose which type of credential from `azure.identity` to use. For example, use `DefaultAzureCredential` to authenticate the client. `DefaultAzureCredential` is the easiest option because it finds the best credential to use in its running environment.
 
     1. Use the following code to configure the OpenAI client object in the project route, specify your deployment, and generate responses.  
 
@@ -197,7 +201,7 @@ Use keyless authentication with **Microsoft Entra ID**. To learn more about keyl
         public class Sample {
             public static void main(String[] args) {
                 String endpoint = "https://YOUR-RESOURCE-NAME.services.ai.azure.com/api/projects/YOUR_PROJECT_NAME";
-                String deploymentName = "MAI-DS-R1"; // Replace with your deployment name, not the model ID
+                String deploymentName = "DeepSeek-R1-0528"; // Replace with your deployment name, not the model ID
 
                 // Get EntraID token for keyless auth
                 var credential = new DefaultAzureCredentialBuilder().build();
@@ -219,7 +223,7 @@ Use keyless authentication with **Microsoft Entra ID**. To learn more about keyl
                                 .maxOutputTokens(500)
                                 .build()
                 );
-                System.out.printf("Response: %s%n", getOutputText(response));
+                System.out.printf("Response: %s%n", response.outputText());
                 System.out.printf("Status:   %s%n", response.status());
                 response.usage().ifPresent(u ->
                         System.out.printf("Output tokens: %d%n", u.outputTokens()));
@@ -230,54 +234,76 @@ Use keyless authentication with **Microsoft Entra ID**. To learn more about keyl
   </Tab>
   <Tab title="Go">
 
-    ```go
-    package main
+    1. Before running the sample, install the required Go modules.
 
-    import (
-        "context"
-        "fmt"
-        "os"
-        "strings"
+        ```bash
+        go get github.com/Azure/azure-sdk-for-go/sdk/azcore v1.21.0
+        go get github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.13.1
+        go get github.com/openai/openai-go/v3 v3.22.0
+        ```
 
-        "github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
-        "github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-        "github.com/openai/openai-go/v3"
-        "github.com/openai/openai-go/v3/option"
-        "github.com/openai/openai-go/v3/responses"
-    )
+    1. Use the following code to configure the OpenAI client object in the project route, specify your deployment, and generate responses.
 
-    func main() {
-        projectEndpoint := "https://YOUR-RESOURCE-NAME.services.ai.azure.com/api/projects/YOUR_PROJECT_NAME"
-        deploymentName := "MAI-DS-R1" // Replace with your deployment name, not the model ID
+        ```go
+        package main
 
-        ctx := context.Background()
+        import (
+            "context"
+            "fmt"
+            "os"
+            "strings"
 
-        // Get EntraID token for keyless auth
-        credential, err := azidentity.NewDefaultAzureCredential(nil)
-        token, err := credential.GetToken(ctx, policy.TokenRequestOptions{
-            Scopes: []string{"https://ai.azure.com/.default"},
-        })
-
-        // Standard OpenAI client — no Azure wrapper (no api-version needed with /v1 path)
-        baseURL := strings.TrimRight(projectEndpoint, "/") + "/openai/v1"
-        client := openai.NewClient(
-            option.WithBaseURL(baseURL),
-            option.WithAPIKey(token.Token),
+            "github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
+            "github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+            "github.com/openai/openai-go/v3"
+            "github.com/openai/openai-go/v3/option"
+            "github.com/openai/openai-go/v3/responses"
         )
 
-        resp, err := client.Responses.New(ctx, responses.ResponseNewParams{
-            Model: deploymentName,
-            Input: responses.ResponseNewParamsInputUnion{
-                OfString: openai.String("What are the top 3 benefits of cloud computing? Be concise."),
-            },
-            MaxOutputTokens: openai.Int(500),
-        })
+        func main() {
+            projectEndpoint := "https://YOUR-RESOURCE-NAME.services.ai.azure.com/api/projects/YOUR_PROJECT_NAME"
+            deploymentName := "DeepSeek-R1-0528" // Replace with your deployment name, not the model ID
 
-        fmt.Printf("Response: %s\n", resp.OutputText())
-        fmt.Printf("Status:   %s\n", resp.Status)
-        fmt.Printf("Output tokens: %d\n", resp.Usage.OutputTokens)
-    }
-    ```
+            ctx := context.Background()
+
+            // Get EntraID token for keyless auth
+            credential, err := azidentity.NewDefaultAzureCredential(nil)
+            if err != nil {
+                fmt.Fprintf(os.Stderr, "Failed to create credential: %v\n", err)
+                os.Exit(1)
+            }
+            token, err := credential.GetToken(ctx, policy.TokenRequestOptions{
+                Scopes: []string{"https://ai.azure.com/.default"},
+            })
+            if err != nil {
+                fmt.Fprintf(os.Stderr, "Failed to get token: %v\n", err)
+                os.Exit(1)
+            }
+
+            // Standard OpenAI client — no Azure wrapper (no api-version needed with /v1 path)
+            baseURL := strings.TrimRight(projectEndpoint, "/") + "/openai/v1"
+            client := openai.NewClient(
+                option.WithBaseURL(baseURL),
+                option.WithAPIKey(token.Token),
+            )
+
+            resp, err := client.Responses.New(ctx, responses.ResponseNewParams{
+                Model: deploymentName,
+                Input: responses.ResponseNewParamsInputUnion{
+                    OfString: openai.String("What are the top 3 benefits of cloud computing? Be concise."),
+                },
+                MaxOutputTokens: openai.Int(500),
+            })
+            if err != nil {
+                fmt.Fprintf(os.Stderr, "API error: %v\n", err)
+                os.Exit(1)
+            }
+
+            fmt.Printf("Response: %s\n", resp.OutputText())
+            fmt.Printf("Status:   %s\n", resp.Status)
+            fmt.Printf("Output tokens: %d\n", resp.Usage.OutputTokens)
+        }
+        ```
 
   </Tab>
 </Tabs>

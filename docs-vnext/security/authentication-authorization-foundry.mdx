@@ -2,17 +2,20 @@
 title: "Authentication and authorization in Microsoft Foundry"
 description: "Learn how to authenticate and authorize access in Microsoft Foundry using Microsoft Entra ID and API keys. Explore RBAC, identity types, and best practices."
 ---
+
 Authentication and authorization in Microsoft Foundry control how principals prove identity and gain permission to perform operations. Foundry divides operations into control plane (resource management) and data plane (runtime usage), each with its own authentication and role-based access control (RBAC) surface.
 
 Foundry supports two authentication methods: Microsoft Entra ID and API keys. Microsoft Entra ID enables conditional access, managed identities, and granular RBAC. API keys remain available for rapid prototyping but lack per-user traceability. This article compares these methods, maps identities to roles, and describes common least privilege scenarios.
 
 <Info>
+
 Use Microsoft Entra ID for production workloads to enable conditional access, managed identities, and least privilege RBAC. API keys are convenient for quick evaluation but provide coarse-grained access.
+
 </Info>
 
 ## Prerequisites
 
-- An Azure subscription. If you don't have one, [create a free account](https://azure.microsoft.com/free/).
+- An Azure subscription. If you don't have one, [create a free account](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
 - A Microsoft Foundry resource with a [custom subdomain](https://learn.microsoft.com/azure/ai-services/cognitive-services-custom-subdomains) configured.
 - Understanding of [Azure RBAC concepts](https://learn.microsoft.com/azure/role-based-access-control/overview).
 - To assign roles, you need the **Owner** role or **User Access Administrator** role at the appropriate scope.
@@ -29,7 +32,7 @@ In Foundry, there's a clear distinction between control plane operations versus 
 | Control plane | Setting up and configuring resource, projects, networking, encryption, and connections | Create or delete resources, assign roles, rotate keys, set up Private Link | Azure portal, Azure CLI, ARM templates, Bicep, Terraform | Azure RBAC actions |
 | Data plane | Running and using model inference, agent interactions, evaluation jobs, and content safety calls | Chat completions, embedding generation, start fine-tune jobs, send agent messages, analyzer and classifier operations | SDKs, REST APIs, Foundry portal playground | Azure RBAC dataActions |
 
-For all Bicep, Terraform, and SDK samples, see the [foundry-samples repository on GitHub](https://github.com/azure-ai-foundry/foundry-samples) for Foundry.
+For all Bicep, Terraform, and SDK samples, see the [foundry-samples repository on GitHub](https://github.com/microsoft-foundry/foundry-samples) for Foundry.
 
 The following lists and diagram illustrate the separation between control plane and data plane actions in detail.
 Control plane actions within Foundry include:
@@ -58,7 +61,7 @@ Foundry supports Microsoft Entra ID (token-based, keyless) and API keys.
 
 ### Microsoft Entra ID
 
-Microsoft Entra ID uses OAuth 2.0 bearer tokens scoped to `https://cognitiveservices.azure.com/.default`.
+Microsoft Entra ID uses OAuth 2.0 bearer tokens scoped to `https://ai.azure.com/.default`.
 
 Use Microsoft Entra ID for:
 - Production workloads.
@@ -96,7 +99,7 @@ import requests
 credential = DefaultAzureCredential()
 
 # Get an access token for the Cognitive Services scope
-token = credential.get_token("https://cognitiveservices.azure.com/.default")
+token = credential.get_token("https://ai.azure.com/.default")
 
 # Use the token in your API request
 headers = {
@@ -138,12 +141,14 @@ print(response.json())
 ```
 
 <Warning>
+
 API keys provide full access to the resource and can't be scoped to specific users or actions. Rotate keys regularly and avoid committing them to source control.
+
 </Warning>
 
 **Expected output**: A JSON response listing your model deployments, or a 401 error if the API key is invalid.
 
-**Reference**: [Rotate API access keys](../../ai-services/rotate-keys)
+**Reference**: [Rotate API access keys](/security/rotate-keys)
 
 ## Feature support matrix
 
@@ -166,6 +171,7 @@ Reference the following matrix to understand what capabilities in Foundry suppor
 | Support in automation pipelines | Yes (secret) | Yes (service principal or managed identity) | Entra ID reduces secret rotation. |
 | Assistants API | Yes | Yes | Recommended to use Entra ID. |
 | Batch inferencing | Yes | Yes |  |
+| Toolbox | No | Yes | Use Entra ID for managed identity tool access. |
 
 ## Identity types
 
@@ -199,7 +205,9 @@ To understand the breakdown of built-in roles and the control and data plane act
 </Frame>
 
 <Tip>
+
 Create a custom role if a built-in role grants excess permissions for your use case.
+
 </Tip>
 
 ## Set up Microsoft Entra ID
@@ -232,7 +240,7 @@ For high-level guidance on setting up Entra ID authentication in Foundry, see [C
 
 | Error | Cause | Resolution |
 | --- | --- | --- |
-| 401 Unauthorized | Missing or expired token; invalid API key | Verify the token acquisition scope is `https://cognitiveservices.azure.com/.default`. Regenerate the API key if you use key-based auth. |
+| 401 Unauthorized | Missing or expired token; invalid API key | Verify the token acquisition scope is `https://ai.azure.com/.default`. Regenerate the API key if you use key-based auth. |
 | 403 Forbidden | Missing RBAC role assignment | Assign the appropriate built-in role (for example, Azure AI User) at the resource or project scope. |
 | AADSTS700016 | Application not found in tenant | Verify the app registration exists in the correct tenant and the client ID is correct. |
 | Custom subdomain required | Resource uses a regional endpoint instead of a custom subdomain | Configure a [custom subdomain](https://learn.microsoft.com/azure/ai-services/cognitive-services-custom-subdomains) on the Foundry resource. Token-based auth requires a custom subdomain. |
@@ -241,7 +249,7 @@ For high-level guidance on setting up Entra ID authentication in Foundry, see [C
 
 - [Role-based access control for Foundry](/security/rbac-foundry)
 - [Configure key-less authentication with Microsoft Entra ID](/security/configure-entra-id)
-- [Rotate API access keys](../../ai-services/rotate-keys)
+- [Rotate API access keys](/security/rotate-keys)
 - [Azure built-in roles (AI + machine learning)](https://learn.microsoft.com/azure/role-based-access-control/built-in-roles#ai-+-machine-learning)
 - [Authentication vs. authorization (Microsoft Entra ID)](/entra/identity-platform/authentication-vs-authorization)
 - [Identity fundamentals](/entra/fundamentals/identity-fundamental-concepts)

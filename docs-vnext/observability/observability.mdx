@@ -2,19 +2,12 @@
 title: "Observability in Generative AI"
 description: "Learn how Microsoft Foundry enables safe, high-quality generative AI through systematic evaluation and observability tools."
 ---
-<Info>
-Items marked (preview) in this article are currently in public preview. This preview is provided without a service-level agreement, and we don't recommend it for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
-</Info>
 
 The AI application lifecycle requires robust evaluation frameworks to ensure AI systems deliver accurate, relevant, and reliable outputs. Without rigorous assessment, AI systems risk generating responses that are inaccurate, inconsistent, poorly grounded, or potentially harmful. Observability enables teams to measure and improve both the quality and safety of AI outputs throughout the development lifecycle—from model selection through production monitoring.
 
-<Note>
-The Microsoft Foundry SDK for evaluation and Foundry portal are in public preview, but the APIs are generally available for model and dataset evaluation (agent evaluation remains in public preview). Evaluators marked (preview) in this article are currently in public preview everywhere.
-</Note>
-
 ## What is observability?
 
-AI observability refers to the ability to monitor, understand, and troubleshoot AI systems throughout their lifecycle. Teams can trace, evaluate, integrate automated quality gates into CI/CD pipelines, and collect signals such as evaluation metrics, logs, traces, and model outputs to gain visibility into performance, quality, safety, and operational health.
+AI observability refers to the ability to monitor, understand, and troubleshoot AI systems throughout their lifecycle. You can trace, evaluate, integrate automated quality gates into CI/CD pipelines, and collect signals such as evaluation metrics, logs, traces, and model outputs to gain visibility into performance, quality, safety, and operational health.
 
 ## Core observability capabilities
 
@@ -22,21 +15,21 @@ Microsoft Foundry provides three core capabilities that work together to deliver
 
 ### Evaluation
 
-Evaluators measure the quality, safety, and reliability of AI responses throughout development. Microsoft Foundry provides built-in evaluators for general-purpose quality metrics (coherence, fluency), RAG-specific metrics (groundedness, relevance), safety and security (hate/unfairness, violence, protected materials), and agent-specific metrics (tool call accuracy, task completion). Teams can also build custom evaluators tailored to their domain-specific requirements.
+Evaluators measure the quality, safety, and reliability of AI responses throughout development. Microsoft Foundry provides built-in evaluators including general-purpose quality metrics (coherence, fluency), RAG-specific metrics (groundedness, relevance), safety and security (hate/unfairness, violence, protected materials), and agent-specific metrics (tool call accuracy, task completion), among others. You can also build custom evaluators tailored to your domain-specific requirements.
 
 For a complete list of built-in evaluators, see [Built-in evaluators reference](/observability/built-in-evaluators).
 
 ### Monitoring
 
-Production monitoring ensures your deployed AI applications maintain quality and performance in real-world conditions. Integrated with Azure Monitor Application Insights, Microsoft Foundry delivers real-time dashboards tracking operational metrics, token consumption, latency, error rates, and quality scores. Teams can set up alerts when outputs fail quality thresholds or produce harmful content, enabling rapid issue resolution.
+Production monitoring ensures your deployed AI applications maintain quality and performance in real-world conditions. Integrated with Azure Monitor Application Insights, Microsoft Foundry delivers real-time dashboards tracking operational metrics, token consumption, latency, error rates, and quality scores. You can set up alerts when outputs fail quality thresholds or produce harmful content, enabling rapid issue resolution.
 
-For details on setting up production monitoring, see [Monitor agents dashboard](/agents/development/how-to-monitor-agents-dashboard).
+For details on setting up production monitoring, see [Monitor agents dashboard](/agent-service/how-to-monitor-agents-dashboard).
 
 ### Tracing
 
-Distributed tracing captures the execution flow of AI applications, providing visibility into LLM calls, tool invocations, agent decisions, and inter-service dependencies. Built on OpenTelemetry standards and integrated with Application Insights, tracing enables debugging complex agent behaviors, identifying performance bottlenecks, and understanding multi-step reasoning chains. Microsoft Foundry supports tracing for popular frameworks including LangChain, Semantic Kernel, and the OpenAI Agents SDK.
+Distributed tracing captures the execution flow of AI applications, providing visibility into LLM calls, tool invocations, agent decisions, and inter-service dependencies. Built on OpenTelemetry standards and integrated with Azure Monitor Application Insights, tracing enables debugging complex agent behaviors, identifying performance bottlenecks, and understanding multi-step reasoning chains. Microsoft Foundry supports tracing for popular frameworks including LangChain, LangGraph, the OpenAI Agents SDK, and the Microsoft Agent Framework.
 
-For guidance on implementing tracing, see [Trace your application](https://learn.microsoft.com/en-us/azure/foundry-classic/how-to/develop/trace-application) and [Trace with Agents SDK](https://learn.microsoft.com/en-us/azure/foundry-classic/how-to/develop/trace-agents-sdk).
+For guidance on implementing tracing, see [Trace agent overview](/agent-service/trace-agent-concept).
 
 ## What are evaluators?
 
@@ -56,11 +49,11 @@ Evaluators integrate into each stage of the AI lifecycle to ensure reliability, 
 
 Select the right foundation model by comparing quality, task performance, ethical considerations, and safety profiles across different models.
 
-**Tools available**: [Microsoft Foundry benchmark](/models/capabilities/model-benchmarks) for comparing models on public datasets or your own data, and the Azure AI Evaluation SDK for [testing specific model endpoints](https://github.com/Azure-Samples/azureai-samples/blob/main/scenarios/evaluate/Supported_Evaluation_Targets/Evaluate_Base_Model_Endpoint/Evaluate_Base_Model_Endpoint.ipynb).
+**Tools available**: [Microsoft Foundry benchmark](/foundry-models/model-benchmarks) for comparing models on public datasets or your own data, and the Azure AI Evaluation SDK for [testing specific model endpoints](https://github.com/Azure-Samples/azureai-samples/blob/main/scenarios/evaluate/Supported_Evaluation_Targets/Evaluate_Base_Model_Endpoint/Evaluate_Base_Model_Endpoint.ipynb).
 
 ### Pre-production evaluation
 
-Before deployment, thorough testing ensures your AI agent or application is production-ready. This stage validates performance through evaluation datasets, identifies edge cases, assesses robustness, and measures key metrics including task adherence, groundedness, relevance, and safety. For building production-ready agents with multi-turn conversations, tool calling, and state management, see [Foundry Agent Service](/agents/development/overview).
+Before deployment, thorough testing ensures your AI agent or application is production-ready. This stage validates performance through evaluation datasets, identifies edge cases, assesses robustness, and measures key metrics including task adherence, groundedness, relevance, and safety. For building production-ready agents with multi-turn conversations, tool calling, and state management, see [Foundry Agent Service](/agent-service/overview).
 
 <Frame>
   <img src="/images/evaluation-models-diagram.png" alt="Diagram of Pre-production evaluation for models and applications with the six steps." />
@@ -74,7 +67,7 @@ Before deployment, thorough testing ensures your AI agent or application is prod
 
 ### Post-production monitoring
 
-After deployment, [continuous monitoring](/agents/development/how-to-monitor-agents-dashboard) ensures your AI application maintains quality in real-world conditions:
+After deployment, [continuous monitoring](/agent-service/how-to-monitor-agents-dashboard) ensures your AI application maintains quality in real-world conditions:
 
 - **Operational metrics**: Regular measurement of key AI agent operational metrics
 - **Continuous evaluation**: Quality and safety evaluation of production traffic at a sampled rate
@@ -84,16 +77,16 @@ After deployment, [continuous monitoring](/agents/development/how-to-monitor-age
 
 Integrated with Azure Monitor Application Insights, the Foundry Observability dashboard delivers real-time insights into performance, safety, and quality metrics, enabling rapid issue resolution and maintaining user trust.
 
-## Evaluation cheat sheet
+## Evaluation quick reference
 
 | Purpose | Process | Parameters, guidance, and samples |
 | -----| -----| ----|
-| How to set up tracing? | Configure distributed tracing | [Trace overview](/agents/development/trace-agent-concept) <br /><br /> [Trace with Agents SDK](/agents/development/trace-agent-setup) |
+| How to set up tracing? | Configure distributed tracing | [Trace overview](/agent-service/trace-agent-concept) <br /><br /> [Trace with Agents SDK](/agent-service/trace-agent-setup) |
 | What are you evaluating for? | Identify or build relevant evaluators | [Built-in evaluators](/observability/built-in-evaluators) <br /><br /> [Custom evaluators](/observability/custom-evaluators) <br /><br /> [Python SDK samples](https://github.com/Azure/azure-sdk-for-python/blob/main/sdk/ai/azure-ai-projects/samples/evaluations/README.md) <br /><br /> [C# SDK samples](https://github.com/Azure/azure-sdk-for-net/tree/main/sdk/ai/Azure.AI.Projects/tests/Samples/Evaluation) |
 | What data should you use? | Upload or generate relevant dataset | [Select or create a dataset](/observability/evaluate-generative-ai-app#select-or-create-a-dataset) |
-| How to run evaluations? | Run evaluation | [Agent evaluation runs](/observability/evaluate-agent) <br /><br /> [Remote cloud run](/observability/cloud-evaluation) |
+| How to run evaluations? | Run evaluation | [Agent evaluation runs](/agent-service/evaluate-agent) <br /><br /> [Remote cloud run](/observability/cloud-evaluation) |
 | How did my model/AI application perform? | Analyze results | [View evaluation results](/observability/evaluate-results) <br /><br /> [Cluster analysis](/observability/cluster-analysis) |
-| How can I improve? | Analyze results and optimize agents | Analyze evaluation failures with [cluster analysis](/observability/cluster-analysis). <br /><br /> Optimize agents and [re-evaluate](/observability/evaluate-agent). <br /><br /> Review [evaluation results](/observability/evaluate-results). |
+| How can I improve? | Analyze results and optimize agents | Analyze evaluation failures with [cluster analysis](/observability/cluster-analysis). <br /><br /> Optimize agents and [re-evaluate](/agent-service/evaluate-agent). <br /><br /> Review [evaluation results](/observability/evaluate-results). |
 
 ## Region support, rate limits, and virtual network support
 
@@ -104,11 +97,13 @@ To learn which regions support AI-assisted evaluators, the rate limits that appl
 Observability features such as risk and safety evaluations and evaluations in the agent playground are billed based on consumption as listed in [our Azure pricing page](https://azure.microsoft.com/pricing/details/ai-foundry/).
 
 <Info>
+
 Evaluations in the agents playground are enabled by default for all Foundry projects and are included in consumption-based billing. To turn off playground evaluations, select metrics in the upper right of the agents playground and unselect all evaluators.
 
 <Frame>
   <img src="/images/agent-playground-evaluation-metrics.png" alt="Screenshot of the Foundry portal showing agents playground with the metrics selected." />
 </Frame>
+
 </Info>
 
 ## Related content

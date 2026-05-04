@@ -14,31 +14,41 @@ This tutorial covers the first stage of the Microsoft Foundry developer journey:
 **Tutorial outcome**: By the end you have a running Modern Workplace Assistant that can answer policy, technical, and combined implementation questions; a repeatable batch evaluation script; and clear extension points (other tools, multi‑agent patterns, richer evaluation).
 
 **You will:**
-<Check>Build a Modern Workplace Assistant with SharePoint and MCP integration.</Check>
-<Check>Demonstrate real business scenarios combining internal and external knowledge.</Check>
-<Check>Implement robust error handling and graceful degradation.</Check>
-<Check>Create evaluation framework for business-focused testing.</Check>
-<Check>Prepare foundation for governance and production deployment.</Check>
+- Build a Modern Workplace Assistant with SharePoint and MCP integration.
+- Demonstrate real business scenarios combining internal and external knowledge.
+- Implement robust error handling and graceful degradation.
+- Create evaluation framework for business-focused testing.
+- Prepare foundation for governance and production deployment.
 This minimal sample demonstrates enterprise-ready patterns with realistic business scenarios.
 
 <Info>
+
 Code in this article uses packages that are currently in preview. This preview is provided without a service-level agreement, and we don't recommend it for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
+
 </Info>
 
 ## Prerequisites 
 
 - An Azure subscription. If you don't have one, [create one for free](https://azure.microsoft.com/free).
 - Azure CLI 2.67.0 or later, authenticated with `az login` (check with `az version`)
-- A Foundry **project** with a deployed model (for example, `gpt-4o-mini`). If you don't have one: [Create a project](/setup/create-projects) and then deploy a model (see model overview: [Model catalog](https://learn.microsoft.com/en-us/azure/foundry-classic/concepts/foundry-models-overview)). 
+- A Foundry **project** with a deployed model (for example, `gpt-4o-mini`). If you don't have one: [Create a project](/setup/create-projects) and then deploy a model (see model overview: [Model catalog](/foundry-models/foundry-models-overview)).
 - Python 3.10 or later
 - .NET SDK 8.0 or later (for the C# sample)
-- SharePoint connection configured in your project ([SharePoint tool documentation](/agents/tools/sharepoint))
+- SharePoint connection configured in your project ([SharePoint tool documentation](/agent-service/sharepoint))
 
 <Note>
-To configure your Foundry project for SharePoint connectivity, see the [SharePoint tool documentation](/agents/tools/sharepoint).
+
+To configure your Foundry project for SharePoint connectivity, see the [SharePoint tool documentation](/agent-service/sharepoint).
+
 </Note>
 
 - (Optional) Git installed for cloning the sample repository
+
+<Info>
+
+SDK versions and sample repository structure may change after publication. Before you begin, check the [sample repository README](https://github.com/microsoft-foundry/foundry-samples/tree/main/samples/python/enterprise-agent-tutorial/1-idea-to-prototype) for the latest setup instructions, required package versions, and environment configuration. If a version referenced in this tutorial isn't available on [PyPI](https://pypi.org/project/azure-ai-projects/) or [NuGet](https://www.nuget.org/packages/Azure.AI.Projects), use the latest published version instead.
+
+</Info>
 
 ## Step 1: Get the sample code
 
@@ -47,17 +57,19 @@ Instead of navigating a large repository tree, use one of these approaches:
 #### Option A (clone entire samples repo)
 
 <Tip>
-Code uses **Azure AI Projects 2.x** and is incompatible with Azure AI Projects 1.x. [See the Foundry (classic) documentation](https://learn.microsoft.com/en-us/azure/foundry-classic/index.yml)  for the Azure AI Projects 1.x version.
+
+Code uses **Azure AI Projects 2.x** and is incompatible with Azure AI Projects 1.x. [See the Foundry (classic) documentation](../../foundry-classic/index.yml)  for the Azure AI Projects 1.x version.
+
 </Tip>
 
 <CodeGroup>
 ```bash Python
-    git clone --depth 1 https://github.com/azure-ai-foundry/foundry-samples.git
+    git clone --depth 1 https://github.com/microsoft-foundry/foundry-samples.git
     cd foundry-samples/samples/python/enterprise-agent-tutorial/1-idea-to-prototype
     ```
 
 ```bash C#
-    git clone --depth 1 https://github.com/azure-ai-foundry/foundry-samples.git
+    git clone --depth 1 https://github.com/microsoft-foundry/foundry-samples.git
     cd foundry-samples/samples/csharp/enterprise-agent-tutorial/1-idea-to-prototype
     ```
 </CodeGroup>
@@ -66,7 +78,7 @@ Code uses **Azure AI Projects 2.x** and is incompatible with Azure AI Projects 1
 
 <CodeGroup>
 ```bash Python
-    git clone --no-checkout https://github.com/azure-ai-foundry/foundry-samples.git
+    git clone --no-checkout https://github.com/microsoft-foundry/foundry-samples.git
     cd foundry-samples
     git sparse-checkout init --cone
     git sparse-checkout set samples/python/enterprise-agent-tutorial/1-idea-to-prototype
@@ -75,7 +87,7 @@ Code uses **Azure AI Projects 2.x** and is incompatible with Azure AI Projects 1
     ```
 
 ```bash C#
-    git clone --no-checkout https://github.com/azure-ai-foundry/foundry-samples.git
+    git clone --no-checkout https://github.com/microsoft-foundry/foundry-samples.git
     cd foundry-samples
     git sparse-checkout init --cone
     git sparse-checkout set samples/csharp/enterprise-agent-tutorial/1-idea-to-prototype
@@ -89,19 +101,21 @@ Code uses **Azure AI Projects 2.x** and is incompatible with Azure AI Projects 1
 Download the repository ZIP, extract it to your local environment, and go to the tutorial folder.
 
 <Info>
+
 For production adoption, use a standalone repository. This tutorial uses the shared samples repo. Sparse checkout minimizes local noise.
+
 </Info>
 
 <Tabs>
   <Tab title="Python">
 
-    <Card title="Download the Python code now" icon="arrow-right" href="https://github.com/azure-ai-foundry/foundry-samples/tree/main/samples/python/enterprise-agent-tutorial/1-idea-to-prototype" />
+    <Card title="Download the Python code now" icon="arrow-right" href="https://github.com/microsoft-foundry/foundry-samples/tree/main/samples/python/enterprise-agent-tutorial/1-idea-to-prototype" />
     After you extract the ZIP, go to `samples/python/enterprise-agent-tutorial/1-idea-to-prototype`.
 
   </Tab>
   <Tab title="C#">
 
-    <Card title="Download the C# code now" icon="arrow-right" href="https://github.com/azure-ai-foundry/foundry-samples/tree/main/samples/csharp/enterprise-agent-tutorial/1-idea-to-prototype" />
+    <Card title="Download the C# code now" icon="arrow-right" href="https://github.com/microsoft-foundry/foundry-samples/tree/main/samples/csharp/enterprise-agent-tutorial/1-idea-to-prototype" />
     After you extract the ZIP, go to `samples/csharp/enterprise-agent-tutorial/1-idea-to-prototype`.
 
   </Tab>
@@ -134,8 +148,8 @@ The minimal structure contains only essential files:
        │   ├── Program.cs                   # Agent implementation with SharePoint + MCP
        │   ├── ModernWorkplaceAssistant.csproj
        │   └── .env                         # Environment variables (create this)
-       ├── Evaluate/                        # Cloud evaluation framework
-       │   ├── Program.cs                   # Cloud evaluation with built-in evaluators
+       ├── Evaluate/                        # Batch evaluation framework
+       │   ├── Program.cs                   # Batch evaluation with built-in evaluators
        │   ├── Evaluate.csproj
        │   └── evaluation_results.json      # Example output (generated)
        ├── questions.jsonl                  # Business test scenarios
@@ -154,34 +168,28 @@ Start by running the agent so you see working functionality before diving into i
 1. Verify that your `requirements.txt` uses these published package versions:
 
    ```text
-   azure-ai-projects==2.0.0b3
-   azure-identity
+   azure-ai-projects>=2.0.0
    python-dotenv
-   openai
    ```
 
 1. Install dependencies:
 
-<Tabs>
-  <Tab title="Python">
+   # [Python](#tab/python)
 
-    ```bash
-    python -m pip install -r requirements.txt
-    ```
+   ```bash
+   python -m pip install -r requirements.txt
+   ```
 
-  </Tab>
-  <Tab title="C#">
+   # [C#](#tab/csharp)
 
-    ```bash
-    cd ModernWorkplaceAssistant
-    dotnet restore
+   ```bash
+   cd ModernWorkplaceAssistant
+   dotnet restore
 
-    cd ../Evaluate
-    dotnet restore
-    ```
-
-  </Tab>
-</Tabs>
+   cd ../Evaluate
+   dotnet restore
+   ```
+   ---
 
    Verify the install succeeded. You should see `Successfully installed azure-ai-projects-...` (Python) or `Restore completed` (.NET) with no errors.
 
@@ -210,8 +218,8 @@ Start by running the agent so you see working functionality before diving into i
 <CodeGroup>
 ```dotenv Python
     # Foundry configuration
-    PROJECT_ENDPOINT=https://<your-project>.aiservices.azure.com
-    MODEL_DEPLOYMENT_NAME=gpt-4o-mini
+    FOUNDRY_PROJECT_ENDPOINT=https://<your-project>.aiservices.azure.com
+    FOUNDRY_MODEL_NAME=gpt-4o-mini
 
     # The Microsoft Learn MCP Server (optional)
     MCP_SERVER_URL=https://learn.microsoft.com/api/mcp
@@ -222,8 +230,8 @@ Start by running the agent so you see working functionality before diving into i
 
 ```dotenv C#
     # Foundry configuration
-    PROJECT_ENDPOINT=https://<your-project>.aiservices.azure.com
-    MODEL_DEPLOYMENT_NAME=gpt-4o-mini
+    FOUNDRY_PROJECT_ENDPOINT=https://<your-project>.aiservices.azure.com
+    FOUNDRY_MODEL_NAME=gpt-4o-mini
 
     # SharePoint integration (optional - requires connection name)
     SHAREPOINT_CONNECTION_NAME=<your-sharepoint-connection-name>
@@ -233,9 +241,10 @@ Start by running the agent so you see working functionality before diving into i
     ```
 </CodeGroup>
 
-   Confirm `.env` contains valid values by opening the file and verifying that `PROJECT_ENDPOINT` starts with `https://` and `MODEL_DEPLOYMENT_NAME` matches the name of a deployed model in your project.
+   Confirm `.env` contains valid values by opening the file and verifying that `FOUNDRY_PROJECT_ENDPOINT` starts with `https://` and `FOUNDRY_MODEL_NAME` matches the name of a deployed model in your project.
 
 <Tip>
+
 To get your **tenant ID**, run:
 
 ```bash
@@ -244,6 +253,7 @@ az account show --query tenantId -o tsv
 ```
 
 To get your **project endpoint**, open your project in the [Foundry portal](https://ai.azure.com) and copy the value shown there.
+
 </Tip>
 
 ### Run agent and evaluation
@@ -309,7 +319,9 @@ Now that you have a working agent, the next sections explain how it works. You d
 ## Understand the assistant implementation
 
 <Note>
+
 This section is for reference only — no action needed. It explains the code you already ran.
+
 </Note>
 
 This section explains the core code in `main.py` (Python) or `ModernWorkplaceAssistant/Program.cs` (C#). You already ran the agent. After reading it, you can:
@@ -328,7 +340,9 @@ The code breaks down into the following main sections, ordered as they appear in
 1. [Converse with the agent](#converse-with-the-agent)
 
 <Info>
+
 Code in this article uses packages that are currently in preview. This preview is provided without a service-level agreement, and we don't recommend it for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
+
 </Info>
 
 ### Imports and authentication setup
@@ -6207,9 +6221,9 @@ Conditional Access policies act as "if-then" statements that enforce organizatio
 🔗 Next: Add evaluation metrics, monitoring, and production deployment
 ```
 
-## Step 4: Evaluate the assistant by using cloud evaluation
+## Step 4: Evaluate the assistant by using batch evaluation
 
-The evaluation framework tests realistic business scenarios by using the **cloud evaluation** capability of the Microsoft Foundry SDK. Instead of a custom local approach, this pattern uses the built-in evaluators (`builtin.violence`, `builtin.fluency`, `builtin.task_adherence`) and the `openai_client.evals` API to run scalable, repeatable evaluations in the cloud.
+The evaluation framework tests realistic business scenarios by using the **batch evaluation** capability of the Microsoft Foundry SDK. Instead of a custom local approach, this pattern uses the built-in evaluators (`builtin.violence`, `builtin.fluency`, `builtin.task_adherence`) and the `openai_client.evals` API to run scalable, repeatable evaluations in the cloud.
 
 This evaluation framework demonstrates:
 
@@ -6221,15 +6235,19 @@ This evaluation framework demonstrates:
 The code breaks down into the following main sections:
 
 1. [Configure the evaluation](#configure-the-evaluation).
-1. [Run the cloud evaluation](#run-the-cloud-evaluation).
+1. [Run the batch evaluation](#run-the-batch-evaluation).
 1. [Retrieve evaluation results](#retrieve-evaluation-results).
 
 <Tip>
-For detailed guidance on cloud evaluations, see [Run evaluations in the cloud](/observability/cloud-evaluation). To find a comprehensive list of built-in evaluators available in Foundry, see [Observability in generative AI](/observability/observability).
+
+For detailed guidance on batch evaluations, see [Run evaluations in the cloud](/observability/cloud-evaluation). To find a comprehensive list of built-in evaluators available in Foundry, see [Observability in generative AI](/observability/observability).
+
 </Tip>
 
 <Note>
-The C# SDK uses **protocol methods** with `BinaryData` and `BinaryContent` instead of typed objects. This approach requires helper methods to parse JSON responses. See the [C# Evaluations SDK sample](https://github.com/Azure/azure-sdk-for-net/blob/feature/ai-foundry/agents-v2/sdk/ai/Azure.AI.Projects/samples/Sample21_Evaluations.md) for the complete pattern.
+
+The C# sample uses a local batch evaluation approach with `ProjectResponsesClient` instead of the cloud `openai_client.evals` API shown in Python. It sends queries to the agent, checks responses against expected keywords, and writes results to `evaluation_results.json`. See the [C# Evaluations SDK sample](https://github.com/Azure/azure-sdk-for-net/tree/main/sdk/ai/Azure.AI.Projects/samples/Evaluations) for cloud evaluation patterns in C#.
+
 </Note>
 
 ### Configure the evaluation
@@ -6615,7 +6633,7 @@ The `testing_criteria` array specifies which evaluators to run:
 - `builtin.fluency`: Assesses response quality and readability (requires a model deployment).
 - `builtin.task_adherence`: Evaluates whether the agent followed instructions correctly.
 
-### Run the cloud evaluation
+### Run the batch evaluation
 
 Create an evaluation run that targets your agent. The `azure_ai_target_completions` data source sends queries to your agent and captures responses for evaluation:
 
@@ -7378,7 +7396,7 @@ Each output item includes:
 - **Score**: Numeric score on the evaluator's scale
 - **Reason**: Explanation of why the score was assigned (for LLM-based evaluators)
 
-### Expected output from cloud evaluation (evaluate.py)
+### Expected output from batch evaluation (evaluate.py)
 
 When you run the evaluation script, you see output similar to the following example. The output shows the evaluation object creation, run submission, and results retrieval:
 
@@ -7411,7 +7429,7 @@ Agent deleted
 
 ### Understanding evaluation results
 
-Cloud evaluations provide structured results that you can view in the Foundry portal or retrieve programmatically. Each output item includes:
+Batch evaluations provide structured results that you can view in the Foundry portal or retrieve programmatically. Each output item includes:
 
 | Field | Description |
 | ------- | ------------- |
@@ -7429,7 +7447,9 @@ Cloud evaluations provide structured results that you can view in the Foundry po
 You can also view detailed results in the Foundry portal by selecting **Evaluation** from your project and selecting the evaluation run. The portal provides visualizations, filtering, and export options.
 
 <Tip>
-For production scenarios, consider running evaluations as part of your CI/CD pipeline. See [How to run an evaluation in Azure DevOps](/observability/evaluation-azure-devops), and [Continuously evaluate your AI agents](https://learn.microsoft.com/en-us/azure/foundry-classic/how-to/continuous-evaluation-agents) for integration patterns.
+
+For production scenarios, consider running evaluations as part of your CI/CD pipeline. See [How to run an evaluation in Azure DevOps](/observability/evaluation-azure-devops), and [Continuously evaluate your AI agents](/agent-service/how-to-monitor-agents-dashboard) for integration patterns.
+
 </Tip>
 
 ## Troubleshooting
@@ -7437,7 +7457,7 @@ For production scenarios, consider running evaluations as part of your CI/CD pip
 | Symptom | Cause | Resolution |
 |---------|-------|------------|
 | `DefaultAzureCredential` authentication error | Azure CLI session expired or not signed in | Run `az login` and retry |
-| `Model deployment not found` | Model name in `.env` doesn't match a deployment in your project | Open your project in the Foundry portal, check **Deployments**, and update `MODEL_DEPLOYMENT_NAME` in `.env` |
+| `Model deployment not found` | Model name in `.env` doesn't match a deployment in your project | Open your project in the Foundry portal, check **Deployments**, and update `FOUNDRY_MODEL_NAME` in `.env` |
 | `SharePoint tool configured` but agent can't find documents | Documents not uploaded or connection name incorrect | Verify documents appear in the SharePoint library and that `SHAREPOINT_CONNECTION_NAME` matches the connection in your project |
 | MCP tool timeout or connection error | Microsoft Learn MCP server is unreachable | Verify `MCP_SERVER_URL` is set to `https://learn.microsoft.com/api/mcp` and that your network allows outbound HTTPS |
 | `403 Forbidden` on SharePoint | Insufficient permissions on the SharePoint site | Confirm your signed-in identity has at least **Read** access to the SharePoint document library |
@@ -7456,22 +7476,22 @@ These patterns reduce prototype-to-production friction: you can add data sources
 This tutorial demonstrates **Stage 1** of the developer journey - from idea to prototype. This minimal sample provides the foundation for enterprise AI development. To continue your journey, explore the next stages:
 
 ### Suggested additional enhancements
-- Add more data sources ([Azure AI Search](/agents/tools/ai-search), [other sources](/setup/connections-add)).
-- Implement advanced evaluation methods ([AI-assisted evaluation](https://learn.microsoft.com/en-us/azure/foundry-classic/how-to/develop/evaluate-sdk)).
-- Create [custom tools](/agents/tools/private-tool-catalog) for business-specific operations.
+- Add more data sources ([Azure AI Search](/agent-service/ai-search), [other sources](/setup/connections-add)).
+- Implement advanced evaluation methods ([AI-assisted evaluation](/agent-service/evaluate-agent)).
+- Create [custom tools](/agent-service/private-tool-catalog) for business-specific operations.
 - Add [conversation memory and personalization](https://learn.microsoft.com/azure/cosmos-db/gen-ai/azure-agent-service).
 
 ### Stage 2: Prototype to production
 
 - [Implement safety assessment with red-team testing](/observability/run-scans-ai-red-teaming-agent).
-- [Create comprehensive evaluation datasets with quality metrics](/models/fine-tuning/data-generation).
-- [Apply organization-wide governance policies and model comparison](https://learn.microsoft.com/en-us/azure/foundry-classic/how-to/built-in-policy-model-deployment).
-- [Configure fleet monitoring, CI/CD integration, and production deployment endpoints](https://learn.microsoft.com/en-us/azure/foundry-classic/concepts/deployments-overview).
+- [Create comprehensive evaluation datasets with quality metrics](/foundry-models/data-generation).
+- [Apply organization-wide governance policies and model comparison](/security/model-deployment-policy).
+- [Configure fleet monitoring, CI/CD integration, and production deployment endpoints](/foundry-models/deployment-types).
 
 ### Stage 3: Production to adoption
 
-- [Collect trace data and user feedback from production deployments](/agents/development/trace-agent-framework).
-- [Fine-tune models and generate evaluation insights for continuous improvement](/models/fine-tuning/fine-tuning).
+- [Collect trace data and user feedback from production deployments](/agent-service/trace-agent-framework).
+- [Fine-tune models and generate evaluation insights for continuous improvement](/foundry-models/fine-tuning).
 - [Integrate Azure API Management gateway with continuous quality monitoring](/manage/enable-ai-api-management-gateway-portal).
 - [Implement fleet governance, compliance controls, and cost optimization](https://learn.microsoft.com/azure/cloud-adoption-framework/scenarios/ai/platform/governance).
 
@@ -7486,7 +7506,7 @@ When you no longer need them, delete the resources you created in this tutorial:
 
 ## Related content
 
-- [Foundry Agent Service overview](/agents/development/overview)
-- [SharePoint tool documentation](/agents/tools/sharepoint)
-- [MCP tool integration](/agents/tools/model-context-protocol)
-- [Multi-agent patterns](https://learn.microsoft.com/en-us/azure/foundry-classic/agents/how-to/connected-agents)
+- [Foundry Agent Service overview](/agent-service/overview)
+- [SharePoint tool documentation](/agent-service/sharepoint)
+- [MCP tool integration](/agent-service/model-context-protocol)
+- [Multi-agent patterns](/agent-service/agent-to-agent)

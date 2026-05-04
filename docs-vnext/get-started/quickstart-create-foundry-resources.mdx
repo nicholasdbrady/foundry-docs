@@ -5,7 +5,9 @@ description: "Learn how to create a Microsoft Foundry project, deploy a model, a
 In this quickstart, you create a [Microsoft Foundry](https://ai.azure.com) project and deploy a model. If you're managing a team, you also grant access to team members. After you complete these steps, you or your team can start building AI applications using the deployed model.
 
 <Tip>
+
 This quickstart shows you how to create resources to build an agent with a basic setup. For more advanced scenarios that use your own resources, see [Set up your environment for agent development](/setup/environment-setup).
+
 </Tip>
 
 ## Prerequisites
@@ -51,10 +53,6 @@ Create a Foundry project to organize your work. The project contains models, age
        ```
 
     1. Create the Foundry resource. For example, create `my-foundry-resource` in the `my-foundry-rg` resource group:
-
-<Note>
-This command creates your Foundry resource. The `az cognitiveservices account` command is used because Microsoft Foundry resources are managed under the Azure Cognitive Services resource provider (`Microsoft.CognitiveServices`). The `--kind AIServices` flag specifies a Foundry resource rather than a single-purpose Cognitive Services resource.
-</Note>
 
        ```azurecli
        az cognitiveservices account create \
@@ -103,9 +101,22 @@ This command creates your Foundry resource. The `az cognitiveservices account` c
   </Tab>
   <Tab title="Foundry portal">
 
-    1. Go to [Microsoft Foundry](https://ai.azure.com).
-    1. Sign in with your Azure account.
-    1. Select the project name in the upper-left corner, and then select **Create new project**.
+    1. Sign in to [Microsoft Foundry](https://ai.azure.com/?cid=learnDocs). Make sure the **New Foundry** toggle is on. These steps refer to **Foundry (new)**.
+
+    <img src="/images/new-foundry.png" />
+    1. Create a project.
+        * If this is your first use of Foundry, you'll be asked to create or search for a project to continue. Select **Create a new project** in the dropdown.
+
+<Frame>
+<img src="/images/initial-foundry.png" alt="Screenshot of the Foundry portal showing the project selection dropdown with the Create new project option highlighted." />
+</Frame>
+
+        * If you already have a project loaded, select its name in the upper-left corner, and then select **Create new project**.
+
+<Frame>
+<img src="/images/create-from-project.png" alt="Screenshot of Foundry portal showing the Create a new project dropdown selected and project creation form fields visible." />
+</Frame>
+
     1. Enter a project name, such as `my-foundry-project`.
     1. Select **Advanced options** to configure the resource group and location:
        - **Resource group**: Create a new resource group or select an existing one. If you create a new resource group, you can more easily manage the project and all its resources together.
@@ -136,10 +147,6 @@ Deploy a model that you can use. This example uses **gpt-4.1-mini**, but you can
         --sku-name Standard
     ```
 
-    <Note>
-    OpenAI models use date-based version strings (for example, `2025-04-14`). To find available model versions and check regional availability, see the [Model Catalog](https://ai.azure.com/explore/models).
-    </Note>
-
     Verify the deployment succeeded:
 
     ```azurecli
@@ -156,8 +163,7 @@ Deploy a model that you can use. This example uses **gpt-4.1-mini**, but you can
   </Tab>
   <Tab title="Foundry portal">
 
-    1. In your project, select **Discover** in the upper-right navigation.
-    1. Select **Models**.
+    1. Select **Discover** in the upper-right navigation, then **Models** in the left pane.
     1. Search for **gpt-4.1-mini**.
     1. Select **Deploy** > **Default settings** to add it to your project.
     1. Note the deployment name (for example, `gpt-4.1-mini`). Your team needs this name to use the model.
@@ -238,7 +244,9 @@ If you're administering a team, assign the **Azure AI User** role to team member
     Repeat these steps for each team member or security group.
 
 <Tip>
+
 To add multiple users at once, use a Microsoft Entra security group instead of individual email addresses.
+
 </Tip>
 
   </Tab>
@@ -246,9 +254,11 @@ To add multiple users at once, use a Microsoft Entra security group instead of i
 
 ### Verify team member access
 
-Ask a team member to verify their access by signing in to [Microsoft Foundry](https://ai.azure.com), selecting the project from the project list, and confirming the deployed model appears under **Build** > **Models**.
+Ask a team member to verify their access by signing in to [Microsoft Foundry](https://ai.azure.com) and selecting the project from the project list.
 
 If the team member can't access the project, verify that the role assignment completed successfully. Check that you used the correct email address or security group ID. Make sure the team member's Azure account is in the same Microsoft Entra tenant.
+
+To confirm the deployed model is available, ask the team member to select **Build** in the upper-right navigation, then **Models** in the left pane.
 
 ## Clean up resources
 
@@ -271,4 +281,4 @@ When you no longer want this project, delete the resource group to delete all re
 
 ## Next step
  
-<Card title="Microsoft Foundry quickstart" icon="arrow-right" href="/get-started/get-started-code" />
+<Card title="Microsoft Foundry quickstart" icon="arrow-right" href="../quickstarts/get-started-code.md" />

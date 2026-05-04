@@ -17,7 +17,9 @@ This article shows you how to register a custom agent in Foundry Control Plane. 
 - An agent that you deploy and expose through a reachable endpoint. The endpoint can be either a public endpoint or an endpoint that's reachable from the network where you deploy the Foundry resource.
 
 <Note>
+
 This capability is available only in the  Foundry (new) portal. Look for <img src="/images/new-foundry.png" /> in the portal banner to confirm you're using Foundry (new).
+
 </Note>
 
 ## Add a custom agent
@@ -36,11 +38,11 @@ The following diagram shows the resulting architecture when you register a custo
 
 Verify that your agent meets the requirements for registration:
 
-<Check>Your agent exposes an exclusive endpoint.</Check>
-<Check>The network where you deploy the Foundry resource can reach the agent's endpoint.</Check>
-<Check>The agent communicates by using one of the supported protocols: HTTP (general) or A2A (more specific).</Check>
-<Check>Your agent emits data by using the OpenTelemetry semantic conventions for generative AI solutions (or you don't need this capability).</Check>
-<Check>You can configure the endpoint that users use to communicate with the agent. After you register an agent, Foundry Control Plane generates a new URL. *Clients and users must use this URL to communicate with the agent*.</Check>
+- Your agent exposes an exclusive endpoint.
+- The network where you deploy the Foundry resource can reach the agent's endpoint.
+- The agent communicates by using one of the supported protocols: HTTP (general) or A2A (more specific).
+- Your agent emits data by using the OpenTelemetry semantic conventions for generative AI solutions (or you don't need this capability).
+- You can configure the endpoint that users use to communicate with the agent. After you register an agent, Foundry Control Plane generates a new URL. *Clients and users must use this URL to communicate with the agent*.
 ### Prepare your Foundry project
 
 Before you register the custom agent that you added to a Foundry project, make sure that you configured the project correctly:
@@ -89,11 +91,11 @@ Before you register the custom agent that you added to a Foundry project, make s
 
 Your project is configured for observability and tracing.
 
-### Register the agent
+### Register the agent (asset)
 
 1. On the toolbar, select **Operate**.
 
-1. On the **Overview** pane, select **Register agent**.
+1. On the **Overview** pane, select **Register asset**.
 
 <Frame>
 <img src="/images/register-custom-agent.png" alt="Screenshot of the button for registering an agent on the Overview pane of the Foundry portal." />
@@ -161,7 +163,9 @@ async def stream_run():
 **Expected output**: The agent processes the message and streams back responses as chunks. Each chunk contains partial results from the agent's execution. These results might include tool calls to the weather function and the final response about Los Angeles weather.
 
 <Note>
+
 Although Foundry acts as a proxy for incoming requests for your agent, the original authorization and authentication schema in the original endpoint still applies. When you consume the new endpoint, *provide the same authentication mechanism as if you're using the original endpoint.*
+
 </Note>
 
 ## Block and unblock the agent
@@ -219,7 +223,9 @@ To get the best level of fidelity, Foundry expects custom agents to comply with 
 </Frame>
 
 <Tip>
+
 In this example, you can see how clients use the new agent's endpoint to communicate with the agent. The example shows an agent served with the Agent Protocol from LangChain. Clients use the route `/runs/stream`.
+
 </Tip>
 
 In this example, the trace doesn't include any details beyond the HTTP post. The agent's code doesn't include any further instrumentation. In the next section, you learn how to instrument your code and get details like tool calls and large language model (LLM) calls.
@@ -228,7 +234,7 @@ In this example, the trace doesn't include any details beyond the HTTP post. The
 
 If you build your agent by using custom code, instrument your solution to emit traces according to the OpenTelemetry standard and send them to Application Insights. Instrumentation gives Foundry access to detailed information about what your agent is doing.
 
-Send traces to the Application Insights resource of your project by using its instrumentation key. To get the instrumentation key associated with your project, follow the instructions at [Enable tracing in your project](https://learn.microsoft.com/en-us/azure/foundry-classic/how-to/develop/trace-application#enable-tracing-in-your-project).
+Send traces to the Application Insights resource of your project by using its instrumentation key. To get the instrumentation key associated with your project, follow the instructions at [Connect Application Insights to your Foundry project](/agent-service/trace-agent-setup#connect-application-insights-to-your-foundry-project).
 
 In this example, you configure an agent developed with LangGraph to emit traces in the OpenTelemetry standard. The tracer captures all agent operations, including tool calls and model interactions. The tracer then sends the operations to Application Insights for monitoring.
 
@@ -265,7 +271,9 @@ agent = create_agent(
 **Expected output**: The agent runs normally while automatically emitting OpenTelemetry traces to Application Insights. Traces include operation names, durations, model calls, tool invocations, and token usage. You can view these traces in the Foundry portal, in the **Traces** section.
 
 <Tip>
+
 You can pass the connection string to Application Insights by using the environment variable `APPLICATIONINSIGHTS_CONNECTION_STRING`.
+
 </Tip>
 
 ### Instrument platform solutions
@@ -278,10 +286,10 @@ Configure the collector with the Azure Monitor exporter to forward data to Appli
 
 If you don't see traces, check the following items:
 
-<Check>The project where you register your agent has Application Insights configured. If you configured Application Insights after you registered the custom agent, you need to unregister the agent and register it again. Application Insights configuration isn't automatically updated after registration if you changed it.</Check>
-<Check>You configured the agent (running on its infrastructure) to send traces to Application Insights, and you're using the same Application Insights resource that your project uses.</Check>
-<Check>Instrumentation complies with OpenTelemetry semantic conventions for generative AI.</Check>
-<Check>Traces include spans with attributes `operation="create_agent"` and `gen_ai.agents.id="<agent-id>"` (or `gen_ai.agents.name="<agent-id>"`). In the latter attribute, `"<agent-id>"` is the **OpenTelemetry Agent ID** value that you configured during registration.</Check>
+- The project where you register your agent has Application Insights configured. If you configured Application Insights after you registered the custom agent, you need to unregister the agent and register it again. Application Insights configuration isn't automatically updated after registration if you changed it.
+- You configured the agent (running on its infrastructure) to send traces to Application Insights, and you're using the same Application Insights resource that your project uses.
+- Instrumentation complies with OpenTelemetry semantic conventions for generative AI.
+- Traces include spans with attributes `operation="create_agent"` and `gen_ai.agents.id="<agent-id>"` (or `gen_ai.agents.name="<agent-id>"`). In the latter attribute, `"<agent-id>"` is the **OpenTelemetry Agent ID** value that you configured during registration.
 ## Related content
 
 - [What is Microsoft Foundry Control Plane?](/manage/overview)

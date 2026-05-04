@@ -1,11 +1,14 @@
 ---
 title: "How to migrate from Azure AI Inference SDK to OpenAI SDK"
-description: "Learn how to migrate to OpenAI SDK from Azure AI Inference SDK for enhanced compatibility and unified APIs when working with Microsoft Foundry Models."
+description: "Migrate your app from the Azure AI Inference SDK to the OpenAI SDK for better compatibility and unified API access to Foundry Models."
 ---
+
 This article provides guidance on migrating your applications from the Azure AI Inference SDK to the OpenAI SDK. The OpenAI SDK offers broader compatibility, access to the latest OpenAI features, and simplified code with unified patterns across Azure OpenAI and Foundry Models.
 
 <Note>
+
 The OpenAI SDK refers to the client libraries (such as the Python `openai` package or JavaScript `openai` npm package) that connect to [OpenAI v1 API endpoints](/api-sdk/api-version-lifecycle#api-evolution). These SDKs have their own versioning separate from the API version - for example, the Go OpenAI SDK is currently at v3, but it still connects to the OpenAI v1 API endpoints with `/openai/v1/` in the URL path.
+
 </Note>
 
 ## Benefits of migrating
@@ -87,7 +90,7 @@ With Microsoft Entra ID authentication:
 
     token_provider = get_bearer_token_provider(
         DefaultAzureCredential(), 
-        "https://cognitiveservices.azure.com/.default"
+        "https://ai.azure.com/.default"
     )
 
     client = OpenAI(
@@ -182,7 +185,7 @@ With Microsoft Entra ID authentication:
     from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 
     token_provider = get_bearer_token_provider(DefaultAzureCredential(), 
-    "https://cognitiveservices.azure.com/.default")
+    "https://ai.azure.com/.default")
 
     client = OpenAI(
         base_url = "https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/",
@@ -271,7 +274,7 @@ With Microsoft Entra ID authentication:
 
     BearerTokenPolicy tokenPolicy = new(
         new DefaultAzureCredential(),
-        "https://cognitiveservices.azure.com/.default"
+        "https://ai.azure.com/.default"
     );
 
     ChatClient client = new(
@@ -463,7 +466,7 @@ With Microsoft Entra ID authentication:
 
     const tokenProvider = getBearerTokenProvider(
         new DefaultAzureCredential(),
-        'https://cognitiveservices.azure.com/.default'
+        'https://ai.azure.com/.default'
     );
 
     const client = new OpenAI({
@@ -569,7 +572,7 @@ With Microsoft Entra ID authentication:
 
     const tokenProvider = getBearerTokenProvider(
         new DefaultAzureCredential(),
-        'https://cognitiveservices.azure.com/.default');
+        'https://ai.azure.com/.default');
     const client = new OpenAI({
         baseURL: "https://<resource>.openai.azure.com/openai/v1/",
         apiKey: tokenProvider
@@ -661,7 +664,7 @@ With Microsoft Entra ID authentication:
         .credential(BearerTokenCredential.create(
             AuthenticationUtil.getBearerTokenSupplier(
                 tokenCredential, 
-                "https://cognitiveservices.azure.com/.default"
+                "https://ai.azure.com/.default"
             )
         ))
         .build();
@@ -1058,16 +1061,17 @@ Both SDKs provide similar access patterns to response data, including:
 
 Use this checklist to ensure a smooth migration:
 
-<Check>Install the OpenAI SDK for your programming language</Check>
-<Check>Update authentication code (API key or Microsoft Entra ID)</Check>
-<Check>Change endpoint URLs from `.services.ai.azure.com/models` to `.openai.azure.com/openai/v1/`</Check>
-<Check>Update client initialization code</Check>
-<Check>Always specify the `model` parameter with your deployment name</Check>
-<Check>Update request method calls (`complete` → `chat.completions.create`)</Check>
-<Check>Update streaming code if applicable</Check>
-<Check>Update error handling to use OpenAI SDK exceptions</Check>
-<Check>Test all functionality thoroughly</Check>
-<Check>Update documentation and code comments</Check>
+- Install the OpenAI SDK for your programming language
+- Update authentication code (API key or Microsoft Entra ID)
+- Change endpoint URLs from `.services.ai.azure.com/models` to `.openai.azure.com/openai/v1/`
+- Change the credential scope from `https://cognitiveservices.azure.com/.default` to `https://ai.azure.com/.default`
+- Update client initialization code
+- Always specify the `model` parameter with your deployment name
+- Update request method calls (`complete` → `chat.completions.create`)
+- Update streaming code if applicable
+- Update error handling to use OpenAI SDK exceptions
+- Test all functionality thoroughly
+- Update documentation and code comments
 ## Troubleshooting
 
 ### Authentication failures
@@ -1076,7 +1080,7 @@ If you experience authentication failures:
 
 - Verify your API key is correct and isn't expired
 - For Microsoft Entra ID, ensure your application has the correct permissions
-- Check that the credential scope is set to `https://cognitiveservices.azure.com/.default`
+- Check that the credential scope is set to `https://ai.azure.com/.default`
 
 ### Endpoint errors
 
@@ -1096,7 +1100,7 @@ If you receive "model not found" errors:
 
 ## Related content
 
-- [Azure OpenAI supported programming languages](/models/capabilities/supported-languages)
+- [Azure OpenAI supported programming languages](/foundry-models/supported-languages)
 - [How to generate chat completions with Foundry Models](/api-sdk/api-version-lifecycle)
 - [API evolution and version lifecycle](/api-sdk/api-version-lifecycle)
 - [Switch between OpenAI and Azure OpenAI endpoints](https://learn.microsoft.com/azure/developer/ai/how-to/switching-endpoints)
