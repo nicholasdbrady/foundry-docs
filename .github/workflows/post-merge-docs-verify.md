@@ -31,7 +31,7 @@ tools:
   bash:
     - "cat *"
     - "grep *"
-    - "find docs-vnext -name '*.mdx'"
+    - "find docs-vnext -name"
     - "python -c *"
 
 safe-outputs:

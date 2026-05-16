@@ -33,7 +33,7 @@ tools:
   edit:
   web-fetch:
   bash:
-    - "find docs-vnext -name '*.mdx'"
+    - "find docs-vnext -name"
     - "cat *"
     - "grep *"
     - "sed *"

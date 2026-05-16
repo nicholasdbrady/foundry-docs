@@ -1,21 +1,25 @@
 #!/usr/bin/env python3
 """Extract manifest from Microsoft Foundry TOC files.
 
-Parses the root toc.yml and all sub-TOC YAML files from MicrosoftDocs/azure-ai-docs-pr,
+Parses the root toc.yml and all sub-TOC YAML files from MicrosoftDocs/azure-ai-docs,
 resolves paths, deduplicates, and outputs manifest.json.
 """
 
 import json
+import os
 import re
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import PurePosixPath
 
 import yaml
 
 REPO_OWNER = "MicrosoftDocs"
-REPO_NAME = "azure-ai-docs-pr"
+REPO_NAME = os.environ.get("FOUNDRY_DOCS_UPSTREAM_REPO", "azure-ai-docs")
 ROOT_TOC_PATH = "articles/foundry/toc.yml"
+FETCH_TIMEOUT_SECONDS = 30
+MAX_SCAN_WORKERS = int(os.environ.get("FOUNDRY_MANIFEST_SCAN_WORKERS", "8"))
 
 # Section name → output directory mapping
 SECTION_SLUG_MAP = {
@@ -42,10 +46,21 @@ SECTION_SLUG_MAP = {
 def gh_get_file(path: str, ref: str = "main") -> str:
     """Fetch a file from GitHub using the gh CLI."""
     result = subprocess.run(
-        ["gh", "api", f"/repos/{REPO_OWNER}/{REPO_NAME}/contents/{path}",
-         "-H", "Accept: application/vnd.github.raw+json",
-         "--method", "GET"],
-        capture_output=True, text=True, check=True
+        [
+            "gh",
+            "api",
+            f"/repos/{REPO_OWNER}/{REPO_NAME}/contents/{path}",
+            "-H",
+            "Accept: application/vnd.github.raw+json",
+            "--method",
+            "GET",
+            "-f",
+            f"ref={ref}",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=FETCH_TIMEOUT_SECONDS,
     )
     return result.stdout
 
@@ -164,8 +179,9 @@ def parse_sub_toc(toc_path: str, section: str) -> list:
     """Parse a sub-TOC YAML file."""
     try:
         content = gh_get_file(toc_path)
-    except subprocess.CalledProcessError as e:
-        print(f"  WARNING: Could not fetch {toc_path}: {e.stderr}", file=sys.stderr)
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
+        detail = getattr(e, "stderr", "") or str(e)
+        print(f"  WARNING: Could not fetch {toc_path}: {detail}", file=sys.stderr)
         return []
 
     data = yaml.safe_load(content)
@@ -176,13 +192,8 @@ def parse_sub_toc(toc_path: str, section: str) -> list:
     return parse_toc_items(data['items'], toc_dir, section, [section])
 
 
-def scan_doc_for_includes(source_path: str) -> list[str]:
-    """Scan a markdown file for [!INCLUDE] references."""
-    try:
-        content = gh_get_file(source_path)
-    except subprocess.CalledProcessError:
-        return []
-
+def scan_content_for_includes(content: str, source_path: str) -> list[str]:
+    """Scan markdown content for [!INCLUDE] references."""
     includes = []
     for match in re.finditer(r'\[!INCLUDE\s+\[.*?\]\((.*?)\)\]', content):
         inc_path = match.group(1)
@@ -191,13 +202,8 @@ def scan_doc_for_includes(source_path: str) -> list[str]:
     return includes
 
 
-def scan_doc_for_images(source_path: str) -> list[str]:
-    """Scan a markdown file for :::image references."""
-    try:
-        content = gh_get_file(source_path)
-    except subprocess.CalledProcessError:
-        return []
-
+def scan_content_for_images(content: str, source_path: str) -> list[str]:
+    """Scan markdown content for image references."""
     doc_dir = str(PurePosixPath(source_path).parent)
     images = []
     for match in re.finditer(r':::image[^:]*source="([^"]+)"', content):
@@ -219,6 +225,31 @@ def scan_doc_for_images(source_path: str) -> list[str]:
         else:
             resolved = resolve_path(img_path, doc_dir)
             images.append(resolved)
+    return images
+
+
+def scan_doc_for_assets(source_path: str) -> tuple[list[str], list[str]]:
+    """Fetch a markdown file once and scan it for includes and images."""
+    try:
+        content = gh_get_file(source_path)
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        return [], []
+
+    return (
+        scan_content_for_includes(content, source_path),
+        scan_content_for_images(content, source_path),
+    )
+
+
+def scan_doc_for_includes(source_path: str) -> list[str]:
+    """Scan a markdown file for [!INCLUDE] references."""
+    includes, _ = scan_doc_for_assets(source_path)
+    return includes
+
+
+def scan_doc_for_images(source_path: str) -> list[str]:
+    """Scan a markdown file for image references."""
+    _, images = scan_doc_for_assets(source_path)
     return images
 
 
@@ -308,36 +339,64 @@ def main():
     all_includes = set()
     all_images = set()
 
-    for entry in deduped:
-        if entry['category'] == 'in-repo-md':
-            includes = scan_doc_for_includes(entry['source_path'])
+    in_repo_docs = [entry for entry in deduped if entry['category'] == 'in-repo-md']
+    with ThreadPoolExecutor(max_workers=MAX_SCAN_WORKERS) as executor:
+        futures = {
+            executor.submit(scan_doc_for_assets, entry['source_path']): entry
+            for entry in in_repo_docs
+        }
+        for index, future in enumerate(as_completed(futures), start=1):
+            entry = futures[future]
+            includes, images = future.result()
             if includes:
                 entry['includes'] = includes
                 all_includes.update(includes)
-            images = scan_doc_for_images(entry['source_path'])
             if images:
                 entry['images'] = images
                 all_images.update(images)
+            if index % 50 == 0:
+                print(
+                    f"  Scanned {index}/{len(in_repo_docs)} docs "
+                    f"({len(all_includes)} includes, {len(all_images)} images)",
+                    file=sys.stderr,
+                )
 
     # Recursively scan include files for nested includes AND images
     scanned_includes = set()
-    to_scan = list(all_includes)
+    to_scan = set(all_includes)
     while to_scan:
-        inc_path = to_scan.pop()
-        if inc_path in scanned_includes:
-            continue
-        scanned_includes.add(inc_path)
-        nested = scan_doc_for_includes(inc_path)
-        for n in nested:
-            if n not in all_includes:
-                all_includes.add(n)
-                to_scan.append(n)
-        # Also scan includes for image references
-        inc_images = scan_doc_for_images(inc_path)
-        all_images.update(inc_images)
+        batch = sorted(path for path in to_scan if path not in scanned_includes)
+        to_scan.clear()
+        if not batch:
+            break
+        with ThreadPoolExecutor(max_workers=MAX_SCAN_WORKERS) as executor:
+            futures = {
+                executor.submit(scan_doc_for_assets, inc_path): inc_path
+                for inc_path in batch
+            }
+            for future in as_completed(futures):
+                inc_path = futures[future]
+                scanned_includes.add(inc_path)
+                nested, inc_images = future.result()
+                for nested_path in nested:
+                    if nested_path not in all_includes:
+                        all_includes.add(nested_path)
+                        if nested_path not in scanned_includes:
+                            to_scan.add(nested_path)
+                all_images.update(inc_images)
+                if len(scanned_includes) % 50 == 0:
+                    print(
+                        f"  Scanned {len(scanned_includes)} include files "
+                        f"({len(all_includes)} total includes, {len(all_images)} images)",
+                        file=sys.stderr,
+                    )
 
     if scanned_includes:
-        print(f"  Scanned {len(scanned_includes)} include files, found {len(all_includes)} total (including nested)", file=sys.stderr)
+        print(
+            f"  Scanned {len(scanned_includes)} include files, "
+            f"found {len(all_includes)} total (including nested)",
+            file=sys.stderr,
+        )
 
     manifest = {
         'repo': f"{REPO_OWNER}/{REPO_NAME}",

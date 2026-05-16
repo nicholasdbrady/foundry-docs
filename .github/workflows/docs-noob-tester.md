@@ -18,6 +18,7 @@ concurrency:
 timeout-minutes: 15
 tools:
   playwright:
+    mode: cli
   web-fetch:
   bash:
     - "*"
@@ -36,7 +37,7 @@ network:
     - defaults
     - hobbyist-e43fa225.mintlify.app
     - learn.microsoft.com
-    - github.com
+    - github
     - registry.npmjs.org
     - cdn.playwright.dev
     - playwright.download.prss.microsoft.com
@@ -117,7 +118,7 @@ After fetching each live page, also read the corresponding source file from `doc
 
 ## Step 2B: Multi-Device Viewport Testing
 
-If Playwright tools are available (browser_navigate, browser_snapshot, browser_resize), use them for viewport testing. Otherwise, skip this section — the content analysis from Step 1 is the primary value.
+Use `playwright-cli` from bash for viewport testing when needed. If browser automation is unavailable, skip this section — the content analysis from Step 1 is the primary value.
 
 ### Mobile (375×812)
 Check: Is the navigation menu accessible? Is text readable? Do code blocks scroll horizontally?

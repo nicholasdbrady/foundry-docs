@@ -30,7 +30,7 @@ tools:
   bash:
     - "cat *"
     - "grep *"
-    - "find docs-vnext -name '*.mdx'"
+    - "find docs-vnext -name"
     - "echo *"
     - "date *"
 

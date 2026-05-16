@@ -40,7 +40,7 @@ tools:
   edit:
   web-fetch:
   bash:
-    - "find docs-vnext -name '*.mdx'"
+    - "find docs-vnext -name"
     - "wc -l *"
     - "grep -n *"
     - "git"

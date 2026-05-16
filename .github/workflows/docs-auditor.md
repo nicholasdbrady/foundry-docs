@@ -17,9 +17,10 @@ network:
     - defaults
     - hobbyist-e43fa225.mintlify.app
     - learn.microsoft.com
-    - github.com
+    - github
 tools:
   playwright:
+    mode: cli
   bash:
     - "date *"
     - "echo *"
@@ -89,7 +90,7 @@ For each selected file:
 
 ### Phase 3: Validate Links via Deployed Site
 
-Use Playwright to check the deployed docs site at `https://hobbyist-e43fa225.mintlify.app/`:
+Use `playwright-cli` from bash to check the deployed docs site at `https://hobbyist-e43fa225.mintlify.app/`:
 
 For each selected file, derive the page URL from the file path (e.g., `docs-vnext/agents/development/overview.mdx` → `https://hobbyist-e43fa225.mintlify.app/agents/development/overview`):
 

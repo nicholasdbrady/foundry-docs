@@ -392,7 +392,7 @@ def main():
         for future in as_completed(futures):
             all_data.append(future.result())
 
-    print(f"\n📊 Building availability matrix...")
+    print("\n📊 Building availability matrix...")
     matrix = build_availability_matrix(all_data)
 
     skus_found = [s for s in SKU_DISPLAY_ORDER if s in matrix]

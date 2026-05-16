@@ -46,12 +46,9 @@ tools:
   edit:
   web-fetch:
   bash:
-    - "find docs-vnext -name '*.mdx'"
-    - "grep -r '*' docs-vnext"
-    - "grep -r '*' foundry_docs_mcp"
-    - "grep -r '*' scripts"
-    - "git log --since='24 hours ago' --oneline"
-    - "git log --since='7 days ago' --oneline"
+    - "find docs-vnext -name"
+    - "grep -r"
+    - "git log --since="
     - "cat *"
     - "mkdir *"
 

@@ -43,7 +43,7 @@ tools:
   edit:
   bash:
     - "cat *"
-    - "grep -r '*' docs-vnext"
+    - "grep -r"
     - "git"
 
 imports:

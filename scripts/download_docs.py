@@ -13,7 +13,7 @@ from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 REPO_OWNER = "MicrosoftDocs"
-REPO_NAME = "azure-ai-docs-pr"
+REPO_NAME = os.environ.get("FOUNDRY_DOCS_UPSTREAM_REPO", "azure-ai-docs")
 RAW_BASE = f"https://raw.githubusercontent.com/{REPO_OWNER}/{REPO_NAME}/main"
 DOCS_DIR = Path("docs")
 RAW_DIR = Path("raw_docs")  # raw downloaded files before conversion

@@ -44,12 +44,10 @@ tools:
   edit:
   web-fetch:
   bash:
-    - "find docs-vnext -name '*.mdx'"
+    - "find docs-vnext -name"
     - "find docs-vnext -maxdepth 1 -ls"
-    - "find docs -name '*.mdx'"
-    - "grep -r '*' docs-vnext"
-    - "grep -r '*' foundry_docs_mcp"
-    - "grep -r '*' scripts"
+    - "find docs -name"
+    - "grep -r"
     - "cat *"
     - "diff *"
     - "git"

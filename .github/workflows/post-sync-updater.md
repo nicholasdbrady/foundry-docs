@@ -46,8 +46,8 @@ tools:
   edit:
   web-fetch:
   bash:
-    - "find docs -name '*.mdx'"
-    - "find docs-vnext -name '*.mdx'"
+    - "find docs -name"
+    - "find docs-vnext -name"
     - "diff *"
     - "grep *"
     - "cat *"

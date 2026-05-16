@@ -30,7 +30,7 @@ from azure.search.documents.indexes.models import (
     VectorSearch,
     VectorSearchProfile,
 )
-from azure.search.documents.models import QueryCaptionType, QueryType, VectorizedQuery
+from azure.search.documents.models import QueryType, VectorizedQuery
 
 from .retry import AdaptiveThrottle, with_retry
 
@@ -397,7 +397,7 @@ class AzureSearchIndex:
                 vector_queries=[vector_query],
                 query_type=QueryType.SEMANTIC,
                 semantic_configuration_name="foundry-semantic",
-                query_caption=QueryCaptionType.EXTRACTIVE,
+                query_caption="extractive",
                 top=max(limit * 3, 20),
                 select=["doc_path", "title", "description", "section_heading", "content"],
             ),

@@ -14,6 +14,8 @@ import json
 import sys
 from pathlib import Path
 
+PUBLIC_UPSTREAM_URL = "https://github.com/MicrosoftDocs/azure-ai-docs"
+
 
 def _build_tree(pages: list, docs_dir: Path) -> dict:
     """Build an ordered tree from flat pages with hierarchy arrays.
@@ -157,6 +159,7 @@ def main():
         docs_json["navigation"] = {
             "tabs": [{"tab": "Documentation", "groups": navigation}]
         }
+        docs_json.setdefault("footerSocials", {})["github"] = PUBLIC_UPSTREAM_URL
     else:
         docs_json = {
             "$schema": "https://mintlify.com/docs.json",
@@ -172,7 +175,7 @@ def main():
                 "tabs": [{"tab": "Documentation", "groups": navigation}]
             },
             "footerSocials": {
-                "github": "https://github.com/MicrosoftDocs/azure-ai-docs-pr"
+                "github": PUBLIC_UPSTREAM_URL
             },
         }
 

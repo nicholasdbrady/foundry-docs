@@ -1,6 +1,6 @@
 ---
 name: Upstream Docs Monitor
-description: Monitors azure-ai-docs-pr for changes to Foundry documentation and triggers sync when detected
+description: Monitors azure-ai-docs for changes to Foundry documentation and triggers sync when detected
 on:
   schedule: every 12h
   workflow_dispatch:
@@ -57,14 +57,14 @@ timeout-minutes: 10
 
 # Upstream Docs Monitor
 
-You monitor the upstream documentation repository (`MicrosoftDocs/azure-ai-docs-pr`) for changes to Foundry documentation under `articles/foundry/`. When changes are detected, you dispatch the sync-and-convert workflow and create a summary issue.
+You monitor the upstream documentation repository (`MicrosoftDocs/azure-ai-docs`) for changes to Foundry documentation under `articles/foundry/`. When changes are detected, you dispatch the sync-and-convert workflow and create a summary issue.
 
 ## Context
 
 - **Repository**: ${{ github.repository }}
-- **Upstream repo**: `MicrosoftDocs/azure-ai-docs-pr`
+- **Upstream repo**: `MicrosoftDocs/azure-ai-docs`
 - **Upstream path**: `articles/foundry/**`
-- **MS Learn refresh cadence**: 4x/day from azure-ai-docs-pr main
+- **MS Learn refresh cadence**: 4x/day from azure-ai-docs main
 
 ## Step 1: Load Persisted State
 
@@ -74,7 +74,7 @@ cat /tmp/gh-aw/repo-memory/default/upstream-docs-state.txt 2>/dev/null || cat /t
 
 ## Step 2: Check Upstream Commits
 
-Use the GitHub MCP tools to list recent commits on `MicrosoftDocs/azure-ai-docs-pr` (main branch). Fetch the last 30 commits.
+Use the GitHub MCP tools to list recent commits on `MicrosoftDocs/azure-ai-docs` (main branch). Fetch the last 30 commits.
 
 For each commit:
 1. Check if the commit message or PR title mentions "foundry" (case-insensitive)
@@ -129,7 +129,7 @@ Also dispatch the `sync-and-convert` workflow:
 ### If No Changes
 
 ```json
-{"noop": {"message": "No new Foundry docs changes in azure-ai-docs-pr. Last check: TIMESTAMP. Reviewed N commits."}}
+{"noop": {"message": "No new Foundry docs changes in azure-ai-docs. Last check: TIMESTAMP. Reviewed N commits."}}
 ```
 
 ## Step 6: Update Persisted State

@@ -35,10 +35,11 @@ tools:
     toolsets: [default]
   web-fetch:
   playwright:
+    mode: cli
   bash:
     - "cat *"
     - "grep *"
-    - "find docs-vnext -name '*.mdx'"
+    - "find docs-vnext -name"
     - "python -c *"
 
 safe-outputs:
@@ -112,7 +113,7 @@ For each target file, check:
 - No deprecated API patterns
 
 ### External Links
-- Check 3-5 external links per file using Playwright
+- Check 3-5 external links per file using `playwright-cli` from bash
 - Verify `learn.microsoft.com` links return 200
 - Flag any redirects or 404s
 

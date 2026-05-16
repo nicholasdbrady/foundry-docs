@@ -46,7 +46,7 @@ steps:
   - name: Install pptxgenjs and dependencies
     run: npm install pptxgenjs react react-dom react-icons sharp
   - name: Install markitdown for QA
-    run: pip install "markitdown[pptx]"
+    run: pip install markitdown python-pptx
 imports:
   - shared/mood.md
   - shared/mcp/mintlify-docs.md
@@ -79,7 +79,7 @@ cat .agents/skills/pptx/pptxgenjs.md
 
 ## Step 2: Check if Slides Exist
 
-Dependencies (`pptxgenjs`, `react`, `react-icons`, `sharp`, `markitdown`) are pre-installed by the workflow build steps.
+Dependencies (`pptxgenjs`, `react`, `react-icons`, `sharp`, `markitdown`, `python-pptx`) are pre-installed by the workflow build steps.
 
 ```bash
 if [ ! -f slides/foundry-docs-overview.pptx ]; then
