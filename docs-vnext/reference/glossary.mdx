@@ -7,6 +7,9 @@ Key terms and concepts used throughout the Microsoft Foundry documentation.
 
 ## A
 
+### A2A (Agent2Agent)
+An open protocol for agent-to-agent communication that enables one agent to discover and call another through a standardized interface. In Microsoft Foundry, agents can expose an A2A endpoint (publishing an agent card describing capabilities) and can call remote A2A endpoints as a tool. Foundry Agent Service supports A2A protocol version 0.3.
+
 ### Agent
 An AI-powered entity that can perform tasks autonomously using tools, models, and instructions. In Microsoft Foundry, agents are created via the Azure AI Projects SDK and can use built-in tools like Code Interpreter, File Search, and Function Calling.
 
@@ -90,6 +93,22 @@ The output of a single agent invocation in Foundry Agent Service. A response inc
 
 ### Responses API
 The API surface for generating agent outputs in Foundry Agent Service. The Responses API accepts a conversation (or previous response output) and returns a new response with the agent's result. It supersedes the older Assistants API runs endpoint.
+
+## S
+
+### Session (Hosted Agent)
+A stateful, isolated sandbox tied to a single logical workload in Foundry Agent Service Hosted agents (for example, one user's chat session). The platform persists the session's filesystem across turns and idle periods so the agent can resume where it left off. Sessions persist for up to 30 days with a 15-minute idle timeout. Sessions are distinct from conversations: a session manages sandbox compute and filesystem state, while a conversation tracks message and response history.
+
+### Skill (Foundry)
+A Markdown file (`SKILL.md`) with YAML front matter that defines behavioral guidelines for Foundry Hosted agents. Skills are authored once, stored centrally in Foundry through the Skills REST API, and downloaded into any Hosted agent project. Agent code loads skill files and injects their contents as additional instructions into conversation sessions. When a skill changes, downloading and redeploying the agent picks up the update without code changes.
+
+### Structured Inputs
+Handlebar template placeholders (`{{variableName}}`) defined in an agent definition that allow runtime customization of agent behavior without creating separate agent versions. Structured inputs let callers dynamically override agent instructions, tool configurations (such as vector store IDs, file IDs, and MCP server URLs), and response parameters by supplying values at call time through the Responses API.
+
+## T
+
+### Toolbox
+A managed Foundry resource that curates a set of tools—MCP servers, connectors, web search, Azure AI Search, and others—and exposes them through a single MCP-compatible endpoint that any agent can consume. Toolbox handles credential injection, token refresh, and enterprise policy enforcement at runtime. Toolbox versioning allows teams to create and test a new version, then promote it to default, so all connected agents pick up the change automatically without code changes or redeployment.
 
 ## V
 
