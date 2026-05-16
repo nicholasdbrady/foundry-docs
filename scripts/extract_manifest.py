@@ -12,6 +12,9 @@ import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import PurePosixPath
+from urllib.error import HTTPError, URLError
+from urllib.parse import quote
+from urllib.request import urlopen
 
 import yaml
 
@@ -45,24 +48,31 @@ SECTION_SLUG_MAP = {
 
 def gh_get_file(path: str, ref: str = "main") -> str:
     """Fetch a file from GitHub using the gh CLI."""
-    result = subprocess.run(
-        [
-            "gh",
-            "api",
-            f"/repos/{REPO_OWNER}/{REPO_NAME}/contents/{path}",
-            "-H",
-            "Accept: application/vnd.github.raw+json",
-            "--method",
-            "GET",
-            "-f",
-            f"ref={ref}",
-        ],
-        capture_output=True,
-        text=True,
-        check=True,
-        timeout=FETCH_TIMEOUT_SECONDS,
-    )
-    return result.stdout
+    try:
+        result = subprocess.run(
+            [
+                "gh",
+                "api",
+                f"/repos/{REPO_OWNER}/{REPO_NAME}/contents/{path}",
+                "-H",
+                "Accept: application/vnd.github.raw+json",
+                "--method",
+                "GET",
+                "-f",
+                f"ref={ref}",
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=FETCH_TIMEOUT_SECONDS,
+        )
+        return result.stdout
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        raw_path = quote(path, safe="/")
+        raw_ref = quote(ref, safe="")
+        url = f"https://raw.githubusercontent.com/{REPO_OWNER}/{REPO_NAME}/{raw_ref}/{raw_path}"
+        with urlopen(url, timeout=FETCH_TIMEOUT_SECONDS) as response:
+            return response.read().decode()
 
 
 def resolve_path(href: str, toc_dir: str) -> str:
@@ -179,7 +189,7 @@ def parse_sub_toc(toc_path: str, section: str) -> list:
     """Parse a sub-TOC YAML file."""
     try:
         content = gh_get_file(toc_path)
-    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, HTTPError, URLError) as e:
         detail = getattr(e, "stderr", "") or str(e)
         print(f"  WARNING: Could not fetch {toc_path}: {detail}", file=sys.stderr)
         return []
@@ -232,7 +242,7 @@ def scan_doc_for_assets(source_path: str) -> tuple[list[str], list[str]]:
     """Fetch a markdown file once and scan it for includes and images."""
     try:
         content = gh_get_file(source_path)
-    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, HTTPError, URLError):
         return [], []
 
     return (

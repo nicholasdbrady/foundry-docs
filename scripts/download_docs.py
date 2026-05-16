@@ -9,8 +9,8 @@ import json
 import os
 import subprocess
 import sys
-from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
 
 REPO_OWNER = "MicrosoftDocs"
 REPO_NAME = os.environ.get("FOUNDRY_DOCS_UPSTREAM_REPO", "azure-ai-docs")
@@ -29,15 +29,22 @@ def download_file(source_path: str, dest_path: Path) -> bool:
     dest_path.parent.mkdir(parents=True, exist_ok=True)
 
     try:
-        cmd = ["curl", "-sL", "-o", str(dest_path), "-w", "%{http_code}", url]
+        base_cmd = ["curl", "-sL", "-o", str(dest_path), "-w", "%{http_code}"]
+        cmd = [*base_cmd, url]
         gh_token = os.environ.get("GH_TOKEN")
         if gh_token:
-            cmd[1:1] = ["-H", f"Authorization: token {gh_token}"]
+            cmd = [*base_cmd, "-H", f"Authorization: token {gh_token}", url]
         result = subprocess.run(
             cmd,
             capture_output=True, text=True, timeout=30
         )
         http_code = result.stdout.strip()
+        if gh_token and http_code != "200":
+            result = subprocess.run(
+                [*base_cmd, url],
+                capture_output=True, text=True, timeout=30
+            )
+            http_code = result.stdout.strip()
         if http_code == "200":
             return True
         else:
