@@ -16,7 +16,7 @@ permissions:
 engine: copilot
 strict: true
 tracker-id: post-sync-updater
-timeout-minutes: 15
+timeout-minutes: 30
 concurrency:
   group: "gh-aw-${{ github.workflow }}"
   cancel-in-progress: true
