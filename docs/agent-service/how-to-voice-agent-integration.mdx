@@ -10,12 +10,6 @@ This feature is currently in public preview. This preview is provided without a 
 
 </Note>
 
-<Note>
-
-Foundry agent integration currently only supports agents available on public endpoints. Foundry agents deployed in private VNet aren't supported.
-
-</Note>
-
 Learn how to use Voice Live with [Microsoft Foundry Agent Service](https://learn.microsoft.com/azure/ai-foundry/agents/overview) using the VoiceLive SDK for Python. This article builds on the [Quickstart: Create a Voice Agent with Foundry Agent Service and Voice Live](../../../voice-live-agents-quickstart) with advanced features and integration options.
 
 [Reference documentation](https://learn.microsoft.com/python/api/overview/azure/ai-voicelive-readme) | [Package (PyPi)](https://pypi.org/project/azure-ai-voicelive/) | [Additional samples on GitHub](https://aka.ms/voicelive/github-python) 
@@ -52,7 +46,13 @@ This document refers to the [Microsoft Foundry (new)](https://learn.microsoft.co
 - A model deployed in Microsoft Foundry. If you don't have a model, first complete [Quickstart: Set up Microsoft Foundry resources](https://learn.microsoft.com/en-us/azure/foundry/tutorials/quickstart-create-foundry-resources).
 
 {/* - A Microsoft Foundry agent created in the [Microsoft Foundry portal](https://ai.azure.com/?cid=learnDocs). For more information about creating an agent, see the [Create an agent quickstart](https://learn.microsoft.com/en-us/azure/ai-foundry/quickstarts/get-started-code). */}
-- Assign the `Azure AI User` role to your user account. You can assign roles in the Azure portal under **Access control (IAM)** > **Add role assignment**.
+- Assign the `Foundry User` role to your user account. You can assign roles in the Azure portal under **Access control (IAM)** > **Add role assignment**.
+
+<Info>
+
+</Info>
+
+> The Foundry RBAC roles were recently renamed. **Foundry User**, **Foundry Owner**, **Foundry Account Owner**, and **Foundry Project Manager** were previously named Azure AI User, Azure AI Owner, Azure AI Account Owner, and Azure AI Project Manager. You might still see the previous names in some places while the rename rolls out. The role IDs and core permissions are unchanged by the rename.
 
 ## Prepare the environment and create the agent
 
@@ -120,7 +120,7 @@ This configuration is resolved in `main()` and then applied when the assistant i
 
 <Info>
 
-Cross-resource connections require proper role assignments. Ensure the Voice Live resource's managed identity has the `Azure AI User` role on the target agent resource.
+Cross-resource connections require proper role assignments. Ensure the Voice Live resource's managed identity has the `Foundry User` role on the target agent resource.
 
 </Info>
 
@@ -142,9 +142,12 @@ In this sample, proactive messaging is applied in three steps:
 
 Use Voice Live's `interim_response` feature to bridge wait times during tool calling or when generating agent responses with high latency.
 
-This feature supports two modes:
-- LlmInterimResponseConfig: LLM-generated interim response - best for dynamic and adaptive starts
-- InterimResponseTrigger: Pre-generated interim response - best for deterministic or branded messaging
+Voice Live offers two interim response modes:
+
+- **LLM-generated interim response** (`llm_interim_response`): Uses a lightweight LLM to generate context-aware filler text dynamically. Best for adaptive, natural-sounding responses.
+- **Static interim response** (`static_interim_response`): Randomly selects from a predefined list of texts you provide. Best for deterministic or branded messaging.
+
+For more information, see [Improve tool calling and latency wait times with interim responses](../../../how-to-voice-live-interim-response).
 
 The `voice-live-agents-quickstart.py` created with the quickstart shows the required code additions to configure this feature as follows:
 
@@ -262,7 +265,13 @@ This guide refers to the [Microsoft Foundry (new)](https://learn.microsoft.com/e
 - The required language runtimes, global tools, and Visual Studio Code extensions. See [Prepare your development environment](https://learn.microsoft.com/en-us/azure/ai-foundry/how-to/develop/install-cli-sdk).
 - A [Microsoft Foundry resource](../../../../multi-service-resource) created in a supported region. See [Voice Live overview documentation](../../../voice-live) for region availability.
 - A deployed model in Microsoft Foundry. If you don't have one, first complete [Quickstart: Set up Microsoft Foundry resources](https://learn.microsoft.com/en-us/azure/foundry/tutorials/quickstart-create-foundry-resources).
-- The `Azure AI User` role assigned to your user account. Assign roles in the Azure portal under **Access control (IAM)** > **Add role assignment**.
+- The `Foundry User` role assigned to your user account. Assign roles in the Azure portal under **Access control (IAM)** > **Add role assignment**.
+
+<Info>
+
+</Info>
+
+> The Foundry RBAC roles were recently renamed. **Foundry User**, **Foundry Owner**, **Foundry Account Owner**, and **Foundry Project Manager** were previously named Azure AI User, Azure AI Owner, Azure AI Account Owner, and Azure AI Project Manager. You might still see the previous names in some places while the rename rolls out. The role IDs and core permissions are unchanged by the rename.
 
 ## Prepare the environment and create the agent
 
@@ -333,7 +342,7 @@ The configuration is resolved in `Main()` and applied when the assistant is crea
 
 <Info>
 
-Cross-resource connections require proper role assignments. Ensure the Voice Live resource's managed identity has the `Azure AI User` role on the target agent resource.
+Cross-resource connections require proper role assignments. Ensure the Voice Live resource's managed identity has the `Foundry User` role on the target agent resource.
 
 </Info>
 
@@ -355,10 +364,12 @@ Proactive messaging is applied in three steps:
 
 Voice Live offers `InterimResponse` to bridge wait times during tool calling or when generating responses with high latency.
 
-The feature supports two modes:
+Voice Live offers two interim response modes:
 
-- `LlmInterimResponseConfig`: LLM-generated interim response—best for dynamic starts.
-- `InterimResponseTrigger`: Pre-generated interim response—best for deterministic or branded messaging.
+- **LLM-generated interim response** (`LlmInterimResponseConfig`): Uses a lightweight LLM to generate context-aware filler text dynamically. Best for adaptive, natural-sounding responses.
+- **Static interim response** (`StaticInterimResponseConfig`): Randomly selects from a predefined list of texts you provide. Best for deterministic or branded messaging.
+
+For more information, see [Improve tool calling and latency wait times with interim responses](../../../how-to-voice-live-interim-response).
 
 The quickstart voice assistant shows the required code additions:
 
@@ -485,7 +496,13 @@ This document refers to the [Microsoft Foundry (new)](https://learn.microsoft.co
 - A model deployed in Microsoft Foundry. If you don't have a model, first complete [Quickstart: Set up Microsoft Foundry resources](https://learn.microsoft.com/en-us/azure/foundry/tutorials/quickstart-create-foundry-resources).
 
 {/* - A Microsoft Foundry agent created in the [Microsoft Foundry portal](https://ai.azure.com/?cid=learnDocs). For more information about creating an agent, see the [Create an agent quickstart](https://learn.microsoft.com/en-us/azure/ai-foundry/quickstarts/get-started-code). */}
-- Assign the `Azure AI User` role to your user account. You can assign roles in the Azure portal under **Access control (IAM)** > **Add role assignment**.
+- Assign the `Foundry User` role to your user account. You can assign roles in the Azure portal under **Access control (IAM)** > **Add role assignment**.
+
+<Info>
+
+</Info>
+
+> The Foundry RBAC roles were recently renamed. **Foundry User**, **Foundry Owner**, **Foundry Account Owner**, and **Foundry Project Manager** were previously named Azure AI User, Azure AI Owner, Azure AI Account Owner, and Azure AI Project Manager. You might still see the previous names in some places while the rename rolls out. The role IDs and core permissions are unchanged by the rename.
 
 ## Prepare the environment and create the agent
 
@@ -553,7 +570,7 @@ This configuration is resolved in `main()` and then applied when the assistant i
 
 <Info>
 
-Cross-resource connections require proper role assignments. Ensure the Voice Live resource's managed identity has the `Azure AI User` role on the target agent resource.
+Cross-resource connections require proper role assignments. Ensure the Voice Live resource's managed identity has the `Foundry User` role on the target agent resource.
 
 </Info>
 
@@ -573,7 +590,14 @@ In this sample, proactive messaging is applied in three steps:
 
 ## Improve tool calling and latency wait times
 
-Voice Live provides a feature called `interimResponse` to bridge wait times when tool calling is required or a high latency is experienced to generate an agent response.
+Voice Live provides the `interimResponse` feature to bridge wait times when tool calling is required or a high latency is experienced to generate an agent response.
+
+Voice Live offers two interim response modes:
+
+- **LLM-generated interim response** (`llm_interim_response`): Uses a lightweight LLM to generate context-aware filler text dynamically. Best for adaptive, natural-sounding responses.
+- **Static interim response** (`static_interim_response`): Randomly selects from a predefined list of texts you provide. Best for deterministic or branded messaging.
+
+For more information, see [Improve tool calling and latency wait times with interim responses](../../../how-to-voice-live-interim-response).
 
 The voice assistant created with the quickstart shows the required code additions to configure this feature as follows:
 
@@ -695,7 +719,13 @@ This document refers to the [Microsoft Foundry (new)](https://learn.microsoft.co
 - A model deployed in Microsoft Foundry. If you don't have a model, first complete [Quickstart: Set up Microsoft Foundry resources](https://learn.microsoft.com/en-us/azure/foundry/tutorials/quickstart-create-foundry-resources).
 
 {/* - A Microsoft Foundry agent created in the [Microsoft Foundry portal](https://ai.azure.com/?cid=learnDocs). For more information about creating an agent, see the [Create an agent quickstart](https://learn.microsoft.com/en-us/azure/ai-foundry/quickstarts/get-started-code). */}
-- Assign the `Azure AI User` role to your user account. You can assign roles in the Azure portal under **Access control (IAM)** > **Add role assignment**.
+- Assign the `Foundry User` role to your user account. You can assign roles in the Azure portal under **Access control (IAM)** > **Add role assignment**.
+
+<Info>
+
+</Info>
+
+> The Foundry RBAC roles were recently renamed. **Foundry User**, **Foundry Owner**, **Foundry Account Owner**, and **Foundry Project Manager** were previously named Azure AI User, Azure AI Owner, Azure AI Account Owner, and Azure AI Project Manager. You might still see the previous names in some places while the rename rolls out. The role IDs and core permissions are unchanged by the rename.
 
 ## Prepare the environment and create the agent
 
@@ -763,7 +793,7 @@ This configuration is resolved in `main()` and then applied when the assistant i
 
 <Info>
 
-Cross-resource connections require proper role assignments. Ensure the Voice Live resource's managed identity has the `Azure AI User` role on the target agent resource.
+Cross-resource connections require proper role assignments. Ensure the Voice Live resource's managed identity has the `Foundry User` role on the target agent resource.
 
 </Info>
 
@@ -785,9 +815,12 @@ In this sample, proactive messaging is applied in three steps:
 
 Use Voice Live's `interimResponse` feature to bridge wait times during tool calling or when generating agent responses with high latency.
 
-This feature supports two modes:
-- `LlmInterimResponseConfig`: LLM-generated interim response - best for dynamic and adaptive starts
-- `InterimResponseTrigger`: Pre-generated interim response - best for deterministic or branded messaging
+Voice Live offers two interim response modes:
+
+- **LLM-generated interim response** (`LlmInterimResponseConfig`): Uses a lightweight LLM to generate context-aware filler text dynamically. Best for adaptive, natural-sounding responses.
+- **Static interim response** (`StaticInterimResponseConfig`): Randomly selects from a predefined list of texts you provide. Best for deterministic or branded messaging.
+
+For more information, see [Improve tool calling and latency wait times with interim responses](../../../how-to-voice-live-interim-response).
 
 The voice assistant created with the quickstart shows the required code additions to configure this feature as follows:
 

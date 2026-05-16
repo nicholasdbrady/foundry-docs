@@ -2,11 +2,12 @@
 title: "Connect Agents to Foundry IQ Knowledge Bases"
 description: "Connect Foundry Agent Service to a Foundry IQ knowledge base (Azure AI Search) for grounded retrieval and citation-backed responses."
 ---
-<Info>
 
-Items marked (preview) in this article are currently in public preview. This preview is provided without a service-level agreement, and we don't recommend it for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
+<Note>
 
-</Info>
+Some agentic retrieval features are generally available in the 2026-04-01 REST API version. However, this article uses the 2025-11-01-preview to demonstrate the full feature set, including features that remain in preview. Preview features are provided without a service-level agreement and aren't recommended for production workloads. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
+
+</Note>
 
 In this article, you learn how to connect a knowledge base in Foundry IQ to an agent in Foundry Agent Service. The connection uses the [Model Context Protocol (MCP)](/agent-service/model-context-protocol) to facilitate tool calls. When invoked by the agent, the knowledge base orchestrates the following operations:
 
@@ -43,9 +44,15 @@ We recommend role-based access control for production deployments. If roles aren
 <Tabs>
   <Tab title="Microsoft Foundry">
 
-    - On the parent resource of your project, you need the **Azure AI User** role to access model deployments and create agents. **Owners** automatically get this role when they create the resource. Other users need a specific role assignment. For more information, see [Role-based access control in Foundry portal](https://learn.microsoft.com/azure/ai-foundry/concepts/rbac-foundry).
+    - On the parent resource of your project, you need the **Foundry User** role to access model deployments and create agents. **Owners** automatically get this role when they create the resource. Other users need a specific role assignment. For more information, see [Role-based access control in Foundry portal](https://learn.microsoft.com/azure/ai-foundry/concepts/rbac-foundry).
 
-    - On the parent resource of your project, you need the **Azure AI Project Manager** role to create a project connection for MCP authentication and either **Azure AI User** or **Azure AI Project Manager** to use the MCP tool in agents.
+<Info>
+
+</Info>
+
+    > The Foundry RBAC roles were recently renamed. **Foundry User**, **Foundry Owner**, **Foundry Account Owner**, and **Foundry Project Manager** were previously named Azure AI User, Azure AI Owner, Azure AI Account Owner, and Azure AI Project Manager. You might still see the previous names in some places while the rename rolls out. The role IDs and core permissions are unchanged by the rename.
+
+    - On the parent resource of your project, you need the **Foundry Project Manager** role to create a project connection for MCP authentication and either **Foundry User** or **Foundry Project Manager** to use the MCP tool in agents.
 
     - On your project, create a system-assigned managed identity for interactions with Azure AI Search.
 
@@ -304,7 +311,7 @@ For per-user authorization, use the [Azure OpenAI Responses API](https://learn.m
 
 </Info>
 
-Optionally, if your knowledge base includes a remote SharePoint knowledge source, you must also include the `x-ms-query-source-authorization` header in the MCP tool connection. For more information, see [Enforce permissions at query time](https://learn.microsoft.com/azure/search/agentic-retrieval-how-to-retrieve.md#enforce-permissions-at-query-time).
+Optionally, if your knowledge base includes a remote SharePoint knowledge source, you must also include the `x-ms-query-source-authorization` header in the MCP tool connection. For more information, see [Enforce permissions at query time](https://learn.microsoft.com/azure/search/agentic-retrieval-how-to-retrieve#enforce-permissions-at-query-time).
 
 <Tabs>
   <Tab title="Python">

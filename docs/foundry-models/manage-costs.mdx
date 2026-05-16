@@ -12,7 +12,13 @@ Before you begin, ensure you have:
 - **Azure subscription:** An active Azure subscription with the resources you want to monitor.
 - **Role-based access control (RBAC):** One or both of the following roles at the subscription or resource group scope:
   - [**Cost Management Reader**](https://learn.microsoft.com/azure/role-based-access-control/built-in-roles/management-and-governance#cost-management-reader) – View costs and usage data.
-  - [**Azure AI User**](/security/rbac-foundry#built-in-roles) – View Foundry resource data and usage context.
+  - [**Foundry User**](/security/rbac-foundry#built-in-roles) – View Foundry resource data and usage context.
+
+<Info>
+
+</Info>
+
+> The Foundry RBAC roles were recently renamed. **Foundry User**, **Foundry Owner**, **Foundry Account Owner**, and **Foundry Project Manager** were previously named Azure AI User, Azure AI Owner, Azure AI Account Owner, and Azure AI Project Manager. You might still see the previous names in some places while the rename rolls out. The role IDs and core permissions are unchanged by the rename.
 - **Supported Azure account type:** One of the [supported account types for Cost Management](https://learn.microsoft.com/azure/cost-management-billing/costs/understand-cost-mgt-data).
 - **Region and model availability check:** Confirm required model and feature availability in your target regions before deployment. For details, see [Feature availability across cloud regions](/foundry-models/region-support).
 - **Resource topology awareness:** Know whether your cost views are scoped to subscription, resource group, or resource, and keep the same scope when you compare estimate versus actual cost.
@@ -23,7 +29,7 @@ If you need to grant these roles to team members, see [Assign access to Cost Man
 Use this task-to-role mapping as a starting point:
 
 - **View Cost Management data:** [Cost Management Reader](https://learn.microsoft.com/azure/role-based-access-control/built-in-roles/management-and-governance#cost-management-reader).
-- **View Foundry resources and related usage context:** [Azure AI User](/security/rbac-foundry#built-in-roles).
+- **View Foundry resources and related usage context:** [Foundry User](/security/rbac-foundry#built-in-roles).
 - **Create or modify custom roles:** **Owner** at the target scope.
 
 <Note>
@@ -139,7 +145,13 @@ Your Foundry costs are only a subset of your overall application or solution cos
 
 ### Configure permissions to view costs
 
-To view Foundry costs, assign roles based on the task and scope. For cost reporting, assign the [Cost Management Reader role](https://learn.microsoft.com/azure/role-based-access-control/built-in-roles/management-and-governance#cost-management-reader) at the required scope. Assign the [Azure AI User role](/security/rbac-foundry#built-in-roles) when users also need to inspect Foundry resources and usage context.
+To view Foundry costs, assign roles based on the task and scope. For cost reporting, assign the [Cost Management Reader role](https://learn.microsoft.com/azure/role-based-access-control/built-in-roles/management-and-governance#cost-management-reader) at the required scope. Assign the [Foundry User role](/security/rbac-foundry#built-in-roles) when users also need to inspect Foundry resources and usage context.
+
+<Info>
+
+The Foundry RBAC roles were recently renamed. **Foundry User**, **Foundry Owner**, **Foundry Account Owner**, and **Foundry Project Manager** were previously named Azure AI User, Azure AI Owner, Azure AI Account Owner, and Azure AI Project Manager. You might still see the previous names in some places while the rename rolls out. The role IDs and core permissions are unchanged by the rename.
+
+</Info>
 
 If built-in roles don't meet your needs, you can create a custom role with least-privilege permissions. Validate role actions in your environment because available actions can evolve over time.
 
@@ -196,7 +208,7 @@ Validate custom role definitions in a nonproduction environment before broad rol
 
 <Note>
 
-This custom role example doesn't grant access to Foundry resources by itself. Assign an additional role such as [Azure AI User](/security/rbac-foundry#built-in-roles) if users also need Foundry resource visibility.
+This custom role example doesn't grant access to Foundry resources by itself. Assign an additional role such as [Foundry User](/security/rbac-foundry#built-in-roles) if users also need Foundry resource visibility.
 
 </Note>
 
@@ -276,7 +288,7 @@ When you select **View More Details** or **Azure Cost Management**, you're direc
 
 <Note>
 
-Token and request charts can temporarily differ from **Estimated cost** because of ingestion timing and aggregation differences. Use **Estimated cost** for near-real-time monitoring, and use Azure Cost Management and invoiced charges for financial reconciliation.
+Token and request charts can temporarily differ from **Estimated cost** because of ingestion timing and aggregation differences. Use **Estimated cost** for near-real-time monitoring, and use Microsoft Cost Management and invoiced charges for financial reconciliation.
 
 </Note>
 
@@ -360,6 +372,34 @@ You can get more detailed billing information by grouping costs by resource:
 <Frame>
 <img src="/images/cost-by-resource-saas.png" alt="Screenshot of cost analysis dashboard scoped to the resource group where the Foundry resource is deployed, highlighting the meters for models billed throughout Azure Marketplace. Cost is group by resource." />
 </Frame>
+
+## Chargeback with project-level cost attribution
+
+Microsoft Foundry supports chargeback at the project level, so FinOps teams and admins can allocate shared Foundry spend back to the business unit, team, or workload that incurred it. Project-level attribution is useful when multiple projects share the same Foundry resource and you need to split the bill accurately.
+
+Every Foundry project is automatically tagged with a `project` tag on its underlying usage. In Cost Management, filter the cost analysis view by the `project` tag to see spend broken down per project. You don't need to add tags manually.
+
+<Note>
+
+Project-level cost attribution is currently supported for models sold directly by Azure (Azure Direct models, including Azure OpenAI). It isn't yet supported for models served through Azure Marketplace.
+
+</Note>
+
+### View costs by project
+
+1. Sign in to the [Azure portal](https://portal.azure.com/) and open your Foundry resource.
+1. Select **Cost analysis** under **Resource Management** in the left navigation.
+1. In the filter bar, select **Add filter**, choose **Tag**, then choose `project`.
+1. Select one or more projects to view their attributed cost over the selected time range.
+
+<Frame>
+<img src="/images/cost-analysis-project-tag.png" alt="Screenshot of Cost Management Cost analysis view filtered by the project tag, showing accumulated cost over time for a selected Foundry project." />
+</Frame>
+
+### What you can do with project-level attribution
+
+- Allocate shared Foundry resource costs back to individual projects for chargeback or showback.
+- Track project-level spend trends over time.
 
 It's important to understand scope when you evaluate costs associated with Foundry resources. If your resources are part of the same resource group, you can scope Cost Analysis at that level to understand the effect on costs. If your resources are spread across multiple resource groups, you can scope to the subscription level.
 

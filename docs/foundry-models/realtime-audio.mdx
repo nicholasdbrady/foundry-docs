@@ -1383,7 +1383,9 @@ ffmpeg -i input.wav -ar 24000 -ac 1 -f s16le input.pcm
             """
 
             credential = DefaultAzureCredential()
-            token_provider = get_bearer_token_provider(credential, "https://ai.azure.com/.default")
+            token_provider = get_bearer_token_provider(
+                credential, "https://ai.azure.com/.default"
+            )
             token = token_provider()
 
             endpoint = os.environ["AZURE_OPENAI_ENDPOINT"]
@@ -1394,27 +1396,41 @@ ffmpeg -i input.wav -ar 24000 -ac 1 -f s16le input.pcm
             input_audio_file = "input.pcm"
             output_audio_file = "output.pcm"
 
-            client = AsyncOpenAI(
-                websocket_base_url=base_url,
-                api_key=token
-            )
+            client = AsyncOpenAI(websocket_base_url=base_url, api_key=token)
 
             async with client.realtime.connect(model=deployment_name) as connection:
                 # Configure the session for audio input and output
-                await connection.session.update(session={
-                    "instructions": "You are a helpful assistant. Respond conversationally.",
-                    "input_audio_format": "pcm16",
-                    "output_audio_format": "pcm16",
-                    "input_audio_transcription": {"model": "whisper-1"},
-                    "turn_detection": {
-                        "type": "server_vad",
-                        "threshold": 0.5,
-                        "prefix_padding_ms": 300,
-                        "silence_duration_ms": 500,
-                        "create_response": True,
-                    },
-                    "voice": "alloy",
-                })
+                await connection.session.update(
+                    session={
+                        "type": "realtime",
+                        "instructions": "You are a helpful assistant. Respond conversationally.",
+                        "output_modalities": ["audio"],
+                        "audio": {
+                            "input": {
+                                "transcription": {"model": "whisper-1"},
+                                "format": {
+                                    "type": "audio/pcm",
+                                    "rate": 24000,
+                                },
+                                "turn_detection": {
+                                    "type": "server_vad",
+                                    "threshold": 0.5,
+                                    "prefix_padding_ms": 300,
+                                    "silence_duration_ms": 500,
+                                    "create_response": True,
+                                    "interrupt_response": False,
+                                },
+                            },
+                            "output": {
+                                "voice": "alloy",
+                                "format": {
+                                    "type": "audio/pcm",
+                                    "rate": 24000,
+                                },
+                            },
+                        },
+                    }
+                )
 
                 # Read and send audio file in chunks
                 print(f"Reading audio from {input_audio_file}...")
@@ -1423,30 +1439,31 @@ ffmpeg -i input.wav -ar 24000 -ac 1 -f s16le input.pcm
 
                 # Send audio in chunks (the Realtime API expects base64-encoded audio)
                 chunk_size = 4800  # 100ms of audio at 24kHz, 16-bit
+                audio_data += b"\x00" * chunk_size * 10  # 1 second of silence
+
                 for i in range(0, len(audio_data), chunk_size):
-                    chunk = audio_data[i:i + chunk_size]
+                    chunk = audio_data[i : i + chunk_size]
                     await connection.input_audio_buffer.append(audio=base64.b64encode(chunk).decode())
                     # Small delay to simulate real-time streaming
-                    await asyncio.sleep(0.05)
+                    await asyncio.sleep(0.1)
 
                 print("Audio sent. Waiting for response...")
-
-                # Commit the audio buffer to signal end of input
-                await connection.input_audio_buffer.commit()
 
                 # Collect audio response
                 output_audio = bytearray()
                 transcript = ""
 
                 async for event in connection:
-                    if event.type == "response.audio.delta":
+                    if event.type == "response.output_audio.delta":
                         audio_chunk = base64.b64decode(event.delta)
                         output_audio.extend(audio_chunk)
-                    elif event.type == "response.audio_transcript.delta":
+                    elif event.type == "response.output_audio_transcript.delta":
                         transcript += event.delta
                         print(event.delta, end="", flush=True)
                     elif event.type == "conversation.item.input_audio_transcription.completed":
                         print(f"\n[User said]: {event.transcript}")
+                    elif event.type == "error":
+                        raise RuntimeError(f"Realtime API error: {event.error.message}")
                     elif event.type == "response.done":
                         break
 
@@ -1455,7 +1472,7 @@ ffmpeg -i input.wav -ar 24000 -ac 1 -f s16le input.pcm
                     with open(output_audio_file, "wb") as f:
                         f.write(output_audio)
                     print(f"\n\nSaved {len(output_audio)} bytes of audio to {output_audio_file}")
-                    print("Play with: ffplay -f s16le -ar 24000 -ac 1 output.pcm")
+                    print("Play with: ffplay -nodisp -autoexit -hide_banner -f s16le -sample_rate 24000 -ch_layout mono output.pcm")
 
             credential.close()
 
@@ -1500,27 +1517,41 @@ ffmpeg -i input.wav -ar 24000 -ac 1 -f s16le input.pcm
             input_audio_file = "input.pcm"
             output_audio_file = "output.pcm"
 
-            client = AsyncOpenAI(
-                websocket_base_url=base_url,
-                api_key=token
-            )
+            client = AsyncOpenAI(websocket_base_url=base_url, api_key=token)
 
             async with client.realtime.connect(model=deployment_name) as connection:
                 # Configure the session for audio input and output
-                await connection.session.update(session={
-                    "instructions": "You are a helpful assistant. Respond conversationally.",
-                    "input_audio_format": "pcm16",
-                    "output_audio_format": "pcm16",
-                    "input_audio_transcription": {"model": "whisper-1"},
-                    "turn_detection": {
-                        "type": "server_vad",
-                        "threshold": 0.5,
-                        "prefix_padding_ms": 300,
-                        "silence_duration_ms": 500,
-                        "create_response": True,
-                    },
-                    "voice": "alloy",
-                })
+                await connection.session.update(
+                    session={
+                        "type": "realtime",
+                        "instructions": "You are a helpful assistant. Respond conversationally.",
+                        "output_modalities": ["audio"],
+                        "audio": {
+                            "input": {
+                                "transcription": {"model": "whisper-1"},
+                                "format": {
+                                    "type": "audio/pcm",
+                                    "rate": 24000,
+                                },
+                                "turn_detection": {
+                                    "type": "server_vad",
+                                    "threshold": 0.5,
+                                    "prefix_padding_ms": 300,
+                                    "silence_duration_ms": 500,
+                                    "create_response": True,
+                                    "interrupt_response": False,
+                                },
+                            },
+                            "output": {
+                                "voice": "alloy",
+                                "format": {
+                                    "type": "audio/pcm",
+                                    "rate": 24000,
+                                },
+                            },
+                        },
+                    }
+                )
 
                 # Read and send audio file in chunks
                 print(f"Reading audio from {input_audio_file}...")
@@ -1529,30 +1560,31 @@ ffmpeg -i input.wav -ar 24000 -ac 1 -f s16le input.pcm
 
                 # Send audio in chunks (the Realtime API expects base64-encoded audio)
                 chunk_size = 4800  # 100ms of audio at 24kHz, 16-bit
+                audio_data += b"\x00" * chunk_size * 10  # 1 second of silence
+
                 for i in range(0, len(audio_data), chunk_size):
-                    chunk = audio_data[i:i + chunk_size]
+                    chunk = audio_data[i : i + chunk_size]
                     await connection.input_audio_buffer.append(audio=base64.b64encode(chunk).decode())
                     # Small delay to simulate real-time streaming
-                    await asyncio.sleep(0.05)
+                    await asyncio.sleep(0.1)
 
                 print("Audio sent. Waiting for response...")
-
-                # Commit the audio buffer to signal end of input
-                await connection.input_audio_buffer.commit()
 
                 # Collect audio response
                 output_audio = bytearray()
                 transcript = ""
 
                 async for event in connection:
-                    if event.type == "response.audio.delta":
+                    if event.type == "response.output_audio.delta":
                         audio_chunk = base64.b64decode(event.delta)
                         output_audio.extend(audio_chunk)
-                    elif event.type == "response.audio_transcript.delta":
+                    elif event.type == "response.output_audio_transcript.delta":
                         transcript += event.delta
                         print(event.delta, end="", flush=True)
                     elif event.type == "conversation.item.input_audio_transcription.completed":
                         print(f"\n[User said]: {event.transcript}")
+                    elif event.type == "error":
+                        raise RuntimeError(f"Realtime API error: {event.error.message}")
                     elif event.type == "response.done":
                         break
 
@@ -1561,7 +1593,7 @@ ffmpeg -i input.wav -ar 24000 -ac 1 -f s16le input.pcm
                     with open(output_audio_file, "wb") as f:
                         f.write(output_audio)
                     print(f"\n\nSaved {len(output_audio)} bytes of audio to {output_audio_file}")
-                    print("Play with: ffplay -f s16le -ar 24000 -ac 1 output.pcm")
+                    print("Play with: ffplay -nodisp -autoexit -hide_banner -f s16le -sample_rate 24000 -ch_layout mono output.pcm")
 
         asyncio.run(main())
         ```
@@ -2524,10 +2556,10 @@ The Realtime API has specific rate limits for audio tokens and concurrent sessio
 
 ## Session configuration
 
-Often, the first event sent by the caller on a newly established `/realtime` session is a [`session.update`](/api-sdk/realtime-audio-reference#realtimeclienteventsessionupdate) payload. This event controls a wide set of input and output behavior, with output and response generation properties then later overridable using the [`response.create`](/api-sdk/realtime-audio-reference#realtimeclienteventresponsecreate) event.
+Often, the first event sent by the caller on a newly established `/realtime` session is a `session.update` payload. This event controls a wide set of input and output behavior, with output and response generation properties then later overridable using the `response.create` event.
 
-The [`session.update`](/api-sdk/realtime-audio-reference#realtimeclienteventsessionupdate) event can be used to configure the following aspects of the session:
-- Transcription of user input audio is opted into via the session's `input_audio_transcription` property. Specifying a transcription model (such as `whisper-1`) in this configuration enables the delivery of [`conversation.item.audio_transcription.completed`](/api-sdk/realtime-audio-reference#realtimeservereventconversationiteminputaudiotranscriptioncompleted) events.
+The `session.update` event can be used to configure the following aspects of the session:
+- Transcription of user input audio is opted into via the session's `input_audio_transcription` property. Specifying a transcription model (such as `whisper-1`) in this configuration enables the delivery of `conversation.item.audio_transcription.completed` events.
 - Turn handling is controlled by the `turn_detection` property. This property's type can be set to `none`, `semantic_vad`, or `server_vad` as described in the [voice activity detection (VAD) and the audio buffer](#voice-activity-detection-vad-and-the-audio-buffer) section.
 - Tools can be configured to enable the server to call out to external services or functions to enrich the conversation. Tools are defined as part of the `tools` property in the session configuration.
 
@@ -2555,15 +2587,15 @@ An example `session.update` that configures several aspects of the session, incl
 }
 ```
 
-The server responds with a [`session.updated`](/api-sdk/realtime-audio-reference#realtimeservereventsessionupdated) event to confirm the session configuration.
+The server responds with a `session.updated` event to confirm the session configuration.
 
 ## Out-of-band responses
 
 By default, responses generated during a session are added to the default conversation state. In some cases, you might want to generate responses outside the default conversation. This can be useful for generating multiple responses concurrently or for generating responses that don't affect the default conversation state. For example, you can limit the number of turns considered by the model when generating a response.
 
-You can create out-of-band responses by setting the [`response.conversation`](/api-sdk/realtime-audio-reference#realtimeresponseoptions) field to the string `none` when creating a response with the [`response.create`](/api-sdk/realtime-audio-reference#realtimeclienteventresponsecreate) client event.
+You can create out-of-band responses by setting the `response.conversation` field to the string `none` when creating a response with the `response.create` client event.
 
-In the same [`response.create`](/api-sdk/realtime-audio-reference#realtimeclienteventresponsecreate) client event, you can also set the [`response.metadata`](/api-sdk/realtime-audio-reference#realtimeresponseoptions) field to help you identify which response is being generated for this client-sent event.
+In the same `response.create` client event, you can also set the `response.metadata` field to help you identify which response is being generated for this client-sent event.
 
 ```json
 {
@@ -2579,7 +2611,7 @@ In the same [`response.create`](/api-sdk/realtime-audio-reference#realtimeclient
 }
 ```
 
-When the server responds with a [`response.done`](/api-sdk/realtime-audio-reference#realtimeservereventresponsecreated) event, the response contains the metadata you provided. You can identify the corresponding response for the client-sent event via the `response.metadata` field.
+When the server responds with a `response.done` event, the response contains the metadata you provided. You can identify the corresponding response for the client-sent event via the `response.metadata` field.
 
 <Info>
 
@@ -2633,12 +2665,12 @@ By default, server VAD (`server_vad`) is enabled, and the server automatically g
 
 You can disable automatic voice activity detection by setting the `turn_detection` type to `none`. When VAD is disabled, the server doesn't automatically generate responses when it detects the end of speech in the input audio buffer.
 
-The session relies on caller-initiated [`input_audio_buffer.commit`](/api-sdk/realtime-audio-reference#realtimeclienteventinputaudiobuffercommit) and [`response.create`](/api-sdk/realtime-audio-reference#realtimeclienteventresponsecreate) events to progress conversations and produce output. This setting is useful for push-to-talk applications or situations that have external audio flow control (such as caller-side VAD component). These manual signals can still be used in `server_vad` mode to supplement VAD-initiated response generation.
+The session relies on caller-initiated `input_audio_buffer.commit` and `response.create` events to progress conversations and produce output. This setting is useful for push-to-talk applications or situations that have external audio flow control (such as caller-side VAD component). These manual signals can still be used in `server_vad` mode to supplement VAD-initiated response generation.
 
-- The client can append audio to the buffer by sending the [`input_audio_buffer.append`](/api-sdk/realtime-audio-reference#realtimeclienteventinputaudiobufferappend) event.
-- The client commits the input audio buffer by sending the [`input_audio_buffer.commit`](/api-sdk/realtime-audio-reference#realtimeclienteventinputaudiobuffercommit) event. The commit creates a new user message item in the conversation.
-- The server responds by sending the [`input_audio_buffer.committed`](/api-sdk/realtime-audio-reference#realtimeservereventinputaudiobuffercommitted) event.
-- The server responds by sending the [`conversation.item.created`](/api-sdk/realtime-audio-reference#realtimeservereventconversationitemcreated) event.
+- The client can append audio to the buffer by sending the `input_audio_buffer.append` event.
+- The client commits the input audio buffer by sending the `input_audio_buffer.commit` event. The commit creates a new user message item in the conversation.
+- The server responds by sending the `input_audio_buffer.committed` event.
+- The server responds by sending the `conversation.item.created` event.
 
 <Frame>
   <img src="/images/input-audio-buffer-client-managed.png" alt="Diagram of the Realtime API input audio sequence without server decision mode." />
@@ -2660,13 +2692,13 @@ sequenceDiagram
 
 You can configure the session to use server-side voice activity detection (VAD). Set the `turn_detection` type to `server_vad` to enable VAD. 
 
-In this case, the server evaluates user audio from the client (as sent via [`input_audio_buffer.append`](/api-sdk/realtime-audio-reference#realtimeclienteventinputaudiobufferappend)) using a voice activity detection (VAD) component. The server automatically uses that audio to initiate response generation on applicable conversations when an end of speech is detected. Silence detection for the VAD can also be configured when specifying `server_vad` detection mode.
+In this case, the server evaluates user audio from the client (as sent via `input_audio_buffer.append`) using a voice activity detection (VAD) component. The server automatically uses that audio to initiate response generation on applicable conversations when an end of speech is detected. Silence detection for the VAD can also be configured when specifying `server_vad` detection mode.
 
-- The server sends the [`input_audio_buffer.speech_started`](/api-sdk/realtime-audio-reference#realtimeservereventinputaudiobufferspeechstarted) event when it detects the start of speech.
-- At any time, the client can optionally append audio to the buffer by sending the [`input_audio_buffer.append`](/api-sdk/realtime-audio-reference#realtimeclienteventinputaudiobufferappend) event.
-- The server sends the [`input_audio_buffer.speech_stopped`](/api-sdk/realtime-audio-reference#realtimeservereventinputaudiobufferspeechstopped) event when it detects the end of speech.
-- The server commits the input audio buffer by sending the [`input_audio_buffer.committed`](/api-sdk/realtime-audio-reference#realtimeservereventinputaudiobuffercommitted) event.
-- The server sends the [`conversation.item.created`](/api-sdk/realtime-audio-reference#realtimeservereventconversationitemcreated) event with the user message item created from the audio buffer.
+- The server sends the `input_audio_buffer.speech_started` event when it detects the start of speech.
+- At any time, the client can optionally append audio to the buffer by sending the `input_audio_buffer.append` event.
+- The server sends the `input_audio_buffer.speech_stopped` event when it detects the end of speech.
+- The server commits the input audio buffer by sending the `input_audio_buffer.committed` event.
+- The server sends the `conversation.item.created` event with the user message item created from the audio buffer.
 
 <Frame>
   <img src="/images/input-audio-buffer-server-vad.png" alt="Diagram of the real time API input audio sequence with server decision mode." />
@@ -2695,7 +2727,7 @@ With the (`semantic_vad`) mode, the model is less likely to interrupt the user d
 
 You can use server-side voice activity detection (VAD) without automatic response generation. This approach can be useful when you want to implement some degree of moderation. 
 
-Set [`turn_detection.create_response`](/api-sdk/realtime-audio-reference#realtimeturndetection) to `false` via the [session.update](/api-sdk/realtime-audio-reference#realtimeclienteventsessionupdate) event. VAD detects the end of speech but the server doesn't generate a response until you send a [`response.create`](/api-sdk/realtime-audio-reference#realtimeclienteventresponsecreate) event.
+Set `turn_detection.create_response` to `false` via the session.update event. VAD detects the end of speech but the server doesn't generate a response until you send a `response.create` event.
 
 ```json
 {
@@ -2717,15 +2749,15 @@ The GPT real-time audio models are designed for real-time, low-latency conversat
 
 You can have one active conversation per session. The conversation accumulates input signals until a response is started, either via a direct event by the caller or automatically by voice activity detection (VAD).
 
-- The server [`conversation.created`](/api-sdk/realtime-audio-reference#realtimeservereventconversationcreated) event is returned right after session creation.
-- The client adds new items to the conversation with a [`conversation.item.create`](/api-sdk/realtime-audio-reference#realtimeclienteventconversationitemcreate) event.
-- The server [`conversation.item.created`](/api-sdk/realtime-audio-reference#realtimeservereventconversationitemcreated) event is returned when the client adds a new item to the conversation.
+- The server `conversation.created` event is returned right after session creation.
+- The client adds new items to the conversation with a `conversation.item.create` event.
+- The server `conversation.item.created` event is returned when the client adds a new item to the conversation.
 
 Optionally, the client can truncate or delete items in the conversation:
-- The client truncates an earlier assistant audio message item with a [`conversation.item.truncate`](/api-sdk/realtime-audio-reference#realtimeclienteventconversationitemtruncate) event.
-- The server [`conversation.item.truncated`](/api-sdk/realtime-audio-reference#realtimeservereventconversationitemtruncated) event is returned to sync the client and server state.
-- The client deletes an item in the conversation with a [`conversation.item.delete`](/api-sdk/realtime-audio-reference#realtimeclienteventconversationitemdelete) event.
-- The server [`conversation.item.deleted`](/api-sdk/realtime-audio-reference#realtimeservereventconversationitemdeleted) event is returned to sync the client and server state.
+- The client truncates an earlier assistant audio message item with a `conversation.item.truncate` event.
+- The server `conversation.item.truncated` event is returned to sync the client and server state.
+- The client deletes an item in the conversation with a `conversation.item.delete` event.
+- The server `conversation.item.deleted` event is returned to sync the client and server state.
 
 <Frame>
   <img src="/images/conversation-item-sequence.png" alt="Diagram of the real-time API conversation item sequence." />
@@ -2750,17 +2782,17 @@ sequenceDiagram
 ### Response generation
 
 To get a response from the model:
-- The client sends a [`response.create`](/api-sdk/realtime-audio-reference#realtimeclienteventresponsecreate) event. The server responds with a [`response.created`](/api-sdk/realtime-audio-reference#realtimeservereventresponsecreated) event. The response can contain one or more items, each of which can contain one or more content parts.
-- Or, when using server-side voice activity detection (VAD), the server automatically generates a response when it detects the end of speech in the input audio buffer. The server sends a [`response.created`](/api-sdk/realtime-audio-reference#realtimeservereventresponsecreated) event with the generated response.
+- The client sends a `response.create` event. The server responds with a `response.created` event. The response can contain one or more items, each of which can contain one or more content parts.
+- Or, when using server-side voice activity detection (VAD), the server automatically generates a response when it detects the end of speech in the input audio buffer. The server sends a `response.created` event with the generated response.
 
 ### Response interruption
 
-The client [`response.cancel`](/api-sdk/realtime-audio-reference#realtimeclienteventresponsecancel) event is used to cancel an in-progress response. 
+The client `response.cancel` event is used to cancel an in-progress response. 
 
-A user might want to interrupt the assistant's response or ask the assistant to stop talking. The server produces audio faster than real-time. The client can send a [`conversation.item.truncate`](/api-sdk/realtime-audio-reference#realtimeclienteventconversationitemtruncate) event to truncate the audio before it's played. 
+A user might want to interrupt the assistant's response or ask the assistant to stop talking. The server produces audio faster than real-time. The client can send a `conversation.item.truncate` event to truncate the audio before it's played. 
 - The server's understanding of the audio with the client's playback is synchronized. 
 - Truncating audio deletes the server-side text transcript to ensure there isn't text in the context that the user doesn't know about.
-- The server responds with a [`conversation.item.truncated`](/api-sdk/realtime-audio-reference#realtimeservereventconversationitemtruncated) event.
+- The server responds with a `conversation.item.truncated` event.
 
 ## Image input
 
@@ -2814,7 +2846,7 @@ The following example json body sets up an MCP server:
 
 Here's an example of the event sequence for a simple text-in, audio-out conversation:
 
-When you connect to the `/realtime` endpoint, the server responds with a [`session.created`](/api-sdk/realtime-audio-reference#realtimeservereventsessioncreated) event. The maximum session duration is 30 minutes.
+When you connect to the `/realtime` endpoint, the server responds with a `session.created` event. The maximum session duration is 30 minutes.
 
 ```json
 {
@@ -2860,7 +2892,7 @@ await client.send({
 });
 ```
 
-Here's the client [`response.create`](/api-sdk/realtime-audio-reference#realtimeclienteventresponsecreate) event in JSON format:
+Here's the client `response.create` event in JSON format:
 
 ```json
 {
@@ -2886,7 +2918,7 @@ for await (const message of client.messages()) {
 }
 ```
 
-The server responds with a [`response.created`](/api-sdk/realtime-audio-reference#realtimeservereventresponsecreated) event. 
+The server responds with a `response.created` event. 
 
 ```json
 {
@@ -2932,7 +2964,7 @@ The server might then send these intermediate events as it processes the respons
 
 You can see that multiple audio and text transcript deltas are sent as the server processes the response. 
 
-Eventually, the server sends a [`response.done`](/api-sdk/realtime-audio-reference#realtimeservereventresponsedone) event with the completed response. This event contains the audio transcript "Hello! How can I assist you today?" 
+Eventually, the server sends a `response.done` event with the completed response. This event contains the audio transcript "Hello! How can I assist you today?" 
 
 ```json
 {

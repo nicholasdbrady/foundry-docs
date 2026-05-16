@@ -20,9 +20,16 @@ For general-purpose evaluation of generative AI models and applications, includi
 
 ## Prerequisites
 
+- Python 3.8 or later.
 - A [Foundry project](/setup/create-projects) with an [agent](/agent-service/overview) or [hosted agent](/agent-service/hosted-agents).
 - An Azure OpenAI deployment with a GPT model that supports chat completion (for example, `gpt-4o` or `gpt-4o-mini`).
-- **Azure AI User** role on the Foundry project.
+- **Foundry User** role on the Foundry project.
+
+<Info>
+
+</Info>
+
+> The Foundry RBAC roles were recently renamed. **Foundry User**, **Foundry Owner**, **Foundry Account Owner**, and **Foundry Project Manager** were previously named Azure AI User, Azure AI Owner, Azure AI Account Owner, and Azure AI Project Manager. You might still see the previous names in some places while the rename rolls out. The role IDs and core permissions are unchanged by the rename.
 
 <Note>
 
@@ -101,7 +108,7 @@ First, configure your evaluators. Each evaluator needs a data mapping that tells
 - `{{sample.output_items}}` references the full agent response, including tool calls.
 - `{{sample.output_text}}` references just the response message text.
 
-AI-assisted evaluators, like Task Adherence and Coherence, require a model deployment in `initialization_parameters`. Some evaluators might require additional fields, like `ground_truth` or tool definitions. For more information, see the [evaluator documentation](/observability/general-purpose-evaluators).
+AI-assisted evaluators, like Task Adherence and Coherence, require a model deployment name in `initialization_parameters`. The value must match a GPT deployment name in your project — this is the judge model used to score responses. Some evaluators might require additional fields, like `ground_truth` or tool definitions. For more information, see the [evaluator documentation](/observability/general-purpose-evaluators).
 
 ```python
 testing_criteria = [
@@ -189,6 +196,12 @@ print(f"Evaluation run started: {eval_run.id}")
 <Tip>
 
 This sample works for both prompt agents and hosted agents that use the responses protocol. For hosted agents that use the invocations protocol, the `input_messages` format is different — provide a freeform JSON object instead of the structured template. For details and code samples, see [Hosted agent invocations protocol](/observability/cloud-evaluation#hosted-agent-invocations-protocol) in the cloud evaluation guide.
+
+</Tip>
+
+<Tip>
+
+To evaluate agent interactions that already occurred using traces from Application Insights, see [Trace evaluation](/observability/cloud-evaluation#trace-evaluation) in the cloud evaluation guide.
 
 </Tip>
 
@@ -308,4 +321,5 @@ Use evaluation to iterate and improve your agent:
 - [Agent Monitoring Dashboard](/agent-service/how-to-monitor-agents-dashboard)
 - [Agent evaluators reference](/observability/agent-evaluators)
 - [REST API reference](../../reference/foundry-project-rest-preview#openai-evals---list-evals)
+- [Trace evaluation in the cloud](/observability/cloud-evaluation#trace-evaluation)
 - [Set up tracing in Microsoft Foundry](/agent-service/trace-agent-setup)

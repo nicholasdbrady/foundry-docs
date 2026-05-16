@@ -3,18 +3,18 @@ title: "Azure OpenAI in Microsoft Foundry Models embeddings tutorial"
 description: "Learn how to use Azure OpenAI's embeddings API for document search with the BillSum dataset"
 ---
 
-This tutorial will walk you through using the Azure OpenAI [embeddings](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/concepts/understand-embeddings) API to perform **document search** where you'll query a knowledge base to find the most relevant document.
+This tutorial shows you how to use the Azure OpenAI [embeddings](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/concepts/understand-embeddings) API to perform **document search**. You query a knowledge base to find the most relevant document.
 
 In this tutorial, you learn how to:
 
 - Download a sample dataset and prepare it for analysis.
 - Create environment variables for your resources endpoint and API key.
-- Use one of the following models: text-embedding-ada-002 (Version 2), text-embedding-3-large, text-embedding-3-small  models.
+- Use one of the following models: text-embedding-ada-002 (Version 2), text-embedding-3-large, or text-embedding-3-small.
 - Use [cosine similarity](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/concepts/understand-embeddings) to rank search results.
 ## Prerequisites
 
 * An Azure subscription - [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn)
-* A Microsoft Foundry or Azure OpenAI resource with the **text-embedding-ada-002 (Version 2)** model deployed. This model is currently only available in [certain regions](/foundry-models/models-sold-directly-by-azure#model-summary-table-and-region-availability).
+* A Microsoft Foundry or Azure OpenAI resource with the **text-embedding-ada-002 (Version 2)** model deployed. This model is currently only available in [certain regions](/foundry-models/models-sold-directly-by-azure-region-availability).
 * <a href="https://www.python.org/" target="_blank">Python 3.10 or later version</a>
 * The following Python libraries: `openai`, `num2words`, `matplotlib`, `plotly`, `scipy`, `scikit-learn`, `pandas`, `tiktoken`.
 * [Jupyter Notebooks](https://jupyter.org/)
@@ -252,7 +252,7 @@ len(decode)
 1466
 ```
 
-Now that we understand more about how tokenization works we can move on to embedding. It's important to note, that we haven't actually tokenized the documents yet. The `n_tokens` column is simply a way of making sure none of the data we pass to the model for tokenization and embedding exceeds the input token limit of 8,192. When we pass the documents to the embeddings model, it will break the documents into tokens similar (though not necessarily identical) to the examples above and then convert the tokens to a series of floating point numbers that will be accessible via vector search. These embeddings can be stored locally or in an [Azure Database to support Vector Search](https://learn.microsoft.com/azure/cosmos-db/mongodb/vcore/vector-search). As a result, each bill will have its own corresponding embedding vector in the new `ada_v2` column on the right side of the DataFrame.
+Now that we understand more about how tokenization works we can move on to embedding. It's important to note, that we haven't actually tokenized the documents yet. The `n_tokens` column is simply a way of making sure none of the data we pass to the model for tokenization and embedding exceeds the input token limit of 8,192. When we pass the documents to the embeddings model, it will break the documents into tokens similar (though not necessarily identical) to the examples above and then convert the tokens to a series of floating point numbers that will be accessible via vector search. These embeddings can be stored locally or in an [Azure Database to support Vector Search](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/references/cosmos-db). As a result, each bill will have its own corresponding embedding vector in the new `ada_v2` column on the right side of the DataFrame.
 
 In the example below we're calling the embedding model once per every item that we want to embed. When working with large embedding projects you can alternatively pass the model an array of inputs to embed rather than one input at a time. When you pass the model an array of inputs the max number of input items per call to the embedding endpoint is 2048.
 
@@ -321,17 +321,17 @@ res["summary"][9]
 "Taxpayer's Right to View Act of 1993 - Amends the Communications Act of 1934 to prohibit a cable operator from assessing separate charges for any video programming of a sporting, theatrical, or other entertainment event if that event is performed at a facility constructed, renovated, or maintained with tax revenues or by an organization that receives public financial support. Authorizes the Federal Communications Commission and local franchising authorities to make determinations concerning the applicability of such prohibition. Sets forth conditions under which a facility is considered to have been constructed, maintained, or renovated with tax revenues. Considers events performed by nonprofit or public organizations that receive tax subsidies to be subject to this Act if the event is sponsored by, or includes the participation of a team that is part of, a tax exempt organization."
 ```
 
-Using this approach, you can use embeddings as a search mechanism across documents in a knowledge base. The user can then take the top search result and use it for their downstream task, which prompted their initial query.
+By using this approach, you can use embeddings as a search mechanism across documents in a knowledge base. The user can then take the top search result and use it for their downstream task, which prompted their initial query.
 
 ## Troubleshooting
 
 - **401/403**: Verify `AZURE_OPENAI_API_KEY` is set and matches your resource key.
 - **404**: Verify `AZURE_OPENAI_EMBEDDINGS_DEPLOYMENT` matches your deployment name.
-- **Invalid URL**: Verify `AZURE_OPENAI_ENDPOINT` is your resource endpoint, for example `https://<resource-name>.openai.azure.com`.
+- **Invalid URL**: Verify `AZURE_OPENAI_ENDPOINT` is your resource endpoint, such as `https://<resource-name>.openai.azure.com`.
 
 ## Clean up resources
 
-If you created an Azure OpenAI resource solely for completing this tutorial and want to clean up and remove an Azure OpenAI resource, you'll need to delete your deployed models, and then delete the resource or associated resource group if it's dedicated to your test resource. Deleting the resource group also deletes any other resources associated with it.
+If you created an Azure OpenAI resource solely for completing this tutorial and want to clean up and remove an Azure OpenAI resource, delete your deployed models. Then, delete the resource or associated resource group if it's dedicated to your test resource. Deleting the resource group also deletes any other resources associated with it.
 
 - [Azure portal](/setup/multi-service-resource)
 - [Azure CLI](/setup/multi-service-resource)
@@ -341,8 +341,6 @@ If you created an Azure OpenAI resource solely for completing this tutorial and 
 Learn more about Azure OpenAI's models:
 <Card title="Azure OpenAI models" icon="arrow-right" href="../../foundry-models/concepts/models-sold-directly-by-azure.md" />* Store your embeddings and perform vector (similarity) search using your choice of Azure service:
   * [Azure AI Search](https://learn.microsoft.com/azure/search/vector-search-overview)
-  * [Azure SQL Database](https://learn.microsoft.com/azure/azure-sql/database/ai-artificial-intelligence-intelligent-applications)
-  * [Azure Cosmos DB for MongoDB vCore](https://learn.microsoft.com/azure/cosmos-db/mongodb/vcore/vector-search)
   * [Azure SQL Database](https://learn.microsoft.com/azure/azure-sql/database/ai-artificial-intelligence-intelligent-applications)
   * [Azure Cosmos DB for NoSQL](https://learn.microsoft.com/azure/cosmos-db/vector-search)
   * [Azure Cosmos DB for PostgreSQL](https://learn.microsoft.com/azure/cosmos-db/postgresql/howto-use-pgvector)

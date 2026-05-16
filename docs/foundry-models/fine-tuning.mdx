@@ -26,7 +26,13 @@ In this article, you learn how to:
 - Read the [guide on when to use Foundry fine-tuning](../openai/concepts/fine-tuning-considerations).
 - You need an Azure subscription. [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
 - You need a Foundry project resource. To create one, sign in to the [Foundry portal](https://ai.azure.com).
-- Fine-tuning requires the **Azure AI Owner** role. While Azure AI Users may train (fine-tune) models, only AI Owners may deploy them. You may also create a [custom role](https://learn.microsoft.com/en-us/azure/foundry-classic/concepts/rbac-foundry#create-custom-roles-for-projects) that combines required actions into a single role.
+- Fine-tuning requires the **Foundry Owner** role. While Foundry Users may train (fine-tune) models, only AI Owners may deploy them. You may also create a [custom role](https://learn.microsoft.com/en-us/azure/foundry-classic/concepts/rbac-foundry#create-custom-roles-for-projects) that combines required actions into a single role.
+
+<Info>
+
+</Info>
+
+> The Foundry RBAC roles were recently renamed. **Foundry User**, **Foundry Owner**, **Foundry Account Owner**, and **Foundry Project Manager** were previously named Azure AI User, Azure AI Owner, Azure AI Account Owner, and Azure AI Project Manager. You might still see the previous names in some places while the rename rolls out. The role IDs and core permissions are unchanged by the rename.
 - If you don't already have access to view quotas and deploy models in the Foundry portal, you need [more permissions](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/how-to/role-based-access-control).
 
 ### Supported models
@@ -180,7 +186,7 @@ The following hyperparameters are available:
 
 <Info>
 
-For automatic deployment, you need the **Azure AI Owner** role or any role with the `Microsoft.CognitiveServices/accounts/deployments/write` action.
+For automatic deployment, you need the **Foundry Owner** role or any role with the `Microsoft.CognitiveServices/accounts/deployments/write` action.
 
 </Info>
 
@@ -225,7 +231,7 @@ The pause operation is applicable only for jobs that are trained for at least on
 
 <Info>
 
-To deploy models, you need the **Azure AI Owner** role or any role with the `Microsoft.CognitiveServices/accounts/deployments/write` action.
+To deploy models, you need the **Foundry Owner** role or any role with the `Microsoft.CognitiveServices/accounts/deployments/write` action.
 
 </Info>
 
@@ -289,7 +295,13 @@ You can't delete a fine-tuned model if it has an existing deployment. You must [
     - You need an Azure OpenAI resource. For more information, see [Create a resource and deploy a model with Azure OpenAI](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/how-to/create-resource).
     - You need the following Python libraries: `os`, `json`, `requests`, `openai`.
     - You need the OpenAI Python library.
-    - Fine-tuning requires the **Azure AI Owner** role. While Azure AI Users may train (fine-tune) models, only AI Owners may deploy them. You may also create a [custom role](https://learn.microsoft.com/en-us/azure/foundry-classic/concepts/rbac-foundry#create-custom-roles-for-projects) that combines required actions into a single role.
+    - Fine-tuning requires the **Foundry Owner** role. While Foundry Users may train (fine-tune) models, only AI Owners may deploy them. You may also create a [custom role](https://learn.microsoft.com/en-us/azure/foundry-classic/concepts/rbac-foundry#create-custom-roles-for-projects) that combines required actions into a single role.
+
+<Info>
+
+</Info>
+
+    > The Foundry RBAC roles were recently renamed. **Foundry User**, **Foundry Owner**, **Foundry Account Owner**, and **Foundry Project Manager** were previously named Azure AI User, Azure AI Owner, Azure AI Account Owner, and Azure AI Project Manager. You might still see the previous names in some places while the rename rolls out. The role IDs and core permissions are unchanged by the rename.
     - If you don't already have access to view quotas and deploy models in the Foundry portal, you need [more permissions](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/how-to/role-based-access-control).  
 
     ### Supported models
@@ -386,6 +398,12 @@ Open-source models (Ministral-3B, Qwen-32B, Llama-3.3-70B-Instruct, gpt-oss-20b)
     - [From Azure Blob Storage or a web location (import)](https://learn.microsoft.com/rest/api/azureopenai/files/import)
 
     For large data files, we recommend that you import from Blob Storage. Large files can become unstable when you upload them through multipart forms because the requests are atomic and can't be retried or resumed. For more information about Blob Storage, see [What is Azure Blob Storage?](https://learn.microsoft.com/azure/storage/blobs/storage-blobs-overview).
+
+<Info>
+
+Importing from Azure Blob Storage requires the storage account to have **public network access enabled**. If your organization's policies don't allow public access on storage accounts, use the [local file upload](https://learn.microsoft.com/rest/api/azureopenai/files/upload) method instead.
+
+</Info>
 
     The following Python example uploads local training and validation files by using the Python SDK, and retrieves the returned file IDs:
 
@@ -749,7 +767,13 @@ for id in results:
     - You need an Azure subscription. [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
     - You need a Foundry project resource. To create one, sign in to the [Foundry portal](https://ai.azure.com).
     - You need the following Python libraries: `os`, `json`, `requests`, `azure-ai-projects`, `azure-identity`.
-    - Fine-tuning requires the **Azure AI Owner** role. While Azure AI Users may train (fine-tune) models, only AI Owners may deploy them. You may also create a [custom role](https://learn.microsoft.com/en-us/azure/foundry-classic/concepts/rbac-foundry#create-custom-roles-for-projects) that combines required actions into a single role.
+    - Fine-tuning requires the **Foundry Owner** role. While Foundry Users may train (fine-tune) models, only AI Owners may deploy them. You may also create a [custom role](https://learn.microsoft.com/en-us/azure/foundry-classic/concepts/rbac-foundry#create-custom-roles-for-projects) that combines required actions into a single role.
+
+<Info>
+
+</Info>
+
+    > The Foundry RBAC roles were recently renamed. **Foundry User**, **Foundry Owner**, **Foundry Account Owner**, and **Foundry Project Manager** were previously named Azure AI User, Azure AI Owner, Azure AI Account Owner, and Azure AI Project Manager. You might still see the previous names in some places while the rename rolls out. The role IDs and core permissions are unchanged by the rename.
     - If you don't already have access to view quotas and deploy models in the Foundry portal, you need [more permissions](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/how-to/role-based-access-control).
 
     ### Supported models
@@ -846,6 +870,12 @@ Open-source models (Ministral-3B, Qwen-32B, Llama-3.3-70B-Instruct, gpt-oss-20b)
     - [From Azure Blob Storage or a web location (import)](https://learn.microsoft.com/rest/api/azureopenai/files/import)
 
     For large data files, we recommend that you import from Blob Storage. Large files can become unstable when you upload them through multipart forms because the requests are atomic and can't be retried or resumed. For more information about Blob Storage, see [What is Azure Blob Storage?](https://learn.microsoft.com/azure/storage/blobs/storage-blobs-overview).
+
+<Info>
+
+Importing from Azure Blob Storage requires the storage account to have **public network access enabled**. If your organization's policies don't allow public access on storage accounts, use the [local file upload](https://learn.microsoft.com/rest/api/azureopenai/files/upload) method instead.
+
+</Info>
 
     The following Python example uploads local training and validation files by using the Python SDK, and retrieves the returned file IDs:
 
@@ -1103,7 +1133,13 @@ If you're unsure of the ID of your existing fine-tuned model, you can find this 
 - Read the [guide on when to use Azure OpenAI fine-tuning](/foundry-models/fine-tuning-considerations).
 - You need an Azure subscription. [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
 - You need an Azure OpenAI resource. For more information, see [Create a resource and deploy a model with Azure OpenAI](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/how-to/create-resource).
-- Fine-tuning requires the **Azure AI Owner** role. While Azure AI Users may train (fine-tune) models, only AI Owners may deploy them. You may also create a [custom role](https://learn.microsoft.com/en-us/azure/foundry-classic/concepts/rbac-foundry#create-custom-roles-for-projects) that combines required actions into a single role.
+- Fine-tuning requires the **Foundry Owner** role. While Foundry Users may train (fine-tune) models, only AI Owners may deploy them. You may also create a [custom role](https://learn.microsoft.com/en-us/azure/foundry-classic/concepts/rbac-foundry#create-custom-roles-for-projects) that combines required actions into a single role.
+
+<Info>
+
+</Info>
+
+> The Foundry RBAC roles were recently renamed. **Foundry User**, **Foundry Owner**, **Foundry Account Owner**, and **Foundry Project Manager** were previously named Azure AI User, Azure AI Owner, Azure AI Account Owner, and Azure AI Project Manager. You might still see the previous names in some places while the rename rolls out. The role IDs and core permissions are unchanged by the rename.
 - If you don't already have access to view quotas and deploy models in the Foundry portal, you need [more permissions](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/how-to/role-based-access-control).  
 
 ### Supported models
@@ -1200,6 +1236,12 @@ The next step is to either choose existing prepared training data or upload new 
 - [From Azure Blob Storage or a web location (import)](https://learn.microsoft.com/rest/api/azureopenai/files/import)
 
 For large data files, we recommend that you import from Blob Storage. Large files can become unstable when you upload them through multipart forms because the requests are atomic and can't be retried or resumed. For more information about Blob Storage, see [What is Azure Blob Storage?](https://learn.microsoft.com/azure/storage/blobs/storage-blobs-overview).
+
+<Info>
+
+Importing from Azure Blob Storage requires the storage account to have **public network access enabled**. If your organization's policies don't allow public access on storage accounts, use the [local file upload](https://learn.microsoft.com/rest/api/azureopenai/files/upload) method instead.
+
+</Info>
 
 ### Upload training data
 
@@ -1361,7 +1403,7 @@ Deletion of the model checkpoint in the source region doesn't cause the model to
 ### Configure permissions
 
 1. Create a [user-assigned managed identity](/entra/identity/managed-identities-azure-resources/how-manage-user-assigned-managed-identities).
-2. Give the Azure AI User role to your user-assigned managed identity on your destination resource or account.
+2. Give the Foundry User role to your user-assigned managed identity on your destination resource or account.
 3. [Assign the user-assigned managed identity](/entra/identity/managed-identities-azure-resources/how-to-assign-access-azure-resource) to your source resource account.
 
 ### Copy the model

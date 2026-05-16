@@ -14,7 +14,12 @@ If your organization requires customized Azure configurations like alternative n
 * An Azure account with an active subscription. If you don't have one, create a [free Azure account, which includes a free trial subscription](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
 
 * If you're creating the project for yourself: 
-    * Access to a role that allows you to create a Foundry resource, such as **Azure Account AI Owner** or **Azure AI Owner** on the subscription or resource group. For more information about permissions, see [Role-based access control for Microsoft Foundry](/security/rbac-foundry#permissions-for-each-built-in-role).
+    * Access to a role that allows you to create a Foundry resource, such as **Azure Account AI Owner** or **Foundry Owner** on the subscription or resource group. For more information about permissions, see [Role-based access control for Microsoft Foundry](/security/rbac-foundry#permissions-for-each-built-in-role).
+<Info>
+
+The Foundry RBAC roles were recently renamed. **Foundry User**, **Foundry Owner**, **Foundry Account Owner**, and **Foundry Project Manager** were previously named Azure AI User, Azure AI Owner, Azure AI Account Owner, and Azure AI Project Manager. You might still see the previous names in some places while the rename rolls out. The role IDs and core permissions are unchanged by the rename.
+
+</Info>
 * If you're creating the project for a team: 
     * Access to a role that allows you to complete role assignments, such as **Owner**. For more information about permissions, see [Role-based access control for Microsoft Foundry](/security/rbac-foundry#permissions-for-each-built-in-role).
     * A list of user email addresses or Microsoft Entra security group IDs for team members who need access.
@@ -596,7 +601,13 @@ While not all Foundry capabilities support organizing work in projects yet, your
 
 ## Grant access to team members
 
-If you created the project for a team, assign the **Azure AI User** role to team members so they can use the project and its resources. This role provides the minimum permissions needed to build and test AI applications. For other roles you might need to assign, see [Role-based access control for Microsoft Foundry](/security/rbac-foundry).
+If you created the project for a team, assign the **Foundry User** role to team members so they can use the project and its resources. This role provides the minimum permissions needed to build and test AI applications. For other roles you might need to assign, see [Role-based access control for Microsoft Foundry](/security/rbac-foundry).
+
+<Info>
+
+The Foundry RBAC roles were recently renamed. **Foundry User**, **Foundry Owner**, **Foundry Account Owner**, and **Foundry Project Manager** were previously named Azure AI User, Azure AI Owner, Azure AI Account Owner, and Azure AI Project Manager. You might still see the previous names in some places while the rename rolls out. The role IDs and core permissions are unchanged by the rename.
+
+</Info>
 
 <Info>
 
@@ -640,20 +651,36 @@ To add multiple users at once, use a Microsoft Entra security group instead of i
            --query id -o tsv)
        ```
 
-    1. Assign the **Azure AI User** role to a team member:
+    1. Assign the **Foundry User** role to a team member:
+
+<Info>
+
+</Info>
+
+    > The Foundry RBAC roles were recently renamed. **Foundry User**, **Foundry Owner**, **Foundry Account Owner**, and **Foundry Project Manager** were previously named Azure AI User, Azure AI Owner, Azure AI Account Owner, and Azure AI Project Manager. You might still see the previous names in some places while the rename rolls out. The role IDs and core permissions are unchanged by the rename.
 
        ```azurecli
        az role assignment create \
-           --role "Azure AI User" \
+           --role "53ca6127-db72-4b80-b1b0-d745d6d5456d" \
            --assignee "user@contoso.com" \
            --scope $PROJECT_ID
        ```
+
+<Note>
+
+Because the Foundry RBAC roles were recently renamed, use the role definition ID (GUID) instead of the role name in your code to avoid issues during the rename rollout:
+- **Foundry User**: `53ca6127-db72-4b80-b1b0-d745d6d5456d`
+- **Foundry Owner**: `c883944f-8b7b-4483-af10-35834be79c4a`
+- **Foundry Account Owner**: `e47c6f54-e4a2-4754-9501-8e0985b135e1`
+- **Foundry Project Manager**: `eadc314b-1a2d-4efa-be10-5d325db5065e`
+
+</Note>
 
        To add a security group instead of an individual user:
 
        ```azurecli
        az role assignment create \
-           --role "Azure AI User" \
+           --role "53ca6127-db72-4b80-b1b0-d745d6d5456d" \
            --assignee-object-id "<security-group-object-id>" \
            --assignee-principal-type Group \
            --scope $PROJECT_ID
@@ -664,7 +691,7 @@ To add multiple users at once, use a Microsoft Entra security group instead of i
        ```azurecli
        az role assignment list \
            --scope $PROJECT_ID \
-           --role "Azure AI User" \
+           --role "53ca6127-db72-4b80-b1b0-d745d6d5456d" \
            --output table
        ```
 

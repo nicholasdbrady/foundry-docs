@@ -37,7 +37,7 @@ Before you can use GPT real-time audio, you need:
 
 ## Supported models
 
-The GPT real-time models are available for global deployments in the [East US 2 and Sweden Central regions](/foundry-models/models-sold-directly-by-azure#global-standard-model-availability).
+The GPT real-time models are available for global deployments in the [East US 2 and Sweden Central regions](/foundry-models/models-sold-directly-by-azure-region-availability).
 - `gpt-4o-mini-realtime-preview` (`2024-12-17`)
 - `gpt-4o-realtime-preview` (`2024-12-17`)
 - `gpt-realtime` (`2025-08-28`)
@@ -118,13 +118,13 @@ sequenceDiagram
 
 Events can be sent and received in parallel and applications should generally handle them both concurrently and asynchronously.
 
-- A client-side caller establishes a connection to `/realtime`, which starts a new [`session`](/api-sdk/realtime-audio-reference#realtimerequestsession).
+- A client-side caller establishes a connection to `/realtime`, which starts a new [`session`](/api-sdk/realtime-audio-reference).
 - A `session` automatically creates a default `conversation`. Multiple concurrent conversations aren't supported.
 - The `conversation` accumulates input signals until a `response` is started, either via a direct event by the caller or automatically by voice activity detection (VAD).
 - Each `response` consists of one or more `items`, which can encapsulate messages, function calls, and other information.
 - Each message `item` has `content_part`, allowing multiple modalities (text and audio) to be represented across a single item.
 - The `session` manages configuration of caller input handling (for example, user audio) and common output generation handling.
-- Each caller-initiated [`response.create`](/api-sdk/realtime-audio-reference#realtimeclienteventresponsecreate) can override some of the output [`response`](/api-sdk/realtime-audio-reference#realtimeresponse) behavior, if desired.
+- Each caller-initiated [`response.create`](/api-sdk/realtime-audio-reference) can override some of the output [`response`](/api-sdk/realtime-audio-reference) behavior, if desired.
 - Server-created `item` and the `content_part` in messages can be populated asynchronously and in parallel. For example, receiving audio, text, and function information concurrently in a round robin fashion.
 
 ## Try the quickstart

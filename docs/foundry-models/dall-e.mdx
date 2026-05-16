@@ -1738,8 +1738,7 @@ You need to retrieve the following information to authenticate your application 
     # Azure OpenAI metadata variables
     $openai = @{
         api_base    = $Env:AZURE_OPENAI_ENDPOINT 
-        api_version = '2025-04-01-preview'
-        deployment  = 'gpt-image-1' # the name of your GPT-image-1 series deployment
+        deployment  = 'gpt-image-1' # set to the name of your model deployment
     }
     
     # Use the recommended keyless authentication via bearer token.
@@ -1753,6 +1752,7 @@ You need to retrieve the following information to authenticate your application 
     
     # Adjust these values to fine-tune completions
     $body = [ordered]@{
+        model  = $openai.deployment  # required: the name of your model deployment
         prompt = $prompt
         size   = '1024x1024'
         n      = 1
@@ -1763,7 +1763,7 @@ You need to retrieve the following information to authenticate your application 
     } | ConvertTo-Json
     
     # Call the API to generate the image and retrieve the response
-    $url = "$($openai.api_base)/openai/deployments/$($openai.deployment)/images/generations?api-version=$($openai.api_version)"
+    $url = "$($openai.api_base)/openai/v1/images/generations?api-version=preview"
     
     $response = Invoke-RestMethod -Uri $url -Headers $headers -Body $body -Method Post -ContentType 'application/json'
     
@@ -1872,23 +1872,19 @@ Image generation typically takes 10-30 seconds depending on the model, size, and
 - An Azure OpenAI resource created in a supported region. See [Region availability](https://learn.microsoft.com/azure/ai-foundry/openai/concepts/models#model-summary-table-and-region-availability).
 - Deploy a `gpt-image-1`-series or `gpt-image-2` model with your Azure OpenAI resource. For more information on deployments, see [Create a resource and deploy a model with Azure OpenAI](https://learn.microsoft.com/azure/ai-foundry/openai/how-to/create-resource).
     - GPT-image-1 series models are available in limited access: [Apply for GPT-image-1 access](https://aka.ms/oai/gptimage1access); [Apply for GPT-image-1.5 access](https://aka.ms/oai/gptimage1.5access).
-    - GPT-image-2 is available in public preview.
+    - GPT-image-2 is generally available (GA).
 - Python 3.8 or later.
     - Install the required packages: `pip install openai azure-identity`
 
 Send a POST request to:
 
 ```
-https://<your_resource_name>.openai.azure.com/openai/deployments/<your_deployment_name>/images/generations?api-version=<api_version>
+https://<your_resource_name>.openai.azure.com/openai/v1/images/generations?api-version=preview
 ```
 
 **URL**:
 
-Replace the following values:
-
-- `<your_resource_name>` is the name of your Azure OpenAI resource.
-- `<your_deployment_name>` is the name of your model deployment.
-- `<api_version>` is the version of the API you want to use. For example, `2025-04-01-preview`.
+Replace `<your_resource_name>` with the name of your Azure OpenAI resource.
 
 **Required headers**:
 
@@ -1898,6 +1894,12 @@ Replace the following values:
 **Body**:
 
 The following is a sample request body. You specify a number of options, defined in later sections.
+
+<Note>
+
+Set the `model` parameter to the name of your model deployment (for example, `gpt-image-1.5`).
+
+</Note>
 
 ```json
 {
@@ -2026,7 +2028,7 @@ Set the *background* parameter to `transparent` and *output_format* to `PNG` on 
 
 ## Call the image edit API
 
-The Image Edit API enables you to modify existing images based on text prompts you provide. The API call is similar to the image generation API call, but you also need to provide an input image.
+The Image Edit API enables you to modify existing images based on text prompts you provide. The image editing endpoint is generally available and supported for production use. The API call is similar to the image generation API call, but you also need to provide an input image.
 
 <Info>
 
@@ -2045,7 +2047,7 @@ https://<your_resource_name>.openai.azure.com/openai/deployments/<your_deploymen
 Replace the following values:
 - `<your_resource_name>` is the name of your Azure OpenAI resource.
 - `<your_deployment_name>` is the name of your GPT-image series model deployment.
-- `<api_version>` is the version of the API you want to use. For example, `2025-04-01-preview`.
+- `<api_version>` is the version of the API you want to use. For example, `2025-04-01`.
 
 **Required headers**:
 - `Content-Type`: `multipart/form-data`

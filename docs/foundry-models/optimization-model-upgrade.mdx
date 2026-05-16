@@ -21,7 +21,13 @@ Ask AI model upgrade recommendations are available for models deployed through F
 - A [Foundry project](/setup/create-projects) with one or more deployed models or [agents](/agent-service/overview).
 - Access to **Ask AI** (the chat assistant) in the Foundry portal.
 - At least one [evaluation dataset](/observability/cloud-evaluation) in CSV or JSONL format. The dataset should include columns for the input query and the expected (ground truth) response for your scenario. For dataset preparation guidance, see [Evaluate your generative AI app](/observability/evaluate-generative-ai-app).
-- **Contributor** role (or higher) on the Foundry resource to deploy models, and **Azure AI User** role (or higher) on the Foundry project to build and run evaluations. For more information, see [Role-based access control for Microsoft Foundry](/security/rbac-foundry).
+- **Contributor** role (or higher) on the Foundry resource to deploy models, and **Foundry User** role (or higher) on the Foundry project to build and run evaluations. For more information, see [Role-based access control for Microsoft Foundry](/security/rbac-foundry).
+
+<Info>
+
+</Info>
+
+> The Foundry RBAC roles were recently renamed. **Foundry User**, **Foundry Owner**, **Foundry Account Owner**, and **Foundry Project Manager** were previously named Azure AI User, Azure AI Owner, Azure AI Account Owner, and Azure AI Project Manager. You might still see the previous names in some places while the rename rolls out. The role IDs and core permissions are unchanged by the rename.
 
 ## Open a chat session in Ask AI
 
@@ -107,7 +113,7 @@ Rolling back restores the agent configuration only. Evaluation runs and deployme
 | Issue | Resolution |
 |-------|------------|
 | Ask AI doesn't suggest any model upgrades | Verify that your deployed model has a newer version available in the [model catalog](/foundry-models/create-model-deployments). Ask AI only recommends upgrades when newer versions exist. |
-| Evaluation run fails to start | Confirm that your evaluation dataset is in CSV or JSONL format, and that you have the **Azure AI User** role (or higher) on the project. |
+| Evaluation run fails to start | Confirm that your evaluation dataset is in CSV or JSONL format, and that you have the **Foundry User** role (or higher) on the project. |
 | New model performs worse than the current model | Use [compare](/observability/evaluate-results#compare-the-evaluation-results) to review per-metric scores. Consider testing with a different model or adjusting agent instructions before switching. |
 | Agent update doesn't take effect | Check the agent version history in **Agent Playground** to confirm the new version was created. To revert, see [Roll back to a previous model](#roll-back-to-a-previous-model). |
 
