@@ -2,14 +2,10 @@
 title: "Microsoft Foundry Quickstart"
 description: "Get started with Microsoft Foundry SDK building AI applications."
 ---
+
 In this quickstart you'll get started using models and agents in Foundry.
 
-<Warning>
-**Use the 2.x preview SDK.** This quickstart requires `azure-ai-projects>=2.0.0b4`, which must be installed with the `--pre` flag. Running `pip install azure-ai-projects` without `--pre` installs the stable 1.x package, which targets the legacy Foundry classic experience. Code written for 2.x is **not compatible** with 1.x. See the install step below and [SDK overview](/api-sdk/sdk-overview) for details.
-</Warning>
-
 **You will:**
-
 - Generate a response from a model
 - Create an agent with a defined prompt
 - Have a multi-turn conversation with the agent
@@ -20,48 +16,76 @@ In this quickstart you'll get started using models and agents in Foundry.
 
 ## Set environment variables and get the code
 
-Store [your project endpoint](/get-started/quickstart-create-foundry-resources#get-your-project-connection-details) as an environment variable. Also set these values for use in your scripts.
-
-```plaintext
-PROJECT_ENDPOINT=<endpoint copied from welcome screen>
-AGENT_NAME="MyAgent"
-MODEL_DEPLOYMENT_NAME="gpt-4.1-mini"
-```
-
 <Tabs>
   <Tab title="Python">
 
+    Store [your project endpoint](/get-started/quickstart-create-foundry-resources#get-your-project-connection-details) as an environment variable. Also set these values for use in your scripts.
+
+    ```
+    PROJECT_ENDPOINT=<endpoint copied from welcome screen>
+    AGENT_NAME="MyAgent"
+    ```
+
     Follow along below or get the code:
-    <Card title="Get the code" icon="arrow-right" href="https://github.com/azure-ai-foundry/foundry-samples/tree/main/samples/python/quickstart" />
+    <Card title="Get the code" icon="arrow-right" href="https://github.com/microsoft-foundry/foundry-samples/tree/main/samples/python/quickstart" />
 
     Sign in using the CLI `az login` command to authenticate before running your Python scripts.
 
   </Tab>
   <Tab title="C#">
 
+    Store [your project endpoint](/get-started/quickstart-create-foundry-resources#get-your-project-connection-details) as an environment variable. Also set these values for use in your scripts.
+
+    ```
+    ProjectEndpoint = <endpoint copied from welcome screen>
+    AgentName = "MyAgent"
+    ```
+
     Follow along below or get the code:
-    <Card title="Get the code" icon="arrow-right" href="https://github.com/azure-ai-foundry/foundry-samples/tree/main/samples/csharp/quickstart" />
+    <Card title="Get the code" icon="arrow-right" href="https://github.com/microsoft-foundry/foundry-samples/tree/main/samples/csharp/quickstart" />
     Sign in using the CLI `az login` command to authenticate before running your C# scripts.
 
   </Tab>
   <Tab title="TypeScript">
 
+    Store [your project endpoint](/get-started/quickstart-create-foundry-resources#get-your-project-connection-details) as an environment variable. Also set these values for use in your scripts.
+
+    ```
+    PROJECT_ENDPOINT=<endpoint copied from welcome screen>
+    AGENT_NAME="MyAgent"
+    ```
     Follow along below or get the code:
-    <Card title="Get the code" icon="arrow-right" href="https://github.com/azure-ai-foundry/foundry-samples/tree/main/samples/typescript/quickstart/src" />
+    <Card title="Get the code" icon="arrow-right" href="https://github.com/microsoft-foundry/foundry-samples/tree/main/samples/typescript/quickstart/" />
     Sign in using the CLI `az login` command to authenticate before running your TypeScript scripts.
+
+    Store [your project endpoint](/get-started/quickstart-create-foundry-resources#get-your-project-connection-details) as an environment variable. Also set these values for use in your scripts.
+
+    ```
+    PROJECT_ENDPOINT=<endpoint copied from welcome screen>
+    AGENT_NAME="MyAgent"
+    ```
 
   </Tab>
   <Tab title="Java">
 
+    Store [your project endpoint](/get-started/quickstart-create-foundry-resources#get-your-project-connection-details) as an environment variable. Also set these values for use in your scripts.
+
+    ```
+    ProjectEndpoint = <endpoint copied from welcome screen>
+    AgentName = "MyAgent"
+    ```
+
     Follow along below or get the code:
-    <Card title="Get the code" icon="arrow-right" href="https://github.com/azure-ai-foundry/foundry-samples/tree/main/samples/java/quickstart/src/main/java/com/microsoft/foundry/samples/" />
+    <Card title="Get the code" icon="arrow-right" href="https://github.com/microsoft-foundry/foundry-samples/tree/main/samples/java/quickstart/" />
     Sign in using the CLI `az login` command to authenticate before running your Java scripts.
 
   </Tab>
   <Tab title="REST API">
 
+    Store [your project endpoint](/get-started/quickstart-create-foundry-resources#get-your-project-connection-details) as an environment variable. 
+
     Follow along below or get the code:
-    <Card title="Get the code" icon="arrow-right" href="https://github.com/azure-ai-foundry/foundry-samples/tree/main/samples/REST/quickstart" />
+    <Card title="Get the code" icon="arrow-right" href="https://github.com/microsoft-foundry/foundry-samples/tree/main/samples/REST/quickstart" />
     1. Sign in using the CLI `az login` command to authenticate before running the next command.
     1. Get a temporary access token. It will expire in 60-90 minutes, you'll need to refresh after that.
 
@@ -81,20 +105,15 @@ MODEL_DEPLOYMENT_NAME="gpt-4.1-mini"
 
 ## Install and authenticate
 
-<Tip>
-**Starting a new project?** Install the 2.x preview package — it's the current active API for new Foundry projects. The 2.x preview package targets the new Foundry portal at [ai.azure.com](https://ai.azure.com). The 1.x GA package targets Foundry classic (legacy). Code using 2.x is not compatible with 1.x. See [SDK overview](/api-sdk/sdk-overview) for details.
-</Tip>
-
-Make sure you install the correct preview/prerelease version of the packages as shown here.
+Make sure you install the correct version of the packages as shown here.
 
 <Tabs>
   <Tab title="Python">
 
-    1. Install these packages, including the preview version of `azure-ai-projects`. This version uses the **Foundry projects (new) API** (preview).
+    1. Install the current version of `azure-ai-projects`. This version uses the **Foundry projects (new) API** .
 
         ```
-        pip install --pre "azure-ai-projects>=2.0.0b4"
-        pip install python-dotenv
+        pip install azure-ai-projects>=2.0.0
         ```
 
     1. Sign in using the CLI `az login` command to authenticate before running your Python scripts.
@@ -104,11 +123,12 @@ Make sure you install the correct preview/prerelease version of the packages as 
 
     1. Install packages:
 
-        Add NuGet packages using the .NET CLI in the integrated terminal: These packages use the **Foundry projects (new) API** (preview).
+        Add NuGet packages using the .NET CLI in the integrated terminal: These packages use the **Foundry projects (new) API**.
 
         ```bash
-        dotnet add package Azure.AI.Projects --prerelease
-        dotnet add package Azure.AI.Projects.OpenAI --prerelease
+        dotnet add package Azure.AI.Projects
+        dotnet add package Azure.AI.Projects.Agents
+        dotnet add package Azure.AI.Extensions.OpenAI
         dotnet add package Azure.Identity
         ```
 
@@ -117,10 +137,10 @@ Make sure you install the correct preview/prerelease version of the packages as 
   </Tab>
   <Tab title="TypeScript">
 
-    1. Install these packages, including the preview version of `@azure/ai-projects`. This version uses the **Foundry projects (new) API** (preview).
+    1. Install the current version of `@azure/ai-projects`. This version uses the **Foundry projects (new) API**.:
 
         ```bash
-        npm install @azure/ai-projects@beta @azure/identity dotenv
+        npm install @azure/ai-projects
         ```
 
     1. Sign in using the CLI `az login` command to authenticate before running your TypeScript scripts.
@@ -128,26 +148,13 @@ Make sure you install the correct preview/prerelease version of the packages as 
   </Tab>
   <Tab title="Java">
 
-    1. Add these Maven dependencies to your `pom.xml`. These packages use the **Foundry projects (new) API** (preview).
-
-        ```xml
-        <dependency>
-            <groupId>com.azure</groupId>
-            <artifactId>azure-ai-agents</artifactId>
-            <version>1.0.0-beta.3</version>
-        </dependency>
-        <dependency>
-            <groupId>com.azure</groupId>
-            <artifactId>azure-identity</artifactId>
-        </dependency>
-        ```
-
-        Or with Gradle:
-
-        ```groovy
-        implementation 'com.azure:azure-ai-agents:1.0.0-beta.3'
-        implementation 'com.azure:azure-identity'
-        ```
+    ```xml
+    <dependency>
+        <groupId>com.azure</groupId>
+        <artifactId>azure-ai-agents</artifactId>
+        <version>2.0.0</version>
+    </dependency>
+    ```
 
     1. Sign in using the CLI `az login` command to authenticate before running your Java scripts.
 
@@ -172,7 +179,9 @@ Make sure you install the correct preview/prerelease version of the packages as 
 </Tabs>
 
 <Tip>
-Code uses **Azure AI Projects 2.x** and is incompatible with Azure AI Projects 1.x. [See the Foundry (classic) documentation](https://learn.microsoft.com/en-us/azure/foundry-classic/index.yml)  for the Azure AI Projects 1.x version.
+
+Code uses **Azure AI Projects 2.x** and is incompatible with Azure AI Projects 1.x. [See the Foundry (classic) documentation](../../foundry-classic/index.yml)  for the Azure AI Projects 1.x version.
+
 </Tip>
 
 ## Chat with a model
@@ -207,8 +216,7 @@ Interacting with a model is the basic building block of AI applications.  Send a
     print(f"Response output: {response.output_text}")
     ```
 
-  </Tab>
-  <Tab title="C#">
+     # [C#](#tab/csharp)
 
     ```csharp
     using Azure.AI.Projects;
@@ -244,7 +252,7 @@ Interacting with a model is the basic building block of AI applications.  Send a
 
     async function main(): Promise<void> {
         const project = new AIProjectClient(projectEndpoint, new DefaultAzureCredential());
-        const openAIClient = await project.getOpenAIClient();
+        const openAIClient = project.getOpenAIClient();
         const response = await openAIClient.responses.create({
             model: deploymentName,
             input: "What is the size of France in square miles?",
@@ -261,33 +269,66 @@ Interacting with a model is the basic building block of AI applications.  Send a
     ```java
     package com.azure.ai.agents;
 
-    import com.azure.core.util.Configuration;
+    import com.azure.ai.agents.models.AgentReference;
+    import com.azure.ai.agents.models.AgentVersionDetails;
+    import com.azure.ai.agents.models.PromptAgentDefinition;
+    import com.azure.identity.AuthenticationUtil;
     import com.azure.identity.DefaultAzureCredentialBuilder;
+    import com.openai.azure.AzureOpenAIServiceVersion;
+    import com.openai.azure.AzureUrlPathMode;
+    import com.openai.client.OpenAIClient;
+    import com.openai.client.okhttp.OpenAIOkHttpClient;
+    import com.openai.credential.BearerTokenCredential;
+    import com.openai.models.conversations.Conversation;
+    import com.openai.models.conversations.items.ItemCreateParams;
+    import com.openai.models.responses.EasyInputMessage;
     import com.openai.models.responses.Response;
     import com.openai.models.responses.ResponseCreateParams;
 
-    public class CreateResponse {
+    public class ChatWithAgent {
         public static void main(String[] args) {
-            String endpoint = Configuration.getGlobalConfiguration().get("PROJECT_ENDPOINT");
-            String model = Configuration.getGlobalConfiguration().get("MODEL_DEPLOYMENT_NAME");
-            // Code sample for creating a response
-            ResponsesClient responsesClient = new AgentsClientBuilder()
+            String endpoint = Configuration.getGlobalConfiguration().get("AZURE_AGENTS_ENDPOINT");
+            String agentName = "MyAgent";
+            
+            AgentsClient agentsClient = new AgentsClientBuilder()
                     .credential(new DefaultAzureCredentialBuilder().build())
                     .endpoint(endpoint)
-                    .serviceVersion(AgentsServiceVersion.V2025_11_15_PREVIEW)
-                    .buildResponsesClient();
+                    .buildAgentsClient();
+
+            AgentDetails agent = agentsClient.getAgent(agentName);
+
+            Conversation conversation = conversationsClient.getConversationService().create();
+            conversationsClient.getConversationService().items().create(
+                ItemCreateParams.builder()
+                    .conversationId(conversation.id())
+                    .addItem(EasyInputMessage.builder()
+                        .role(EasyInputMessage.Role.SYSTEM)
+                        .content("You are a helpful assistant that speaks like a pirate.")
+                        .build()
+                    ).addItem(EasyInputMessage.builder()
+                        .role(EasyInputMessage.Role.USER)
+                        .content("Hello, agent!")
+                        .build()
+                ).build()
+            );
+
+            AgentReference agentReference = new AgentReference(agent.getName()).setVersion(agent.getVersion());
+            Response response = responsesClient.createWithAgentConversation(agentReference, conversation.id());
+
+            OpenAIClient client = OpenAIOkHttpClient.builder()
+                .baseUrl(endpoint.endsWith("/") ? endpoint + "openai" : endpoint + "/openai")
+                .azureUrlPathMode(AzureUrlPathMode.UNIFIED)
+                .credential(BearerTokenCredential.create(AuthenticationUtil.getBearerTokenSupplier(
+                        new DefaultAzureCredentialBuilder().build(), "https://ai.azure.com/.default")))
+                .azureServiceVersion(AzureOpenAIServiceVersion.fromString("2025-11-15-preview"))
+                .build();
 
             ResponseCreateParams responseRequest = new ResponseCreateParams.Builder()
-                    .input("Hello, how can you help me?")
-                    .model(model)
-                    .build();
+                .input("Hello, how can you help me?")
+                .model(model)
+                .build();
 
-            Response response = responsesClient.getResponseService().create(responseRequest);
-
-            System.out.println("Response ID: " + response.id());
-            System.out.println("Response Model: " + response.model());
-            System.out.println("Response Created At: " + response.createdAt());
-            System.out.println("Response Output: " + response.output());
+            Response result = client.responses().create(responseRequest);
         }
     }
     ```
@@ -320,7 +361,9 @@ Interacting with a model is the basic building block of AI applications.  Send a
 After running the code, you see a model-generated response in the console (for example, a short poem or answer to your prompt). This confirms your project endpoint, authentication, and model deployment are working correctly.
 
 <Tip>
-Code uses **Azure AI Projects 2.x** and is incompatible with Azure AI Projects 1.x. [See the Foundry (classic) documentation](https://learn.microsoft.com/en-us/azure/foundry-classic/index.yml)  for the Azure AI Projects 1.x version.
+
+Code uses **Azure AI Projects 2.x** and is incompatible with Azure AI Projects 1.x. [See the Foundry (classic) documentation](../../foundry-classic/index.yml)  for the Azure AI Projects 1.x version.
+
 </Tip>
 
 ## Create an agent
@@ -468,7 +511,7 @@ An agent defines core behavior. Once created, it ensures consistent responses in
 
     Now create an agent and interact with it.
     1. Still in the **Build** section, select **Agents** in the left pane.
-    1. Select **Create agent** and give it a name.
+    1. Select **Create agent** and give it a name, such as "MyAgent".
 
   </Tab>
 </Tabs>
@@ -476,7 +519,9 @@ An agent defines core behavior. Once created, it ensures consistent responses in
 The output confirms the agent was created. For SDK tabs, you see the agent name and ID printed to the console.
 
 <Tip>
-Code uses **Azure AI Projects 2.x** and is incompatible with Azure AI Projects 1.x. [See the Foundry (classic) documentation](https://learn.microsoft.com/en-us/azure/foundry-classic/index.yml)  for the Azure AI Projects 1.x version.
+
+Code uses **Azure AI Projects 2.x** and is incompatible with Azure AI Projects 1.x. [See the Foundry (classic) documentation](../../foundry-classic/index.yml)  for the Azure AI Projects 1.x version.
+
 </Tip>
 
 ## Chat with an agent
@@ -509,7 +554,7 @@ Use the previously created agent named "MyAgent" to interact by asking a questio
     # Chat with the agent to answer questions
     response = openai_client.responses.create(
         conversation=conversation.id, #Optional conversation context for multi-turn
-        extra_body={"agent": {"name": agent_name, "type": "agent_reference"}},
+        extra_body={"agent_reference": {"name": agent_name, "type": "agent_reference"}},
         input="What is the size of France in square miles?",
     )
     print(f"Response output: {response.output_text}")
@@ -517,7 +562,7 @@ Use the previously created agent named "MyAgent" to interact by asking a questio
     # Optional Step: Ask a follow-up question in the same conversation
     response = openai_client.responses.create(
         conversation=conversation.id,
-        extra_body={"agent": {"name": agent_name, "type": "agent_reference"}},
+        extra_body={"agent_reference": {"name": agent_name, "type": "agent_reference"}},
         input="And what is the capital city?",
     )
     print(f"Response output: {response.output_text}")
@@ -572,7 +617,7 @@ Use the previously created agent named "MyAgent" to interact by asking a questio
 
     async function main(): Promise<void> {
         const project = new AIProjectClient(projectEndpoint, new DefaultAzureCredential());
-        const openAIClient = await project.getOpenAIClient();
+        const openAIClient = project.getOpenAIClient();
         
         // Create agent
         console.log("Creating agent...");
@@ -735,7 +780,9 @@ Use the previously created agent named "MyAgent" to interact by asking a questio
 You see the agent's responses to both prompts. The follow-up response demonstrates that the agent maintains conversation history across turns.
 
 <Tip>
-Code uses **Azure AI Projects 2.x** and is incompatible with Azure AI Projects 1.x. [See the Foundry (classic) documentation](https://learn.microsoft.com/en-us/azure/foundry-classic/index.yml)  for the Azure AI Projects 1.x version.
+
+Code uses **Azure AI Projects 2.x** and is incompatible with Azure AI Projects 1.x. [See the Foundry (classic) documentation](../../foundry-classic/index.yml)  for the Azure AI Projects 1.x version.
+
 </Tip>
 
 ## Clean up resources

@@ -2,9 +2,11 @@
 title: "Foundry Agent Service disaster recovery"
 description: "Plan disaster recovery for Foundry Agent Service: limitations, readiness checklist, and recovery paths for platform outages and data loss."
 ---
+
 Use this article as the starting point for disaster recovery (DR) planning for Foundry Agent Service in the [Standard deployment mode](https://learn.microsoft.com/azure/ai-foundry/agents/concepts/standard-agent-setup). It explains what you can and can't recover, what to prepare before an incident, and where to find recovery procedures for platform outages and resource or data loss.
 
 <Info>
+
 This is the overview article in a three-part series.
 
 - You're here: Understand limitations, prevention controls, and required baseline configuration.
@@ -12,6 +14,7 @@ This is the overview article in a three-part series.
 - For human-caused or automation-caused deletions and localized data loss, see [Agent Service resource and data loss recovery strategies](/security/agent-service-operator-disaster-recovery).
 
 To reduce the likelihood of recovery events, see [High availability and resiliency for Foundry projects and agent services](/security/high-availability-resiliency).
+
 </Info>
 
 ## Scope and definitions
@@ -20,10 +23,12 @@ This series focuses on DR for Foundry projects that use Agent Service in Standar
 
 - **Blast radius boundary**: In most workloads, a single Foundry project is the recovery unit.
 - **State**: Agent definitions, conversation threads (including user-uploaded files), and any file-based knowledge stored in the capability host dependencies (Azure Cosmos DB, Azure AI Search, and Azure Storage).
-- **Data plane APIs**: APIs used to create, update, and invoke agents and threads. For details, see [AI Agents REST API operation groups](https://learn.microsoft.com/rest/api/aifoundry/aiagents/operation-groups).
+- **Data plane APIs**: APIs used to create, update, and invoke agents and threads. For details, see [Azure AI Foundry REST API reference](https://learn.microsoft.com/rest/api/aifoundry/).
 
 <Note>
+
 This series doesn't cover the Basic deployment mode. Basic mode uses Microsoft-managed infrastructure with different DR characteristics. For details, see [Basic vs. Standard agent setup](https://learn.microsoft.com/azure/ai-foundry/agents/concepts/standard-agent-setup).
+
 </Note>
 
 For general recovery design concepts (including setting recovery objectives such as RPO and RTO), see [Design for recovery](https://learn.microsoft.com/azure/well-architected/reliability/principles#design-for-recovery).
@@ -35,7 +40,7 @@ Complete these actions before you rely on Agent Service in production:
 1. Choose a recovery strategy per project (for example, warm standby and reconstruction) and document your recovery objectives.
 1. Configure required baseline protections and recovery features on your dependencies. For guidance, see [High availability and resiliency for Foundry projects and agent services](/security/high-availability-resiliency).
 1. Treat agent definitions as code. Store agent definitions, knowledge assets, and tool bindings in source control so you can redeploy them quickly.
-1. Automate redeployment of agents and any client updates needed for new agent IDs. Use the [AI Agents REST API](https://learn.microsoft.com/rest/api/aifoundry/aiagents/operation-groups) or the [Azure AI Projects SDK](https://learn.microsoft.com/python/api/overview/azure/ai-projects-readme) to script agent creation. Store and version infrastructure as code (IaC) templates for your capability host dependencies.
+1. Automate redeployment of agents and any client updates needed for new agent IDs. Use the [Azure AI Foundry REST API reference](https://learn.microsoft.com/rest/api/aifoundry/) or the [Azure AI Projects SDK](https://learn.microsoft.com/python/api/overview/azure/ai-projects-readme) to script agent creation. Store and version infrastructure as code (IaC) templates for your capability host dependencies.
 1. Practice recovery. Run periodic drills so operators can execute the recovery steps under time pressure.
 1. Set up monitoring and alerts. Configure [Azure Monitor](https://learn.microsoft.com/azure/azure-monitor/overview) alerts for your capability host dependencies (Azure Cosmos DB, Azure AI Search, and Azure Storage) to detect availability degradation early.
 
@@ -57,9 +62,11 @@ Agent Service is stateful. Recovery focuses on preserving and restoring state st
 The Agent Service has important limitations that shape your workload's disaster recovery (DR) design. Consider these factors when you set realistic recovery point objectives (RPOs) and recovery time objectives (RTOs).
 
 <Info>
+
 Agent Service doesn't provide built-in disaster recovery capabilities. It doesn't replicate state, create backups, or support point-in-time restore. One project can't use the data of another project. The service doesn't have any supported method for active-active, multi-region replication. Microsoft Support can't recover orphaned data, migrate data between projects, or combine state from multiple sources.
 
 The recommendations in this guide are compensating controls. Recovery might not be possible. An incident can permanently remove an agent and its data, such as threads and knowledge.
+
 </Info>
 
 ## Unrecoverable scenarios and expectations
@@ -83,22 +90,22 @@ Plan for scenarios where recovery isn't possible or where recovery restores only
 
 ## Disaster prevention
 
-Preventing disasters is easier and less costly than recovering from them. Stop disasters from happening in the first place by applying proactive measures. For more information, see [High availability and resiliency for Foundry projects and agent services](/security/high-availability-resiliency#disaster-prevention).
+Preventing disasters is easier and less costly than recovering from them. Stop disasters from happening in the first place by applying proactive measures. For more information, see [High availability and resiliency for Foundry projects and agent services](/security/high-availability-resiliency#prevent-disasters-and-data-loss).
 
 ## Resource configuration to support recovery
 
-Configure your resources to support recovery before an incident happens. Enable specific features and settings that facilitate recovery processes. For more information, see [High availability and resiliency: Resource configuration to support recovery](/security/high-availability-resiliency#resource-configuration-to-support-recovery).
+Configure your resources to support recovery before an incident happens. Enable specific features and settings that facilitate recovery processes. For more information, see [High availability and resiliency: Resource configuration to support recovery](/security/high-availability-resiliency#configure-resources-to-support-recovery).
 
 ## Recover from Azure outages
 
 In the standard deployment model, the Agent Service is a jointly managed service. Microsoft operates and maintains the control plane and capability host. You operate the agent stateful resources; Azure Cosmos DB, Azure AI Search, and Azure Storage account. All of these services depend on your deployment region's availability. If Azure is experiencing a prolonged region-wide outage, your approach to recovery focuses on getting another instance running in a region that isn't experiencing an outage.
 
-<Card title="Agent Service platform outage recovery strategies" icon="arrow-right" href="agent-service-platform-disaster-recovery.md" />
+<Card title="Agent Service platform outage recovery strategies" icon="arrow-right" href="../how-to/agent-service-platform-disaster-recovery.md" />
 ## Recover from resource and data loss incidents
 
 The Agent Service has a significant amount of state and interconnected resources that you're responsible for in your workload. A user or automation process can delete or corrupt that state. The disruption might be accidental or malicious. Your recovery approach varies based on which resource or data element was lost.
 
-<Card title="Agent Service resource and data loss recovery strategies" icon="arrow-right" href="agent-service-operator-disaster-recovery.md" />
+<Card title="Agent Service resource and data loss recovery strategies" icon="arrow-right" href="../how-to/agent-service-operator-disaster-recovery.md" />
 ## Business continuity
 
 Disaster recovery is only one part of your business continuity strategy. For agent-based flows, plan how you continue to deliver value when agents are inoperable or data is lost. Set realistic expectations with users and business partners. Fall back to planned contingencies as needed.

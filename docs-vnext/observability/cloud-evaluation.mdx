@@ -2,19 +2,25 @@
 title: "Cloud Evaluation with the Microsoft Foundry SDK"
 description: "Run scalable evaluations for generative AI applications using the Microsoft Foundry SDK. Learn how to integrate evaluations into your development pipeline."
 ---
+
 <Info>
+
 Items marked (preview) in this article are currently in public preview. This preview is provided without a service-level agreement, and we don't recommend it for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
+
 </Info>
 
-In this article, you learn how to run evaluations in the cloud (preview) for predeployment testing on a test dataset. 
+In this article, you learn how to run evaluations in the cloud (preview) for predeployment testing on a test dataset.
 
-Use cloud evaluations for most scenarios—especially when testing at scale, integrating evaluations into continuous integration and continuous delivery (CI/CD) pipelines, or performing predeployment testing. Running evaluations in the cloud eliminates the need to manage local compute infrastructure and supports large-scale, automated testing workflows. You can also [schedule evaluations](/agents/development/how-to-monitor-agents-dashboard) to run on a recurring basis, or set up [continuous evaluation](/agents/development/how-to-monitor-agents-dashboard#set-up-continuous-evaluation-python-sdk) to automatically evaluate sampled agent responses in production.
+Use cloud evaluations for most scenarios—especially when testing at scale, integrating evaluations into continuous integration and continuous delivery (CI/CD) pipelines, or performing predeployment testing. Running evaluations in the cloud eliminates the need to manage local compute infrastructure and supports large-scale, automated testing workflows. You can also [schedule evaluations](/agent-service/how-to-monitor-agents-dashboard) to run on a recurring basis, or set up [continuous evaluation](/agent-service/how-to-monitor-agents-dashboard#) to automatically evaluate sampled agent responses in production.
 
 Cloud evaluation results are stored in your Foundry project. You can review results in the portal, retrieve them through the SDK, or route them to Application Insights if connected. Cloud evaluation supports all Microsoft-curated [built-in evaluators](/observability/observability#what-are-evaluators) and your own [custom evaluators](/observability/custom-evaluators). Evaluators are managed in the [evaluator catalog](/observability/evaluate-generative-ai-app) with the same project-scope, role-based access control.
 
 <Tip>
+
 For complete runnable examples, see the [Python SDK evaluation samples](https://github.com/Azure/azure-sdk-for-python/blob/main/sdk/ai/azure-ai-projects/samples/evaluations/README.md) on GitHub.
+
 </Tip>
+
 ## How cloud evaluation works
 
 To run a cloud evaluation, you create an evaluation definition with your data schema and testing criteria (evaluators), then create an evaluation run. The run executes each evaluator against your data and returns scored results that you can poll for completion.
@@ -24,9 +30,12 @@ Cloud evaluation supports the following scenarios:
 | Scenario | When to use | Data source type | Target |
 |----------|-------------|------------------|--------|
 | **[Dataset evaluation](#dataset-evaluation)** | Evaluate pre-computed responses in a JSONL file. | `jsonl` | — |
+| **[CSV dataset evaluation](#csv-dataset-evaluation)** | Evaluate pre-computed responses in a CSV file. | `csv` | — |
 | **[Model target evaluation](#model-target-evaluation)** | Provide queries and generate responses from a model at runtime for evaluation. | `azure_ai_target_completions` | `azure_ai_model` |
-| **[Agent target evaluation](#agent-target-evaluation)** | Provide queries and generate responses from a Foundry agent at runtime for evaluation. | `azure_ai_target_completions` | `azure_ai_agent` |
+| **[Agent target evaluation](#agent-target-evaluation)** | Provide queries and generate responses from a Foundry agent (prompt or hosted) at runtime for evaluation. | `azure_ai_target_completions` | `azure_ai_agent` |
 | **[Agent response evaluation](#agent-response-evaluation)** | Retrieve and evaluate Foundry agent responses by response IDs. | `azure_ai_responses` | — |
+| **[Trace evaluation](#trace-evaluation)** | Evaluate agent interactions already captured in Application Insights by trace ID. Use this approach for non-Foundry agents (LangChain and custom frameworks that adhere to OpenTelemetry based logging). | `azure_ai_traces` | — |
+| **[Synthetic data evaluation (preview)](#synthetic-data-evaluation-preview)** | Generate synthetic test queries, send them to a model or agent, and evaluate the responses. | `azure_ai_synthetic_data_gen_preview` | `azure_ai_model` or `azure_ai_agent` |
 | **[Red team evaluation](/observability/run-ai-red-teaming-cloud)** | Run automated adversarial testing against a model or agent. | `azure_ai_red_team` | `azure_ai_model` or `azure_ai_agent` |
 
 Most scenarios require input data. You can provide data in two ways:
@@ -39,7 +48,7 @@ Most scenarios require input data. You can provide data in two ways:
 Every evaluation requires a `data_source_config` that tells the service what fields to expect in your data:
 
 - **`custom`** — You define an `item_schema` with your field names and types. Set `include_sample_schema` to `true` when using a target so evaluators can reference generated responses.
-- **`azure_ai_source`** — The schema is inferred from the service. Set `"scenario"` to `"responses"` for agent response evaluation or `"red_team"` for [red teaming](/observability/run-ai-red-teaming-cloud).
+- **`azure_ai_source`** — The schema is inferred from the service. Set `"scenario"` to `"responses"` for agent response evaluation, `"traces"` for [trace evaluation](#trace-evaluation), `"synthetic_data_gen_preview"` for [synthetic data evaluation (preview)](#synthetic-data-evaluation-preview), or `"red_team"` for [red teaming](/observability/run-ai-red-teaming-cloud).
 
 Each scenario requires evaluators that define your testing criteria. For guidance on selecting evaluators, see [built-in evaluators](/observability/observability#what-are-evaluators).
 
@@ -47,11 +56,19 @@ Each scenario requires evaluators that define your testing criteria. For guidanc
 
 - A [Foundry project](/setup/create-projects).
 - An Azure OpenAI deployment with a GPT model that supports chat completion (for example, `gpt-5-mini`).
-- **Azure AI User** role on the Foundry project.
+- **Foundry User** role on the Foundry project.
+
+<Info>
+
+</Info>
+
+> The Foundry RBAC roles were recently renamed. **Foundry User**, **Foundry Owner**, **Foundry Account Owner**, and **Foundry Project Manager** were previously named Azure AI User, Azure AI Owner, Azure AI Account Owner, and Azure AI Project Manager. You might still see the previous names in some places while the rename rolls out. The role IDs and core permissions are unchanged by the rename.
 - Optionally, you can [use your own storage account](/observability/evaluation-regions-limits-virtual-network#bring-your-own-storage) to run evaluations.
 
 <Note>
+
 Some evaluation features have regional restrictions. See [supported regions](/observability/risk-safety-evaluators#foundry-project-configuration-and-region-support) for details.
+
 </Note>
 
 ## Get started
@@ -59,7 +76,7 @@ Some evaluation features have regional restrictions. See [supported regions](/ob
 Install the SDK and set up your client:
 
 ```bash
-pip install "azure-ai-projects>=2.0.0b1" azure-identity openai
+pip install "azure-ai-projects>=2.0.0"
 ```
 
 ```python
@@ -102,13 +119,21 @@ Most evaluation scenarios require input data. You can provide data in two ways:
 
 ### Upload a dataset (recommended)
 
-Upload a JSONL file to create a versioned dataset in your Foundry project. Datasets support versioning and reuse across multiple evaluation runs. Use this approach for production testing and CI/CD workflows.
+Upload a JSONL or CSV file to create a versioned dataset in your Foundry project. Datasets support versioning and reuse across multiple evaluation runs. Use this approach for production testing and CI/CD workflows.
 
 Prepare a JSONL file with one JSON object per line containing the fields your evaluators need:
 
 ```json
 {"query": "What is machine learning?", "response": "Machine learning is a subset of AI.", "ground_truth": "Machine learning is a type of AI that learns from data."}
 {"query": "Explain neural networks.", "response": "Neural networks are computing systems inspired by biological neural networks.", "ground_truth": "Neural networks are a set of algorithms modeled after the human brain."}
+```
+
+Or prepare a CSV file with column headers matching your evaluator fields:
+
+```csv
+query,response,ground_truth
+What is machine learning?,Machine learning is a subset of AI.,Machine learning is a type of AI that learns from data.
+Explain neural networks.,Neural networks are computing systems inspired by biological neural networks.,Neural networks are a set of algorithms modeled after the human brain.
 ```
 
 ```python
@@ -149,6 +174,12 @@ Pass `source` as the `"source"` field in your data source configuration when cre
 ## Dataset evaluation
 
 Evaluate pre-computed responses in a JSONL file using the `jsonl` data source type. This scenario is useful when you already have model outputs and want to assess their quality.
+
+<Tip>
+
+Before you begin, complete [Get started](#get-started) and [Prepare input data](#uploading-evaluation-data).
+
+</Tip>
 
 ### Define the data schema and evaluators
 
@@ -208,7 +239,7 @@ Specify the schema that matches your JSONL fields, and select the evaluators (te
 
 ```bash cURL
     curl --request POST \
-      --url "https://${ACCOUNT}.services.ai.azure.com/api/projects/${PROJECT}/openai/evals?api-version=v1" \
+      --url "https://${ACCOUNT}.services.ai.azure.com/api/projects/${PROJECT}/openai/v1/evals" \
       --header "Authorization: Bearer ${TOKEN}" \
       --header "Content-Type: application/json" \
       --data '{
@@ -260,7 +291,7 @@ Create the evaluation, then start a run against your uploaded dataset. The run e
 ```bash cURL
     # Step 1: Create the evaluation
     EVAL_ID=$(curl --silent --request POST \
-      --url "https://${ACCOUNT}.services.ai.azure.com/api/projects/${PROJECT}/openai/evals?api-version=v1" \
+      --url "https://${ACCOUNT}.services.ai.azure.com/api/projects/${PROJECT}/openai/v1/evals" \
       --header "Authorization: Bearer ${TOKEN}" \
       --header "Content-Type: application/json" \
       --data '{
@@ -312,7 +343,7 @@ Create the evaluation, then start a run against your uploaded dataset. The run e
 
     # Step 2: Create a run against your dataset
     curl --request POST \
-      --url "https://${ACCOUNT}.services.ai.azure.com/api/projects/${PROJECT}/openai/evals/${EVAL_ID}/runs?api-version=v1" \
+      --url "https://${ACCOUNT}.services.ai.azure.com/api/projects/${PROJECT}/openai/v1/evals/${EVAL_ID}/runs" \
       --header "Authorization: Bearer ${TOKEN}" \
       --header "Content-Type: application/json" \
       --data '{
@@ -330,9 +361,116 @@ Create the evaluation, then start a run against your uploaded dataset. The run e
 
 For a complete runnable example, see [sample_evaluations_builtin_with_dataset_id.py](https://github.com/Azure/azure-sdk-for-python/blob/main/sdk/ai/azure-ai-projects/samples/evaluations/sample_evaluations_builtin_with_dataset_id.py) on GitHub. To poll for completion and interpret results, see [Get results](#get-results).
 
+## CSV dataset evaluation
+
+Evaluate pre-computed responses in a CSV file using the `csv` data source type. This scenario works the same way as [dataset evaluation](#dataset-evaluation) but accepts CSV files instead of JSONL. Use CSV when your data is already in spreadsheet or tabular format.
+
+<Tip>
+
+Before you begin, complete [Get started](#get-started) and [Prepare input data](#uploading-evaluation-data).
+
+</Tip>
+
+### Prepare a CSV file
+
+Create a CSV file with column headers matching the fields your evaluators need. Each row represents one test case:
+
+```csv
+query,response,context,ground_truth
+What is cloud computing?,Cloud computing delivers computing services over the internet.,Cloud computing is a technology for on-demand resource delivery.,Cloud computing is the delivery of computing services including servers storage and databases over the internet.
+What is machine learning?,Machine learning is a subset of AI that learns from data.,Machine learning is a branch of artificial intelligence.,Machine learning is a type of AI that enables computers to learn from data without being explicitly programmed.
+Explain neural networks.,Neural networks are computing systems inspired by biological neural networks.,Neural networks are used in deep learning.,Neural networks are a set of algorithms modeled after the human brain designed to recognize patterns.
+```
+
+### Upload and run
+
+Upload the CSV file as a dataset, then create an evaluation using the `csv` data source type. The schema definition and evaluator configuration are the same as for JSONL evaluations — the only difference is the `"type": "csv"` in the data source.
+
+```python
+# Upload the CSV file
+data_id = project_client.datasets.upload_file(
+    name="eval-csv-data",
+    version="1",
+    file_path="./evaluation_data.csv",
+).id
+
+# Define the schema matching your CSV columns
+data_source_config = DataSourceConfigCustom(
+    type="custom",
+    item_schema={
+        "type": "object",
+        "properties": {
+            "query": {"type": "string"},
+            "response": {"type": "string"},
+            "context": {"type": "string"},
+            "ground_truth": {"type": "string"},
+        },
+        "required": [],
+    },
+    include_sample_schema=True,
+)
+
+# Define evaluators with data mappings to CSV columns
+testing_criteria = [
+    {
+        "type": "azure_ai_evaluator",
+        "name": "coherence",
+        "evaluator_name": "builtin.coherence",
+        "data_mapping": {
+            "query": "{{item.query}}",
+            "response": "{{item.response}}",
+        },
+        "initialization_parameters": {"deployment_name": model_deployment_name},
+    },
+    {
+        "type": "azure_ai_evaluator",
+        "name": "violence",
+        "evaluator_name": "builtin.violence",
+        "data_mapping": {
+            "query": "{{item.query}}",
+            "response": "{{item.response}}",
+        },
+        "initialization_parameters": {"deployment_name": model_deployment_name},
+    },
+    {
+        "type": "azure_ai_evaluator",
+        "name": "f1",
+        "evaluator_name": "builtin.f1_score",
+    },
+]
+
+# Create the evaluation
+eval_object = client.evals.create(
+    name="CSV evaluation with built-in evaluators",
+    data_source_config=data_source_config,
+    testing_criteria=testing_criteria,
+)
+
+# Create a run using the CSV data source type
+eval_run = client.evals.runs.create(
+    eval_id=eval_object.id,
+    name="csv-evaluation-run",
+    data_source={
+        "type": "csv",
+        "source": {
+            "type": "file_id",
+            "id": data_id,
+        },
+    },
+)
+```
+
+To poll for completion and interpret results, see [Get results](#get-results).
+
 ## Model target evaluation
 
 Send queries to a deployed model at runtime and evaluate the responses using the `azure_ai_target_completions` data source type with an `azure_ai_model` target. Your input data contains queries; the model generates responses which are then evaluated.
+
+<Tip>
+
+Before you begin, complete [Get started](#get-started) and [Prepare input data](#uploading-evaluation-data).
+
+</Tip>
 
 ### Define the message template and target
 
@@ -434,7 +572,7 @@ testing_criteria = [
 
 ```bash cURL
     curl --request POST \
-      --url "https://${ACCOUNT}.services.ai.azure.com/api/projects/${PROJECT}/openai/evals/${EVAL_ID}/runs?api-version=v1" \
+      --url "https://${ACCOUNT}.services.ai.azure.com/api/projects/${PROJECT}/openai/v1/evals/${EVAL_ID}/runs" \
       --header "Authorization: Bearer ${TOKEN}" \
       --header "Content-Type: application/json" \
       --data '{
@@ -473,9 +611,23 @@ testing_criteria = [
 
 For a complete runnable example, see [sample_model_evaluation.py](https://github.com/Azure/azure-sdk-for-python/blob/main/sdk/ai/azure-ai-projects/samples/evaluations/sample_model_evaluation.py) on GitHub. To poll for completion and interpret results, see [Get results](#get-results).
 
+<Tip>
+
+To add another evaluation run, you can use the same code.
+
+</Tip>
+
 ## Agent target evaluation
 
-Send queries to a Foundry agent at runtime and evaluate the responses using the `azure_ai_target_completions` data source type with an `azure_ai_agent` target.
+Send queries to a Foundry agent at runtime and evaluate the responses using the `azure_ai_target_completions` data source type with an `azure_ai_agent` target. This scenario works for both [prompt agents](/agent-service/overview) and [hosted agents](/agent-service/hosted-agents).
+
+<Tip>
+
+Before you begin, complete [Get started](#get-started) and [Prepare input data](#uploading-evaluation-data).
+[!TIP]
+Hosted agents that use the responses protocol work with the same code samples shown here. For hosted agents that use the invocations protocol, the `input_messages` format is different. See [Hosted agent invocations protocol](#hosted-agent-invocations-protocol) for details.
+
+</Tip>
 
 ### Define the message template and target
 
@@ -522,7 +674,9 @@ When the agent generates responses at runtime, use `{{sample.*}}` variables in `
 | `{{item.field}}` | A field from your input data. | Input fields like `query` or `ground_truth`. |
 
 <Tip>
+
 The `query` field can contain structured JSON, including system messages and conversation history. Some agent evaluators such as `task_adherence` use this context for more accurate scoring. For details on query formatting, see [agent evaluators](/observability/agent-evaluators).
+
 </Tip>
 
 ```python
@@ -604,7 +758,7 @@ testing_criteria = [
 
 ```bash cURL
     curl --request POST \
-      --url "https://${ACCOUNT}.services.ai.azure.com/api/projects/${PROJECT}/openai/evals/${EVAL_ID}/runs?api-version=v1" \
+      --url "https://${ACCOUNT}.services.ai.azure.com/api/projects/${PROJECT}/openai/v1/evals/${EVAL_ID}/runs" \
       --header "Authorization: Bearer ${TOKEN}" \
       --header "Content-Type: application/json" \
       --data '{
@@ -648,9 +802,88 @@ testing_criteria = [
 
 For a complete runnable example, see [sample_agent_evaluation.py](https://github.com/Azure/azure-sdk-for-python/blob/main/sdk/ai/azure-ai-projects/samples/evaluations/sample_agent_evaluation.py) on GitHub. To poll for completion and interpret results, see [Get results](#get-results).
 
+### Hosted agent invocations protocol
+
+[Hosted agents](/agent-service/hosted-agents) that use the invocations protocol support the same `azure_ai_agent` target type but use a **freeform `input_messages`** format. Instead of the structured template format, provide a JSON object that maps directly to the agent's `/invocations` request body. Use `{{item.*}}` placeholders to substitute fields from your input data.
+
+If a hosted agent supports both the responses and invocations protocols, the service defaults to using the invocations protocol.
+
+#### Define the message format and target
+
+```python
+input_messages = {"message": "{{item.query}}"}
+
+target = {
+    "type": "azure_ai_agent",
+    "name": "my-hosted-agent",  # Replace with your hosted agent name
+    "version": "1",
+}
+```
+
+#### Create evaluation and run
+
+<CodeGroup>
+```python Python
+    eval_object = client.evals.create(
+        name="Hosted Agent Invocations Evaluation",
+        data_source_config=data_source_config,
+        testing_criteria=testing_criteria,
+    )
+
+    data_source = {
+        "type": "azure_ai_target_completions",
+        "source": {
+            "type": "file_id",
+            "id": data_id,
+        },
+        "input_messages": input_messages,
+        "target": target,
+    }
+
+    eval_run = client.evals.runs.create(
+        eval_id=eval_object.id,
+        name="hosted-agent-invocations-evaluation",
+        data_source=data_source,
+    )
+    ```
+
+```bash cURL
+    curl --request POST \
+      --url "https://${ACCOUNT}.services.ai.azure.com/api/projects/${PROJECT}/openai/v1/evals/${EVAL_ID}/runs" \
+      --header "Authorization: Bearer ${TOKEN}" \
+      --header "Content-Type: application/json" \
+      --data '{
+        "name": "hosted-agent-invocations-evaluation",
+        "data_source": {
+          "type": "azure_ai_target_completions",
+          "source": {
+            "type": "file_id",
+            "id": "YOUR_DATASET_ID"
+          },
+          "input_messages": {
+            "message": "{{item.query}}"
+          },
+          "target": {
+            "type": "azure_ai_agent",
+            "name": "my-hosted-agent",
+            "version": "1"
+          }
+        }
+      }'
+    ```
+</CodeGroup>
+
+The evaluator setup and data mappings are the same as for [prompt agent evaluation](#set-up-evaluators-and-data-mappings-1). Use `{{sample.output_text}}` for the agent's text response and `{{sample.output_items}}` for the full structured output including tool calls.
+
 ## Agent response evaluation
 
 Retrieve and evaluate Foundry agent responses by response IDs using the `azure_ai_responses` data source type. Use this scenario to evaluate specific agent interactions after they occur.
+
+<Tip>
+
+Before you begin, complete [Get started](#get-started).
+
+</Tip>
 
 A **response ID** is a unique identifier returned each time a Foundry agent generates a response. You can collect response IDs from agent interactions by using the [Responses API](https://learn.microsoft.com/rest/api/aifoundry) or from your application's trace logs. Provide the IDs inline as file content, or upload them as a dataset (see [Prepare input data](#uploading-evaluation-data)).
 
@@ -666,6 +899,8 @@ response = client.responses.create(
 )
 print(response.id)  # Example: resp_abc123
 ```
+
+You can also collect response IDs from agent interactions in your application's trace logs or monitoring pipeline. Each response ID uniquely identifies a stored response that the evaluation service can retrieve.
 
 ### Create evaluation and run
 
@@ -719,7 +954,7 @@ print(response.id)  # Example: resp_abc123
 
 ```bash cURL
     curl --request POST \
-      --url "https://${ACCOUNT}.services.ai.azure.com/api/projects/${PROJECT}/openai/evals/${EVAL_ID}/runs?api-version=v1" \
+      --url "https://${ACCOUNT}.services.ai.azure.com/api/projects/${PROJECT}/openai/v1/evals/${EVAL_ID}/runs" \
       --header "Authorization: Bearer ${TOKEN}" \
       --header "Content-Type: application/json" \
       --data '{
@@ -743,6 +978,477 @@ print(response.id)  # Example: resp_abc123
 </CodeGroup>
 
 For a complete runnable example, see [sample_agent_response_evaluation.py](https://github.com/Azure/azure-sdk-for-python/blob/main/sdk/ai/azure-ai-projects/samples/evaluations/sample_agent_response_evaluation.py) on GitHub. To poll for completion and interpret results, see [Get results](#get-results).
+
+## Trace evaluation
+
+Evaluate agent interactions that were already captured in [Application Insights](https://learn.microsoft.com/azure/azure-monitor/app/app-insights-overview). Use the `azure_ai_traces` data source type. This scenario is useful for post-deployment evaluation of real production traffic — you select traces from your monitoring pipeline and run evaluators against them without replaying any requests.
+
+<Info>
+
+Trace evaluation is the recommended approach for evaluating **agents not built with the Microsoft Foundry Agent Service** — including LangChain and custom frameworks. As long as your agent emits [OpenTelemetry spans following the GenAI semantic conventions](#trace-data-requirements) to Application Insights, trace evaluation can assess its interactions using the same evaluators available for Foundry agents.
+
+</Info>
+
+Trace evaluation supports two modes:
+
+- **By trace IDs** — Evaluate specific agent interactions by providing their `operation_Id` values from Application Insights.
+- **By agent filter** — Automatically discover and evaluate recent traces for a given agent, without manually collecting trace IDs.
+
+<Tip>
+
+Before you begin, complete [Get started](#get-started). This scenario also requires an [Application Insights resource connected to your Foundry project](/agent-service/trace-agent-setup).
+
+</Tip>
+
+### Trace data requirements
+
+Trace evaluation requires your agent to emit spans following the [OpenTelemetry semantic conventions for generative AI](https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-agent-spans/). Specifically, the evaluation service reads **`invoke_agent` spans** from Application Insights and extracts conversation data from their attributes.
+
+The following span attributes are used:
+
+| Attribute | Required | Description |
+|-----------|----------|-------------|
+| `gen_ai.operation.name` | **Yes** | Must equal `"invoke_agent"`. The service ignores all other spans. |
+| `gen_ai.agent.id` | For agent filter mode | Unique agent identifier (format: `agent-name:version`). |
+| `gen_ai.agent.name` | For agent filter mode | Human-readable agent name. |
+| `gen_ai.input.messages` | For evaluators query inputs | JSON array of input messages following the [GenAI semantic conventions message format](https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-agent-spans/#invoke-agent-span). Messages with role `user` or `system` map to `query`; messages with role `assistant` or `tool` map to `response`. |
+| `gen_ai.output.messages` | For evaluators query inputs | JSON array of model-generated output messages. All output messages map to `response`. If output also contains type: tool_call or type: tool_result, it maps to `tool_calls` |
+| `gen_ai.tool.definitions` | Optional | JSON array of tool schemas available to the agent. If absent, the service attempts to infer tool definitions from tool call messages, but inferred schemas may be incomplete. |
+| `gen_ai.conversation.id` | Optional | Conversation identifier, passed through to evaluation results for correlation. |
+
+<Note>
+
+If `gen_ai.input.messages` and `gen_ai.output.messages` are empty or missing, quality evaluators (coherence, fluency, relevance, intent resolution) will return `score=None`. Safety evaluators (violence, self-harm, sexual, hate/unfairness) can still produce scores with partial data but they may not produce meaningful results.
+
+</Note>
+
+For Python agents built with the Azure AI Agent Server SDK, add the `[tracing]` extra to enable automatic span emission:
+
+```bash
+pip install "azure-ai-agentserver-core[tracing]"
+```
+
+### Prerequisites for trace evaluation
+
+In addition to the general [prerequisites](#prerequisites), trace evaluation requires:
+
+- An [Application Insights resource](https://learn.microsoft.com/azure/azure-monitor/app/app-insights-overview) connected to your Foundry project. See [Set up tracing in Microsoft Foundry](/agent-service/trace-agent-setup).
+- The project's managed identity must have the **Log Analytics Reader** role on both the Application Insights resource and its linked Log Analytics workspace.
+- The `azure-monitor-query` Python package (only needed if you collect trace IDs manually).
+
+```bash
+pip install "azure-ai-projects>=2.0.0" azure-monitor-query
+```
+
+Set these environment variables:
+
+- `APPINSIGHTS_RESOURCE_ID` — The Application Insights resource ID (for example, `/subscriptions/<subscription_id>/resourceGroups/<rg_name>/providers/Microsoft.Insights/components/<resource_name>`).
+- `AGENT_ID` — The agent identifier emitted by the tracing integration (`gen_ai.agent.id` attribute), used to filter traces. Format: `agent-name:version`.
+- `TRACE_LOOKBACK_HOURS` — (Optional) Number of hours to look back when querying traces. Defaults to `1`.
+
+### Option A: Evaluate by agent filter
+
+The simplest approach — let the service automatically discover and evaluate recent traces for a specific agent. No manual trace ID collection needed.
+
+```python
+import os
+
+agent_id = os.environ["AGENT_ID"]  # e.g., "my-weather-agent:1"
+trace_lookback_hours = int(os.environ.get("TRACE_LOOKBACK_HOURS", "1"))
+
+# Create the evaluation
+data_source_config = {
+    "type": "azure_ai_source",
+    "scenario": "traces",
+}
+
+eval_object = client.evals.create(
+    name="Agent Trace Evaluation (by agent)",
+    data_source_config=data_source_config,
+    testing_criteria=testing_criteria,  # See "Set up evaluators" below
+)
+
+# Create a run — the service queries App Insights for matching traces
+data_source = {
+    "type": "azure_ai_traces",
+    "agent_id": agent_id,
+    "max_traces": 50,           # Maximum number of traces to evaluate
+    "lookback_hours": trace_lookback_hours,
+}
+
+eval_run = client.evals.runs.create(
+    eval_id=eval_object.id,
+    name="agent-trace-eval-run",
+    data_source=data_source,
+)
+
+print(f"Evaluation run started: {eval_run.id}")
+```
+
+The service filters `invoke_agent` spans by the `gen_ai.agent.id` attribute, samples up to `max_traces` unique trace IDs, and evaluates all spans from those traces.
+
+### Option B: Evaluate by trace IDs
+
+For more control, collect specific trace IDs from Application Insights and evaluate them. This is useful when you want to evaluate a curated set of interactions (for example, traces flagged by alerts or sampled for quality review).
+
+#### Collect trace IDs from Application Insights
+
+Query Application Insights for `operation_Id` values from your agent's traces. Each `operation_Id` represents a complete agent interaction:
+
+```python
+import os
+from datetime import datetime, timedelta, timezone
+from azure.identity import DefaultAzureCredential
+from azure.monitor.query import LogsQueryClient, LogsQueryStatus
+
+appinsights_resource_id = os.environ["APPINSIGHTS_RESOURCE_ID"]
+agent_id = os.environ["AGENT_ID"]
+trace_query_hours = int(os.environ.get("TRACE_LOOKBACK_HOURS", "1"))
+
+end_time = datetime.now(timezone.utc)
+start_time = end_time - timedelta(hours=trace_query_hours)
+
+query = f"""dependencies
+| where timestamp between (datetime({start_time.isoformat()}) .. datetime({end_time.isoformat()}))
+| extend agent_id = tostring(customDimensions["gen_ai.agent.id"])
+| where agent_id == "{agent_id}"
+| distinct operation_Id"""
+
+credential = DefaultAzureCredential()
+logs_client = LogsQueryClient(credential)
+response = logs_client.query_resource(
+    appinsights_resource_id,
+    query=query,
+    timespan=None,  # Time range is specified in the query itself
+)
+
+trace_ids = []
+if response.status == LogsQueryStatus.SUCCESS:
+    for table in response.tables:
+        for row in table.rows:
+            trace_ids.append(row[0])
+
+print(f"Found {len(trace_ids)} trace IDs")
+```
+
+#### Create evaluation and run with trace IDs
+
+```python
+# Create the evaluation
+data_source_config = {
+    "type": "azure_ai_source",
+    "scenario": "traces",
+}
+
+eval_object = client.evals.create(
+    name="Agent Trace Evaluation (by trace IDs)",
+    data_source_config=data_source_config,
+    testing_criteria=testing_criteria,  # See "Set up evaluators" below
+)
+
+# Create a run using the collected trace IDs
+data_source = {
+    "type": "azure_ai_traces",
+    "trace_ids": trace_ids,
+    "lookback_hours": trace_query_hours,
+}
+
+eval_run = client.evals.runs.create(
+    eval_id=eval_object.id,
+    name="agent-trace-eval-run",
+    metadata={
+        "agent_id": agent_id,
+        "start_time": start_time.isoformat(),
+        "end_time": end_time.isoformat(),
+    },
+    data_source=data_source,
+)
+
+print(f"Evaluation run started: {eval_run.id}")
+```
+
+### Set up evaluators and data mappings
+
+When evaluating traces, the service automatically extracts conversation data from the OpenTelemetry span attributes. Use these field names directly in `data_mapping` (without the `item.` or `sample.` prefixes used in other scenarios):
+
+| Variable | Source attribute | Description |
+|----------|----------------|-------------|
+| `{{item.query}}` | `gen_ai.input.messages` (user/system roles) | The user query extracted from the trace. |
+| `{{item.response}}` | `gen_ai.input.messages` (assistant/tool roles) + `gen_ai.output.messages` | The agent's response extracted from the trace. |
+| `{{item.tool_definitions}}` | `gen_ai.tool.definitions` | Tool schemas available to the agent. Only required for tool-related evaluators |
+| `{{item.tool_calls}}` | Extracted from assistant messages in `gen_ai.input.messages` / `gen_ai.output.messages` | Tool calls made by the agent during the interaction. Used by tool evaluators. Only required for tool-related evaluators |
+
+```python
+testing_criteria = [
+    # Quality evaluators — require query and response from trace data
+    {
+        "type": "azure_ai_evaluator",
+        "name": "intent_resolution",
+        "evaluator_name": "builtin.intent_resolution",
+        "data_mapping": {
+            "query": "{{item.query}}",
+            "response": "{{item.response}}",
+            "tool_definitions": "{{item.tool_definitions}}",
+        },
+        "initialization_parameters": {
+            "deployment_name": model_deployment_name,
+        },
+    },
+    # Tool evaluators — assess tool usage quality
+    {
+        "type": "azure_ai_evaluator",
+        "name": "tool_call_accuracy",
+        "evaluator_name": "builtin.tool_call_accuracy",
+        "data_mapping": {
+            "query": "{{item.query}}",
+            "response": "{{item.response}}",
+            "tool_calls": "{{item.tool_calls}}",
+            "tool_definitions": "{{item.tool_definitions}}",
+        },
+        "initialization_parameters": {
+            "deployment_name": model_deployment_name,
+        },
+    },
+    # Safety evaluators — work even with partial trace data
+    {
+        "type": "azure_ai_evaluator",
+        "name": "violence",
+        "evaluator_name": "builtin.violence",
+        "data_mapping": {
+            "query": "{{item.query}}",
+            "response": "{{item.response}}",
+        },
+        "initialization_parameters": {
+            "threshold": 4,
+        },
+    },
+]
+```
+
+For a complete runnable example, see [sample_evaluations_builtin_with_traces.py](https://github.com/Azure/azure-sdk-for-python/blob/main/sdk/ai/azure-ai-projects/samples/evaluations/sample_evaluations_builtin_with_traces.py) on GitHub. To poll for completion and interpret results, see [Get results](#get-results).
+
+## Synthetic data evaluation (preview)
+
+Generate synthetic test queries, send them to a deployed model or Foundry agent, and evaluate the responses using the `azure_ai_synthetic_data_gen_preview` data source type. Use this scenario when you don't have a test dataset — the service generates queries based on a prompt you provide (and/or from the agent's instructions), runs them against your target, and evaluates the responses.
+
+<Tip>
+
+Before you begin, complete [Get started](#get-started).
+
+</Tip>
+
+### How synthetic data evaluation works
+
+1. The service generates synthetic queries based on your `prompt` and optional seed data files.
+1. Each query is sent to the specified target (model or agent) to generate a response.
+1. Evaluators score each response using the generated query and response.
+1. The generated queries are stored as a dataset in your project for reuse.
+
+### Parameters
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `samples_count` | Yes | Maximum number of synthetic test queries to generate. |
+| `model_deployment_name` | Yes | Model deployment to use for generating synthetic queries. Only models with Responses API capability are supported. For availability, see [Responses API region availability](https://aka.ms/aoai/responsesapi/availability). |
+| `prompt` | No | Instructions describing the type of queries to generate. Optional when the agent target has instructions configured. |
+| `output_dataset_name` | No | Name for the output dataset where generated queries are stored. If not provided, the service generates a name automatically. |
+| `sources` | No | Seed data files (by file ID) to improve relevance of generated queries. Currently only one file is supported. |
+
+### Set up evaluators and data mappings
+
+The synthetic data generator produces queries in the `{{item.query}}` field. The target generates responses available in `{{sample.output_text}}`. Map these fields to your evaluators:
+
+```python
+data_source_config = {"type": "azure_ai_source", "scenario": "synthetic_data_gen_preview"}
+
+testing_criteria = [
+    {
+        "type": "azure_ai_evaluator",
+        "name": "coherence",
+        "evaluator_name": "builtin.coherence",
+        "initialization_parameters": {
+            "deployment_name": model_deployment_name,
+        },
+        "data_mapping": {
+            "query": "{{item.query}}",
+            "response": "{{sample.output_text}}",
+        },
+    },
+    {
+        "type": "azure_ai_evaluator",
+        "name": "violence",
+        "evaluator_name": "builtin.violence",
+        "data_mapping": {
+            "query": "{{item.query}}",
+            "response": "{{sample.output_text}}",
+        },
+    },
+]
+```
+
+### Create evaluation and run
+
+<Tabs>
+  <Tab title="Python">
+
+    #### Model target
+
+    Generate synthetic queries and evaluate a model:
+
+    ```python
+    eval_object = client.evals.create(
+        name="Synthetic Data Evaluation",
+        data_source_config=data_source_config,
+        testing_criteria=testing_criteria,
+    )
+
+    data_source = {
+        "type": "azure_ai_synthetic_data_gen_preview",
+        "item_generation_params": {
+            "type": "synthetic_data_gen_preview",
+            "samples_count": 5,
+            "prompt": "Generate customer service questions about returning defective products",
+            "model_deployment_name": model_deployment_name,
+            "output_dataset_name": "my-synthetic-dataset",
+        },
+        "target": {
+            "type": "azure_ai_model",
+            "model": model_deployment_name,
+        },
+    }
+
+    eval_run = client.evals.runs.create(
+        eval_id=eval_object.id,
+        name="synthetic-data-evaluation",
+        data_source=data_source,
+    )
+    ```
+
+    You can optionally add a system prompt to shape the target model's behavior. When you use `input_messages` with synthetic data generation, include only `system` role messages — the service provides the generated queries as user messages automatically.
+
+    ```python
+    data_source = {
+        "type": "azure_ai_synthetic_data_gen_preview",
+        "item_generation_params": {
+            "type": "synthetic_data_gen_preview",
+            "samples_count": 5,
+            "prompt": "Generate customer service questions about returning defective products",
+            "model_deployment_name": model_deployment_name,
+        },
+        "target": {
+            "type": "azure_ai_model",
+            "model": model_deployment_name,
+        },
+        "input_messages": {
+            "type": "template",
+            "template": [
+                {
+                    "type": "message",
+                    "role": "system",
+                    "content": {
+                        "type": "input_text",
+                        "text": "You are a helpful customer service agent. Be empathetic and solution-oriented."
+                    }
+                }
+            ]
+        },
+    }
+    ```
+    #### Agent target
+
+    Generate synthetic queries and evaluate a Foundry agent:
+
+    ```python
+    data_source = {
+        "type": "azure_ai_synthetic_data_gen_preview",
+        "item_generation_params": {
+            "type": "synthetic_data_gen_preview",
+            "samples_count": 5,
+            "prompt": "Generate questions about returning defective products",
+            "model_deployment_name": model_deployment_name,
+        },
+        "target": {
+            "type": "azure_ai_agent",
+            "name": agent_name,
+            "version": agent_version,
+        },
+    }
+
+    eval_run = client.evals.runs.create(
+        eval_id=eval_object.id,
+        name="synthetic-agent-evaluation",
+        data_source=data_source,
+    )
+    ```
+
+  </Tab>
+  <Tab title="cURL">
+
+    ```bash
+    # Step 1: Create the evaluation
+    curl --request POST \
+      --url "https://${ACCOUNT}.services.ai.azure.com/api/projects/${PROJECT}/openai/evals?api-version=v1" \
+      --header "Authorization: Bearer ${TOKEN}" \
+      --header "Content-Type: application/json" \
+      --data '{
+        "name": "Synthetic Data Evaluation",
+        "data_source_config": {
+          "type": "azure_ai_source",
+          "scenario": "synthetic_data_gen_preview"
+        },
+        "testing_criteria": [
+          {
+            "type": "azure_ai_evaluator",
+            "name": "coherence",
+            "evaluator_name": "builtin.coherence",
+            "initialization_parameters": {
+              "deployment_name": "gpt-5-mini"
+            },
+            "data_mapping": {
+              "query": "{{item.query}}",
+              "response": "{{sample.output_text}}"
+            }
+          },
+          {
+            "type": "azure_ai_evaluator",
+            "name": "violence",
+            "evaluator_name": "builtin.violence",
+            "data_mapping": {
+              "query": "{{item.query}}",
+              "response": "{{sample.output_text}}"
+            }
+          }
+        ]
+      }'
+
+    # Step 2: Create a run with synthetic data generation
+    curl --request POST \
+      --url "https://${ACCOUNT}.services.ai.azure.com/api/projects/${PROJECT}/openai/evals/${EVAL_ID}/runs?api-version=v1" \
+      --header "Authorization: Bearer ${TOKEN}" \
+      --header "Content-Type: application/json" \
+      --data '{
+        "name": "synthetic-data-evaluation",
+        "data_source": {
+          "type": "azure_ai_synthetic_data_gen_preview",
+          "item_generation_params": {
+            "type": "synthetic_data_gen_preview",
+            "samples_count": 5,
+            "prompt": "Generate customer service questions about returning defective products",
+            "model_deployment_name": "gpt-5-mini",
+            "output_dataset_name": "my-synthetic-dataset"
+          },
+          "target": {
+            "type": "azure_ai_model",
+            "model": "gpt-5-mini"
+          }
+        }
+      }'
+    ```
+
+  </Tab>
+</Tabs>
+
+To poll for completion and interpret results, see [Get results](#get-results). The response includes an `output_dataset_id` property that contains the ID of the generated dataset, which you can use to retrieve or reuse the synthetic data.
 
 ## Get results
 
@@ -777,15 +1483,13 @@ print(f"Report URL: {run.report_url}")
 
 ### Interpret results
 
-For a single data example, all evaluators output the following schema:
+For a single data example, all evaluators output the following schema:  
 
-| Field | Description |
-|-------|-------------|
-| `label` | Binary `"pass"` or `"fail"`. Use for comparisons across evaluators. |
-| `score` | Score on the evaluator's natural scale: 1–5 (quality), 1–7 (content safety), or 0–1 (F1). Non-binary scores are binarized using `threshold`. |
-| `threshold` | Cutoff used to binarize `score` into `label`. Overridable in the SDK. |
-| `reason` | LLM-judge evaluators include a reasoning field explaining the score. |
-| `details` | (Optional) Additional debugging information for some evaluators (for example, `tool_call_accuracy`). |
+- **Label**: a binary "pass" or "fail" label, similar to a unit test's output. Use this result to facilitate comparisons across evaluators.
+- **Score**: a score from the natural scale of each evaluator. Some evaluators use a fine-grained rubric, scoring on a 5-point scale (quality evaluators) or a 7-point scale (content safety evaluators). Others, like textual similarity evaluators, use F1 scores, which are floats between 0 and 1. Any non-binary "score" is binarized to "pass" or "fail" in the "label" field based on the "threshold".
+- **Threshold**: any non-binary scores are binarized to "pass" or "fail" based on a default threshold, which the user can override in the SDK experience.
+- **Reason**: To improve intelligibility, all LLM-judge evaluators also output a reasoning field to explain why a certain score is given.
+- **Details**: (optional) For some evaluators, such as tool_call_accuracy, there might be a "details" field or flags that contain additional information to help users debug their applications.
 
 ### Example output (single item)
 
@@ -850,7 +1554,7 @@ Your evaluation job might remain in the **Running** state for an extended period
 If you receive a `401 Unauthorized` or `403 Forbidden` error, verify that:
 
 - Your `DefaultAzureCredential` is configured correctly (run `az login` if using Azure CLI).
-- Your account has the **Azure AI User** role on the Foundry project.
+- Your account has the **Foundry User** role on the Foundry project.
 - The project endpoint URL is correct and includes both the account and project names.
 
 ### Data format errors
@@ -863,9 +1567,16 @@ If the evaluation fails with a schema or data mapping error:
 
 ### Rate limit errors
 
-Evaluation run creations are rate-limited at the tenant, subscription, and project levels. If you receive a `429 Too Many Requests` response, check the `retry-after` header, review the response body for details, and use exponential backoff when retrying.
+Evaluation run creations are rate-limited at the tenant, subscription, and project levels. If you receive a `429 Too Many Requests` response:
 
-If an evaluation job fails with a `429` error during execution, reduce the dataset size or increase the tokens-per-minute (TPM) quota for your model deployment in the Azure portal.
+- Check the `retry-after` header in the response for the recommended wait time.
+- Review the response body for rate limit details.
+- Use exponential backoff when retrying failed requests.
+
+If an evaluation job fails with a `429` error during execution:
+
+- Reduce the size of your evaluation dataset or split it into smaller batches.
+- Increase the tokens-per-minute (TPM) quota for your model deployment in the Azure portal.
 
 ### Agent evaluator tool errors
 
@@ -877,7 +1588,9 @@ If an agent evaluator returns an error for unsupported tools:
 ## Related content
 
 - [Complete working samples](https://github.com/Azure/azure-sdk-for-python/tree/main/sdk/ai/azure-ai-projects/samples/evaluations)
-- [Evaluate your AI agents continuously](https://learn.microsoft.com/en-us/azure/foundry-classic/how-to/continuous-evaluation-agents)
+- [Trace-based evaluation sample](https://github.com/Azure/azure-sdk-for-python/blob/main/sdk/ai/azure-ai-projects/samples/evaluations/sample_evaluations_builtin_with_traces.py)
+- [Set up tracing in Microsoft Foundry](/agent-service/trace-agent-setup)
+- [Set up continuous evaluation](/agent-service/how-to-monitor-agents-dashboard#set-up-continuous-evaluation)
 - [See evaluation results in the Foundry portal](/observability/evaluate-results)
 - [Get started with Foundry](/get-started/get-started-code)
-- [REST API reference](/api-sdk/foundry-project-rest-preview#openai-evals---list-evals)
+- [REST API reference](../../reference/foundry-project-rest-preview#openai-evals---list-evals)

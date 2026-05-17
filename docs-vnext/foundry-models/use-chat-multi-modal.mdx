@@ -1,0 +1,1145 @@
+---
+title: "How to use image and audio in chat completions with Microsoft Foundry Models (classic)"
+description: "Learn how to process audio and images with chat completions models with Microsoft Foundry Models (classic)"
+---
+
+**Applies only to:** <img src="/images/yes-icon.svg" /> **Foundry (classic) portal**. This article isn't available for the new Foundry portal. [Learn more about the new portal](https://learn.microsoft.com/en-us/azure/foundry/what-is-foundry).
+
+<Note>
+
+Links in this article might open content in the new Microsoft Foundry documentation instead of the Foundry (classic) documentation you're viewing now.
+
+</Note>
+
+<Info>
+
+Azure AI Inference beta SDK is deprecated and will be retired on August 26, 2026. Switch to the generally available [OpenAI/v1 API](https://aka.ms/openai/v1) with a stable OpenAI SDK. Follow the [migration guide](../how-to/model-inference-to-openai-migration) to switch to OpenAI/v1, using the SDK for your preferred programming language.
+
+</Info>
+
+This article explains how to use chat completions API with _multimodal_ models deployed in Microsoft Foundry Models. Apart from text input, multimodal models can accept other input types, such as images or audio input.
+
+## Prerequisites
+
+To use chat completion models in your application, you need:
+
+- An Azure subscription. If you're using GitHub Models, you can upgrade your experience and create an Azure subscription in the process. Read [Upgrade from GitHub Models to Microsoft Foundry Models](../how-to/quickstart-github-models) if that's your case.
+
+- A Foundry project. This kind of project is managed under a Foundry resource. If you don't have a Foundry project, see [Create a project for Foundry (Foundry projects)](../../how-to/create-projects).
+
+- The endpoint's URL.
+
+- The endpoint's key (if you choose to use API key for authentication).
+
+* Install the [Azure AI inference package for Python](https://aka.ms/azsdk/azure-ai-inference/python/reference) with the following command:
+
+  ```bash
+  pip install -U azure-ai-inference
+  ```
+
+* A chat completions model deployment with support for **audio and images**. If you don't have one, see [Add and configure Foundry Models](../../how-to/create-model-deployments) to add a chat completions model to your resource.
+
+  * This article uses `Phi-4-multimodal-instruct`.
+
+## Use chat completions
+
+First, create the client to consume the model. The following code uses an endpoint URL and key that are stored in environment variables.
+
+```python
+import os
+from azure.ai.inference import ChatCompletionsClient
+from azure.core.credentials import AzureKeyCredential
+
+client = ChatCompletionsClient(
+    endpoint="https://<resource>.services.ai.azure.com/models",
+    credential=AzureKeyCredential(os.environ["AZURE_INFERENCE_CREDENTIAL"]),
+    model="Phi-4-multimodal-instruct"
+)
+```
+
+If you've configured the resource with **Microsoft Entra ID** support, you can use the following code snippet to create a client.
+
+```python
+import os
+from azure.ai.inference import ChatCompletionsClient
+from azure.identity import DefaultAzureCredential
+
+client = ChatCompletionsClient(
+    endpoint="https://<resource>.services.ai.azure.com/models",
+    credential=DefaultAzureCredential(),
+    model="Phi-4-multimodal-instruct"
+)
+```
+
+## Use chat completions with images
+
+Some models can reason across text and images and generate text completions based on both kinds of input. In this section, you explore the capabilities of some models for vision in a chat fashion. 
+
+Images can be passed to models using URLs and including them inside of messages with the role **user**. You can also use [data URLs](https://developer.mozilla.org/docs/Web/URI/Reference/Schemes/data) which allow you to embed the actual content of the file inside of a URL encoded in `base64` strings.
+
+Let's consider the following image which can be download [from this source](https://news.microsoft.com/source/wp-content/uploads/2024/04/The-Phi-3-small-language-models-with-big-potential-1-1900x1069.jpg):
+
+<Frame>
+  <img src="/images/small-language-models-chart-example.jpg" alt="A chart displaying the relative capabilities between large language models and small language models." />
+</Frame>
+
+You can load the image into a *data URL* as follows:
+
+```python
+from azure.ai.inference.models import ImageContentItem, ImageUrl
+
+data_url = ImageUrl.load(
+    image_file="The-Phi-3-small-language-models-with-big-potential-1-1900x1069.jpg",
+    image_format="jpeg"
+)
+```
+
+Data URLs are of the form `data:image/{image_format};base64,{image_data_base64}`.
+
+Now, create a chat completion request with the image:
+
+```python
+from azure.ai.inference.models import SystemMessage, UserMessage, TextContentItem, ImageContentItem, ImageUrl
+response = client.complete(
+    messages=[
+        SystemMessage("You are a helpful assistant that can generate responses based on images."),
+        UserMessage(content=[
+            TextContentItem(text="Which conclusion can be extracted from the following chart?"),
+            ImageContentItem(image_url=data_url)
+        ]),
+    ],
+    temperature=1,
+    max_tokens=2048,
+)
+```
+
+The response is as follows, where you can see the model's usage statistics:
+
+```python
+print(f"{response.choices[0].message.role}: {response.choices[0].message.content}")
+print("Model:", response.model)
+print("Usage:")
+print("\tPrompt tokens:", response.usage.prompt_tokens)
+print("\tCompletion tokens:", response.usage.completion_tokens)
+print("\tTotal tokens:", response.usage.total_tokens)
+```
+
+```console
+ASSISTANT: The chart illustrates that larger models tend to perform better in quality, as indicated by their size in billions of parameters. However, there are exceptions to this trend, such as Phi-3-medium and Phi-3-small, which outperform smaller models in quality. This suggests that while larger models generally have an advantage, there might be other factors at play that influence a model's performance.
+Model: phi-4-omni
+Usage: 
+  Prompt tokens: 2380
+  Completion tokens: 126
+  Total tokens: 2506
+```
+
+### Usage
+
+Images are broken into tokens and submitted to the model for processing. When referring to images, each of those tokens is typically referred as *patches*. Each model might break down a given image on a different number of patches. Read the model card to learn the details.
+
+### Multi-turn conversations
+
+Some models support only one image for each turn in the chat conversation and only the last image is retained in context. If you add multiple images, it results in an error. Read the model card to understand the case of each model.
+
+### Image URLs
+
+The model can read the content from an **accessible cloud location** by passing the URL as an input. This approach requires the URL to be public and do not require specific handling.
+
+```python
+from azure.ai.inference.models import SystemMessage, UserMessage, TextContentItem, ImageContentItem, ImageUrl
+
+image_url = "https://news.microsoft.com/source/wp-content/uploads/2024/04/The-Phi-3-small-language-models-with-big-potential-1-1900x1069.jpg"
+
+response = client.complete(
+    messages=[
+        SystemMessage("You are a helpful assistant that can generate responses based on images."),
+        UserMessage(content=[
+            TextContentItem(text="Which conclusion can be extracted from the following chart?"),
+            ImageContentItem(image_url=ImageUrl(image_url))
+        ]),
+    ],
+    temperature=1,
+    max_tokens=2048,
+)
+```
+
+## Use chat completions with audio
+
+Some models can reason across text and audio inputs. The following example shows how you can send audio context to chat completions models that also supports audio. Use `InputAudio` to load the content of the audio file into the payload. The content is encoded in `base64` data and sent over the payload.
+
+```python
+from azure.ai.inference.models import (
+    TextContentItem,
+    AudioContentItem,
+    InputAudio,
+    AudioContentFormat,
+    SystemMessage,
+    UserMessage
+)
+
+response = client.complete(
+    messages=[
+        SystemMessage("You are an AI assistant for translating and transcribing audio clips."),
+        UserMessage(
+            [
+                TextContentItem(text="Please translate this audio snippet to spanish."),
+                AudioContentItem(
+                    input_audio=InputAudio.load(
+                        audio_file="hello_how_are_you.mp3", audio_format=AudioContentFormat.MP3
+                    )
+                ),
+            ],
+        ),
+    ],
+)
+```
+
+The response is as follows, where you can see the model's usage statistics:
+
+```python
+print(f"{response.choices[0].message.role}: {response.choices[0].message.content}")
+print("Model:", response.model)
+print("Usage:")
+print("\tPrompt tokens:", response.usage.prompt_tokens)
+print("\tCompletion tokens:", response.usage.completion_tokens)
+print("\tTotal tokens:", response.usage.total_tokens)
+```
+
+```console
+ASSISTANT: Hola. ¿Cómo estás?
+Model: speech
+Usage:
+    Prompt tokens: 77
+    Completion tokens: 7
+    Total tokens: 84
+```
+
+The model can read the content from an **accessible cloud location** by passing the URL as an input. The Python SDK doesn't provide a direct way to do it, but you can indicate the payload as follows:
+
+```python
+response = client.complete(
+    {
+        "messages": [
+            {
+                "role": "system",
+                "content": "You are an AI assistant for translating and transcribing audio clips.",
+            },
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "Please translate this audio snippet to spanish."
+                    },
+                    {
+                        "type": "audio_url",
+                        "audio_url": {
+                            "url": "https://.../hello_how_are_you.mp3"
+                        }
+                    }
+                ]
+            },
+        ],
+    }
+)
+```
+### Usage
+
+Audio is broken into tokens and submitted to the model for processing. Some models might operate directly over audio tokens while other might use internal modules to perform speech-to-text, resulting in different strategies to compute tokens. Read the model card for details about how each model operates.
+
+This article explains how to use chat completions API with _multimodal_ models deployed in Microsoft Foundry Models. Apart from text input, multimodal models can accept other input types, such as images or audio input.
+## Prerequisites
+
+To use chat completion models in your application, you need:
+
+- An Azure subscription. If you're using GitHub Models, you can upgrade your experience and create an Azure subscription in the process. Read [Upgrade from GitHub Models to Microsoft Foundry Models](../how-to/quickstart-github-models) if that's your case.
+
+- A Foundry project. This kind of project is managed under a Foundry resource. If you don't have a Foundry project, see [Create a project for Foundry (Foundry projects)](../../how-to/create-projects).
+
+- The endpoint's URL.
+
+- The endpoint's key (if you choose to use API key for authentication).
+
+* Install the [Azure Inference library for JavaScript](https://aka.ms/azsdk/azure-ai-inference/javascript/reference) with the following command:
+
+  ```bash
+  npm install @azure-rest/ai-inference
+  npm install @azure/core-auth
+  npm install @azure/identity
+  ```
+
+  If you are using Node.js, you can configure the dependencies in **package.json**:
+
+  __package.json__
+
+  ```json
+  {
+    "name": "main_app",
+    "version": "1.0.0",
+    "description": "",
+    "main": "app.js",
+    "type": "module",
+    "dependencies": {
+      "@azure-rest/ai-inference": "1.0.0-beta.6",
+      "@azure/core-auth": "1.9.0",
+      "@azure/core-sse": "2.2.0",
+      "@azure/identity": "4.8.0"
+    }
+  }
+  ```
+
+* Import the following:
+
+  ```javascript
+  import ModelClient from "@azure-rest/ai-inference";
+  import { isUnexpected } from "@azure-rest/ai-inference";
+  import { createSseStream } from "@azure/core-sse";
+  import { AzureKeyCredential } from "@azure/core-auth";
+  import { DefaultAzureCredential } from "@azure/identity";
+  ```
+
+* A chat completions model deployment with support for **audio and images**. If you don't have one, see [Add and configure Foundry Models](../../how-to/create-model-deployments) to add a chat completions model to your resource.
+
+  * This article uses `Phi-4-multimodal-instruct`.
+
+## Use chat completions
+
+First, create the client to consume the model. The following code uses an endpoint URL and key that are stored in environment variables.
+
+```javascript
+const client = ModelClient(
+    "https://<resource>.services.ai.azure.com/api/models", 
+    new AzureKeyCredential(process.env.AZURE_INFERENCE_CREDENTIAL)
+);
+```
+
+If you've configured the resource with **Microsoft Entra ID** support, you can use the following code snippet to create a client.
+
+```javascript
+const clientOptions = { credentials: { "https://cognitiveservices.azure.com" } };
+
+const client = ModelClient(
+    "https://<resource>.services.ai.azure.com/api/models", 
+    new DefaultAzureCredential()
+    clientOptions,
+);
+```
+
+## Use chat completions with images
+
+Some models can reason across text and images and generate text completions based on both kinds of input. In this section, you explore the capabilities of some models for vision in a chat fashion. 
+
+<Info>
+
+Some models support only one image for each turn in the chat conversation and only the last image is retained in context. If you add multiple images, it results in an error.
+
+</Info>
+
+To see this capability, download an image and encode the information as `base64` string. The resulting data should be inside of a [data URL](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URLs):
+
+```javascript
+const image_url = "https://news.microsoft.com/source/wp-content/uploads/2024/04/The-Phi-3-small-language-models-with-big-potential-1-1900x1069.jpg";
+const image_format = "jpeg";
+
+const response = await fetch(image_url, { headers: { "User-Agent": "Mozilla/5.0" } });
+const image_data = await response.arrayBuffer();
+const image_data_base64 = Buffer.from(image_data).toString("base64");
+const data_url = `data:image/${image_format};base64,${image_data_base64}`;
+```
+
+Visualize the image:
+
+```javascript
+const img = document.createElement("img");
+img.src = data_url;
+document.body.appendChild(img);
+```
+
+<Frame>
+  <img src="/images/small-language-models-chart-example.jpg" alt="A chart displaying the relative capabilities between large language models and small language models." />
+</Frame>
+
+Now, create a chat completion request with the image:
+
+```javascript
+var messages = [
+    { role: "system", content: "You are a helpful assistant that can generate responses based on images." },
+    { role: "user", content: 
+        [
+            { type: "text", text: "Which conclusion can be extracted from the following chart?" },
+            { type: "image_url", image:
+                {
+                    url: data_url
+                }
+            } 
+        ] 
+    }
+];
+
+var response = await client.path("/chat/completions").post({
+    body: {
+        messages: messages,
+        model: "Phi-4-multimodal-instruct",
+    }
+});
+```
+
+The response is as follows, where you can see the model's usage statistics:
+
+```javascript
+console.log(response.body.choices[0].message.role + ": " + response.body.choices[0].message.content);
+console.log("Model:", response.body.model);
+console.log("Usage:");
+console.log("\tPrompt tokens:", response.body.usage.prompt_tokens);
+console.log("\tCompletion tokens:", response.body.usage.completion_tokens);
+console.log("\tTotal tokens:", response.body.usage.total_tokens);
+```
+
+```console
+ASSISTANT: The chart illustrates that larger models tend to perform better in quality, as indicated by their size in billions of parameters. However, there are exceptions to this trend, such as Phi-3-medium and Phi-3-small, which outperform smaller models in quality. This suggests that while larger models generally have an advantage, there might be other factors at play that influence a model's performance.
+Model: Phi-4-multimodal-instruct
+Usage: 
+  Prompt tokens: 2380
+  Completion tokens: 126
+  Total tokens: 2506
+```
+
+### Usage
+
+Images are broken into tokens and submitted to the model for processing. When referring to images, each of those tokens is typically referred as *patches*. Each model might break down a given image on a different number of patches. Read the model card to learn the details.
+
+### Multi-turn conversations
+
+Some models support only one image for each turn in the chat conversation and only the last image is retained in context. If you add multiple images, it results in an error. Read the model card to understand the case of each model.
+
+### Image URLs
+
+The model can read the content from an **accessible cloud location** by passing the URL as an input. This approach requires the URL to be public and do not require specific handling.
+
+## Use chat completions with audio
+
+Some models can reason across text and audio inputs. The following example shows how you can send audio context to chat completions models that also supports audio.
+
+In this example, we create a function `getAudioData` to load the content of the audio file encoded in `base64` data as the model expects it.
+
+```javascript
+import fs from "node:fs";
+
+/**
+ * Get the Base 64 data of an audio file.
+ * @param {string} audioFile - The path to the image file.
+ * @returns {string} Base64 data of the audio.
+ */
+function getAudioData(audioFile: string): string {
+  try {
+    const audioBuffer = fs.readFileSync(audioFile);
+    return audioBuffer.toString("base64");
+  } catch (error) {
+    console.error(`Could not read '${audioFile}'.`);
+    console.error("Set the correct path to the audio file before running this sample.");
+    process.exit(1);
+  }
+}
+```
+
+Let's now use this function to load the content of an audio file stored on disk. We send the content of the audio file in a user message. Notice that in the request we also indicate the format of the audio content:
+
+```javascript
+const audioFilePath = "hello_how_are_you.mp3"
+const audioFormat = "mp3"
+const audioData = getAudioData(audioFilePath);
+
+const systemMessage = { role: "system", content: "You are an AI assistant for translating and transcribing audio clips." };
+const audioMessage = { 
+role: "user",
+content: [
+    { type: "text", text: "Translate this audio snippet to spanish."},
+    { type: "input_audio",
+    input_audio: {
+        audioData,
+        audioFormat,
+    },
+    },
+] 
+};
+
+const response = await client.path("/chat/completions").post({
+    body: {
+      messages: [
+        systemMessage,
+        audioMessage
+      ],
+      model: "Phi-4-multimodal-instruct",
+    },
+  });
+```
+
+The response is as follows, where you can see the model's usage statistics:
+
+```javascript
+if (isUnexpected(response)) {
+    throw response.body.error;
+}
+
+console.log("Response: ", response.body.choices[0].message.content);
+console.log("Model: ", response.body.model);
+console.log("Usage:");
+console.log("\tPrompt tokens:", response.body.usage.prompt_tokens);
+console.log("\tTotal tokens:", response.body.usage.total_tokens);
+console.log("\tCompletion tokens:", response.body.usage.completion_tokens);
+```
+
+```console
+ASSISTANT: Hola. ¿Cómo estás?
+Model: speech
+Usage:
+    Prompt tokens: 77
+    Completion tokens: 7
+    Total tokens: 84
+```
+
+The model can read the content from an **accessible cloud location** by passing the URL as an input. The Python SDK doesn't provide a direct way to do it, but you can indicate the payload as follows:
+
+```javascript
+const systemMessage = { role: "system", content: "You are a helpful assistant." };
+const audioMessage = { 
+    role: "user",
+    content: [
+        { type: "text", text: "Transcribe this audio."},
+        { type: "audio_url",
+        audio_url: {
+            url: "https://example.com/audio.mp3", 
+        },
+        },
+    ] 
+};
+
+const response = await client.path("/chat/completions").post({
+    body: {
+      messages: [
+        systemMessage,
+        audioMessage
+      ],
+      model: "Phi-4-multimodal-instruct",
+    },
+  });
+```
+
+### Usage
+
+Audio is broken into tokens and submitted to the model for processing. Some models might operate directly over audio tokens while other might use internal modules to perform speech-to-text, resulting in different strategies to compute tokens. Read the model card for details about how each model operates.
+
+This article explains how to use chat completions API with _multimodal_ models deployed in Microsoft Foundry Models. Apart from text input, multimodal models can accept other input types, such as images or audio input.
+
+## Prerequisites
+
+To use chat completion models in your application, you need:
+
+- An Azure subscription. If you're using GitHub Models, you can upgrade your experience and create an Azure subscription in the process. Read [Upgrade from GitHub Models to Microsoft Foundry Models](../how-to/quickstart-github-models) if that's your case.
+
+- A Foundry project. This kind of project is managed under a Foundry resource. If you don't have a Foundry project, see [Create a project for Foundry (Foundry projects)](../../how-to/create-projects).
+
+- The endpoint's URL.
+
+- The endpoint's key (if you choose to use API key for authentication).
+
+* Add the [Azure AI inference package](https://aka.ms/azsdk/azure-ai-inference/java/reference) to your project:
+
+  ```xml
+  <dependency>
+      <groupId>com.azure</groupId>
+      <artifactId>azure-ai-inference</artifactId>
+      <version>1.0.0-beta.4</version>
+  </dependency>
+  ```
+  
+* If you are using Entra ID, you also need the following package:
+
+  ```xml
+  <dependency>
+      <groupId>com.azure</groupId>
+      <artifactId>azure-identity</artifactId>
+      <version>1.15.3</version>
+  </dependency>
+  ```
+
+* Import the following namespace:
+  
+  ```java
+  package com.azure.ai.inference.usage;
+  
+  import com.azure.ai.inference.EmbeddingsClient;
+  import com.azure.ai.inference.EmbeddingsClientBuilder;
+  import com.azure.ai.inference.ChatCompletionsClient;
+  import com.azure.ai.inference.ChatCompletionsClientBuilder;
+  import com.azure.ai.inference.models.EmbeddingsResult;
+  import com.azure.ai.inference.models.EmbeddingItem;
+  import com.azure.ai.inference.models.ChatCompletions;
+  import com.azure.core.credential.AzureKeyCredential;
+  import com.azure.core.util.Configuration;
+  
+  import java.util.ArrayList;
+  import java.util.List;
+  ```
+
+* A chat completions model deployment. If you don't have one read [Add and configure Foundry Models](../../how-to/create-model-deployments) to add a chat completions model to your resource.
+
+    * This example uses `phi-4-multimodal-instruct`.
+
+## Use chat completions
+
+First, create the client to consume the model. The following code uses an endpoint URL and key that are stored in environment variables.
+
+```java
+ChatCompletionsClient client = new ChatCompletionsClientBuilder()
+    .credential(new AzureKeyCredential("{key}"))
+    .endpoint("https://<resource>.services.ai.azure.com/api/models")
+    .buildClient();
+```
+
+If you've configured the resource with **Microsoft Entra ID** support, you can use the following code snippet to create a client.
+
+```java
+TokenCredential defaultCredential = new DefaultAzureCredentialBuilder().build();
+ChatCompletionsClient client = new ChatCompletionsClientBuilder()
+    .credential(defaultCredential)
+    .endpoint("https://<resource>.services.ai.azure.com/api/models")
+    .buildClient();
+```
+
+## Use chat completions with images
+
+Some models can reason across text and images and generate text completions based on both kinds of input. In this section, you explore the capabilities of Some models for vision in a chat fashion:
+
+To see this capability, download an image and encode the information as `base64` string. The resulting data should be inside of a [data URL](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URLs):
+
+```java
+Path testFilePath = Paths.get("small-language-models-chart-example.jpg");
+String imageFormat = "jpg";
+```
+
+Visualize the image:
+
+<Frame>
+  <img src="/images/small-language-models-chart-example.jpg" alt="A chart displaying the relative capabilities between large language models and small language models." />
+</Frame>
+
+Now, create a chat completion request with the image:
+
+```java
+List<ChatMessageContentItem> contentItems = new ArrayList<>();
+contentItems.add(new ChatMessageTextContentItem("Which conclusion can be extracted from the following chart?"));
+contentItems.add(new ChatMessageImageContentItem(testFilePath, imageFormat));
+
+List<ChatRequestMessage> chatMessages = new ArrayList<>();
+chatMessages.add(new ChatRequestSystemMessage("You are an AI assistant that helps people find information."));
+chatMessages.add(ChatRequestUserMessage.fromContentItems(contentItems));
+
+ChatCompletionsOptions options = new ChatCompletionsOptions(chatMessages);
+options.setModel("phi-4-multimodal-instruct")
+
+ChatCompletions response = client.complete(options);
+```
+
+The response is as follows, where you can see the model's usage statistics:
+
+```java
+System.out.println("Response: " + response.getValue().getChoices().get(0).getMessage().getContent());
+System.out.println("Model: " + response.getValue().getModel());
+System.out.println("Usage:");
+System.out.println("\tPrompt tokens: " + response.getValue().getUsage().getPromptTokens());
+System.out.println("\tTotal tokens: " + response.getValue().getUsage().getTotalTokens());
+System.out.println("\tCompletion tokens: " + response.getValue().getUsage().getCompletionTokens());
+```
+
+### Usage
+
+Images are broken into tokens and submitted to the model for processing. When referring to images, each of those tokens is typically referred as *patches*. Each model might break down a given image on a different number of patches. Read the model card to learn the details.
+
+### Multi-turn conversations
+
+Some models support only one image for each turn in the chat conversation and only the last image is retained in context. If you add multiple images, it results in an error. Read the model card to understand the case of each model.
+
+### Image URLs
+
+The model can read the content from an **accessible cloud location** by passing the URL as an input. This approach requires the URL to be public and do not require specific handling.
+
+```java
+Path testFilePath = Paths.get("https://.../small-language-models-chart-example.jpg");
+
+List<ChatMessageContentItem> contentItems = new ArrayList<>();
+contentItems.add(new ChatMessageTextContentItem("Which conclusion can be extracted from the following chart?"));
+contentItems.add(new ChatMessageImageContentItem(
+    new ChatMessageImageUrl(testFilePath)));
+
+List<ChatRequestMessage> chatMessages = new ArrayList<>();
+chatMessages.add(new ChatRequestSystemMessage("You are an AI assistant that helps people find information."));
+chatMessages.add(ChatRequestUserMessage.fromContentItems(contentItems));
+
+ChatCompletionsOptions options = new ChatCompletionsOptions(chatMessages);
+options.setModel("phi-4-multimodal-instruct")
+
+ChatCompletions response = client.complete(options);
+```
+
+## Use chat completions with audio
+
+Some models can reason across text and audio inputs. This capability isn't available in the Azure AI Inference package for Java.
+
+This article explains how to use chat completions API with _multimodal_ models deployed in Microsoft Foundry Models. Apart from text input, multimodal models can accept other input types, such as images or audio input.
+
+## Prerequisites
+
+To use chat completion models in your application, you need:
+
+- An Azure subscription. If you're using GitHub Models, you can upgrade your experience and create an Azure subscription in the process. Read [Upgrade from GitHub Models to Microsoft Foundry Models](../how-to/quickstart-github-models) if that's your case.
+
+- A Foundry project. This kind of project is managed under a Foundry resource. If you don't have a Foundry project, see [Create a project for Foundry (Foundry projects)](../../how-to/create-projects).
+
+- The endpoint's URL.
+
+- The endpoint's key (if you choose to use API key for authentication).
+
+* Install the [Azure AI inference package](https://aka.ms/azsdk/azure-ai-inference/python/reference) with the following command:
+
+    ```bash
+    dotnet add package Azure.AI.Inference --prerelease
+    ```
+    
+* If you are using Entra ID, you also need the following package:
+
+    ```bash
+    dotnet add package Azure.Identity
+    ```
+
+* A chat completions model deployment. If you don't have one, read [Add and configure Foundry Models](../../how-to/create-model-deployments) to add a chat completions model to your resource.
+
+    * This example uses `phi-4-multimodal-instruct`.
+
+## Use chat completions
+
+First, create the client to consume the model. The following code uses an endpoint URL and key that are stored in environment variables.
+
+```csharp
+ChatCompletionsClient client = new ChatCompletionsClient(
+    new Uri("https://<resource>.services.ai.azure.com/api/models"),
+    new AzureKeyCredential(Environment.GetEnvironmentVariable("AZURE_INFERENCE_CREDENTIAL")),
+);
+```
+
+If you've configured the resource with **Microsoft Entra ID** support, you can use the following code snippet to create a client.
+
+```csharp
+client = new ChatCompletionsClient(
+    new Uri("https://<resource>.services.ai.azure.com/api/models"),
+    new DefaultAzureCredential(),
+);
+```
+
+## Use chat completions with images
+
+Some models can reason across text and images and generate text completions based on both kinds of input. In this section, you explore the capabilities of Some models for vision in a chat fashion:
+
+<Info>
+
+Some models support only one image for each turn in the chat conversation and only the last image is retained in context. If you add multiple images, it results in an error.
+
+</Info>
+
+To see this capability, download an image and encode the information as `base64` string. The resulting data should be inside of a [data URL](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URLs):
+
+```csharp
+string imageUrl = "https://news.microsoft.com/source/wp-content/uploads/2024/04/The-Phi-3-small-language-models-with-big-potential-1-1900x1069.jpg";
+string imageFormat = "jpeg";
+HttpClient httpClient = new HttpClient();
+httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0");
+byte[] imageBytes = httpClient.GetByteArrayAsync(imageUrl).Result;
+string imageBase64 = Convert.ToBase64String(imageBytes);
+string dataUrl = $"data:image/{imageFormat};base64,{imageBase64}";
+```
+
+Visualize the image:
+
+<Frame>
+  <img src="/images/small-language-models-chart-example.jpg" alt="A chart displaying the relative capabilities between large language models and small language models." />
+</Frame>
+
+Now, create a chat completion request with the image:
+
+```csharp
+ChatCompletionsOptions requestOptions = new ChatCompletionsOptions()
+{
+    Messages = {
+        new ChatRequestSystemMessage("You are an AI assistant that helps people find information."),
+        new ChatRequestUserMessage([
+            new ChatMessageTextContentItem("Which conclusion can be extracted from the following chart?"),
+            new ChatMessageImageContentItem(new Uri(dataUrl))
+        ]),
+    },
+    MaxTokens=2048,
+    Model = "Phi-4-multimodal-instruct",
+};
+
+var response = client.Complete(requestOptions);
+Console.WriteLine(response.Value.Content);
+```
+
+The response is as follows, where you can see the model's usage statistics:
+
+```csharp
+Console.WriteLine($"{response.Value.Role}: {response.Value.Content}");
+Console.WriteLine($"Model: {response.Value.Model}");
+Console.WriteLine("Usage:");
+Console.WriteLine($"\tPrompt tokens: {response.Value.Usage.PromptTokens}");
+Console.WriteLine($"\tTotal tokens: {response.Value.Usage.TotalTokens}");
+Console.WriteLine($"\tCompletion tokens: {response.Value.Usage.CompletionTokens}");
+```
+
+```console
+ASSISTANT: The chart illustrates that larger models tend to perform better in quality, as indicated by their size in billions of parameters. However, there are exceptions to this trend, such as Phi-3-medium and Phi-3-small, which outperform smaller models in quality. This suggests that while larger models generally have an advantage, there might be other factors at play that influence a model's performance.
+Model: Phi-4-multimodal-instruct
+Usage: 
+  Prompt tokens: 2380
+  Completion tokens: 126
+  Total tokens: 2506
+```
+
+### Usage
+
+Images are broken into tokens and submitted to the model for processing. When referring to images, each of those tokens is typically referred as *patches*. Each model might break down a given image on a different number of patches. Read the model card to learn the details.
+
+### Multi-turn conversations
+
+Some models support only one image for each turn in the chat conversation and only the last image is retained in context. If you add multiple images, it results in an error. Read the model card to understand the case of each model.
+
+### Image URLs
+
+The model can read the content from an **accessible cloud location** by passing the URL as an input. This approach requires the URL to be public and do not require specific handling.
+
+## Use chat completions with audio
+
+Some models can reason across text and audio inputs. The following example shows how you can send audio context to chat completions models that also supports audio. Use `InputAudio` to load the content of the audio file into the payload. The content is encoded in `base64` data and sent over the payload.
+
+```csharp
+var requestOptions = new ChatCompletionsOptions()
+{
+    Messages =
+    {
+        new ChatRequestSystemMessage("You are an AI assistant for translating and transcribing audio clips."),
+        new ChatRequestUserMessage(
+            new ChatMessageTextContentItem("Please translate this audio snippet to spanish."),
+            new ChatMessageAudioContentItem("hello_how_are_you.mp3", AudioContentFormat.Mp3),
+    },
+};
+
+Response<ChatCompletions> response = client.Complete(requestOptions);
+```
+
+The response is as follows, where you can see the model's usage statistics:
+
+```csharp
+Console.WriteLine($"{response.Value.Role}: {response.Value.Content}");
+Console.WriteLine($"Model: {response.Value.Model}");
+Console.WriteLine("Usage:");
+Console.WriteLine($"\tPrompt tokens: {response.Value.Usage.PromptTokens}");
+Console.WriteLine($"\tTotal tokens: {response.Value.Usage.TotalTokens}");
+Console.WriteLine($"\tCompletion tokens: {response.Value.Usage.CompletionTokens}");
+```
+
+```console
+ASSISTANT: Hola. ¿Cómo estás?
+Model: speech
+Usage:
+    Prompt tokens: 77
+    Completion tokens: 7
+    Total tokens: 84
+```
+
+The model can read the content from an **accessible cloud location** by passing the URL as an input. The Python SDK doesn't provide a direct way to do it, but you can indicate the payload as follows:
+
+```csharp
+var requestOptions = new ChatCompletionsOptions()
+{
+    Messages =
+    {
+        new ChatRequestSystemMessage("You are an AI assistant for translating and transcribing audio clips."),
+        new ChatRequestUserMessage(
+            new ChatMessageTextContentItem("Please translate this audio snippet to spanish."),
+            new ChatMessageAudioContentItem(new Uri("https://.../hello_how_are_you.mp3"))),
+    },
+};
+
+Response<ChatCompletions> response = client.Complete(requestOptions);
+```
+
+The response is as follows, where you can see the model's usage statistics:
+
+```csharp
+Console.WriteLine($"{response.Value.Role}: {response.Value.Content}");
+Console.WriteLine($"Model: {response.Value.Model}");
+Console.WriteLine("Usage:");
+Console.WriteLine($"\tPrompt tokens: {response.Value.Usage.PromptTokens}");
+Console.WriteLine($"\tTotal tokens: {response.Value.Usage.TotalTokens}");
+Console.WriteLine($"\tCompletion tokens: {response.Value.Usage.CompletionTokens}");
+```
+
+```console
+ASSISTANT: Hola. ¿Cómo estás?
+Model: speech
+Usage:
+    Prompt tokens: 77
+    Completion tokens: 7
+    Total tokens: 84
+```
+
+### Usage
+
+Audio is broken into tokens and submitted to the model for processing. Some models might operate directly over audio tokens while other might use internal modules to perform speech-to-text, resulting in different strategies to compute tokens. Read the model card for details about how each model operates.
+
+This article explains how to use chat completions API with _multimodal_ models deployed in Microsoft Foundry Models. Apart from text input, multimodal models can accept other input types, such as images or audio input.
+
+## Prerequisites
+
+To use chat completion models in your application, you need:
+
+- An Azure subscription. If you're using GitHub Models, you can upgrade your experience and create an Azure subscription in the process. Read [Upgrade from GitHub Models to Microsoft Foundry Models](../how-to/quickstart-github-models) if that's your case.
+
+- A Foundry project. This kind of project is managed under a Foundry resource. If you don't have a Foundry project, see [Create a project for Foundry (Foundry projects)](../../how-to/create-projects).
+
+- The endpoint's URL.
+
+- The endpoint's key (if you choose to use API key for authentication).
+
+* A chat completions model deployment. If you don't have one, see [Add and configure Foundry Models](../../how-to/create-model-deployments) to add a chat completions model to your resource.
+
+  * This article uses `Phi-4-multimodal-instruct`.
+
+## Use chat completions
+
+To use chat completions API, use the route `/chat/completions` appended to the base URL along with your credential indicated in `api-key`. `Authorization` header is also supported with the format `Bearer <key>`.
+
+```http
+POST https://<resource>.services.ai.azure.com/models/chat/completions?api-version=2024-05-01-preview
+Content-Type: application/json
+api-key: <key>
+```
+
+If you've configured the resource with **Microsoft Entra ID** support, pass your token in the `Authorization` header with the format `Bearer <token>`. Use scope `https://ai.azure.com/.default`. 
+
+```http
+POST https://<resource>.services.ai.azure.com/models/chat/completions?api-version=2024-05-01-preview
+Content-Type: application/json
+Authorization: Bearer <token>
+```
+
+Using Microsoft Entra ID might require extra configuration in your resource to grant access. Learn how to [configure key-less authentication with Microsoft Entra ID](../../how-to/configure-entra-id).
+
+## Use chat completions with images
+
+Some models can reason across text and images and generate text completions based on both kinds of input. In this section, you explore the capabilities of Some models for vision in a chat fashion:
+
+<Info>
+
+Some models support only one image for each turn in the chat conversation and only the last image is retained in context. If you add multiple images, it results in an error.
+
+</Info>
+
+To see this capability, download an image and encode the information as `base64` string. The resulting data should be inside of a [data URL](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URLs):
+
+<Tip>
+
+You'll need to construct the data URL using a scripting or programming language. This article uses [this sample image](../../../../foundry-classic/media/how-to/sdks/small-language-models-chart-example.jpg) in JPEG format. A data URL has a format as follows: `data:image/jpg;base64,0xABCDFGHIJKLMNOPQRSTUVWXYZ...`.
+
+</Tip>
+
+Visualize the image:
+
+<Frame>
+  <img src="/images/small-language-models-chart-example.jpg" alt="A chart displaying the relative capabilities between large language models and small language models." />
+</Frame>
+
+Now, create a chat completion request with the image:
+
+```json
+{
+    "model": "Phi-4-multimodal-instruct",
+    "messages": [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "text",
+                    "text": "Which peculiar conclusion about LLMs and SLMs can be extracted from the following chart?"
+                },
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": "data:image/jpg;base64,0xABCDFGHIJKLMNOPQRSTUVWXYZ..."
+                    }
+                }
+            ]
+        }
+    ],
+    "temperature": 0,
+    "top_p": 1,
+    "max_tokens": 2048
+}
+```
+
+The response is as follows, where you can see the model's usage statistics:
+
+```json
+{
+    "id": "0a1234b5de6789f01gh2i345j6789klm",
+    "object": "chat.completion",
+    "created": 1718726686,
+    "model": "Phi-4-multimodal-instruct",
+    "choices": [
+        {
+            "index": 0,
+            "message": {
+                "role": "assistant",
+                "content": "The chart illustrates that larger models tend to perform better in quality, as indicated by their size in billions of parameters. However, there are exceptions to this trend, such as Phi-3-medium and Phi-3-small, which outperform smaller models in quality. This suggests that while larger models generally have an advantage, there might be other factors at play that influence a model's performance.",
+                "tool_calls": null
+            },
+            "finish_reason": "stop",
+            "logprobs": null
+        }
+    ],
+    "usage": {
+        "prompt_tokens": 2380,
+        "completion_tokens": 126,
+        "total_tokens": 2506
+    }
+}
+```
+
+Images are broken into tokens and submitted to the model for processing. When referring to images, each of those tokens is typically referred as *patches*. Each model might break down a given image on a different number of patches. Read the model card to learn the details.
+
+## Use chat completions with audio
+
+Some models can reason across text and audio inputs. The following example shows how you can send audio context to chat completions models that also supports audio. 
+
+The following example sends audio content encoded in `base64` data in the chat history:
+
+```json
+{
+    "model": "Phi-4-multimodal-instruct",
+    "messages": [
+        {
+            "role": "system",
+            "content": "You are an AI assistant for translating and transcribing audio clips."
+        },
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "text",
+                    "text": "Please translate this audio snippet to spanish."
+                },
+                {
+                    "type": "input_audio",
+                    "input_audio": {
+                        "data": "0xABCDFGHIJKLMNOPQRSTUVWXYZ...",
+                        "format": "mp3"
+                    }
+                }
+            ]
+        }
+    ],
+}
+```
+
+The response is as follows, where you can see the model's usage statistics:
+
+```json
+{
+    "id": "0a1234b5de6789f01gh2i345j6789klm",
+    "object": "chat.completion",
+    "created": 1718726686,
+    "model": "Phi-4-multimodal-instruct",
+    "choices": [
+        {
+            "index": 0,
+            "message": {
+                "role": "assistant",
+                "content": "Hola. ¿Cómo estás?",
+                "tool_calls": null
+            },
+            "finish_reason": "stop",
+            "logprobs": null
+        }
+    ],
+    "usage": {
+        "prompt_tokens": 77,
+        "completion_tokens": 7,
+        "total_tokens": 84
+    }
+}
+```
+
+The model can read the content from an **accessible cloud location** by passing the URL as an input. You can indicate the payload as follows:
+
+```json
+{
+    "model": "Phi-4-multimodal-instruct",
+    "messages": [
+        {
+            "role": "system",
+            "content": "You are an AI assistant for translating and transcribing audio clips."
+        },
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "text",
+                    "text": "Please translate this audio snippet to spanish."
+                },
+                {
+                    "type": "audio_url",
+                    "audio_url": {
+                        "url": "https://.../hello_how_are_you.mp3",
+                    }
+                }
+            ]
+        }
+    ],
+}
+```
+
+The response is as follows, where you can see the model's usage statistics:
+
+```json
+{
+    "id": "0a1234b5de6789f01gh2i345j6789klm",
+    "object": "chat.completion",
+    "created": 1718726686,
+    "model": "Phi-4-multimodal-instruct",
+    "choices": [
+        {
+            "index": 0,
+            "message": {
+                "role": "assistant",
+                "content": "Hola. ¿Cómo estás?",
+                "tool_calls": null
+            },
+            "finish_reason": "stop",
+            "logprobs": null
+        }
+    ],
+    "usage": {
+        "prompt_tokens": 77,
+        "completion_tokens": 7,
+        "total_tokens": 84
+    }
+}
+```
+
+Audio is broken into tokens and submitted to the model for processing. Some models might operate directly over audio tokens while others might use internal modules to perform speech-to-text, resulting in different strategies to compute tokens. Read the model card for details about how each model operates.
+
+## Related content
+
+* [Use embeddings models](/foundry-models/use-embeddings)
+* [Use image embeddings models](./use-image-embeddings)
+* [Use reasoning models](/foundry-models/use-chat-reasoning)
+* [Azure AI Model Inference API](https://learn.microsoft.com/rest/api/aifoundry/modelinference)

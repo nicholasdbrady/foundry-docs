@@ -153,7 +153,7 @@ az cognitiveservices agent delete \
 ### Delete using the SDK
 
 ```python
-client.agents.delete_version(agent_name="my-agent", agent_version="1")
+project.agents.delete_version(agent_name="my-agent", agent_version="1")
 ```
 
 ## List and view agents
@@ -204,26 +204,31 @@ Timeouts:
 Test your running agent using the SDK:
 
 ```python
-import os
 from azure.identity import DefaultAzureCredential
 from azure.ai.projects import AIProjectClient
 
-endpoint = os.environ["AZURE_AI_PROJECT_ENDPOINT"]
-agent_name = os.environ["AZURE_AI_AGENT_NAME"]
+# Format: "https://resource_name.services.ai.azure.com/api/projects/project_name"
+PROJECT_ENDPOINT = "your_project_endpoint"
+AGENT_NAME = "your_agent_name"
 
-with (
-    DefaultAzureCredential() as credential,
-    AIProjectClient(endpoint=endpoint, credential=credential) as client,
-    client.get_openai_client() as openai_client,
-):
-    agent = client.agents.get(agent_name=agent_name)
-    
-    response = openai_client.responses.create(
-        input=[{"role": "user", "content": "Hello! What can you help me with?"}],
-        extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}}
-    )
-    
-    print(f"Response: {response.output_text}")
+# Create project and OpenAI clients
+project = AIProjectClient(
+    endpoint=PROJECT_ENDPOINT,
+    credential=DefaultAzureCredential(),
+    allow_preview=True,
+)
+openai = project.get_openai_client()
+
+# Get agent details
+agent = project.agents.get(agent_name=AGENT_NAME)
+
+# Chat with the hosted agent
+response = openai.responses.create(
+    input=[{"role": "user", "content": "Hello! What can you help me with?"}],
+    extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}}
+)
+
+print(f"Response: {response.output_text}")
 ```
 
 You can also test agents in the agent playground UI in the Foundry portal.
@@ -249,23 +254,9 @@ You can also test agents in the agent playground UI in the Foundry portal.
 
 - **Forgetting ACR permissions**: The project's managed identity needs explicit pull access to the container registry
 - **Incorrect platform version for docker images**: Always specify `--platform linux/amd64` when doing docker build yourself 
-- **Wrong SDK version**: Hosted agents require `azure-ai-projects>=2.0.0b4`
+- **Wrong SDK version**: Hosted agents require `azure-ai-projects>=2.0.0`
 - **Missing capability host**: Create an account-level capability host before deploying. See [Deploy a hosted agent](/agents/development/deploy-hosted-agent#create-an-account-level-capability-host)
 - **Publishing identity mismatch**: After publishing, the agent uses a different identity. Reassign RBAC permissions
-
-### Environment variable security
-
-<Warning>
-Environment variables are visible in container log streams and in Azure portal deployment details. Never store secrets such as API keys, tokens, or connection strings directly in environment variables.
-</Warning>
-
-Instead of embedding secrets in environment variables:
-
-1. Use [managed identities](/agents/development/agent-identity) to authenticate to Azure services without credentials.
-1. Store secrets in Azure Key Vault and connect them through a [Key Vault connection](/security/set-up-key-vault-connection).
-1. Use Foundry [connections](https://learn.microsoft.com/azure/ai-foundry/concepts/connections) to securely reference external service credentials.
-
-If you suspect that secrets were exposed through environment variables, rotate the affected credentials immediately and redeploy the agent with the secrets removed from the environment variable configuration.
 
 ## Next steps
 
@@ -275,4 +266,4 @@ If you suspect that secrets were exposed through environment variables, rotate t
 - [What are hosted agents?](/agents/development/hosted-agents)
 - [Deploy a hosted agent](/agents/development/deploy-hosted-agent)
 - [Agent identity concepts](/agents/development/agent-identity)
-- [Evaluate your AI agents locally](https://learn.microsoft.com/en-us/azure/foundry-classic/how-to/develop/agent-evaluate-sdk)
+- [Evaluate your AI agents](/agents/development/trace-agent-concept)
