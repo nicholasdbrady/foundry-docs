@@ -39,7 +39,9 @@ safe-outputs:
     labels: [community, documentation]
     expires: 14d
     close-older-issues: true
+  report-incomplete:
   noop:
+    report-as-issue: false
 
 network:
   allowed:

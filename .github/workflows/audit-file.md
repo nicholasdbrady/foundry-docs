@@ -45,7 +45,9 @@ tools:
 safe-outputs:
   add-comment:
     max: 1
+  report-incomplete:
   noop:
+    report-as-issue: false
 
 timeout-minutes: 10
 concurrency:

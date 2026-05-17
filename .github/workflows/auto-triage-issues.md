@@ -30,7 +30,9 @@ safe-outputs:
     max: 4
   add-comment:
     max: 1
+  report-incomplete:
   noop:
+    report-as-issue: false
 
 network:
   allowed:

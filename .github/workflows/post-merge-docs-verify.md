@@ -41,7 +41,9 @@ safe-outputs:
     title-prefix: "[post-merge] "
     labels: [documentation, post-merge-check]
     expires: 7d
+  report-incomplete:
   noop:
+    report-as-issue: false
 
 timeout-minutes: 10
 concurrency:

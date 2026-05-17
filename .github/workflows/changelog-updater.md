@@ -34,7 +34,9 @@ safe-outputs:
     reviewers: [copilot]
     draft: false
     auto-merge: true
+  report-incomplete:
   noop:
+    report-as-issue: false
 
 tools:
   cache-memory: true

@@ -25,7 +25,9 @@ safe-outputs:
     auto-merge: true
     draft: false
     expires: 7d
+  report-incomplete:
   noop:
+    report-as-issue: false
 
 engine: copilot
 imports:

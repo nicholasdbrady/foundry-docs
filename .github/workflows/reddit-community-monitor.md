@@ -42,7 +42,9 @@ safe-outputs:
     close-older-issues: true
   add-comment:
     max: 1
+  report-incomplete:
   noop:
+    report-as-issue: false
 
 network:
   allowed:

@@ -43,7 +43,9 @@ safe-outputs:
   add-labels:
     allowed: [documentation, docs-vnext, needs-review, approved-docs]
     max: 3
+  report-incomplete:
   noop:
+    report-as-issue: false
 
 timeout-minutes: 10
 concurrency:

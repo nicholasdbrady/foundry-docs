@@ -37,7 +37,9 @@ safe-outputs:
     labels: [documentation, glossary, docs-vnext]
     auto-merge: true
     draft: false
+  report-incomplete:
   noop:
+    report-as-issue: false
 
 tools:
   cache-memory: true

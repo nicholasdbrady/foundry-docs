@@ -32,7 +32,9 @@ safe-outputs:
     auto-merge: true
     expires: 7d
     draft: false
+  report-incomplete:
   noop:
+    report-as-issue: false
 
 tools:
   cache-memory: true
@@ -74,7 +76,7 @@ Run the scraper for the primary docs site:
 python3 scripts/scrape_model_catalog.py --include-partners --output docs/static/data
 ```
 
-If the script exits with a non-zero code, call `noop` with the error output and STOP — do NOT create a PR with bad data.
+If the script exits with a non-zero code, call `report_incomplete` with the error output and STOP — do NOT create a PR with bad data.
 
 Then copy the output to docs-vnext:
 
@@ -111,6 +113,6 @@ Use `create_pull_request` with:
 
 ## Error Handling
 
-- If the scraper fails: `noop` with error message
+- If the scraper fails: `report_incomplete` with error message
 - If no changes: `noop` with "up to date" message
 - Never commit or PR bad data

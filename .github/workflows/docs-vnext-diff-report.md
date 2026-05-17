@@ -43,7 +43,9 @@ safe-outputs:
     labels: [documentation, metrics, docs-vnext]
     close-older-issues: true
     expires: 14d
+  report-incomplete:
   noop:
+    report-as-issue: false
 
 timeout-minutes: 15
 

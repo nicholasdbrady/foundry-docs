@@ -64,7 +64,9 @@ safe-outputs:
     reviewers: [copilot]
     draft: false
     auto-merge: true
+  report-incomplete:
   noop:
+    report-as-issue: false
 
 ---
 
@@ -84,7 +86,7 @@ You run automatically after the "Sync and Convert Docs" workflow completes. Your
 If this was triggered by a `workflow_run` event, check the parent workflow's conclusion:
 
 - The conclusion is available at: `${{ github.event.workflow_run.conclusion }}`
-- If the conclusion is NOT `success` (e.g., `failure`, `cancelled`), immediately call `noop` with message: "Parent workflow did not succeed (conclusion: [conclusion]). Skipping."
+- If the conclusion is NOT `success` (e.g., `failure`, `cancelled`), immediately call `report_incomplete` with message: "Parent workflow did not succeed (conclusion: [conclusion]). Skipping."
 - If triggered by `workflow_dispatch` (manual), skip this check and proceed normally.
 
 ## Step 0B: Load Last Processed Commit

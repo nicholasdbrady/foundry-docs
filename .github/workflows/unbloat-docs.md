@@ -59,7 +59,9 @@ safe-outputs:
     fallback-as-issue: false
   add-comment:
     max: 1
+  report-incomplete:
   noop:
+    report-as-issue: false
   messages:
     footer: "> 🗜️ *Compressed by [{workflow_name}]({run_url})*"
     run-started: "📦 Time to slim down! [{workflow_name}]({run_url}) is trimming the excess..."

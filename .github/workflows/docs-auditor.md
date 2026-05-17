@@ -39,6 +39,7 @@ safe-outputs:
     expires: 14d
   report-incomplete:
   noop:
+    report-as-issue: false
 timeout-minutes: 25
 concurrency:
   group: "gh-aw-${{ github.workflow }}"

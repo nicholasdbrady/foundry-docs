@@ -31,6 +31,7 @@ safe-outputs:
     expires: 14d
   report-incomplete:
   noop:
+    report-as-issue: false
 
 network:
   allowed:

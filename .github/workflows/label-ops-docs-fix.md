@@ -53,7 +53,9 @@ safe-outputs:
     draft: false
   add-comment:
     max: 1
+  report-incomplete:
   noop:
+    report-as-issue: false
 
 timeout-minutes: 15
 concurrency:

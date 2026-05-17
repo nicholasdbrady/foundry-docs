@@ -41,7 +41,9 @@ safe-outputs:
   dispatch-workflow:
     workflows: ["sync-and-convert"]
     max: 1
+  report-incomplete:
   noop:
+    report-as-issue: false
 
 network:
   allowed:

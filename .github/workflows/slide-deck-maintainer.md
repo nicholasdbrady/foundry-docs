@@ -33,6 +33,7 @@ safe-outputs:
     expires: 7d
   report-incomplete:
   noop:
+    report-as-issue: false
 network:
   allowed:
     - defaults

@@ -41,7 +41,9 @@ tools:
 safe-outputs:
   add-comment:
     max: 1
+  report-incomplete:
   noop:
+    report-as-issue: false
 
 imports:
   - shared/mood.md

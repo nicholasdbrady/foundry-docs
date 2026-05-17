@@ -36,7 +36,9 @@ safe-outputs:
   add-labels:
     allowed: [docs-impact, no-docs-impact]
     max: 1
+  report-incomplete:
   noop:
+    report-as-issue: false
 
 timeout-minutes: 10
 concurrency:

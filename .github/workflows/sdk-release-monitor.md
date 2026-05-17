@@ -43,7 +43,9 @@ safe-outputs:
     labels: [sdk-update, automation]
     expires: 3d
     close-older-issues: true
+  report-incomplete:
   noop:
+    report-as-issue: false
 
 network:
   allowed:
