@@ -1,11 +1,13 @@
 ---
-title: "Manage Compliance and Security in Microsoft Foundry"
+title: "Manage compliance and security in Microsoft Foundry"
 description: "Discover how to manage compliance and secure your Microsoft Foundry assets by using guardrail policies, Microsoft Defender for Cloud, and Microsoft Purview DSPM."
 ---
 Learn how Microsoft Foundry Control Plane helps you manage compliance, enforce guardrail controls, and integrate security tooling such as Microsoft Defender for Cloud across subscriptions.
 
 <Info>
+
 Items marked (preview) in this article are currently in public preview. This preview is provided without a service-level agreement, and we don't recommend it for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
+
 </Info>
 
 Use the compliance workspace tabs to reach the right surface quickly.
@@ -15,7 +17,7 @@ Use the compliance workspace tabs to reach the right surface quickly.
 | **Policies** | **Operate** > **Compliance** > **Policies** | Review guardrail policies, check compliance, and create or edit enforcement rules. |
 | **Assets** | **Operate** > **Compliance** > **Assets** | Inspect individual model deployments, view policy violations, and jump to remediation. |
 | **Guardrails** | **Operate** > **Compliance** > **Guardrails** | Compare guardrail configurations across deployments and spot coverage gaps. |
-| **Security** | **Operate** > **Compliance** > **Security** | Review Defender for Cloud recommendations and manage Microsoft Purview enablement. |
+| **Security posture** | **Operate** > **Compliance** > **Security posture** | Review Defender for Cloud recommendations and manage Microsoft Purview enablement. |
 
 ## Prerequisites
 
@@ -29,10 +31,38 @@ Use the compliance workspace tabs to reach the right surface quickly.
   - **To view compliance status and guardrail policies**: No special permissions are required beyond project access.
   - **To create or edit guardrail policies**: You must be an [Owner](https://learn.microsoft.com/azure/role-based-access-control/built-in-roles#owner) or [Resource Policy Contributor](https://learn.microsoft.com/azure/role-based-access-control/built-in-roles#resource-policy-contributor) at the Azure subscription or resource group level. See the [overview of Azure Policy](https://learn.microsoft.com/azure/governance/policy/overview#azure-policy-and-azure-rbac).
   - **To enable Defender for Cloud**: You need the Security Admin role or the Owner role for a subscription so that you can turn on Defender plans and agentless protections.
-  - **To configure Microsoft Purview integration**: You need the Azure AI Account Owner role.
+  - **To configure Microsoft Purview integration**: You need the Foundry Account Owner role.
+
+<Info>
+
+</Info>
+
+> The Foundry RBAC roles were recently renamed. **Foundry User**, **Foundry Owner**, **Foundry Account Owner**, and **Foundry Project Manager** were previously named Azure AI User, Azure AI Owner, Azure AI Account Owner, and Azure AI Project Manager. You might still see the previous names in some places while the rename rolls out. The role IDs and core permissions are unchanged by the rename.
 
 <Note>
-This capability is available only in the  Foundry (new) portal. Look for <img src="/images/new-foundry.png" /> in the portal banner to confirm you're using Foundry (new).
+
+This capability is available only in the Foundry (new) portal. Look for <img src="/images/new-foundry.png" /> in the portal banner to confirm you're using Foundry (new).
+
+</Note>
+
+## AI risks and defense-in-depth overview
+
+Building AI workloads introduces unique security challenges. Key risks include:
+
+- **Prompt injection**: Malicious inputs crafted to manipulate model behavior or bypass safety controls.
+- **Sensitive data leakage**: Models inadvertently exposing confidential information in responses.
+- **Model misuse**: Unauthorized or abusive use of AI capabilities that violates organizational policies.
+
+Microsoft Foundry, Defender for Cloud, and Microsoft Purview address these risks in combination:
+
+- **Foundry guardrails**: Content filters, prompt shields, and abuse detection protect managed inference endpoints at the model layer.
+- **Defender for Cloud**: Security posture recommendations identify misconfigurations, and threat protection for Foundry Tools detects jailbreak and user input attacks.
+- **Microsoft Purview**: Auditing, sensitive information type (SIT) classification, and Data Security Posture Management (DSPM) for AI provide visibility and governance over prompt and response data.
+
+<Note>
+
+Microsoft Purview Data Security Policies require Microsoft Entra ID user-context tokens to attach policies to user interactions.
+
 </Note>
 
 ## Create, review, and manage guardrail policies
@@ -44,7 +74,9 @@ To learn more about guardrail policies, see [Guardrails and controls overview in
 Most users don't have permission to create guardrail policies because they need the appropriate Azure role-based access control (RBAC) roles for Azure Policy. See the [overview of Azure Policy](https://learn.microsoft.com/azure/governance/policy/overview#azure-policy-and-azure-rbac). Most users in Foundry can still view the compliance status of individual guardrail policies and model deployments.
 
 <Tip>
+
 Access the compliance workspace by selecting **Operate** on the toolbar, and then selecting **Compliance** on the left pane. Use the subscription and project filters to scope your view before you switch tabs.
+
 </Tip>
 
 ### View and fix compliance violations
@@ -69,7 +101,7 @@ You can also review compliance status by asset rather than by guardrail policy:
 
 1. Review model deployments within the chosen subscription and project.
 
-1. Examine any assets marked as **Violation detected** in the **Policy Compliance** column. Select these rows to access further details. Assets might appear multiple times if they're subject to several guardrail policies.
+1. Examine any assets marked as **Violations detected** in the **Policy Compliance** column. Select these rows to access further details. Assets might appear multiple times if they're subject to several guardrail policies.
 
 1. On the information pane, review the governing guardrail policies and the specifics of any noncompliant guardrail policy.
 
@@ -111,7 +143,7 @@ After you create the guardrail policy, it's listed on the **Policies** tab. The 
 
 When you monitor your model deployments for compliance, review and compare the guardrail controls for your assets throughout a project or subscription. Even if the controls aren't directly linked to guardrail policy compliance, this process helps you spot gaps in guardrail policy assignments, like missing controls. You can also uncover potential risks that might go unnoticed, such as subscriptions that lack content filtering entirely.
 
-Here's how you can do this task:
+To review guardrails across your subscription:
 
 1. In the compliance workspace, select the **Guardrails** tab.
 
@@ -136,11 +168,13 @@ Here's how you can do this task:
 
 Defender for Cloud provides security posture gaps and recommendations for remediation. Your security posture represents the overall security status of your Azure resources, including potential vulnerabilities, misconfigurations, and recommended improvements. Defender assesses your resources and workloads against built-in and custom security standards.
 
-To get security posture recommendations from Defender for Cloud, [enable it on your Azure subscription](https://learn.microsoft.com/azure/defender-for-cloud/connect-azure-subscription). To get threat protection alerts for jailbreak attacks based on risk detection in Foundry for user input attacks, [enable threat protection for Foundry Tools](https://learn.microsoft.com/azure/defender-for-cloud/ai-onboarding). Jailbreak attacks attempt to bypass AI safety measures by using carefully crafted prompts. Foundry detects these attack patterns in user input.  
+To get security posture recommendations from Defender for Cloud, [enable it on your Azure subscription](https://learn.microsoft.com/azure/defender-for-cloud/connect-azure-subscription). To get threat protection alerts for jailbreak attacks based on risk detection in Foundry for user input attacks, [enable threat protection for Foundry Tools](https://learn.microsoft.com/azure/defender-for-cloud/ai-onboarding). Jailbreak attacks attempt to bypass AI safety measures by using carefully crafted prompts. Foundry detects these attack patterns in user input.
+
+Recommendations and alerts cover AI workloads built on Foundry's managed inference endpoints. Detections for jailbreak and prompt attacks appear as Defender alerts and can be correlated with Microsoft Purview Audit records of AI interactions to support investigation and governance.
 
 To review Defender security recommendations, follow these steps:
 
-1. In the compliance workspace, select the **Security** tab.
+1. In the compliance workspace, select the **Security posture** tab.
 
 1. [Enable Defender for Cloud](https://learn.microsoft.com/azure/defender-for-cloud/connect-azure-subscription) for your subscription if you need to do so.
 
@@ -162,19 +196,19 @@ By enabling Microsoft Purview on your Azure subscription, you can access, proces
 
 This capability helps your organization manage and monitor AI-generated data in alignment with enterprise policies and regulatory requirements. Keep these considerations in mind:
 
-- Microsoft Purview Data Security Policies for Foundry Services interactions are supported for API calls that use Microsoft Entra ID authentication with a user-context token, or for API calls that explicitly include user context. To learn more, see [AzureUserSecurityContext](/api-sdk/latest#azureusersecuritycontext). For all other authentication scenarios, user interactions captured in Microsoft Purview appear only in Microsoft Purview Audit and AI interactions with classifications within DSPM for the AI activity explorer.
+- Microsoft Purview Data Security Policies apply to interactions that use Microsoft Entra ID user-context authentication against Foundry's managed inference endpoint (`/chat/completions`). To learn more, see [AzureUserSecurityContext](/api-sdk/latest#azureusersecuritycontext).
+
+- For all other authentication scenarios, user interactions are visible in Microsoft Purview Audit and DSPM for AI activity explorer classifications, but aren't enforced by data security policies.
 
 - Microsoft Purview Audit is included as part of the Microsoft Purview license for Foundry services. For setup of data security policies in Microsoft Purview by your enterprise security admins, billing is based on [pay-as-you-go](https://azure.microsoft.com/pricing/details/purview/) meters.
 
 - Integration with Microsoft Purview for the preceding features in Foundry doesn't yet support network isolation.
 
-- Integration with Microsoft Purview is currently available for calls made through the Microsoft Foundry inference endpoint (aka OpenAI-compatible chat completions API or /chat/completions endpoint). Every model deployed through Foundry's managed inference stack is covered by Purview.
-
 This feature requires a Microsoft Purview license in the tenant. To learn about Microsoft Purview, see [Microsoft Purview data security and compliance protections for generative AI apps](/purview/ai-microsoft-purview).
 
 ### Enable Microsoft Purview in Foundry
 
-You must have the Azure AI Account Owner role to enable Microsoft Purview integration.
+You must have the Foundry Account Owner role to enable Microsoft Purview integration.
 
 To enable Microsoft Purview in Foundry:
 

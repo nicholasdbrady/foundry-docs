@@ -5,14 +5,21 @@ description: "Learn how to create a Microsoft Foundry project, deploy a model, a
 In this quickstart, you create a [Microsoft Foundry](https://ai.azure.com) project and deploy a model. If you're managing a team, you also grant access to team members. After you complete these steps, you or your team can start building AI applications using the deployed model.
 
 <Tip>
+
 This quickstart shows you how to create resources to build an agent with a basic setup. For more advanced scenarios that use your own resources, see [Set up your environment for agent development](/setup/environment-setup).
+
 </Tip>
 
 ## Prerequisites
 
 - An Azure account with an active subscription. If you don't have one, create a [free Azure account, which includes a free trial subscription](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
 - If you're creating the project for yourself: 
-    - Access to a role that allows you to create a Foundry resource, such as **Azure Account AI Owner** or **Azure AI Owner** on the subscription or resource group. For more information about permissions, see [Role-based access control for Microsoft Foundry](/security/rbac-foundry#permissions-for-each-built-in-role).
+    - Access to a role that allows you to create a Foundry resource, such as **Azure Account AI Owner** or **Foundry Owner** on the subscription or resource group. For more information about permissions, see [Role-based access control for Microsoft Foundry](/security/rbac-foundry#permissions-for-each-built-in-role).
+<Info>
+
+The Foundry RBAC roles were recently renamed. **Foundry User**, **Foundry Owner**, **Foundry Account Owner**, and **Foundry Project Manager** were previously named Azure AI User, Azure AI Owner, Azure AI Account Owner, and Azure AI Project Manager. You might still see the previous names in some places while the rename rolls out. The role IDs and core permissions are unchanged by the rename.
+
+</Info>
 - If you're creating the project for a team: 
     - Access to a role that allows you to complete role assignments, such as **Owner**. For more information about permissions, see [Role-based access control for Microsoft Foundry](/security/rbac-foundry#permissions-for-each-built-in-role).
     - A list of user email addresses or Microsoft Entra security group IDs for team members who need access.
@@ -51,10 +58,6 @@ Create a Foundry project to organize your work. The project contains models, age
        ```
 
     1. Create the Foundry resource. For example, create `my-foundry-resource` in the `my-foundry-rg` resource group:
-
-<Note>
-This command creates your Foundry resource. The `az cognitiveservices account` command is used because Microsoft Foundry resources are managed under the Azure Cognitive Services resource provider (`Microsoft.CognitiveServices`). The `--kind AIServices` flag specifies a Foundry resource rather than a single-purpose Cognitive Services resource.
-</Note>
 
        ```azurecli
        az cognitiveservices account create \
@@ -103,9 +106,22 @@ This command creates your Foundry resource. The `az cognitiveservices account` c
   </Tab>
   <Tab title="Foundry portal">
 
-    1. Go to [Microsoft Foundry](https://ai.azure.com).
-    1. Sign in with your Azure account.
-    1. Select the project name in the upper-left corner, and then select **Create new project**.
+    1. Sign in to [Microsoft Foundry](https://ai.azure.com/?cid=learnDocs). Make sure the **New Foundry** toggle is on. These steps refer to **Foundry (new)**.
+
+    <img src="/images/new-foundry.png" />
+    1. Create a project.
+        * If this is your first use of Foundry, you'll be asked to create or search for a project to continue. Select **Create a new project** in the dropdown.
+
+<Frame>
+<img src="/images/initial-foundry.png" alt="Screenshot of the Foundry portal showing the project selection dropdown with the Create new project option highlighted." />
+</Frame>
+
+        * If you already have a project loaded, select its name in the upper-left corner, and then select **Create new project**.
+
+<Frame>
+<img src="/images/create-from-project.png" alt="Screenshot of Foundry portal showing the Create a new project dropdown selected and project creation form fields visible." />
+</Frame>
+
     1. Enter a project name, such as `my-foundry-project`.
     1. Select **Advanced options** to configure the resource group and location:
        - **Resource group**: Create a new resource group or select an existing one. If you create a new resource group, you can more easily manage the project and all its resources together.
@@ -136,10 +152,6 @@ Deploy a model that you can use. This example uses **gpt-4.1-mini**, but you can
         --sku-name Standard
     ```
 
-    <Note>
-    OpenAI models use date-based version strings (for example, `2025-04-14`). To find available model versions and check regional availability, see the [Model Catalog](https://ai.azure.com/explore/models).
-    </Note>
-
     Verify the deployment succeeded:
 
     ```azurecli
@@ -156,8 +168,7 @@ Deploy a model that you can use. This example uses **gpt-4.1-mini**, but you can
   </Tab>
   <Tab title="Foundry portal">
 
-    1. In your project, select **Discover** in the upper-right navigation.
-    1. Select **Models**.
+    1. Select **Discover** in the upper-right navigation, then **Models** in the left pane.
     1. Search for **gpt-4.1-mini**.
     1. Select **Deploy** > **Default settings** to add it to your project.
     1. Note the deployment name (for example, `gpt-4.1-mini`). Your team needs this name to use the model.
@@ -180,7 +191,13 @@ You need your project endpoint to connect from code. If you're administering thi
 
 ## For administrators - grant access
 
-If you're administering a team, assign the **Azure AI User** role to team members so they can use the project and deployed models. This role provides the minimum permissions needed to build and test AI applications. For other roles you might need to assign, see [Role-based access control for Microsoft Foundry](/security/rbac-foundry)
+If you're administering a team, assign the **Foundry User** role to team members so they can use the project and deployed models. This role provides the minimum permissions needed to build and test AI applications. For other roles you might need to assign, see [Role-based access control for Microsoft Foundry](/security/rbac-foundry)
+
+<Info>
+
+The Foundry RBAC roles were recently renamed. **Foundry User**, **Foundry Owner**, **Foundry Account Owner**, and **Foundry Project Manager** were previously named Azure AI User, Azure AI Owner, Azure AI Account Owner, and Azure AI Project Manager. You might still see the previous names in some places while the rename rolls out. The role IDs and core permissions are unchanged by the rename.
+
+</Info>
 
 <Tabs>
   <Tab title="Azure CLI">
@@ -195,20 +212,36 @@ If you're administering a team, assign the **Azure AI User** role to team member
            --query id -o tsv)
        ```
 
-    1. Assign the **Azure AI User** role to a team member:
+    1. Assign the **Foundry User** role to a team member:
+
+<Info>
+
+</Info>
+
+    > The Foundry RBAC roles were recently renamed. **Foundry User**, **Foundry Owner**, **Foundry Account Owner**, and **Foundry Project Manager** were previously named Azure AI User, Azure AI Owner, Azure AI Account Owner, and Azure AI Project Manager. You might still see the previous names in some places while the rename rolls out. The role IDs and core permissions are unchanged by the rename.
 
        ```azurecli
        az role assignment create \
-           --role "Azure AI User" \
+           --role "53ca6127-db72-4b80-b1b0-d745d6d5456d" \
            --assignee "user@contoso.com" \
            --scope $PROJECT_ID
        ```
+
+<Note>
+
+Because the Foundry RBAC roles were recently renamed, use the role definition ID (GUID) instead of the role name in your code to avoid issues during the rename rollout:
+- **Foundry User**: `53ca6127-db72-4b80-b1b0-d745d6d5456d`
+- **Foundry Owner**: `c883944f-8b7b-4483-af10-35834be79c4a`
+- **Foundry Account Owner**: `e47c6f54-e4a2-4754-9501-8e0985b135e1`
+- **Foundry Project Manager**: `eadc314b-1a2d-4efa-be10-5d325db5065e`
+
+</Note>
 
        To add a security group instead of an individual user:
 
        ```azurecli
        az role assignment create \
-           --role "Azure AI User" \
+           --role "53ca6127-db72-4b80-b1b0-d745d6d5456d" \
            --assignee-object-id "<security-group-object-id>" \
            --assignee-principal-type Group \
            --scope $PROJECT_ID
@@ -219,7 +252,7 @@ If you're administering a team, assign the **Azure AI User** role to team member
        ```azurecli
        az role assignment list \
            --scope $PROJECT_ID \
-           --role "Azure AI User" \
+           --role "53ca6127-db72-4b80-b1b0-d745d6d5456d" \
            --output table
        ```
 
@@ -238,7 +271,9 @@ If you're administering a team, assign the **Azure AI User** role to team member
     Repeat these steps for each team member or security group.
 
 <Tip>
+
 To add multiple users at once, use a Microsoft Entra security group instead of individual email addresses.
+
 </Tip>
 
   </Tab>
@@ -246,9 +281,11 @@ To add multiple users at once, use a Microsoft Entra security group instead of i
 
 ### Verify team member access
 
-Ask a team member to verify their access by signing in to [Microsoft Foundry](https://ai.azure.com), selecting the project from the project list, and confirming the deployed model appears under **Build** > **Models**.
+Ask a team member to verify their access by signing in to [Microsoft Foundry](https://ai.azure.com) and selecting the project from the project list.
 
 If the team member can't access the project, verify that the role assignment completed successfully. Check that you used the correct email address or security group ID. Make sure the team member's Azure account is in the same Microsoft Entra tenant.
+
+To confirm the deployed model is available, ask the team member to select **Build** in the upper-right navigation, then **Models** in the left pane.
 
 ## Clean up resources
 
@@ -271,4 +308,4 @@ When you no longer want this project, delete the resource group to delete all re
 
 ## Next step
  
-<Card title="Microsoft Foundry quickstart" icon="arrow-right" href="/get-started/get-started-code" />
+<Card title="Microsoft Foundry quickstart" icon="arrow-right" href="../quickstarts/get-started-code.md" />

@@ -2,6 +2,7 @@
 title: "Tutorial: Get started with DeepSeek-R1 in Foundry Models"
 description: "Learn how to deploy and use DeepSeek-R1 reasoning model in Microsoft Foundry Models. Get step-by-step guidance, code examples, and best practices for AI reasoning."
 ---
+
 In this tutorial, you learn how to deploy and use a DeepSeek reasoning model in Microsoft Foundry. This tutorial uses [DeepSeek-R1](https://ai.azure.com/explore/models/deepseek-r1/version/1/registry/azureml-deepseek?cid=learnDocs) for illustration. However, the content also applies to the newer [DeepSeek-R1-0528](https://ai.azure.com/explore/models/deepseek-r1-0528/version/1/registry/azureml-deepseek?cid=learnDocs) reasoning model.
 
 **What you accomplish:**
@@ -18,7 +19,7 @@ The steps you perform in this tutorial are:
 
 To complete this article, you need:
 
-- An Azure subscription with a valid payment method. If you don't have an Azure subscription, create a [paid Azure account](https://azure.microsoft.com/pricing/purchase-options/pay-as-you-go) to begin. If you're using [GitHub Models](https://docs.github.com/en/github-models/), you can [upgrade from GitHub Models to Microsoft Foundry Models](/models/capabilities/quickstart-github-models) and create an Azure subscription in the process.
+- An Azure subscription with a valid payment method. If you don't have an Azure subscription, create a [paid Azure account](https://azure.microsoft.com/pricing/purchase-options/pay-as-you-go) to begin. If you're using GitHub Models, you can [upgrade from GitHub Models to Microsoft Foundry Models](/foundry-models/quickstart-github-models) and create an Azure subscription in the process.
 
 - Access to Microsoft Foundry with appropriate permissions to create and manage resources. Typically requires Contributor or Owner role on the resource group for creating resources and deploying models.
 
@@ -66,7 +67,9 @@ The following code examples demonstrate how to:
 1. Authenticate with Microsoft Entra ID using `DefaultAzureCredential`, which automatically attempts multiple authentication methods (environment variables, managed identity, Azure CLI, and others). The exact order depends on the Azure Identity SDK version you're using.
     
 <Tip>
+
 For local development, ensure you're authenticated with Azure CLI by running `az login`. For production deployments in Azure, configure managed identity for your application.
+
 </Tip>
 
 1. Create a chat completion client connected to your model deployment
@@ -92,7 +95,7 @@ For local development, ensure you're authenticated with Azure CLI by running `az
     from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 
     token_provider = get_bearer_token_provider(
-        DefaultAzureCredential(), "https://cognitiveservices.azure.com/.default"
+        DefaultAzureCredential(), "https://ai.azure.com/.default"
     )
 
     client = OpenAI(  
@@ -132,7 +135,7 @@ For local development, ensure you're authenticated with Azure CLI by running `az
 
     const tokenProvider = getBearerTokenProvider(
         new DefaultAzureCredential(),
-        'https://cognitiveservices.azure.com/.default');
+        'https://ai.azure.com/.default');
 
     const client = new OpenAI({
         baseURL: "https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/",
@@ -179,7 +182,7 @@ For local development, ensure you're authenticated with Azure CLI by running `az
 
     BearerTokenPolicy tokenPolicy = new(
         new DefaultAzureCredential(),
-        "https://cognitiveservices.azure.com/.default");
+        "https://ai.azure.com/.default");
 
     ChatClient client = new(
         model: "DeepSeek-R1", // Replace with your model deployment name.
@@ -217,7 +220,7 @@ For local development, ensure you're authenticated with Azure CLI by running `az
     Credential tokenCredential = BearerTokenCredential.create(
             AuthenticationUtil.getBearerTokenSupplier(
                     new DefaultAzureCredentialBuilder().build(),
-                    "https://cognitiveservices.azure.com/.default"));
+                    "https://ai.azure.com/.default"));
     OpenAIClient client = OpenAIOkHttpClient.builder()
             .baseUrl("https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/")
             .credential(tokenCredential)
@@ -247,7 +250,7 @@ For local development, ensure you're authenticated with Azure CLI by running `az
                         .baseUrl(resourceName)
                         // Set the Azure Entra ID
                         .credential(BearerTokenCredential.create(AuthenticationUtil.getBearerTokenSupplier(
-                            new DefaultAzureCredentialBuilder().build(), "https://cognitiveservices.azure.com/.default")))
+                            new DefaultAzureCredentialBuilder().build(), "https://ai.azure.com/.default")))
                         .build();
 
                ChatCompletionCreateParams params = ChatCompletionCreateParams.builder()
@@ -294,7 +297,9 @@ For local development, ensure you're authenticated with Azure CLI by running `az
 </Tabs>
 
 <Tip>
+
 After running the code, you should see a JSON response that includes `choices[0].message.content` with the model's answer. If the model generates reasoning, the response contains content wrapped in `<think>...</think>` tags followed by the final answer.
+
 </Tip>
 
 **API Reference:**
@@ -305,7 +310,7 @@ After running the code, you should see a JSON response that includes `choices[0]
 - [Chat completions API reference](/api-sdk/latest#create-chat-completion)
 - [Azure Identity library overview](https://learn.microsoft.com/dotnet/api/overview/azure/identity-readme)
 
-Reasoning might generate longer responses and consume a larger number of tokens. DeepSeek-R1 supports up to 5,000 requests per minute and 5,000,000 tokens per minute. See the [rate limits](/setup/quotas-limits) that apply to DeepSeek-R1 models. Consider having a retry strategy to handle rate limits. You can also [request increases to the default limits](/setup/quotas-limits#request-increases-to-the-default-limits).
+Reasoning might generate longer responses and consume a larger number of tokens. DeepSeek-R1 supports up to 5,000 requests per minute and 5,000,000 tokens per minute. See the [rate limits](/foundry-models/quotas-limits) that apply to DeepSeek-R1 models. Consider having a retry strategy to handle rate limits. You can also [request increases to the default limits](/foundry-models/quotas-limits#request-increases-to-the-default-limits).
 
 ## About reasoning models
 
@@ -359,11 +364,11 @@ Usage:
 
 When building prompts for reasoning models, take the following into consideration:
 
-<Check>Use simple instructions and avoid using chain-of-thought techniques.</Check>
-<Check>Built-in reasoning capabilities make simple zero-shot prompts as effective as more complex methods.</Check>
-<Check>When providing additional context or documents, like in RAG scenarios, including only the most relevant information might help prevent the model from over-complicating its response.</Check>
-<Check>Reasoning models may support the use of system messages. However, they might not follow them as strictly as other non-reasoning models.</Check>
-<Check>When creating multi-turn applications, consider appending only the final answer from the model, without it's reasoning content, as explained in the [Reasoning content](#reasoning-content) section.</Check>
+- Use simple instructions and avoid using chain-of-thought techniques.
+- Built-in reasoning capabilities make simple zero-shot prompts as effective as more complex methods.
+- When providing additional context or documents, like in RAG scenarios, including only the most relevant information might help prevent the model from over-complicating its response.
+- Reasoning models may support the use of system messages. However, they might not follow them as strictly as other non-reasoning models.
+- When creating multi-turn applications, consider appending only the final answer from the model, without it's reasoning content, as explained in the [Reasoning content](#reasoning-content) section.
 Notice that reasoning models can take longer times to generate responses. They use long reasoning chains of thought that enable deeper and more structured problem-solving. They also perform self-verification to cross-check their answers and correct their mistakes, thereby showcasing emergent self-reflective behaviors.
 
 ### Parameters
@@ -420,8 +425,8 @@ If you encounter issues while following this tutorial, use the following guidanc
 ### Rate limiting (429 errors)
 
 - **Implement retry logic.** Reasoning models generate longer responses that consume more tokens. Use exponential backoff to handle 429 (Too Many Requests) errors.
-- **Monitor token usage.** DeepSeek-R1 reasoning content (within `<think>` tags) counts toward your token limit. See [quotas and limits](/setup/quotas-limits) for the current rate limits.
-- **Request quota increases.** If you consistently hit rate limits, [request increases to the default limits](/setup/quotas-limits#request-increases-to-the-default-limits).
+- **Monitor token usage.** DeepSeek-R1 reasoning content (within `<think>` tags) counts toward your token limit. See [quotas and limits](/foundry-models/quotas-limits) for the current rate limits.
+- **Request quota increases.** If you consistently hit rate limits, [request increases to the default limits](/foundry-models/quotas-limits#request-increases-to-the-default-limits).
 
 ### Package installation issues
 
@@ -433,14 +438,14 @@ If you encounter issues while following this tutorial, use the following guidanc
 
 In this tutorial, you accomplished the following:
 
-<Check>Created Foundry resources for hosting AI models</Check>
-<Check>Deployed the DeepSeek-R1 reasoning model</Check>
-<Check>Made authenticated API calls using Microsoft Entra ID</Check>
-<Check>Sent inference requests and received reasoning outputs</Check>
-<Check>Parsed reasoning content from model responses to understand the model's thought process</Check>
+- Created Foundry resources for hosting AI models
+- Deployed the DeepSeek-R1 reasoning model
+- Made authenticated API calls using Microsoft Entra ID
+- Sent inference requests and received reasoning outputs
+- Parsed reasoning content from model responses to understand the model's thought process
 ## Related content
 
 - [Azure OpenAI in Microsoft Foundry Models v1 API](/api-sdk/api-version-lifecycle)
-- [Use chat reasoning models](https://learn.microsoft.com/en-us/azure/foundry-classic/foundry-models/how-to/use-chat-reasoning)
-- [Azure OpenAI supported programming languages](/models/capabilities/supported-languages)
-- [Microsoft Foundry Models quotas and limits](/setup/quotas-limits)
+- [Use chat reasoning models](/foundry-models/use-chat-reasoning)
+- [Azure OpenAI supported programming languages](/foundry-models/supported-languages)
+- [Microsoft Foundry Models quotas and limits](/foundry-models/quotas-limits)

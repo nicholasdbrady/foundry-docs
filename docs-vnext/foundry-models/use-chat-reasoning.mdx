@@ -1,0 +1,1571 @@
+---
+title: "How to use reasoning models with Microsoft Foundry Models (classic)"
+description: "Learn how to use reasoning capabilities from models with Microsoft Foundry Models (classic)"
+---
+
+**Applies only to:** <img src="/images/yes-icon.svg" /> **Foundry (classic) portal**. This article isn't available for the new Foundry portal. [Learn more about the new portal](https://learn.microsoft.com/en-us/azure/foundry/what-is-foundry).
+
+<Note>
+
+Links in this article might open content in the new Microsoft Foundry documentation instead of the Foundry (classic) documentation you're viewing now.
+
+</Note>
+
+<Info>
+
+Azure AI Inference beta SDK is deprecated and will be retired on August 26, 2026. Switch to the generally available [OpenAI/v1 API](https://aka.ms/openai/v1) with a stable OpenAI SDK. Follow the [migration guide](../how-to/model-inference-to-openai-migration) to switch to OpenAI/v1, using the SDK for your preferred programming language.
+
+</Info>
+
+This article explains how to use the reasoning capabilities of chat completions models deployed in Microsoft Foundry Models.
+
+## Reasoning models
+
+Reasoning models can reach higher levels of performance in domains like math, coding, science, strategy, and logistics. The way these models produce outputs is by explicitly using chain of thought to explore all possible paths before generating an answer. They verify their answers as they produce them, which helps to arrive at more accurate conclusions. As a result, reasoning models might require less context prompts in order to produce effective results. 
+
+Reasoning models produce two types of content as outputs:
+
+* Reasoning completions
+* Output completions
+
+Both of these completions count towards content generated from the model. Therefore, they contribute to the token limits and costs associated with the model. Some models, like `DeepSeek-R1`, might respond with the reasoning content. Others, like `o1`, output only the completions.
+
+## Prerequisites
+
+To complete this tutorial, you need:
+
+- An Azure subscription. If you're using GitHub Models, you can upgrade your experience and create an Azure subscription in the process. Read [Upgrade from GitHub Models to Microsoft Foundry Models](../how-to/quickstart-github-models) if that's your case.
+
+- A Foundry project. This kind of project is managed under a Foundry resource. If you don't have a Foundry project, see [Create a project for Foundry (Foundry projects)](../../how-to/create-projects).
+
+- The endpoint's URL.
+
+- The endpoint's key (if you choose to use API key for authentication).
+
+* Install the SDK with the following command:
+
+    # [OpenAI API](#tab/openai)
+    
+    ```bash
+    pip install -U openai
+    ```
+    
+    # [Model Inference API (preview)](#tab/inference)
+    
+    ```bash
+    pip install -U azure-ai-inference
+    ```
+
+* A model with reasoning capabilities model deployment. If you don't have one read [Add and configure Foundry Models](../../how-to/create-model-deployments) to add a reasoning model. 
+
+  * This example uses `DeepSeek-R1`.
+
+## Use reasoning capabilities with chat
+
+First, create the client to consume the model. The following code uses an endpoint URL and key that are stored in environment variables.
+
+<CodeGroup>
+```python OpenAI API
+    import os
+    from openai import AzureOpenAI
+
+    client = AzureOpenAI(
+        azure_endpoint = "https://<resource>.services.ai.azure.com",
+        api_key=os.getenv("AZURE_INFERENCE_CREDENTIAL"),  
+        api_version="2024-10-21",
+    )
+    ```
+
+```python Model Inference API (preview)
+    import os
+    from azure.ai.inference import ChatCompletionsClient
+    from azure.core.credentials import AzureKeyCredential
+
+    client = ChatCompletionsClient(
+        endpoint="https://<resource>.services.ai.azure.com/models",
+        credential=AzureKeyCredential(os.environ["AZURE_INFERENCE_CREDENTIAL"]),
+        model="deepseek-r1"
+    )
+    ```
+</CodeGroup>
+
+If you have configured the resource to with **Microsoft Entra ID** support, you can use the following code snippet to create a client.
+
+<CodeGroup>
+```python OpenAI API
+    import os
+    from openai import AzureOpenAI
+    from azure.identity import DefaultAzureCredential, get_bearer_token_provider
+
+    token_provider = get_bearer_token_provider(
+        DefaultAzureCredential(), "https://ai.azure.com/.default"
+    )
+
+    client = AzureOpenAI(
+        azure_endpoint = "https://<resource>.services.ai.azure.com",
+        azure_ad_token_provider=token_provider,
+        api_version="2024-10-21",
+    )
+    ```
+
+```python Model Inference API (preview)
+    import os
+    from azure.ai.inference import ChatCompletionsClient
+    from azure.identity import DefaultAzureCredential
+
+    client = ChatCompletionsClient(
+        endpoint="https://<resource>.services.ai.azure.com/models",
+        credential=DefaultAzureCredential(),
+        credential_scopes=["https://cognitiveservices.azure.com/.default"],
+        model="deepseek-r1"
+    )
+    ```
+</CodeGroup>
+
+### Prompt reasoning models
+
+When building prompts for reasoning models, take the following into consideration:
+
+- Use simple instructions and avoid using chain-of-thought techniques.
+- Built-in reasoning capabilities make simple zero-shot prompts as effective as more complex methods.
+- When providing additional context or documents, like in RAG scenarios, including only the most relevant information might help prevent the model from over-complicating its response.
+- Reasoning models may support the use of system messages. However, they might not follow them as strictly as other non-reasoning models.
+- When creating multi-turn applications, consider appending only the final answer from the model, without it's reasoning content, as explained in the [Reasoning content](#reasoning-content) section.
+Notice that reasoning models can take longer times to generate responses. They use long reasoning chains of thought that enable deeper and more structured problem-solving. They also perform self-verification to cross-check their answers and correct their mistakes, thereby showcasing emergent self-reflective behaviors.
+
+### Create a chat completion request
+
+The following example shows how you can create a basic chat request to the model.
+
+<CodeGroup>
+```python OpenAI API
+    response = client.chat.completions.create(
+        model="deepseek-r1",
+        messages=[
+            {"role": "user", "content": "How many languages are in the world?"}
+        ]
+    )
+    ```
+
+```python Model Inference API (preview)
+    from azure.ai.inference.models import SystemMessage, UserMessage
+
+    response = client.complete(
+        messages=[
+            UserMessage(content="How many languages are in the world?"),
+        ],
+    )
+    ```
+</CodeGroup>
+
+The response is as follows, where you can see the model's usage statistics:
+
+<CodeGroup>
+```python OpenAI API
+    print("Response:", response.choices[0].message.content)
+    print("Model:", response.model)
+    print("Usage:")
+    print("\tPrompt tokens:", response.usage.prompt_tokens)
+    print("\tTotal tokens:", response.usage.total_tokens)
+    print("\tCompletion tokens:", response.usage.completion_tokens)
+    ```
+
+```console OpenAI API
+    Response: As of now, it's estimated that there are about 7,000 languages spoken around the world. However, this number can vary as some languages become extinct and new ones develop. It's also important to note that the number of speakers can greatly vary between languages, with some having millions of speakers and others only a few hundred.
+    Model: deepseek-r1
+    Usage: 
+      Prompt tokens: 11
+      Total tokens: 897
+      Completion tokens: 886
+    ```
+
+```python Model Inference API (preview)
+    print("Response:", response.choices[0].message.content)
+    print("Model:", response.model)
+    print("Usage:")
+    print("\tPrompt tokens:", response.usage.prompt_tokens)
+    print("\tTotal tokens:", response.usage.total_tokens)
+    print("\tCompletion tokens:", response.usage.completion_tokens)
+    ```
+
+```console Model Inference API (preview)
+    Response: <think>Okay, the user is asking how many languages exist in the world. I need to provide a clear and accurate answer...</think>As of now, it's estimated that there are about 7,000 languages spoken around the world. However, this number can vary as some languages become extinct and new ones develop. It's also important to note that the number of speakers can greatly vary between languages, with some having millions of speakers and others only a few hundred.
+    Model: deepseek-r1
+    Usage: 
+      Prompt tokens: 11
+      Total tokens: 897
+      Completion tokens: 886
+    ```
+</CodeGroup>
+
+### Reasoning content
+
+<Note>
+
+This information on reasoning content does not apply to Azure OpenAI models. Azure OpenAI reasoning models use the [reasoning summaries feature](../../../openai/how-to/reasoning#reasoning-summary).
+
+</Note>
+
+Some reasoning models, like DeepSeek-R1, generate completions and include the reasoning behind it. 
+
+<Tabs>
+  <Tab title="OpenAI API">
+
+    The reasoning associated with the completion is included in the field `reasoning_content`. The model may select on which scenarios to generate reasoning content. 
+
+    ```python
+    print("Thinking:", response.choices[0].message.reasoning_content)
+    ```
+
+    ```console
+    Thinking: Okay, the user is asking how many languages exist in the world. I need to provide a clear and accurate answer...
+    ```
+
+  </Tab>
+  <Tab title="Model Inference API (preview)">
+
+    The reasoning associated with the completion is included in the response's content within the tags `<think>` and `</think>`. The model may select on which scenarios to generate reasoning content. You can extract the reasoning content from the response to understand the model's thought process as follows:
+
+    ```python
+    import re
+
+    match = re.match(r"<think>(.*?)</think>(.*)", response.choices[0].message.content, re.DOTALL)
+
+    if match:
+        print("\tThinking:", match.group(1))
+    else:
+        print("\tAnswer:", response.choices[0].message.content)
+    ```
+
+    ```console
+    Thinking: Okay, the user is asking how many languages exist in the world. I need to provide a clear and accurate answer. Let's start...
+    ```
+  </Tab>
+</Tabs>
+
+When making multi-turn conversations, it's useful to avoid sending the reasoning content in the chat history as reasoning tends to generate long explanations.
+
+### Stream content
+
+By default, the completions API returns the entire generated content in a single response. If you're generating long completions, waiting for the response can take many seconds.
+
+You can _stream_ the content to get it as it's being generated. Streaming content allows you to start processing the completion as content becomes available. This mode returns an object that streams back the response as [data-only server-sent events](https://html.spec.whatwg.org/multipage/server-sent-events.html#server-sent-events). Extract chunks from the delta field, rather than the message field.
+
+To stream completions, set `stream=True` when you call the model.
+
+<CodeGroup>
+```python OpenAI API
+    response = client.chat.completions.create(
+        model="deepseek-r1",
+        messages=[
+            {"role": "user", "content": "How many languages are in the world?"}
+        ],
+        stream=True
+    )
+    ```
+
+```python Model Inference API (preview)
+    response = client.complete(
+        model="deepseek-r1",
+        messages=[
+            UserMessage(content="How many languages are in the world?"),
+        ],
+        max_tokens=2048,
+        stream=True,
+    )
+    ```
+</CodeGroup>
+
+To visualize the output, define a helper function to print the stream. The following example implements a routing that stream only the answer without the reasoning content:
+
+<Tabs>
+  <Tab title="OpenAI API">
+
+    Reasoning content is also included inside of the delta pieces of the response, in the key `reasoning_content`.
+
+    ```python
+    def print_stream(completion):
+        """
+        Prints the chat completion with streaming.
+        """
+        is_thinking = False
+        for event in completion:
+            if event.choices:
+                content = event.choices[0].delta.content
+                reasoning_content = event.choices[0].delta.reasoning_content if hasattr(event.choices[0].delta, "reasoning_content") else None
+                if reasoning_content and not is_thinking:
+                    is_thinking = True
+                    print("🧠 Thinking...", end="", flush=True)
+                elif content:
+                    if is_thinking:
+                        is_thinking = False
+                        print("🛑\n\n")
+                print(content or reasoning_content, end="", flush=True)
+
+    print_stream(response)
+    ```
+
+  </Tab>
+  <Tab title="Model Inference API (preview)">
+
+    When streaming, pay closer attention to the `<think>` tag that may be included inside of the `content` field.
+
+    ```python
+    def print_stream(completion):
+        """
+        Prints the chat completion with streaming.
+        """
+        is_thinking = False
+        for event in completion:
+            if event.choices:
+                content = event.choices[0].delta.content
+                if content == "<think>":
+                    is_thinking = True
+                    print("🧠 Thinking...", end="", flush=True)
+                elif content == "</think>":
+                    is_thinking = False
+                    print("🛑\n\n")
+                elif content:
+                    print(content, end="", flush=True)
+    ```
+  </Tab>
+</Tabs>
+
+You can visualize how streaming generates content:
+
+```python
+print_stream(response)
+```
+
+### Parameters
+
+In general, reasoning models don't support the following parameters you can find in chat completion models:
+
+* Temperature
+* Presence penalty
+* Repetition penalty
+* Parameter `top_p`
+
+Some models support the use of tools or structured outputs (including JSON-schemas). Read the [Models](../../concepts/models-sold-directly-by-azure) details page to understand each model's support.
+
+### Apply Guardrails and controls
+
+The Azure AI Model Inference API supports [Azure AI Content Safety](https://aka.ms/azureaicontentsafety). When you use deployments with Azure AI Content Safety turned on, inputs and outputs pass through an ensemble of classification models aimed at detecting and preventing the output of harmful content. The content filtering system detects and takes action on specific categories of potentially harmful content in both input prompts and output completions.
+
+The following example shows how to handle events when the model detects harmful content in the input prompt.
+
+<CodeGroup>
+```python OpenAI API
+    try:
+        response = client.chat.completions.create(
+            model="deepseek-r1",
+            messages=[
+                {"role": "user", "content": "Chopping tomatoes and cutting them into cubes or wedges are great ways to practice your knife skills."}
+            ],
+        )
+
+        print(response.choices[0].message.content)
+
+    except HttpResponseError as ex:
+        if ex.status_code == 400:
+            response = ex.response.json()
+            if isinstance(response, dict) and "error" in response:
+                print(f"Your request triggered an {response['error']['code']} error:\n\t {response['error']['message']}")
+            else:
+                raise
+        raise
+    ```
+
+```python Model Inference API (preview)
+    from azure.ai.inference.models import AssistantMessage, UserMessage
+
+    try:
+        response = client.complete(
+            model="deepseek-r1",
+            messages=[
+                UserMessage(content="Chopping tomatoes and cutting them into cubes or wedges are great ways to practice your knife skills."),
+            ],
+        )
+
+        print(response.choices[0].message.content)
+
+    except HttpResponseError as ex:
+        if ex.status_code == 400:
+            response = ex.response.json()
+            if isinstance(response, dict) and "error" in response:
+                print(f"Your request triggered an {response['error']['code']} error:\n\t {response['error']['message']}")
+            else:
+                raise
+        raise
+    ```
+</CodeGroup>
+
+<Tip>
+
+To learn more about how you can configure and control Azure AI Content Safety settings, check the [Azure AI Content Safety documentation](https://aka.ms/azureaicontentsafety).
+
+</Tip>
+
+This article explains how to use the reasoning capabilities of chat completions models deployed in Microsoft Foundry Models.
+
+## Reasoning models
+
+Reasoning models can reach higher levels of performance in domains like math, coding, science, strategy, and logistics. The way these models produce outputs is by explicitly using chain of thought to explore all possible paths before generating an answer. They verify their answers as they produce them, which helps to arrive at more accurate conclusions. As a result, reasoning models might require less context prompts in order to produce effective results. 
+
+Reasoning models produce two types of content as outputs:
+
+* Reasoning completions
+* Output completions
+
+Both of these completions count towards content generated from the model. Therefore, they contribute to the token limits and costs associated with the model. Some models, like `DeepSeek-R1`, might respond with the reasoning content. Others, like `o1`, output only the completions.
+
+## Prerequisites
+
+To complete this tutorial, you need:
+
+- An Azure subscription. If you're using GitHub Models, you can upgrade your experience and create an Azure subscription in the process. Read [Upgrade from GitHub Models to Microsoft Foundry Models](../how-to/quickstart-github-models) if that's your case.
+
+- A Foundry project. This kind of project is managed under a Foundry resource. If you don't have a Foundry project, see [Create a project for Foundry (Foundry projects)](../../how-to/create-projects).
+
+- The endpoint's URL.
+
+- The endpoint's key (if you choose to use API key for authentication).
+
+* Install the [Azure Inference library for JavaScript](https://aka.ms/azsdk/azure-ai-inference/javascript/reference) with the following command:
+
+  ```bash
+  npm install @azure-rest/ai-inference
+  npm install @azure/core-auth
+  npm install @azure/identity
+  ```
+
+  If you are using Node.js, you can configure the dependencies in **package.json**:
+
+  __package.json__
+
+  ```json
+  {
+    "name": "main_app",
+    "version": "1.0.0",
+    "description": "",
+    "main": "app.js",
+    "type": "module",
+    "dependencies": {
+      "@azure-rest/ai-inference": "1.0.0-beta.6",
+      "@azure/core-auth": "1.9.0",
+      "@azure/core-sse": "2.2.0",
+      "@azure/identity": "4.8.0"
+    }
+  }
+  ```
+
+* Import the following:
+
+  ```javascript
+  import ModelClient from "@azure-rest/ai-inference";
+  import { isUnexpected } from "@azure-rest/ai-inference";
+  import { createSseStream } from "@azure/core-sse";
+  import { AzureKeyCredential } from "@azure/core-auth";
+  import { DefaultAzureCredential } from "@azure/identity";
+  ```
+
+* A model with reasoning capabilities model deployment. If you don't have one read [Add and configure Foundry Models](../../how-to/create-model-deployments) to add a reasoning model. 
+
+  * This example uses `DeepSeek-R1`.
+      
+## Use reasoning capabilities with chat
+
+First, create the client to consume the model. The following code uses an endpoint URL and key that are stored in environment variables.
+
+```javascript
+const client = ModelClient(
+    "https://<resource>.services.ai.azure.com/models", 
+    new AzureKeyCredential(process.env.AZURE_INFERENCE_CREDENTIAL)
+);
+```
+
+If you've configured the resource with **Microsoft Entra ID** support, you can use the following code snippet to create a client.
+
+```javascript
+const clientOptions = { credentials: { "https://cognitiveservices.azure.com/.default" } };
+
+const client = ModelClient(
+    "https://<resource>.services.ai.azure.com/models", 
+    new DefaultAzureCredential()
+    clientOptions,
+);
+```
+
+### Prompt reasoning models
+
+When building prompts for reasoning models, take the following into consideration:
+
+- Use simple instructions and avoid using chain-of-thought techniques.
+- Built-in reasoning capabilities make simple zero-shot prompts as effective as more complex methods.
+- When providing additional context or documents, like in RAG scenarios, including only the most relevant information might help prevent the model from over-complicating its response.
+- Reasoning models may support the use of system messages. However, they might not follow them as strictly as other non-reasoning models.
+- When creating multi-turn applications, consider appending only the final answer from the model, without it's reasoning content, as explained in the [Reasoning content](#reasoning-content) section.
+Notice that reasoning models can take longer times to generate responses. They use long reasoning chains of thought that enable deeper and more structured problem-solving. They also perform self-verification to cross-check their answers and correct their mistakes, thereby showcasing emergent self-reflective behaviors.
+
+### Create a chat completion request
+
+The following example shows how you can create a basic chat request to the model.
+
+```javascript
+var messages = [
+    { role: "user", content: "How many languages are in the world?" },
+];
+
+var response = await client.path("/chat/completions").post({
+    body: {
+        model: "DeepSeek-R1",
+        messages: messages,
+    }
+});
+```
+
+The response is as follows, where you can see the model's usage statistics:
+
+```javascript
+if (isUnexpected(response)) {
+    throw response.body.error;
+}
+
+console.log("Response: ", response.body.choices[0].message.content);
+console.log("Model: ", response.body.model);
+console.log("Usage:");
+console.log("\tPrompt tokens:", response.body.usage.prompt_tokens);
+console.log("\tTotal tokens:", response.body.usage.total_tokens);
+console.log("\tCompletion tokens:", response.body.usage.completion_tokens);
+```
+
+```console
+Response: <think>Okay, the user is asking how many languages exist in the world. I need to provide a clear and accurate answer...</think>As of now, it's estimated that there are about 7,000 languages spoken around the world. However, this number can vary as some languages become extinct and new ones develop. It's also important to note that the number of speakers can greatly vary between languages, with some having millions of speakers and others only a few hundred.
+Model: deepseek-r1
+Usage: 
+  Prompt tokens: 11
+  Total tokens: 897
+  Completion tokens: 886
+```
+
+### Reasoning content
+
+<Note>
+
+This information on reasoning content does not apply to Azure OpenAI models. Azure OpenAI reasoning models use the [reasoning summaries feature](../../../openai/how-to/reasoning#reasoning-summary).
+
+</Note>
+
+Some reasoning models, like DeepSeek-R1, generate completions and include the reasoning behind it. The reasoning associated with the completion is included in the response's content within the tags `<think>` and `</think>`. The model may select on which scenarios to generate reasoning content. You can extract the reasoning content from the response to understand the model's thought process as follows:
+
+```javascript
+var content = response.body.choices[0].message.content
+var match = content.match(/<think>(.*?)<\/think>(.*)/s);
+
+console.log("Response:");
+if (match) {
+    console.log("\tThinking:", match[1]);
+    console.log("\Answer:", match[2]);
+}
+else {
+    console.log("Response:", content);
+}
+console.log("Model: ", response.body.model);
+console.log("Usage:");
+console.log("\tPrompt tokens:", response.body.usage.prompt_tokens);
+console.log("\tTotal tokens:", response.body.usage.total_tokens);
+console.log("\tCompletion tokens:", response.body.usage.completion_tokens);
+```
+
+```console
+Thinking: Okay, the user is asking how many languages exist in the world. I need to provide a clear and accurate answer. Let's start by recalling the general consensus from linguistic sources. I remember that the number often cited is around 7,000, but maybe I should check some reputable organizations.\n\nEthnologue is a well-known resource for language data, and I think they list about 7,000 languages. But wait, do they update their numbers? It might be around 7,100 or so. Also, the exact count can vary because some sources might categorize dialects differently or have more recent data. \n\nAnother thing to consider is language endangerment. Many languages are endangered, with some having only a few speakers left. Organizations like UNESCO track endangered languages, so mentioning that adds context. Also, the distribution isn't even. Some countries/regions have hundreds of languages, like Papua New Guinea with over 800, while others have just a few. \n\nA user might also wonder why the exact number is hard to pin down. It's because the distinction between a language and a dialect can be political or cultural. For example, Mandarin and Cantonese are considered dialects of Chinese by some, but they're mutually unintelligible, so others classify them as separate languages. Also, some regions are under-researched, making it hard to document all languages. \n\nI should also touch on language families. The 7,000 languages are grouped into families like Indo-European, Sino-Tibetan, Niger-Congo, etc. Maybe mention a few of the largest families. But wait, the question is just about the count, not the families. Still, it's good to provide a bit more context. \n\nI need to make sure the information is up-to-date. Let me think – recent estimates still hover around 7,000. However, languages are dying out rapidly, so the number decreases over time. Including that note about endangerment and language extinction rates could be helpful. For instance, it's often stated that a language dies every few weeks. \n\nAnother point is sign languages. Does the count include them? Ethnologue includes some, but not all sources might. If the user is including sign languages, that adds more to the count, but I think the 7,000 figure typically refers to spoken languages. For thoroughness, maybe mention that there are also over 300 sign languages. \n\nSummarizing, the answer should state around 7,000, mention Ethnologue's figure, explain why the exact number varies, touch on endangerment, and possibly note sign languages as a separate category. Also, a brief mention of Papua New Guinea as the most linguistically diverse country/region. \n\nWait, let me verify Ethnologue's current number. As of their latest edition (25th, 2022), they list 7,168 living languages. But I should check if that's the case. Some sources might round to 7,000. Also, SIL International publishes Ethnologue, so citing them as reference makes sense. \n\nOther sources, like Glottolog, might have a different count because they use different criteria. Glottolog might list around 7,000 as well, but exact numbers vary. It's important to highlight that the count isn't exact because of differing definitions and ongoing research. \n\nIn conclusion, the approximate number is 7,000, with Ethnologue being a key source, considerations of endangerment, and the challenges in counting due to dialect vs. language distinctions. I should make sure the answer is clear, acknowledges the variability, and provides key points succinctly.
+
+Answer: The exact number of languages in the world is challenging to determine due to differences in definitions (e.g., distinguishing languages from dialects) and ongoing documentation efforts. However, widely cited estimates suggest there are approximately **7,000 languages** globally.
+Model: DeepSeek-R1
+Usage: 
+  Prompt tokens: 11
+  Total tokens: 897
+  Completion tokens: 886
+```
+
+When making multi-turn conversations, it's useful to avoid sending the reasoning content in the chat history as reasoning tends to generate long explanations.
+
+### Stream content
+
+By default, the completions API returns the entire generated content in a single response. If you're generating long completions, waiting for the response can take many seconds.
+
+You can _stream_ the content to get it as it's being generated. Streaming content allows you to start processing the completion as content becomes available. This mode returns an object that streams back the response as [data-only server-sent events](https://html.spec.whatwg.org/multipage/server-sent-events.html#server-sent-events). Extract chunks from the delta field, rather than the message field.
+
+To stream completions, set `stream=True` when you call the model.
+
+```javascript
+var messages = [
+    { role: "user", content: "How many languages are in the world?" },
+];
+
+var response = await client.path("/chat/completions").post({
+    body: {
+        model: "DeepSeek-R1",
+        messages: messages,
+        stream: true
+    }
+}).asNodeStream();
+```
+
+To visualize the output, define a helper function to print the stream. The following example implements a routing that stream only the answer without the reasoning content:
+
+```javascript
+async function printStream(sses) {
+    let isThinking = false;
+    
+    for await (const event of sses) {
+        if (event.data === "[DONE]") {
+            return;
+        }
+        for (const choice of (JSON.parse(event.data)).choices) {
+            const content = choice.delta?.content ?? "";
+            
+            if (content === "<think>") {
+                isThinking = true;
+                process.stdout.write("🧠 Thinking...");
+            } else if (content === "</think>") {
+                isThinking = false;
+                console.log("🛑\n\n");
+            } else if (content) {
+                process.stdout.write(content);
+            }
+        }
+    }
+}
+```
+
+You can visualize how streaming generates content:
+
+```javascript
+var sses = createSseStream(response.body);
+await printStream(sses)
+```
+
+### Parameters
+
+In general, reasoning models don't support the following parameters you can find in chat completion models:
+
+* Temperature
+* Presence penalty
+* Repetition penalty
+* Parameter `top_p`
+
+Some models support the use of tools or structured outputs (including JSON-schemas). Read the [Models](../../concepts/models-sold-directly-by-azure) details page to understand each model's support.
+
+### Apply Guardrails and controls
+
+The Azure AI Model Inference API supports [Azure AI Content Safety](https://aka.ms/azureaicontentsafety). When you use deployments with Azure AI Content Safety turned on, inputs and outputs pass through an ensemble of classification models aimed at detecting and preventing the output of harmful content. The content filtering system detects and takes action on specific categories of potentially harmful content in both input prompts and output completions.
+
+The following example shows how to handle events when the model detects harmful content in the input prompt.
+
+```javascript
+try {
+    var messages = [
+        { role: "system", content: "You are an AI assistant that helps people find information." },
+        { role: "user", content: "Chopping tomatoes and cutting them into cubes or wedges are great ways to practice your knife skills." },
+    ];
+
+    var response = await client.path("/chat/completions").post({
+        model: "DeepSeek-R1",
+        body: {
+            messages: messages,
+        }
+    });
+
+    console.log(response.body.choices[0].message.content);
+}
+catch (error) {
+    if (error.status_code == 400) {
+        var response = JSON.parse(error.response._content);
+        if (response.error) {
+            console.log(`Your request triggered an ${response.error.code} error:\n\t ${response.error.message}`);
+        }
+        else
+        {
+            throw error;
+        }
+    }
+}
+```
+
+<Tip>
+
+To learn more about how you can configure and control Azure AI Content Safety settings, check the [Azure AI Content Safety documentation](https://aka.ms/azureaicontentsafety).
+
+</Tip>
+
+This article explains how to use the reasoning capabilities of chat completions models deployed in Microsoft Foundry Models.
+
+## Reasoning models
+
+Reasoning models can reach higher levels of performance in domains like math, coding, science, strategy, and logistics. The way these models produce outputs is by explicitly using chain of thought to explore all possible paths before generating an answer. They verify their answers as they produce them, which helps to arrive at more accurate conclusions. As a result, reasoning models might require less context prompts in order to produce effective results. 
+
+Reasoning models produce two types of content as outputs:
+
+* Reasoning completions
+* Output completions
+
+Both of these completions count towards content generated from the model. Therefore, they contribute to the token limits and costs associated with the model. Some models, like `DeepSeek-R1`, might respond with the reasoning content. Others, like `o1`, output only the completions.
+
+## Prerequisites
+
+To complete this tutorial, you need:
+
+- An Azure subscription. If you're using GitHub Models, you can upgrade your experience and create an Azure subscription in the process. Read [Upgrade from GitHub Models to Microsoft Foundry Models](../how-to/quickstart-github-models) if that's your case.
+
+- A Foundry project. This kind of project is managed under a Foundry resource. If you don't have a Foundry project, see [Create a project for Foundry (Foundry projects)](../../how-to/create-projects).
+
+- The endpoint's URL.
+
+- The endpoint's key (if you choose to use API key for authentication).
+
+* Add the [Azure AI inference package](https://aka.ms/azsdk/azure-ai-inference/java/reference) to your project:
+
+  ```xml
+  <dependency>
+      <groupId>com.azure</groupId>
+      <artifactId>azure-ai-inference</artifactId>
+      <version>1.0.0-beta.4</version>
+  </dependency>
+  ```
+  
+* If you are using Entra ID, you also need the following package:
+
+  ```xml
+  <dependency>
+      <groupId>com.azure</groupId>
+      <artifactId>azure-identity</artifactId>
+      <version>1.15.3</version>
+  </dependency>
+  ```
+
+* Import the following namespace:
+  
+  ```java
+  package com.azure.ai.inference.usage;
+  
+  import com.azure.ai.inference.EmbeddingsClient;
+  import com.azure.ai.inference.EmbeddingsClientBuilder;
+  import com.azure.ai.inference.ChatCompletionsClient;
+  import com.azure.ai.inference.ChatCompletionsClientBuilder;
+  import com.azure.ai.inference.models.EmbeddingsResult;
+  import com.azure.ai.inference.models.EmbeddingItem;
+  import com.azure.ai.inference.models.ChatCompletions;
+  import com.azure.core.credential.AzureKeyCredential;
+  import com.azure.core.util.Configuration;
+  
+  import java.util.ArrayList;
+  import java.util.List;
+  ```
+
+* A model with reasoning capabilities model deployment. If you don't have one read [Add and configure Foundry Models](../../how-to/create-model-deployments) to add a reasoning model. 
+
+  * This example uses `DeepSeek-R1`.
+
+## Use reasoning capabilities with chat
+
+First, create the client to consume the model. The following code uses an endpoint URL and key that are stored in environment variables.
+
+```java
+ChatCompletionsClient client = new ChatCompletionsClient(
+        new URI("https://<resource>.services.ai.azure.com/models"),
+        new AzureKeyCredential(System.getProperty("AZURE_INFERENCE_CREDENTIAL")),
+```
+
+<Tip>
+
+Verify that you have deployed the model to Foundry Tools resource with the Azure AI Model Inference API. `Deepseek-R1` is also available as serverless API deployments. However, those endpoints don't take the parameter `model` as explained in this tutorial. You can verify that by going to [Foundry portal]() > Models + endpoints, and verify that the model is listed under the section **Foundry Tools**.
+
+</Tip>
+
+If you have configured the resource to with **Microsoft Entra ID** support, you can use the following code snippet to create a client.
+
+```java
+client = new ChatCompletionsClient(
+        new URI("https://<resource>.services.ai.azure.com/models"),
+        new DefaultAzureCredentialBuilder().build()
+);
+```
+
+### Prompt reasoning models
+
+When building prompts for reasoning models, take the following into consideration:
+
+- Use simple instructions and avoid using chain-of-thought techniques.
+- Built-in reasoning capabilities make simple zero-shot prompts as effective as more complex methods.
+- When providing additional context or documents, like in RAG scenarios, including only the most relevant information might help prevent the model from over-complicating its response.
+- Reasoning models may support the use of system messages. However, they might not follow them as strictly as other non-reasoning models.
+- When creating multi-turn applications, consider appending only the final answer from the model, without it's reasoning content, as explained in the [Reasoning content](#reasoning-content) section.
+Notice that reasoning models can take longer times to generate responses. They use long reasoning chains of thought that enable deeper and more structured problem-solving. They also perform self-verification to cross-check their answers and correct their mistakes, thereby showcasing emergent self-reflective behaviors.
+
+### Create a chat completion request
+
+The following example shows how you can create a basic chat request to the model.
+
+```java
+ChatCompletionsOptions requestOptions = new ChatCompletionsOptions()
+        .setModel("DeepSeek-R1")
+        .setMessages(Arrays.asList(
+                new ChatRequestUserMessage("How many languages are in the world?")
+        ));
+
+Response<ChatCompletions> response = client.complete(requestOptions);
+```
+
+The response is as follows, where you can see the model's usage statistics:
+
+```java
+System.out.println("Response: " + response.getValue().getChoices().get(0).getMessage().getContent());
+System.out.println("Model: " + response.getValue().getModel());
+System.out.println("Usage:");
+System.out.println("\tPrompt tokens: " + response.getValue().getUsage().getPromptTokens());
+System.out.println("\tTotal tokens: " + response.getValue().getUsage().getTotalTokens());
+System.out.println("\tCompletion tokens: " + response.getValue().getUsage().getCompletionTokens());
+```
+
+```console
+Response: <think>Okay, the user is asking how many languages exist in the world. I need to provide a clear and accurate...</think>The exact number of languages in the world is challenging to determine due to differences in definitions (e.g., distinguishing languages from dialects) and ongoing documentation efforts. However, widely cited estimates suggest there are approximately **7,000 languages** globally.
+Model: deepseek-r1
+Usage: 
+  Prompt tokens: 11
+  Total tokens: 897
+  Completion tokens: 886
+```
+
+### Reasoning content
+
+<Note>
+
+This information on reasoning content does not apply to Azure OpenAI models. Azure OpenAI reasoning models use the [reasoning summaries feature](../../../openai/how-to/reasoning#reasoning-summary).
+
+</Note>
+
+Some reasoning models, like DeepSeek-R1, generate completions and include the reasoning behind it. The reasoning associated with the completion is included in the response's content within the tags `<think>` and `</think>`. The model may select on which scenarios to generate reasoning content. You can extract the reasoning content from the response to understand the model's thought process as follows:
+
+```java
+String content = response.getValue().getChoices().get(0).getMessage().getContent()
+Pattern pattern = Pattern.compile("<think>(.*?)</think>(.*)", Pattern.DOTALL);
+Matcher matcher = pattern.matcher(content);
+
+System.out.println("Response:");
+if (matcher.find()) {
+    System.out.println("\tThinking: " + matcher.group(1));
+    System.out.println("\tAnswer: " + matcher.group(2));
+}
+else {
+    System.out.println("Response: " + content);
+}
+System.out.println("Model: " + response.getValue().getModel());
+System.out.println("Usage:");
+System.out.println("\tPrompt tokens: " + response.getValue().getUsage().getPromptTokens());
+System.out.println("\tTotal tokens: " + response.getValue().getUsage().getTotalTokens());
+System.out.println("\tCompletion tokens: " + response.getValue().getUsage().getCompletionTokens());
+```
+
+```console
+Thinking: Okay, the user is asking how many languages exist in the world. I need to provide a clear and accurate answer. Let's start by recalling the general consensus from linguistic sources. I remember that the number often cited is around 7,000, but maybe I should check some reputable organizations.\n\nEthnologue is a well-known resource for language data, and I think they list about 7,000 languages. But wait, do they update their numbers? It might be around 7,100 or so. Also, the exact count can vary because some sources might categorize dialects differently or have more recent data. \n\nAnother thing to consider is language endangerment. Many languages are endangered, with some having only a few speakers left. Organizations like UNESCO track endangered languages, so mentioning that adds context. Also, the distribution isn't even. Some countries/regions have hundreds of languages, like Papua New Guinea with over 800, while others have just a few. \n\nA user might also wonder why the exact number is hard to pin down. It's because the distinction between a language and a dialect can be political or cultural. For example, Mandarin and Cantonese are considered dialects of Chinese by some, but they're mutually unintelligible, so others classify them as separate languages. Also, some regions are under-researched, making it hard to document all languages. \n\nI should also touch on language families. The 7,000 languages are grouped into families like Indo-European, Sino-Tibetan, Niger-Congo, etc. Maybe mention a few of the largest families. But wait, the question is just about the count, not the families. Still, it's good to provide a bit more context. \n\nI need to make sure the information is up-to-date. Let me think – recent estimates still hover around 7,000. However, languages are dying out rapidly, so the number decreases over time. Including that note about endangerment and language extinction rates could be helpful. For instance, it's often stated that a language dies every few weeks. \n\nAnother point is sign languages. Does the count include them? Ethnologue includes some, but not all sources might. If the user is including sign languages, that adds more to the count, but I think the 7,000 figure typically refers to spoken languages. For thoroughness, maybe mention that there are also over 300 sign languages. \n\nSummarizing, the answer should state around 7,000, mention Ethnologue's figure, explain why the exact number varies, touch on endangerment, and possibly note sign languages as a separate category. Also, a brief mention of Papua New Guinea as the most linguistically diverse country/region. \n\nWait, let me verify Ethnologue's current number. As of their latest edition (25th, 2022), they list 7,168 living languages. But I should check if that's the case. Some sources might round to 7,000. Also, SIL International publishes Ethnologue, so citing them as reference makes sense. \n\nOther sources, like Glottolog, might have a different count because they use different criteria. Glottolog might list around 7,000 as well, but exact numbers vary. It's important to highlight that the count isn't exact because of differing definitions and ongoing research. \n\nIn conclusion, the approximate number is 7,000, with Ethnologue being a key source, considerations of endangerment, and the challenges in counting due to dialect vs. language distinctions. I should make sure the answer is clear, acknowledges the variability, and provides key points succinctly.
+
+Answer: The exact number of languages in the world is challenging to determine due to differences in definitions (e.g., distinguishing languages from dialects) and ongoing documentation efforts. However, widely cited estimates suggest there are approximately **7,000 languages** globally.
+Model: DeepSeek-R1
+Usage: 
+  Prompt tokens: 11
+  Total tokens: 897
+  Completion tokens: 886
+```
+
+When making multi-turn conversations, it's useful to avoid sending the reasoning content in the chat history as reasoning tends to generate long explanations.
+
+### Stream content
+
+By default, the completions API returns the entire generated content in a single response. If you're generating long completions, waiting for the response can take many seconds.
+
+You can _stream_ the content to get it as it's being generated. Streaming content allows you to start processing the completion as content becomes available. This mode returns an object that streams back the response as [data-only server-sent events](https://html.spec.whatwg.org/multipage/server-sent-events.html#server-sent-events). Extract chunks from the delta field, rather than the message field.
+
+```java
+ChatCompletionsOptions requestOptions = new ChatCompletionsOptions()
+        .setModel("DeepSeek-R1")
+        .setMessages(Arrays.asList(
+                new ChatRequestUserMessage("How many languages are in the world? Write an essay about it.")
+        ))
+        .setMaxTokens(4096);
+
+return client.completeStreamingAsync(requestOptions).thenAcceptAsync(response -> {
+    try {
+        printStream(response);
+    } catch (Exception e) {
+        throw new RuntimeException(e);
+    }
+});
+```
+
+To visualize the output, define a helper function to print the stream. The following example implements a routing that stream only the answer without the reasoning content:
+
+```java
+public void printStream(StreamingResponse<StreamingChatCompletionsUpdate> response) throws Exception {
+    boolean isThinking = false;
+
+    for (StreamingChatCompletionsUpdate chatUpdate : response) {
+       if (chatUpdate.getContentUpdate() != null && !chatUpdate.getContentUpdate().isEmpty()) {
+            String content = chatUpdate.getContentUpdate();
+
+            if ("<think>".equals(content)) {
+                isThinking = true;
+                System.out.print("🧠 Thinking...");
+                System.out.flush();
+            } else if ("</think>".equals(content)) {
+                isThinking = false;
+                System.out.println("🛑\n\n");
+            } else if (content != null && !content.isEmpty()) {
+                System.out.print(content);
+                System.out.flush();
+            }
+        }
+    }
+}
+```
+
+You can visualize how streaming generates content:
+
+```csharp
+try {
+    streamMessageAsync(client).get();
+} catch (Exception e) {
+    throw new RuntimeException(e);
+}
+```
+
+### Parameters
+
+In general, reasoning models don't support the following parameters you can find in chat completion models:
+
+* Temperature
+* Presence penalty
+* Repetition penalty
+* Parameter `top_p`
+
+Some models support the use of tools or structured outputs (including JSON-schemas). Read the [Models](../../concepts/models-sold-directly-by-azure) details page to understand each model's support.
+
+This article explains how to use the reasoning capabilities of chat completions models deployed in Microsoft Foundry Models.
+
+## Reasoning models
+
+Reasoning models can reach higher levels of performance in domains like math, coding, science, strategy, and logistics. The way these models produce outputs is by explicitly using chain of thought to explore all possible paths before generating an answer. They verify their answers as they produce them, which helps to arrive at more accurate conclusions. As a result, reasoning models might require less context prompts in order to produce effective results. 
+
+Reasoning models produce two types of content as outputs:
+
+* Reasoning completions
+* Output completions
+
+Both of these completions count towards content generated from the model. Therefore, they contribute to the token limits and costs associated with the model. Some models, like `DeepSeek-R1`, might respond with the reasoning content. Others, like `o1`, output only the completions.
+
+## Prerequisites
+
+To complete this tutorial, you need:
+
+- An Azure subscription. If you're using GitHub Models, you can upgrade your experience and create an Azure subscription in the process. Read [Upgrade from GitHub Models to Microsoft Foundry Models](../how-to/quickstart-github-models) if that's your case.
+
+- A Foundry project. This kind of project is managed under a Foundry resource. If you don't have a Foundry project, see [Create a project for Foundry (Foundry projects)](../../how-to/create-projects).
+
+- The endpoint's URL.
+
+- The endpoint's key (if you choose to use API key for authentication).
+
+* Install the [Azure AI inference package](https://aka.ms/azsdk/azure-ai-inference/python/reference) with the following command:
+
+    ```bash
+    dotnet add package Azure.AI.Inference --prerelease
+    ```
+    
+* If you are using Entra ID, you also need the following package:
+
+    ```bash
+    dotnet add package Azure.Identity
+    ```
+
+* A model with reasoning capabilities model deployment. If you don't have one read [Add and configure Foundry Models](../../how-to/create-model-deployments) to add a reasoning model. 
+
+  * This example uses `DeepSeek-R1`.
+
+## Use reasoning capabilities with chat
+
+First, create the client to consume the model. The following code uses an endpoint URL and key that are stored in environment variables.
+
+```csharp
+AzureAIInferenceClientOptions clientOptions = new AzureAIInferenceClientOptions(apiVersion);
+
+ChatCompletionsClient client = new ChatCompletionsClient(
+    new Uri("https://<resource>.services.ai.azure.com/models"),
+    new AzureKeyCredential(Environment.GetEnvironmentVariable("AZURE_INFERENCE_CREDENTIAL")),
+    clientOptions
+);
+```
+
+If you have configured the resource to with **Microsoft Entra ID** support, you can use the following code snippet to create a client.
+
+```csharp
+AzureAIInferenceClientOptions clientOptions = new AzureAIInferenceClientOptions(
+    "2024-05-01-preview", 
+    new string[] { "https://cognitiveservices.azure.com/.default" }
+);
+
+client = new ChatCompletionsClient(
+    new Uri("https://<resource>.services.ai.azure.com/models"),
+    new DefaultAzureCredential(),
+    clientOptions,
+);
+```
+
+### Prompt reasoning models
+
+When building prompts for reasoning models, take the following into consideration:
+
+- Use simple instructions and avoid using chain-of-thought techniques.
+- Built-in reasoning capabilities make simple zero-shot prompts as effective as more complex methods.
+- When providing additional context or documents, like in RAG scenarios, including only the most relevant information might help prevent the model from over-complicating its response.
+- Reasoning models may support the use of system messages. However, they might not follow them as strictly as other non-reasoning models.
+- When creating multi-turn applications, consider appending only the final answer from the model, without it's reasoning content, as explained in the [Reasoning content](#reasoning-content) section.
+Notice that reasoning models can take longer times to generate responses. They use long reasoning chains of thought that enable deeper and more structured problem-solving. They also perform self-verification to cross-check their answers and correct their mistakes, thereby showcasing emergent self-reflective behaviors.
+
+### Create a chat completion request
+
+The following example shows how you can create a basic chat request to the model.
+
+```csharp
+ChatCompletionsOptions requestOptions = new ChatCompletionsOptions()
+{
+    Messages = {
+        new ChatRequestUserMessage("How many languages are in the world?")
+    },
+    Model = "deepseek-r1",
+};
+
+Response<ChatCompletions> response = client.Complete(requestOptions);
+```
+
+The response is as follows, where you can see the model's usage statistics:
+
+```csharp
+Console.WriteLine($"Response: {response.Value.Content}");
+Console.WriteLine($"Model: {response.Value.Model}");
+Console.WriteLine("Usage:");
+Console.WriteLine($"\tPrompt tokens: {response.Value.Usage.PromptTokens}");
+Console.WriteLine($"\tTotal tokens: {response.Value.Usage.TotalTokens}");
+Console.WriteLine($"\tCompletion tokens: {response.Value.Usage.CompletionTokens}");
+```
+
+```console
+Response: <think>Okay, the user is asking how many languages exist in the world. I need to provide a clear and accurate...</think>The exact number of languages in the world is challenging to determine due to differences in definitions (e.g., distinguishing languages from dialects) and ongoing documentation efforts. However, widely cited estimates suggest there are approximately **7,000 languages** globally.
+Model: deepseek-r1
+Usage: 
+  Prompt tokens: 11
+  Total tokens: 897
+  Completion tokens: 886
+```
+
+### Reasoning content
+
+<Note>
+
+This information on reasoning content does not apply to Azure OpenAI models. Azure OpenAI reasoning models use the [reasoning summaries feature](../../../openai/how-to/reasoning#reasoning-summary).
+
+</Note>
+
+Some reasoning models, like DeepSeek-R1, generate completions and include the reasoning behind it. The reasoning associated with the completion is included in the response's content within the tags `<think>` and `</think>`. The model may select on which scenarios to generate reasoning content. You can extract the reasoning content from the response to understand the model's thought process as follows:
+
+```csharp
+Regex regex = new Regex(pattern, RegexOptions.Singleline);
+Match match = regex.Match(response.Value.Content);
+
+Console.WriteLine("Response:");
+if (match.Success)
+{
+    Console.WriteLine($"\tThinking: {match.Groups[1].Value}");
+    Console.WriteLine($"\tAnswer: {match.Groups[2].Value}");
+else
+{
+    Console.WriteLine($"Response: {response.Value.Content}");
+}
+Console.WriteLine($"Model: {response.Value.Model}");
+Console.WriteLine("Usage:");
+Console.WriteLine($"\tPrompt tokens: {response.Value.Usage.PromptTokens}");
+Console.WriteLine($"\tTotal tokens: {response.Value.Usage.TotalTokens}");
+Console.WriteLine($"\tCompletion tokens: {response.Value.Usage.CompletionTokens}");
+```
+
+```console
+Thinking: Okay, the user is asking how many languages exist in the world. I need to provide a clear and accurate answer. Let's start by recalling the general consensus from linguistic sources. I remember that the number often cited is around 7,000, but maybe I should check some reputable organizations.\n\nEthnologue is a well-known resource for language data, and I think they list about 7,000 languages. But wait, do they update their numbers? It might be around 7,100 or so. Also, the exact count can vary because some sources might categorize dialects differently or have more recent data. \n\nAnother thing to consider is language endangerment. Many languages are endangered, with some having only a few speakers left. Organizations like UNESCO track endangered languages, so mentioning that adds context. Also, the distribution isn't even. Some countries/regions have hundreds of languages, like Papua New Guinea with over 800, while others have just a few. \n\nA user might also wonder why the exact number is hard to pin down. It's because the distinction between a language and a dialect can be political or cultural. For example, Mandarin and Cantonese are considered dialects of Chinese by some, but they're mutually unintelligible, so others classify them as separate languages. Also, some regions are under-researched, making it hard to document all languages. \n\nI should also touch on language families. The 7,000 languages are grouped into families like Indo-European, Sino-Tibetan, Niger-Congo, etc. Maybe mention a few of the largest families. But wait, the question is just about the count, not the families. Still, it's good to provide a bit more context. \n\nI need to make sure the information is up-to-date. Let me think – recent estimates still hover around 7,000. However, languages are dying out rapidly, so the number decreases over time. Including that note about endangerment and language extinction rates could be helpful. For instance, it's often stated that a language dies every few weeks. \n\nAnother point is sign languages. Does the count include them? Ethnologue includes some, but not all sources might. If the user is including sign languages, that adds more to the count, but I think the 7,000 figure typically refers to spoken languages. For thoroughness, maybe mention that there are also over 300 sign languages. \n\nSummarizing, the answer should state around 7,000, mention Ethnologue's figure, explain why the exact number varies, touch on endangerment, and possibly note sign languages as a separate category. Also, a brief mention of Papua New Guinea as the most linguistically diverse country/region. \n\nWait, let me verify Ethnologue's current number. As of their latest edition (25th, 2022), they list 7,168 living languages. But I should check if that's the case. Some sources might round to 7,000. Also, SIL International publishes Ethnologue, so citing them as reference makes sense. \n\nOther sources, like Glottolog, might have a different count because they use different criteria. Glottolog might list around 7,000 as well, but exact numbers vary. It's important to highlight that the count isn't exact because of differing definitions and ongoing research. \n\nIn conclusion, the approximate number is 7,000, with Ethnologue being a key source, considerations of endangerment, and the challenges in counting due to dialect vs. language distinctions. I should make sure the answer is clear, acknowledges the variability, and provides key points succinctly.
+
+Answer: The exact number of languages in the world is challenging to determine due to differences in definitions (e.g., distinguishing languages from dialects) and ongoing documentation efforts. However, widely cited estimates suggest there are approximately **7,000 languages** globally.
+Model: DeepSeek-R1
+Usage: 
+  Prompt tokens: 11
+  Total tokens: 897
+  Completion tokens: 886
+```
+
+When making multi-turn conversations, it's useful to avoid sending the reasoning content in the chat history as reasoning tends to generate long explanations.
+
+### Stream content
+
+By default, the completions API returns the entire generated content in a single response. If you're generating long completions, waiting for the response can take many seconds.
+
+You can _stream_ the content to get it as it's being generated. Streaming content allows you to start processing the completion as content becomes available. This mode returns an object that streams back the response as [data-only server-sent events](https://html.spec.whatwg.org/multipage/server-sent-events.html#server-sent-events). Extract chunks from the delta field, rather than the message field.
+
+```csharp
+static async Task StreamMessageAsync(ChatCompletionsClient client)
+{
+    ChatCompletionsOptions requestOptions = new ChatCompletionsOptions()
+    {
+        Messages = {
+            new ChatRequestUserMessage("How many languages are in the world?")
+        },
+        MaxTokens=4096,
+        Model = "deepseek-r1",
+    };
+
+    StreamingResponse<StreamingChatCompletionsUpdate> streamResponse = await client.CompleteStreamingAsync(requestOptions);
+
+    await PrintStream(streamResponse);
+}
+```
+
+To visualize the output, define a helper function to print the stream. The following example implements a routing that stream only the answer without the reasoning content:
+
+```csharp
+static void PrintStream(StreamingResponse<StreamingChatCompletionsUpdate> response)
+{
+    bool isThinking = false;
+    await foreach (StreamingChatCompletionsUpdate chatUpdate in response)
+    {
+        if (!string.IsNullOrEmpty(chatUpdate.ContentUpdate))
+        {
+            string content = chatUpdate.ContentUpdate;
+            if (content == "<think>")
+            {
+                isThinking = true;
+                Console.Write("🧠 Thinking...");
+                Console.Out.Flush();
+            }
+            else if (content == "</think>")
+            {
+                isThinking = false;
+                Console.WriteLine("🛑\n\n");
+            }
+            else if (!string.IsNullOrEmpty(content))
+            {
+                Console.Write(content);
+                Console.Out.Flush();
+            }
+        }
+    }
+}
+```
+
+You can visualize how streaming generates content:
+
+```csharp
+StreamMessageAsync(client).GetAwaiter().GetResult();
+```
+
+### Parameters
+
+In general, reasoning models don't support the following parameters you can find in chat completion models:
+
+* Temperature
+* Presence penalty
+* Repetition penalty
+* Parameter `top_p`
+
+Some models support the use of tools or structured outputs (including JSON-schemas). Read the [Models](../../concepts/models-sold-directly-by-azure) details page to understand each model's support.
+
+### Apply Guardrails and controls
+
+The Azure AI Model Inference API supports [Azure AI Content Safety](https://aka.ms/azureaicontentsafety). When you use deployments with Azure AI Content Safety turned on, inputs and outputs pass through an ensemble of classification models aimed at detecting and preventing the output of harmful content. The content filtering system detects and takes action on specific categories of potentially harmful content in both input prompts and output completions.
+
+The following example shows how to handle events when the model detects harmful content in the input prompt.
+
+```csharp
+try
+{
+    requestOptions = new ChatCompletionsOptions()
+    {
+        Messages = {
+            new ChatRequestSystemMessage("You are an AI assistant that helps people find information."),
+            new ChatRequestUserMessage(
+                "Chopping tomatoes and cutting them into cubes or wedges are great ways to practice your knife skills."
+            ),
+        },
+        Model = "deepseek-r1",
+    };
+
+    response = client.Complete(requestOptions);
+    Console.WriteLine(response.Value.Content);
+}
+catch (RequestFailedException ex)
+{
+    if (ex.ErrorCode == "content_filter")
+    {
+        Console.WriteLine($"Your query has trigger Azure Content Safety: {ex.Message}");
+    }
+    else
+    {
+        throw;
+    }
+}
+```
+
+<Tip>
+
+To learn more about how you can configure and control Azure AI Content Safety settings, check the [Azure AI Content Safety documentation](https://aka.ms/azureaicontentsafety).
+
+</Tip>
+
+This article explains how to use the reasoning capabilities of chat completions models deployed in Microsoft Foundry Models.
+
+## Reasoning models
+
+Reasoning models can reach higher levels of performance in domains like math, coding, science, strategy, and logistics. The way these models produce outputs is by explicitly using chain of thought to explore all possible paths before generating an answer. They verify their answers as they produce them, which helps to arrive at more accurate conclusions. As a result, reasoning models might require less context prompts in order to produce effective results. 
+
+Reasoning models produce two types of content as outputs:
+
+* Reasoning completions
+* Output completions
+
+Both of these completions count towards content generated from the model. Therefore, they contribute to the token limits and costs associated with the model. Some models, like `DeepSeek-R1`, might respond with the reasoning content. Others, like `o1`, output only the completions.
+
+## Prerequisites
+
+To complete this tutorial, you need:
+
+- An Azure subscription. If you're using GitHub Models, you can upgrade your experience and create an Azure subscription in the process. Read [Upgrade from GitHub Models to Microsoft Foundry Models](../how-to/quickstart-github-models) if that's your case.
+
+- A Foundry project. This kind of project is managed under a Foundry resource. If you don't have a Foundry project, see [Create a project for Foundry (Foundry projects)](../../how-to/create-projects).
+
+- The endpoint's URL.
+
+- The endpoint's key (if you choose to use API key for authentication).
+
+* A model with reasoning capabilities model deployment. If you don't have one read [Add and configure Foundry Models](../../how-to/create-model-deployments) to add a reasoning model. 
+
+  * This example uses `DeepSeek-R1`.
+
+## Use reasoning capabilities with chat
+
+First, create the client to consume the model. The following code uses an endpoint URL and key that are stored in environment variables.
+
+<CodeGroup>
+```http OpenAI API
+    POST https://<resource>.services.ai.azure.com/openai/deployments/deepseek-r1/chat/completions?api-version=2024-10-21
+    Content-Type: application/json
+    api-key: <key>
+    ```
+
+```http Model Inference API (preview)
+    POST https://<resource>.services.ai.azure.com/models/chat/completions?api-version=2024-05-01-preview
+    Content-Type: application/json
+    api-key: <key>
+    ```
+</CodeGroup>
+
+If you have configured the resource with **Microsoft Entra ID** support, pass you token in the `Authorization` header with the format `Bearer <token>`. Use scope `https://ai.azure.com/.default`. 
+
+<CodeGroup>
+```http OpenAI API
+    POST https://<resource>.services.ai.azure.com/openai/deployments/deepseek-r1/chat/completions?api-version=2024-10-21
+    Content-Type: application/json
+    Authorization: Bearer <token>
+    ```
+
+```http Model Inference API (preview)
+    POST https://<resource>.services.ai.azure.com/models/chat/completions?api-version=2024-05-01-preview
+    Content-Type: application/json
+    Authorization: Bearer <token>
+    ```
+</CodeGroup>
+
+Using Microsoft Entra ID may require additional configuration in your resource to grant access. Learn how to [configure key-less authentication with Microsoft Entra ID](../../how-to/configure-entra-id).
+
+### Prompt reasoning models
+
+When building prompts for reasoning models, take the following into consideration:
+
+- Use simple instructions and avoid using chain-of-thought techniques.
+- Built-in reasoning capabilities make simple zero-shot prompts as effective as more complex methods.
+- When providing additional context or documents, like in RAG scenarios, including only the most relevant information might help prevent the model from over-complicating its response.
+- Reasoning models may support the use of system messages. However, they might not follow them as strictly as other non-reasoning models.
+- When creating multi-turn applications, consider appending only the final answer from the model, without it's reasoning content, as explained in the [Reasoning content](#reasoning-content) section.
+Notice that reasoning models can take longer times to generate responses. They use long reasoning chains of thought that enable deeper and more structured problem-solving. They also perform self-verification to cross-check their answers and correct their mistakes, thereby showcasing emergent self-reflective behaviors.
+
+### Create a chat completion request
+
+The following example shows how you can create a basic chat request to the model.
+
+```json
+{
+    "model": "deepseek-r1",
+    "messages": [
+        {
+            "role": "user",
+            "content": "How many languages are in the world?"
+        }
+    ]
+}
+```
+
+The response is as follows, where you can see the model's usage statistics:
+
+<CodeGroup>
+```json OpenAI API
+    {
+        "id": "0a1234b5de6789f01gh2i345j6789klm",
+        "object": "chat.completion",
+        "created": 1718726686,
+        "model": "DeepSeek-R1",
+        "choices": [
+            {
+                "index": 0,
+                "message": {
+                    "role": "assistant",
+                    "reasoning_content": "Okay, the user is asking how many languages exist in the world. I need to provide a clear and accurate answer. Let's start by recalling the general consensus from linguistic sources. I remember that the number often cited is around 7,000, but maybe I should check some reputable organizations.\n\nEthnologue is a well-known resource for language data, and I think they list about 7,000 languages. But wait, do they update their numbers? It might be around 7,100 or so. Also, the exact count can vary because some sources might categorize dialects differently or have more recent data. \n\nAnother thing to consider is language endangerment. Many languages are endangered, with some having only a few speakers left. Organizations like UNESCO track endangered languages, so mentioning that adds context. Also, the distribution isn't even. Some countries/regions have hundreds of languages, like Papua New Guinea with over 800, while others have just a few. \n\nA user might also wonder why the exact number is hard to pin down. It's because the distinction between a language and a dialect can be political or cultural. For example, Mandarin and Cantonese are considered dialects of Chinese by some, but they're mutually unintelligible, so others classify them as separate languages. Also, some regions are under-researched, making it hard to document all languages. \n\nI should also touch on language families. The 7,000 languages are grouped into families like Indo-European, Sino-Tibetan, Niger-Congo, etc. Maybe mention a few of the largest families. But wait, the question is just about the count, not the families. Still, it's good to provide a bit more context. \n\nI need to make sure the information is up-to-date. Let me think – recent estimates still hover around 7,000. However, languages are dying out rapidly, so the number decreases over time. Including that note about endangerment and language extinction rates could be helpful. For instance, it's often stated that a language dies every few weeks. \n\nAnother point is sign languages. Does the count include them? Ethnologue includes some, but not all sources might. If the user is including sign languages, that adds more to the count, but I think the 7,000 figure typically refers to spoken languages. For thoroughness, maybe mention that there are also over 300 sign languages. \n\nSummarizing, the answer should state around 7,000, mention Ethnologue's figure, explain why the exact number varies, touch on endangerment, and possibly note sign languages as a separate category. Also, a brief mention of Papua New Guinea as the most linguistically diverse country/region. \n\nWait, let me verify Ethnologue's current number. As of their latest edition (25th, 2022), they list 7,168 living languages. But I should check if that's the case. Some sources might round to 7,000. Also, SIL International publishes Ethnologue, so citing them as reference makes sense. \n\nOther sources, like Glottolog, might have a different count because they use different criteria. Glottolog might list around 7,000 as well, but exact numbers vary. It's important to highlight that the count isn't exact because of differing definitions and ongoing research. \n\nIn conclusion, the approximate number is 7,000, with Ethnologue being a key source, considerations of endangerment, and the challenges in counting due to dialect vs. language distinctions. I should make sure the answer is clear, acknowledges the variability, and provides key points succinctly.\n",
+                    "content": "The exact number of languages in the world is challenging to determine due to differences in definitions (e.g., distinguishing languages from dialects) and ongoing documentation efforts. However, widely cited estimates suggest there are approximately **7,000 languages** globally.",
+                    "tool_calls": null
+                },
+                "finish_reason": "stop"
+            }
+        ],
+        "usage": {
+            "prompt_tokens": 11,
+            "total_tokens": 897,
+            "completion_tokens": 886
+        }
+    }
+    ```
+
+```json Model Inference API (preview)
+    {
+        "id": "0a1234b5de6789f01gh2i345j6789klm",
+        "object": "chat.completion",
+        "created": 1718726686,
+        "model": "DeepSeek-R1",
+        "choices": [
+            {
+                "index": 0,
+                "message": {
+                    "role": "assistant",
+                    "content": "<think>\nOkay, the user is asking how many languages exist in the world. I need to provide a clear and accurate answer. Let's start by recalling the general consensus from linguistic sources. I remember that the number often cited is around 7,000, but maybe I should check some reputable organizations.\n\nEthnologue is a well-known resource for language data, and I think they list about 7,000 languages. But wait, do they update their numbers? It might be around 7,100 or so. Also, the exact count can vary because some sources might categorize dialects differently or have more recent data. \n\nAnother thing to consider is language endangerment. Many languages are endangered, with some having only a few speakers left. Organizations like UNESCO track endangered languages, so mentioning that adds context. Also, the distribution isn't even. Some countries/regions have hundreds of languages, like Papua New Guinea with over 800, while others have just a few. \n\nA user might also wonder why the exact number is hard to pin down. It's because the distinction between a language and a dialect can be political or cultural. For example, Mandarin and Cantonese are considered dialects of Chinese by some, but they're mutually unintelligible, so others classify them as separate languages. Also, some regions are under-researched, making it hard to document all languages. \n\nI should also touch on language families. The 7,000 languages are grouped into families like Indo-European, Sino-Tibetan, Niger-Congo, etc. Maybe mention a few of the largest families. But wait, the question is just about the count, not the families. Still, it's good to provide a bit more context. \n\nI need to make sure the information is up-to-date. Let me think – recent estimates still hover around 7,000. However, languages are dying out rapidly, so the number decreases over time. Including that note about endangerment and language extinction rates could be helpful. For instance, it's often stated that a language dies every few weeks. \n\nAnother point is sign languages. Does the count include them? Ethnologue includes some, but not all sources might. If the user is including sign languages, that adds more to the count, but I think the 7,000 figure typically refers to spoken languages. For thoroughness, maybe mention that there are also over 300 sign languages. \n\nSummarizing, the answer should state around 7,000, mention Ethnologue's figure, explain why the exact number varies, touch on endangerment, and possibly note sign languages as a separate category. Also, a brief mention of Papua New Guinea as the most linguistically diverse country/region. \n\nWait, let me verify Ethnologue's current number. As of their latest edition (25th, 2022), they list 7,168 living languages. But I should check if that's the case. Some sources might round to 7,000. Also, SIL International publishes Ethnologue, so citing them as reference makes sense. \n\nOther sources, like Glottolog, might have a different count because they use different criteria. Glottolog might list around 7,000 as well, but exact numbers vary. It's important to highlight that the count isn't exact because of differing definitions and ongoing research. \n\nIn conclusion, the approximate number is 7,000, with Ethnologue being a key source, considerations of endangerment, and the challenges in counting due to dialect vs. language distinctions. I should make sure the answer is clear, acknowledges the variability, and provides key points succinctly.\n</think>\n\nThe exact number of languages in the world is challenging to determine due to differences in definitions (e.g., distinguishing languages from dialects) and ongoing documentation efforts. However, widely cited estimates suggest there are approximately **7,000 languages** globally.",
+                    "tool_calls": null
+                },
+                "finish_reason": "stop"
+            }
+        ],
+        "usage": {
+            "prompt_tokens": 11,
+            "total_tokens": 897,
+            "completion_tokens": 886
+        }
+    }
+    ```
+</CodeGroup>
+
+### Reasoning content
+
+<Note>
+
+This information on reasoning content does not apply to Azure OpenAI models. Azure OpenAI reasoning models use the [reasoning summaries feature](../../../openai/how-to/reasoning#reasoning-summary).
+
+</Note>
+
+Some reasoning models, like DeepSeek-R1, generate completions and include the reasoning behind it. 
+
+<Tabs>
+  <Tab title="OpenAI API">
+
+    The reasoning associated with the completion is included in the field `reasoning_content`. The model may select on which scenarios to generate reasoning content. 
+
+  </Tab>
+  <Tab title="Model Inference API (preview)">
+
+    The reasoning associated with the completion is included in the response's content within the tags `<think>` and `</think>`. The model may select on which scenarios to generate reasoning content. 
+
+  </Tab>
+</Tabs>
+
+When making multi-turn conversations, it's useful to avoid sending the reasoning content in the chat history as reasoning tends to generate long explanations.
+
+### Stream content
+
+By default, the completions API returns the entire generated content in a single response. If you're generating long completions, waiting for the response can take many seconds.
+
+You can _stream_ the content to get it as it's being generated. Streaming content allows you to start processing the completion as content becomes available. This mode returns an object that streams back the response as [data-only server-sent events](https://html.spec.whatwg.org/multipage/server-sent-events.html#server-sent-events). Extract chunks from the delta field, rather than the message field.
+
+To stream completions, set `"stream": true` when you call the model.
+
+```json
+{
+    "model": "DeepSeek-R1",
+    "messages": [
+        {
+            "role": "user",
+            "content": "How many languages are in the world?"
+        }
+    ],
+    "stream": true,
+    "max_tokens": 2048
+}
+```
+
+To visualize the output, define a helper function to print the stream. The following example implements a routing that stream only the answer without the reasoning content:
+
+<CodeGroup>
+```json OpenAI API
+    {
+        "id": "23b54589eba14564ad8a2e6978775a39",
+        "object": "chat.completion.chunk",
+        "created": 1718726371,
+        "model": "DeepSeek-R1",
+        "choices": [
+            {
+                "index": 0,
+                "delta": {
+                    "role": "assistant",
+                    "reasoning_content": "Okay,",
+                    "content": ""
+                },
+                "finish_reason": null,
+                "logprobs": null
+            }
+        ]
+    }
+    ```
+
+```json Model Inference API (preview)
+    {
+        "id": "23b54589eba14564ad8a2e6978775a39",
+        "object": "chat.completion.chunk",
+        "created": 1718726371,
+        "model": "DeepSeek-R1",
+        "choices": [
+            {
+                "index": 0,
+                "delta": {
+                    "role": "assistant",
+                    "content": "<think>Okay,"
+                },
+                "finish_reason": null,
+                "logprobs": null
+            }
+        ]
+    }
+    ```
+</CodeGroup>
+
+The last message in the stream has `finish_reason` set, indicating the reason for the generation process to stop.
+
+<CodeGroup>
+```json OpenAI API
+    {
+        "id": "23b54589eba14564ad8a2e6978775a39",
+        "object": "chat.completion.chunk",
+        "created": 1718726371,
+        "model": "DeepSeek-R1",
+        "choices": [
+            {
+                "index": 0,
+                "delta": {
+                    "reasoning_content": "",
+                    "content": ""
+                },
+                "finish_reason": "stop",
+                "logprobs": null
+            }
+        ],
+        "usage": {
+            "prompt_tokens": 11,
+            "total_tokens": 897,
+            "completion_tokens": 886
+        }
+    }
+    ```
+
+```json Model Inference API (preview)
+    {
+        "id": "23b54589eba14564ad8a2e6978775a39",
+        "object": "chat.completion.chunk",
+        "created": 1718726371,
+        "model": "DeepSeek-R1",
+        "choices": [
+            {
+                "index": 0,
+                "delta": {
+                    "content": ""
+                },
+                "finish_reason": "stop",
+                "logprobs": null
+            }
+        ],
+        "usage": {
+            "prompt_tokens": 11,
+            "total_tokens": 897,
+            "completion_tokens": 886
+        }
+    }
+    ```
+</CodeGroup>
+
+### Parameters
+
+In general, reasoning models don't support the following parameters you can find in chat completion models:
+
+* Temperature
+* Presence penalty
+* Repetition penalty
+* Parameter `top_p`
+
+Some models support the use of tools or structured outputs (including JSON-schemas). Read the [Models](../../concepts/models-sold-directly-by-azure) details page to understand each model's support.
+
+### Apply Guardrails and controls
+
+The Azure AI Model Inference API supports [Azure AI Content Safety](https://aka.ms/azureaicontentsafety). When you use deployments with Azure AI Content Safety turned on, inputs and outputs pass through an ensemble of classification models aimed at detecting and preventing the output of harmful content. The content filtering system detects and takes action on specific categories of potentially harmful content in both input prompts and output completions.
+
+The following example shows how to handle events when the model detects harmful content in the input prompt.
+
+```json
+{
+    "model": "DeepSeek-R1",
+    "messages": [
+        {
+            "role": "user",
+            "content": "Chopping tomatoes and cutting them into cubes or wedges are great ways to practice your knife skills."
+        }
+    ]
+}
+```
+
+```json
+{
+    "error": {
+        "message": "The response was filtered due to the prompt triggering Microsoft's content management policy. Please modify your prompt and retry.",
+        "type": null,
+        "param": "prompt",
+        "code": "content_filter",
+        "status": 400
+    }
+}
+```
+
+<Tip>
+
+To learn more about how you can configure and control Azure AI Content Safety settings, check the [Azure AI Content Safety documentation](https://aka.ms/azureaicontentsafety).
+
+</Tip>
+
+## Related content
+
+* [Use embeddings models](/foundry-models/use-embeddings)
+* [Use image embeddings models](./use-image-embeddings)
+* [Azure AI Model Inference API](https://learn.microsoft.com/rest/api/aifoundry/modelinference)

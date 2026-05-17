@@ -2,6 +2,7 @@
 title: "Use your own resources in the Foundry Agent Service"
 description: "Learn how to use resources that you already have with the Foundry Agent Service."
 ---
+
 By default, Foundry Agent Service manages storage for files, conversations, and vector stores. If your organization requires full data ownership, customer-managed keys (CMK), or network isolation, you can connect your own Azure resources instead. This article shows you how to configure the deployment templates to use existing Azure OpenAI, Azure Storage, Azure Cosmos DB, and Azure AI Search resources with Agent Service.
 
 ## Limitations
@@ -16,7 +17,7 @@ You can reuse your existing model deployments and quota from Foundry Tools or Az
 
 ### SDK usage with hub-based projects
 
-Starting in May 2025, the Azure AI Agent Service uses an endpoint for [Foundry projects](/overview/what-is-foundry#choosing-a-project) instead of the connection string that was used for hub-based projects before this time. Connection strings are no longer supported in current versions of the SDKs and REST API. We recommend creating a new foundry project.
+Starting in May 2025, the Azure AI Agent Service uses an endpoint for [Foundry projects](/what-is-microsoft-foundry/what-is-foundry#foundry-portal) instead of the connection string that was used for hub-based projects before this time. Connection strings are no longer supported in current versions of the SDKs and REST API. We recommend creating a new foundry project.
 
 If you want to continue using your hub-based project and connection string, you need to: 
 * Use the connection string for your project located under **Connection string** in the overview of your project. 
@@ -35,13 +36,21 @@ If you want to continue using your hub-based project and connection string, you 
 - Three containers will be provisioned in your existing Cosmos DB account, each requiring 1000 RU/s
 
 <Note>
+
 * Make sure your Azure OpenAI resource and Foundry account and project are in the same region.
+
 </Note>
 
 ## Prerequisites
 * An Azure subscription - [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
 * [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) (version 2.64 or later).
-* Ensure that the individual creating the account and project has the **Azure AI Account Owner** role at the subscription scope
+* Ensure that the individual creating the account and project has the **Foundry Account Owner** role at the subscription scope
+
+<Info>
+
+</Info>
+
+> The Foundry RBAC roles were recently renamed. **Foundry User**, **Foundry Owner**, **Foundry Account Owner**, and **Foundry Project Manager** were previously named Azure AI User, Azure AI Owner, Azure AI Account Owner, and Azure AI Project Manager. You might still see the previous names in some places while the rename rolls out. The role IDs and core permissions are unchanged by the rename.
 * If configuring a [standard setup](#choose-basic-or-standard-agent-setup), the same individual must also have permissions to assign roles to required resources (Cosmos DB, Search, Storage). For more information about RBAC in Foundry, see [RBAC in Foundry](/security/rbac-foundry).
     * The built-in role needed is **Role Based Access Administrator**.
     * Alternatively, having the **Owner** role at the subscription level also satisfies this requirement.
@@ -56,7 +65,7 @@ If you want to continue using your hub-based project and connection string, you 
     * `Microsoft.App`
     * `Microsoft.ContainerService`
 
-To use the [Grounding with Bing Search tool](/agents/tools/bing-tools) the following provider must be registered: `Microsoft.Bing`
+To use the [Grounding with Bing Search tool](/agent-service/bing-tools) the following provider must be registered: `Microsoft.Bing`
 
 ```console
 az provider register --namespace 'Microsoft.KeyVault'
@@ -72,7 +81,7 @@ az provider register --namespace 'Microsoft.Bing'
 
 ## Choose basic or standard agent setup
 
-To use your own resources, you can edit the parameters in the provided deployment templates. To start, determine if you want to edit the [basic agent setup template](https://github.com/azure-ai-foundry/foundry-samples/tree/main/infrastructure/infrastructure-setup-bicep/42-basic-agent-setup-with-customization), or the [standard agent setup template](https://github.com/azure-ai-foundry/foundry-samples/tree/main/infrastructure/infrastructure-setup-bicep/43-standard-agent-setup-with-customization).
+To use your own resources, you can edit the parameters in the provided deployment templates. To start, determine if you want to edit the [basic agent setup template](https://github.com/microsoft-foundry/foundry-samples/tree/main/infrastructure/infrastructure-setup-bicep/42-basic-agent-setup-with-customization), or the [standard agent setup template](https://github.com/microsoft-foundry/foundry-samples/tree/main/infrastructure/infrastructure-setup-bicep/43-standard-agent-setup-with-customization).
    
 **Basic Setup**
 
@@ -84,7 +93,7 @@ Includes everything in the basic setup and fine-grained control over your data b
 
 ## Basic agent setup: Use an existing Azure OpenAI resource 
 
-Replace the parameter value for `existingAoaiResourceId`in the [template](https://github.com/azure-ai-foundry/foundry-samples/tree/main/infrastructure/infrastructure-setup-bicep/42-basic-agent-setup-with-customization) with the full arm resource ID of the Azure OpenAI resource you want to use.
+Replace the parameter value for `existingAoaiResourceId`in the [template](https://github.com/microsoft-foundry/foundry-samples/tree/main/infrastructure/infrastructure-setup-bicep/42-basic-agent-setup-with-customization) with the full arm resource ID of the Azure OpenAI resource you want to use.
 
 1. To get the Azure OpenAI account resource ID, sign in to the Azure CLI and select the subscription with your Foundry Tools account:
        
@@ -100,7 +109,7 @@ Replace the parameter value for `existingAoaiResourceId`in the [template](https:
 
     The value returned is the `existingAoaiResourceId` you need to use in the template.
 
-3. In the [basic agent template file](https://github.com/azure-ai-foundry/foundry-samples/blob/main/infrastructure/infrastructure-setup-bicep/42-basic-agent-setup-with-customization/main.bicep), replace the following placeholder:
+3. In the [basic agent template file](https://github.com/microsoft-foundry/foundry-samples/blob/main/infrastructure/infrastructure-setup-bicep/42-basic-agent-setup-with-customization/main.bicep), replace the following placeholder:
     
     ```console
     existingAoaiResourceId:/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CognitiveServices/accounts/{serviceName}
@@ -108,7 +117,7 @@ Replace the parameter value for `existingAoaiResourceId`in the [template](https:
 
 ## Standard agent setup: Use existing service resources and storage accounts 
 
-Use an existing Azure OpenAI, Azure Storage account, Azure Cosmos DB for NoSQL account and/or Azure AI Search resource by providing the full ARM resource ID in the [standard agent template file](https://github.com/azure-ai-foundry/foundry-samples/blob/main/infrastructure/infrastructure-setup-bicep/43-standard-agent-setup-with-customization/main.bicep).
+Use an existing Azure OpenAI, Azure Storage account, Azure Cosmos DB for NoSQL account and/or Azure AI Search resource by providing the full ARM resource ID in the [standard agent template file](https://github.com/microsoft-foundry/foundry-samples/blob/main/infrastructure/infrastructure-setup-bicep/43-standard-agent-setup-with-customization/main.bicep).
 
 ### Use an existing Azure OpenAI resource
 
@@ -153,7 +162,9 @@ For example, if two projects are deployed under the same Foundry account, the Co
 Both provisioned throughput and serverless modes are supported.
 
 <Note>
+
 Insufficient RU/s capacity in the Cosmos DB account causes capability host provisioning failures during deployment.
+
 </Note>
 
 1. To get your Azure Cosmos DB account resource ID, sign in to the Azure CLI and select the subscription with your account: 
@@ -198,4 +209,4 @@ Insufficient RU/s capacity in the Cosmos DB account causes capability host provi
 
 ## See also
 
-* Learn about the different [tools](/agents/tools/tool-catalog) agents can use.
+* Learn about the different [tools](/agent-service/tool-catalog) agents can use.
