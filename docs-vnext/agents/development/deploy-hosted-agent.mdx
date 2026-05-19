@@ -4,6 +4,17 @@ description: "Deploy your containerized agent code to Foundry Agent Service usin
 ---
 This article shows you how to deploy a containerized agent to Foundry Agent Service. Use hosted agents when you need to run custom agent code built with frameworks like LangGraph, Microsoft Agent Framework, or your own implementation.
 
+If you're deploying for the first time or want the fastest path, use the [Quickstart: Create and deploy a Hosted agent](/agents/development/quickstart-hosted-agent) instead. The quickstart uses the **Azure Developer CLI (azd)** or **VS Code extension**, which handle building, pushing, versioning, and RBAC configuration automatically.
+
+## Deployment lifecycle
+
+Every Hosted agent deployment follows this sequence:
+
+1. **Build and push** — Package your agent code into a container image and push it to Azure Container Registry.
+1. **Create an agent version** — Register the image with Foundry Agent Service. The platform provisions infrastructure and creates a dedicated Entra agent identity.
+1. **Poll for status** — Wait for the version status to reach `active`.
+1. **Invoke** — Send requests to the agent's dedicated endpoint.
+
 ## Prerequisites
 
 * A [Microsoft Foundry project](/setup/create-projects)
