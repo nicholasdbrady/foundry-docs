@@ -15,7 +15,7 @@ strict: false
 concurrency:
   group: "gh-aw-${{ github.workflow }}"
   cancel-in-progress: true
-timeout-minutes: 15
+timeout-minutes: 20
 tools:
   playwright:
     mode: cli
