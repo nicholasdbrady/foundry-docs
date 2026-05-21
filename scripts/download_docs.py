@@ -103,6 +103,11 @@ def main():
         dest = RAW_DIR / img_path
         files_to_download.append((img_path, dest, "image"))
 
+    # 4. Zone pivot groups definition (for tab title resolution)
+    zone_pivot_source = "zone-pivots/zone-pivot-groups.yml"
+    zone_pivot_dest = RAW_DIR / zone_pivot_source
+    files_to_download.append((zone_pivot_source, zone_pivot_dest, "meta"))
+
     print(f"Files to download: {len(files_to_download)}", file=sys.stderr)
     print(f"  Docs: {len([f for f in files_to_download if f[2] == 'doc'])}", file=sys.stderr)
     print(f"  Includes: {len([f for f in files_to_download if f[2] == 'include'])}", file=sys.stderr)
