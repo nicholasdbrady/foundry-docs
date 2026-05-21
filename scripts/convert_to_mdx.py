@@ -14,6 +14,7 @@ import yaml
 
 RAW_DIR = Path("raw_docs")
 DOCS_DIR = Path("docs")
+ZONE_PIVOT_GROUPS_PATH = RAW_DIR / "zone-pivots" / "zone-pivot-groups.yml"
 
 # Load manifest and path map
 MANIFEST = json.load(open("manifest.json"))
@@ -459,8 +460,61 @@ def convert_tabs(content: str) -> str:
     return "\n".join(result)
 
 
+def _load_pivot_titles() -> dict[str, str]:
+    """Load pivot ID → display title mapping from upstream zone-pivot-groups.yml.
+
+    Falls back to a minimal built-in mapping if the file hasn't been downloaded.
+    """
+    if ZONE_PIVOT_GROUPS_PATH.exists():
+        raw = ZONE_PIVOT_GROUPS_PATH.read_text(encoding="utf-8", errors="replace")
+        # Strip the ### YamlMime:ZonePivotGroups header that isn't valid YAML
+        cleaned = "\n".join(line for line in raw.split("\n") if not line.startswith("### YamlMime"))
+        try:
+            data = yaml.safe_load(cleaned)
+        except yaml.YAMLError:
+            data = None
+        if data and isinstance(data, dict):
+            titles: dict[str, str] = {}
+            for group in data.get("groups", []):
+                for pivot in group.get("pivots", []):
+                    pid = pivot.get("id", "")
+                    title = pivot.get("title", "").strip()
+                    if pid and title and pid not in titles:
+                        titles[pid] = title
+            if titles:
+                return titles
+    # Fallback: minimal mapping for common IDs if the YAML file is missing
+    return {
+        "azd": "Azure Developer CLI",
+        "vscode": "VS Code",
+        "python": "Python",
+        "csharp": "C#",
+        "typescript": "TypeScript",
+        "javascript": "JavaScript",
+        "rest": "REST API",
+        "rest-api": "REST API",
+        "java": "Java",
+        "portal": "Portal",
+        "cli": "Azure CLI",
+        "powershell": "PowerShell",
+    }
+
+
+# Module-level cache so we parse the file once
+_PIVOT_TITLES: dict[str, str] | None = None
+
+
+def _get_pivot_titles() -> dict[str, str]:
+    global _PIVOT_TITLES
+    if _PIVOT_TITLES is None:
+        _PIVOT_TITLES = _load_pivot_titles()
+    return _PIVOT_TITLES
+
+
 def convert_zone_pivots(content: str) -> str:
     """Convert :::zone pivot="..." blocks to Mintlify <Tabs>/<Tab> components."""
+    PIVOT_TITLES = _get_pivot_titles()
+
     lines = content.split("\n")
     result = []
     i = 0
@@ -477,7 +531,7 @@ def convert_zone_pivots(content: str) -> str:
         else:
             result.append("<Tabs>")
             for pivot_name, zone_lines in zone_groups:
-                title = pivot_name.replace("-", " ").title()
+                title = PIVOT_TITLES.get(pivot_name, pivot_name.replace("-", " ").title())
                 result.append(f'  <Tab title="{title}">')
                 result.append("")  # blank line so MDX parses markdown inside JSX
                 for line in zone_lines:
@@ -516,8 +570,20 @@ def convert_zone_pivots(content: str) -> str:
         if zones:
             zones[-1][1].append(line)
         else:
-            # If we have pending zone groups and hit non-zone content, flush first
+            # If we have pending zone groups and hit non-zone content, check
+            # whether a subsequent zone start follows (skipping blank lines).
+            # Blank lines between consecutive zones should not trigger a flush.
             if zone_groups:
+                if not line.strip():
+                    # Blank line: peek ahead to see if another zone follows
+                    j = i + 1
+                    while j < len(lines) and not lines[j].strip():
+                        j += 1
+                    if j < len(lines) and re.match(r':::\s*zone\s+pivot="', lines[j].strip()):
+                        # Another zone is coming — skip this blank line
+                        i += 1
+                        continue
+                # Non-blank line (or no zone follows): flush pending zones first
                 flush_zone_group()
             result.append(line)
 
@@ -1104,6 +1170,8 @@ def clean_up(content: str) -> str:
     """Final cleanup pass."""
     # Remove leftover moniker range from front matter comments
     content = re.sub(r'monikerRange:.*\n', '', content)
+    # Remove zone_pivot_groups from front matter (MS Learn-specific)
+    content = re.sub(r'zone_pivot_groups:.*\n', '', content)
     # Remove :::no-loc directives
     content = re.sub(r':::no-loc\s+text="([^"]+)":::', r'\1', content)
     # Remove any leftover :::row/:::column directives not caught by convert_columns
