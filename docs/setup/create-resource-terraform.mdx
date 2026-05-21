@@ -313,9 +313,19 @@ terraform output
 If you already configured a Foundry resource in the Azure portal, you can export that configuration as Terraform code. The export captures your current resource settings, including network rules, identity configuration, and project associations. Use the exported code as a starting point for managing the resource with Terraform.
 
 1. In the [Azure portal](https://portal.azure.com), go to your Foundry resource.
-1. In the left menu under **Automation**, select **Export template**.
-1. Select the **Terraform** tab to view the generated Terraform code.
-1. Select **Download** to save the file locally, or **Copy** to copy the code to your clipboard.
+1. In the left menu, expand **Automation**, and then select **Export template**.
+
+<Frame>
+<img src="/images/foundry-resource-export-template-menu.png" alt="Screenshot of a Foundry resource left menu with the Automation group expanded and Export template selected." />
+</Frame>
+
+1. Select the **Terraform** tab to view the generated Terraform code. Use the **AzureRM** or **AzApi** subtab to choose which provider format to export.
+
+<Frame>
+<img src="/images/foundry-export-template-terraform.png" alt="Screenshot of the Foundry Export template page with the Terraform tab selected, showing the Download, Open in VS Code, and Copy buttons above the AzureRM and AzApi subtabs and the generated Terraform code." />
+</Frame>
+
+1. Select **Download** to save the file locally, **Open in VS Code** to edit it directly, or **Copy** to copy the code to your clipboard.
 
 <Note>
 
@@ -345,12 +355,14 @@ For production-ready Terraform configurations with enterprise security built in,
 
 ### Related security configurations
 
-When you customize your configuration, consider adding the following security settings:
+When you customize your configuration, consider adding the following security settings. Choose based on your governance requirements:
 
-- [Configure network isolation with private endpoints](/security/configure-private-link)
-- [Set up customer-managed keys for encryption](/security/encryption-keys-portal)
-- [Configure role-based access control for Foundry](/security/rbac-foundry)
-- [Create custom Azure Policy definitions](/security/custom-policy-definition)
+| Control | When to add it | Learn more |
+| --- | --- | --- |
+| **Private endpoints (network isolation)** | Your organization bans public endpoints, or you need to keep traffic on your virtual network for compliance (HIPAA, PCI, FedRAMP). | [Configure network isolation with private endpoints](/security/configure-private-link) |
+| **Customer-managed keys (CMK) for encryption** | You must control the encryption-key lifecycle, rotation cadence, or revocation, or your data classification requires bring-your-own-key. | [Set up customer-managed keys for encryption](/security/encryption-keys-portal) |
+| **Role-based access control (RBAC)** | You need least-privilege access for builders versus administrators, or you grant access to multiple teams that share a Foundry resource. | [Configure role-based access control for Foundry](/security/rbac-foundry) |
+| **Custom Azure Policy definitions** | Your platform team enforces a security baseline (allowed regions, required tags, allowed SKUs, mandatory CMK or private link) across every Foundry resource the organization creates. | [Create custom Azure Policy definitions](/security/custom-policy-definition) |
 
 ## Customize security and compliance
 
