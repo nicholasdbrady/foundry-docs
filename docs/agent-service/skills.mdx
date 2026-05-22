@@ -2,6 +2,8 @@
 title: "Use skills with Microsoft Foundry agents (preview)"
 description: "Manage skills in Microsoft Foundry using the Skills REST API. Author SKILL.md files, store them centrally, and use them in hosted agents."
 ---
+import { ZoneContent, ZonePivot } from "/snippets/zone-pivot.jsx"
+
 <Info>
 
 Items marked (preview) in this article are currently in public preview. This preview is provided without a service-level agreement, and we don't recommend it for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
@@ -104,8 +106,11 @@ You can create a skill in two ways: submit the content directly as JSON, or uplo
 
 Use this option when you want to supply the skill's `instructions` text directly without packaging a file.
 
-<CodeGroup>
-```http REST API
+<ZonePivot group="dotnet__javascript__python__rest-api" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} defaultValue="rest-api" />
+
+<ZoneContent group="dotnet__javascript__python__rest-api" value="rest-api" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["rest-api", "python", "dotnet", "javascript"]} defaultValue="rest-api">
+
+```http
 POST {endpoint}/skills?api-version=v1
 Authorization: Bearer {token}
 Content-Type: application/json
@@ -118,7 +123,10 @@ Accept: application/json
 }
 ```
 
-```python Python
+</ZoneContent>
+<ZoneContent group="dotnet__javascript__python__rest-api" value="python" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["rest-api", "python", "dotnet", "javascript"]} defaultValue="rest-api">
+
+```python
 from azure.identity import DefaultAzureCredential
 from azure.ai.projects import AIProjectClient
 
@@ -143,7 +151,10 @@ with (
     )
 ```
 
-```csharp .NET
+</ZoneContent>
+<ZoneContent group="dotnet__javascript__python__rest-api" value="dotnet" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["rest-api", "python", "dotnet", "javascript"]} defaultValue="rest-api">
+
+```csharp
 #pragma warning disable AAIP001
 using Azure.AI.Projects.Agents;
 using Azure.Core.Pipeline;
@@ -179,7 +190,10 @@ internal class FeaturePolicy(string feature) : PipelinePolicy
 }
 ```
 
-```javascript JavaScript
+</ZoneContent>
+<ZoneContent group="dotnet__javascript__python__rest-api" value="javascript" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["rest-api", "python", "dotnet", "javascript"]} defaultValue="rest-api">
+
+```javascript
 import { DefaultAzureCredential } from "@azure/identity";
 import { AIProjectClient } from "@azure/ai-projects";
 
@@ -193,7 +207,8 @@ const skill = await project.beta.skills.create("greeting", {
 });
 console.log(`Created skill: ${skill.name} (id: ${skill.skillId})`);
 ```
-</CodeGroup>
+
+</ZoneContent>
 Example response:
 
 ```json
@@ -212,8 +227,9 @@ Example response:
 
 Use this option when you have a `SKILL.md` file. Package it as a ZIP and POST to the `:import` endpoint. The skill name and description come from the `SKILL.md` front matter. The request body must be a valid ZIP file with a `SKILL.md` entry at the root.
 
-<CodeGroup>
-```http REST API
+<ZoneContent group="dotnet__javascript__python__rest-api" value="rest-api" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["rest-api", "python", "dotnet", "javascript"]} defaultValue="rest-api">
+
+```http
 POST {endpoint}/skills:import?api-version=v1
 Authorization: Bearer {token}
 Content-Type: application/zip
@@ -223,7 +239,10 @@ Foundry-Features: Skills=V1Preview
 <ZIP bytes containing SKILL.md at the root>
 ```
 
-```python Python
+</ZoneContent>
+<ZoneContent group="dotnet__javascript__python__rest-api" value="python" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["rest-api", "python", "dotnet", "javascript"]} defaultValue="rest-api">
+
+```python
 from pathlib import Path
 from azure.identity import DefaultAzureCredential
 from azure.ai.projects import AIProjectClient
@@ -247,7 +266,10 @@ with (
     )
 ```
 
-```csharp .NET
+</ZoneContent>
+<ZoneContent group="dotnet__javascript__python__rest-api" value="dotnet" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["rest-api", "python", "dotnet", "javascript"]} defaultValue="rest-api">
+
+```csharp
 #pragma warning disable AAIP001
 // See the FeaturePolicy class definition and client setup in the Create a skill section above.
 
@@ -256,14 +278,18 @@ AgentsSkill imported = skillsClient.CreateSkillFromPackage("path/to/skill-direct
 Console.WriteLine($"Imported skill: {imported.Name} ({imported.SkillId}) HasBlob={imported.HasBlob}");
 ```
 
-```javascript JavaScript
+</ZoneContent>
+<ZoneContent group="dotnet__javascript__python__rest-api" value="javascript" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["rest-api", "python", "dotnet", "javascript"]} defaultValue="rest-api">
+
+```javascript
 import { readFileSync } from "fs";
 
 const zipBytes = readFileSync("greeting.zip");
 const skill = await project.beta.skills.createFromPackage(zipBytes);
 console.log(`Imported skill: ${skill.name} (has_blob: ${skill.hasBlob})`);
 ```
-</CodeGroup>
+
+</ZoneContent>
 
 <Note>
 
@@ -288,15 +314,19 @@ Example response:
 
 ### List skills
 
-<CodeGroup>
-```http REST API
+<ZoneContent group="dotnet__javascript__python__rest-api" value="rest-api" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["rest-api", "python", "dotnet", "javascript"]} defaultValue="rest-api">
+
+```http
 GET {endpoint}/skills?api-version=v1&limit=20&order=desc
 Authorization: Bearer {token}
 Accept: application/json
 Foundry-Features: Skills=V1Preview
 ```
 
-```python Python
+</ZoneContent>
+<ZoneContent group="dotnet__javascript__python__rest-api" value="python" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["rest-api", "python", "dotnet", "javascript"]} defaultValue="rest-api">
+
+```python
 from azure.identity import DefaultAzureCredential
 from azure.ai.projects import AIProjectClient
 
@@ -316,7 +346,10 @@ with (
         print(f"  {skill.name} (has_blob: {skill.has_blob})")
 ```
 
-```csharp .NET
+</ZoneContent>
+<ZoneContent group="dotnet__javascript__python__rest-api" value="dotnet" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["rest-api", "python", "dotnet", "javascript"]} defaultValue="rest-api">
+
+```csharp
 #pragma warning disable AAIP001
 // See the FeaturePolicy class definition and client setup in the Create a skill section above.
 
@@ -328,13 +361,17 @@ foreach (AgentsSkill item in skills)
 }
 ```
 
-```javascript JavaScript
+</ZoneContent>
+<ZoneContent group="dotnet__javascript__python__rest-api" value="javascript" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["rest-api", "python", "dotnet", "javascript"]} defaultValue="rest-api">
+
+```javascript
 const skills = project.beta.skills.list({ limit: 20, order: "desc" });
 for await (const skill of skills) {
   console.log(`${skill.name} (has_blob: ${skill.hasBlob})`);
 }
 ```
-</CodeGroup>
+
+</ZoneContent>
 Example response:
 
 ```json
@@ -361,15 +398,19 @@ for cursor-based pagination.
 
 ### Get a skill
 
-<CodeGroup>
-```http REST API
+<ZoneContent group="dotnet__javascript__python__rest-api" value="rest-api" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["rest-api", "python", "dotnet", "javascript"]} defaultValue="rest-api">
+
+```http
 GET {endpoint}/skills/{name}?api-version=v1
 Authorization: Bearer {token}
 Accept: application/json
 Foundry-Features: Skills=V1Preview
 ```
 
-```python Python
+</ZoneContent>
+<ZoneContent group="dotnet__javascript__python__rest-api" value="python" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["rest-api", "python", "dotnet", "javascript"]} defaultValue="rest-api">
+
+```python
 from azure.identity import DefaultAzureCredential
 from azure.ai.projects import AIProjectClient
 
@@ -387,7 +428,10 @@ with (
     print(f"{skill.name}: {skill.description}")
 ```
 
-```csharp .NET
+</ZoneContent>
+<ZoneContent group="dotnet__javascript__python__rest-api" value="dotnet" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["rest-api", "python", "dotnet", "javascript"]} defaultValue="rest-api">
+
+```csharp
 #pragma warning disable AAIP001
 // See the FeaturePolicy class definition and client setup in the Create a skill section above.
 
@@ -395,11 +439,15 @@ AgentsSkill skill = skillsClient.GetSkill(skillName: "greeting");
 Console.WriteLine($"Retrieved skill: {skill.Name}, description: {skill.Description}");
 ```
 
-```javascript JavaScript
+</ZoneContent>
+<ZoneContent group="dotnet__javascript__python__rest-api" value="javascript" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["rest-api", "python", "dotnet", "javascript"]} defaultValue="rest-api">
+
+```javascript
 const skill = await project.beta.skills.get("greeting");
 console.log(`${skill.name}: ${skill.description}`);
 ```
-</CodeGroup>
+
+</ZoneContent>
 
 Returns the skill metadata. Returns HTTP 404 if the skill doesn't exist.
 
@@ -407,8 +455,7 @@ Returns the skill metadata. Returns HTTP 404 if the skill doesn't exist.
 
 Downloads the original ZIP archive for skills created through `:import` (`has_blob: true`). Returns HTTP 404 for skills created through JSON.
 
-<Tabs>
-<Tab title="REST API">
+<ZoneContent group="dotnet__javascript__python__rest-api" value="rest-api" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["rest-api", "python", "dotnet", "javascript"]} defaultValue="rest-api">
 
 ```http
 GET {endpoint}/skills/{name}:download?api-version=v1
@@ -417,8 +464,8 @@ Accept: application/zip
 Foundry-Features: Skills=V1Preview
 ```
 
-</Tab>
-<Tab title="Python">
+</ZoneContent>
+<ZoneContent group="dotnet__javascript__python__rest-api" value="python" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["rest-api", "python", "dotnet", "javascript"]} defaultValue="rest-api">
 
 ```python
 import tempfile
@@ -446,8 +493,8 @@ with (
     print(f"Downloaded skill package to: {download_path}")
 ```
 
-</Tab>
-<Tab title=".NET">
+</ZoneContent>
+<ZoneContent group="dotnet__javascript__python__rest-api" value="dotnet" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["rest-api", "python", "dotnet", "javascript"]} defaultValue="rest-api">
 
 <Note>
 
@@ -455,16 +502,15 @@ with (
 
 </Note>
 
-</Tab>
-<Tab title="JavaScript">
+</ZoneContent>
+<ZoneContent group="dotnet__javascript__python__rest-api" value="javascript" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["rest-api", "python", "dotnet", "javascript"]} defaultValue="rest-api">
 
 ```javascript
 const response = await project.beta.skills.download("greeting");
 // response.body contains the ZIP archive bytes
 ```
 
-</Tab>
-</Tabs>
+</ZoneContent>
 
 <Note>
 
@@ -474,15 +520,19 @@ The response body is a binary ZIP archive (`Content-Type: application/zip`).
 
 ### Delete a skill
 
-<CodeGroup>
-```http REST API
+<ZoneContent group="dotnet__javascript__python__rest-api" value="rest-api" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["rest-api", "python", "dotnet", "javascript"]} defaultValue="rest-api">
+
+```http
 DELETE {endpoint}/skills/{name}?api-version=v1
 Authorization: Bearer {token}
 Accept: application/json
 Foundry-Features: Skills=V1Preview
 ```
 
-```python Python
+</ZoneContent>
+<ZoneContent group="dotnet__javascript__python__rest-api" value="python" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["rest-api", "python", "dotnet", "javascript"]} defaultValue="rest-api">
+
+```python
 from azure.identity import DefaultAzureCredential
 from azure.ai.projects import AIProjectClient
 
@@ -500,7 +550,10 @@ with (
     print(f"Deleted skill: {deleted}")
 ```
 
-```csharp .NET
+</ZoneContent>
+<ZoneContent group="dotnet__javascript__python__rest-api" value="dotnet" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["rest-api", "python", "dotnet", "javascript"]} defaultValue="rest-api">
+
+```csharp
 #pragma warning disable AAIP001
 // See the FeaturePolicy class definition and client setup in the Create a skill section above.
 
@@ -508,11 +561,15 @@ skillsClient.DeleteSkill("greeting");
 Console.WriteLine("Skill deleted.");
 ```
 
-```javascript JavaScript
+</ZoneContent>
+<ZoneContent group="dotnet__javascript__python__rest-api" value="javascript" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["rest-api", "python", "dotnet", "javascript"]} defaultValue="rest-api">
+
+```javascript
 const result = await project.beta.skills.delete("greeting");
 console.log(`Deleted: ${result.name} (${result.deleted})`);
 ```
-</CodeGroup>
+
+</ZoneContent>
 
 Returns HTTP 200 on success:
 

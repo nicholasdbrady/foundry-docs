@@ -2,6 +2,8 @@
 title: "Use Code Interpreter with Microsoft Foundry agents"
 description: "Create agents that run Python code in a sandboxed environment using Code Interpreter in Microsoft Foundry. Upload files, analyze data, and download generated charts."
 ---
+import { ZoneContent, ZonePivot } from "/snippets/zone-pivot.jsx"
+
 
 Code Interpreter enables a Microsoft Foundry agent to run Python code in a sandboxed execution environment. The agent's Foundry model writes and executes code for data analysis, chart generation, and iterative problem-solving tasks.
 
@@ -46,8 +48,9 @@ You can customize Code Interpreter behavior at runtime, such as specifying which
 
 </Tip>
 
-<Tabs>
-<Tab title="Python">
+<ZonePivot group="csharp__java__python__rest__typescript" options={[{"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "typescript", "title": "TypeScript"}, {"id": "java", "title": "Java"}, {"id": "rest", "title": "REST"}]} defaultValue="python" />
+
+<ZoneContent group="csharp__java__python__rest__typescript" value="python" options={[{"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "typescript", "title": "TypeScript"}, {"id": "java", "title": "Java"}, {"id": "rest", "title": "REST"}]} values={["python", "csharp", "typescript", "java", "rest"]} defaultValue="python">
 
 ## Sample of using agent with code interpreter tool in Python SDK
 
@@ -145,8 +148,8 @@ File downloaded successfully: transportation_operating_profit_bar_chart.png
 
 The agent uploads your CSV file to Azure storage, creates a sandboxed Python environment, analyzes the data to filter transportation sector records, generates a PNG bar chart showing operating profit by quarter, and downloads the chart to your local directory. The file annotations in the response provide the file ID and container information needed to retrieve the generated chart.
 
-</Tab>
-<Tab title="C#">
+</ZoneContent>
+<ZoneContent group="csharp__java__python__rest__typescript" value="csharp" options={[{"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "typescript", "title": "TypeScript"}, {"id": "java", "title": "Java"}, {"id": "rest", "title": "REST"}]} values={["python", "csharp", "typescript", "java", "rest"]} defaultValue="python">
 
 ## Create a chart with Code Interpreter in C#
 
@@ -254,8 +257,8 @@ Chart downloaded: C:\Users\you\chart.png
 
 The agent uploads your CSV file to Azure storage, creates a sandboxed Python environment, analyzes the data to filter transportation sector records, and generates a PNG bar chart. The annotation parsing extracts the container ID and file ID from the response, which are used to download the chart to your local directory.
 
-</Tab>
-<Tab title="TypeScript">
+</ZoneContent>
+<ZoneContent group="csharp__java__python__rest__typescript" value="typescript" options={[{"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "typescript", "title": "TypeScript"}, {"id": "java", "title": "Java"}, {"id": "rest", "title": "REST"}]} values={["python", "csharp", "typescript", "java", "rest"]} defaultValue="python">
 
 ## Sample of using agent with code interpreter tool in TypeScript SDK
 
@@ -389,8 +392,8 @@ File ready for download: transportation_operating_profit_bar_chart.png
 
 The agent uploads your CSV file to Azure storage, creates a sandboxed Python environment, analyzes the data to filter transportation sector records, generates a PNG bar chart showing operating profit by quarter, and downloads the chart to your local directory. The file annotations in the response provide the file ID and container information needed to retrieve the generated chart.
 
-</Tab>
-<Tab title="Java">
+</ZoneContent>
+<ZoneContent group="csharp__java__python__rest__typescript" value="java" options={[{"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "typescript", "title": "TypeScript"}, {"id": "java", "title": "Java"}, {"id": "rest", "title": "REST"}]} values={["python", "csharp", "typescript", "java", "rest"]} defaultValue="python">
 
 ## Create a chart with Code Interpreter in Java
 
@@ -473,8 +476,8 @@ Response: Here is the bar chart showing quarterly revenue for 2025 with Q1 ($2.1
 
 The agent creates a Code Interpreter session, writes Python code by using matplotlib to generate the chart, and executes the code in a sandboxed environment. For an example that uploads a CSV file and downloads the generated chart, select **Python** or **TypeScript** from the language selector at the top of this article. For more examples, see the [Azure AI Agents Java SDK samples](https://github.com/Azure/azure-sdk-for-java/tree/main/sdk/ai/azure-ai-agents/src/samples/).
 
-</Tab>
-<Tab title="REST">
+</ZoneContent>
+<ZoneContent group="csharp__java__python__rest__typescript" value="rest" options={[{"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "typescript", "title": "TypeScript"}, {"id": "java", "title": "Java"}, {"id": "rest", "title": "REST"}]} values={["python", "csharp", "typescript", "java", "rest"]} defaultValue="python">
 
 ## Create a chart with Code Interpreter using the REST API
 
@@ -558,8 +561,7 @@ curl -X DELETE "$FOUNDRY_PROJECT_ENDPOINT/agents/chart-agent?api-version=v1" \
   -H "Authorization: Bearer $AGENT_TOKEN"
 ```
 
-</Tab>
-</Tabs>
+</ZoneContent>
 
 ## Check regional and model availability
 

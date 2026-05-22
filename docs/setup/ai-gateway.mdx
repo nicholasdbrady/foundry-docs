@@ -2,6 +2,8 @@
 title: "Bring Your Own Model to Foundry Agent Service"
 description: "Connect and bring your own models hosted behind enterprise AI gateways like Azure API Management with Foundry Agent Service."
 ---
+import { ZoneContent, ZonePivot } from "/snippets/zone-pivot.jsx"
+
 Foundry Agent Service allows you to connect and use models hosted behind your AI gateways such as **Azure API Management** or other **non-Azure managed AI model gateways**. This capability, called *bring your own model*, allows you to maintain control over your model endpoints while using Foundry agent capabilities.
 
 <Info>
@@ -52,8 +54,9 @@ The Foundry RBAC roles were recently renamed. **Foundry User**, **Foundry Owner*
 
 </Info>
 
-<Tabs>
-<Tab title="Foundry Portal">
+<ZonePivot group="azure-cli__foundry-portal" options={[{"id": "foundry-portal", "title": "Foundry Portal"}, {"id": "azure-cli", "title": "Azure CLI"}]} defaultValue="foundry-portal" />
+
+<ZoneContent group="azure-cli__foundry-portal" value="foundry-portal" options={[{"id": "foundry-portal", "title": "Foundry Portal"}, {"id": "azure-cli", "title": "Azure CLI"}]} values={["foundry-portal", "azure-cli"]} defaultValue="foundry-portal">
 
 ## Create a model connection
 
@@ -197,8 +200,8 @@ Foundry automatically deploys models you add through a connection, so you can us
 
 * You can select an admin-connected deployment when configuring an agent's model. Foundry automatically routes requests from agents to these deployments through the connected gateway.
 
-</Tab>
-<Tab title="Azure CLI">
+</ZoneContent>
+<ZoneContent group="azure-cli__foundry-portal" value="azure-cli" options={[{"id": "foundry-portal", "title": "Foundry Portal"}, {"id": "azure-cli", "title": "Azure CLI"}]} values={["foundry-portal", "azure-cli"]} defaultValue="foundry-portal">
 
 ## Create a model connection
 
@@ -229,8 +232,7 @@ A successful deployment returns `provisioningState: Succeeded` in the command ou
 
 1. Verify the connection in the Foundry portal. Go to the [Foundry portal](https://ai.azure.com) and select your project. Navigate to **Connected resources** in your project settings. The new connection appears with an **Active** status and the gateway endpoint URL you specified.
 
-</Tab>
-</Tabs>
+</ZoneContent>
 
 ## Create a prompt agent with the model connection
 
