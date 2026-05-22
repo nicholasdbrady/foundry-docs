@@ -2,6 +2,8 @@
 title: "Deploy models using Azure CLI and Bicep"
 description: "Learn how to add and configure Microsoft Foundry Models in your Foundry resource for use in inference applications using Azure CLI and Bicep templates."
 ---
+import { ZoneContent, ZonePivot } from "/snippets/zone-pivot.jsx"
+
 
 <Info>
 
@@ -23,8 +25,9 @@ To complete this article, you need the following:
 
 * [Foundry Models from partners and community](/foundry-models/models-from-partners) require access to **Azure Marketplace**. Ensure you have the [permissions required to subscribe to model offerings](../how-to/configure-marketplace). [Foundry Models sold by Azure](/foundry-models/models-sold-directly-by-azure) don't have this requirement.
 
-<Tabs>
-<Tab title="Speech CLI">
+<ZonePivot group="programming-language-bicep__programming-language-cli" options={[{"id": "programming-language-cli", "title": "Speech CLI"}, {"id": "programming-language-bicep", "title": "Bicep"}]} defaultValue="programming-language-cli" />
+
+<ZoneContent group="programming-language-bicep__programming-language-cli" value="programming-language-cli" options={[{"id": "programming-language-cli", "title": "Speech CLI"}, {"id": "programming-language-bicep", "title": "Bicep"}]} values={["programming-language-cli", "programming-language-bicep"]} defaultValue="programming-language-cli">
 
 * Install the [Azure CLI](https://learn.microsoft.com/cli/azure/) (version 2.60 or later) and the `cognitiveservices` extension.
 
@@ -190,8 +193,8 @@ You can see all the deployments available using the CLI:
 
     Reference: [az cognitiveservices account deployment delete](https://learn.microsoft.com/cli/azure/cognitiveservices/account/deployment#az-cognitiveservices-account-deployment-delete)
 
-</Tab>
-<Tab title="Bicep">
+</ZoneContent>
+<ZoneContent group="programming-language-bicep__programming-language-cli" value="programming-language-bicep" options={[{"id": "programming-language-cli", "title": "Speech CLI"}, {"id": "programming-language-bicep", "title": "Bicep"}]} values={["programming-language-cli", "programming-language-bicep"]} defaultValue="programming-language-cli">
 
 * Install the [Azure CLI](https://learn.microsoft.com/cli/azure/).
 
@@ -309,8 +312,7 @@ To make requests to the Foundry Models endpoint, append the route `models`. For 
 az cognitiveservices account keys list  -n $accountName -g $resourceGroupName
 ```
 
-</Tab>
-</Tabs>
+</ZoneContent>
 
 ## Troubleshooting
 

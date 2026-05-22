@@ -297,6 +297,48 @@ def strip_table_wrappers(content: str) -> str:
     return content
 
 
+def normalize_markdown_tables(content: str) -> str:
+    """Repair Markdown table delimiter rows so parsers recognize the table.
+
+    Microsoft Learn source occasionally ships a header row with more cells than
+    the following ``---`` delimiter row. Markdown parsers then render the entire
+    block as paragraph text. Normalize the delimiter cell count to the header
+    cell count while preserving existing alignment markers where present.
+    """
+    parts = _split_code_and_comments(content)
+    for i, part in enumerate(parts):
+        if part.lstrip().startswith('```') or part.lstrip().startswith('~~~') or part.lstrip().startswith('{/*'):
+            continue
+
+        lines = part.split('\n')
+        for j in range(1, len(lines)):
+            delimiter_match = re.match(r'^(\s*)\|(.+)\|\s*$', lines[j])
+            if not delimiter_match:
+                continue
+
+            delimiter_cells = [cell.strip() for cell in delimiter_match.group(2).split('|')]
+            if not delimiter_cells or not all(re.match(r'^:?-{3,}:?$', cell) for cell in delimiter_cells):
+                continue
+
+            header_match = re.match(r'^\s*\|(.+)\|\s*$', lines[j - 1])
+            if not header_match:
+                continue
+
+            header_cell_count = len(header_match.group(1).split('|'))
+            if header_cell_count == len(delimiter_cells):
+                continue
+
+            normalized_cells = delimiter_cells[:header_cell_count]
+            while len(normalized_cells) < header_cell_count:
+                normalized_cells.append('---')
+
+            indent = delimiter_match.group(1)
+            lines[j] = f"{indent}| " + " | ".join(normalized_cells) + " |"
+
+        parts[i] = '\n'.join(lines)
+    return ''.join(parts)
+
+
 def convert_images(content: str) -> str:
     """Convert :::image to Mintlify components.
 
@@ -460,9 +502,9 @@ def convert_tabs(content: str) -> str:
             i += 1
             continue
 
-        # Stop tab accumulation at JSX component boundaries (e.g. zone pivot
-        # <Tab>/<Tabs> tags) to prevent spanning across unrelated components.
-        if in_tabs and re.match(r'\s*</?(?:Tab|Tabs)\b', line):
+        # Stop tab accumulation at JSX component boundaries to prevent spanning
+        # across unrelated components.
+        if in_tabs and re.match(r'\s*</?(?:Tab|Tabs|ZonePivot|ZoneContent)\b', line):
             _close_tab_group()
             result.append(line)
             i += 1
@@ -534,87 +576,131 @@ def _get_pivot_titles() -> dict[str, str]:
 
 
 def convert_zone_pivots(content: str) -> str:
-    """Convert :::zone pivot="..." blocks to Mintlify <Tabs>/<Tab> components."""
+    """Convert :::zone pivot="..." blocks to page-level ZonePivot components."""
     PIVOT_TITLES = _get_pivot_titles()
 
     lines = content.split("\n")
-    result = []
+    segments = []
+    text_buffer = []
+    emitted_selectors: set[str] = set()
+    group_configs: dict[str, tuple[str, str, str]] = {}
+
+    def pivot_title(pivot_name: str) -> str:
+        return PIVOT_TITLES.get(pivot_name, pivot_name.replace("-", " ").title())
+
+    def flush_text():
+        if text_buffer:
+            segments.append(("text", text_buffer.copy()))
+            text_buffer.clear()
+
+    def group_id(zone_group: list[tuple[str, list[str]]]) -> str:
+        raw_id = "__".join(sorted({pivot_name for pivot_name, _ in zone_group}))
+        return re.sub(r"[^a-zA-Z0-9_-]+", "-", raw_id).strip("-") or "default"
+
+    def emit_options(zone_group: list[tuple[str, list[str]]]) -> str:
+        return json.dumps(
+            [{"id": pivot_name, "title": pivot_title(pivot_name)} for pivot_name, _ in zone_group],
+            ensure_ascii=False,
+        )
+
+    def emit_values(zone_group: list[tuple[str, list[str]]]) -> str:
+        return json.dumps([pivot_name for pivot_name, _ in zone_group], ensure_ascii=False)
+
+    def emit_zone_components(zone_group: list[tuple[str, list[str]]]) -> list[str]:
+        if len(zone_group) == 1:
+            return zone_group[0][1]
+
+        group = group_id(zone_group)
+        if group not in group_configs:
+            group_configs[group] = (zone_group[0][0], emit_options(zone_group), emit_values(zone_group))
+        default_value, options, values = group_configs[group]
+        output = []
+
+        if group not in emitted_selectors:
+            output.extend(
+                [
+                    f'<ZonePivot group="{group}" options={{{options}}} defaultValue="{default_value}" />',
+                    "",
+                ]
+            )
+            emitted_selectors.add(group)
+
+        for pivot_name, zone_lines in zone_group:
+            output.append(
+                f'<ZoneContent group="{group}" value="{pivot_name}" options={{{options}}} values={{{values}}} defaultValue="{default_value}">'
+            )
+            output.append("")  # blank line so MDX parses markdown inside JSX
+            output.extend(zone_lines)
+            output.append("")  # blank line before closing tag
+            output.append("</ZoneContent>")
+        return output
+
     i = 0
-    zones = []  # stack of (pivot_name, start_index)
-    zone_groups = []  # list of (pivot_name, content_lines) for consecutive zones
-
-    def flush_zone_group():
-        """Convert accumulated consecutive zones into a <Tabs> block."""
-        if not zone_groups:
-            return
-        if len(zone_groups) == 1:
-            # Single zone: just output content without tabs wrapper
-            result.extend(zone_groups[0][1])
-        else:
-            result.append("<Tabs>")
-            for pivot_name, zone_lines in zone_groups:
-                title = PIVOT_TITLES.get(pivot_name, pivot_name.replace("-", " ").title())
-                result.append(f'<Tab title="{title}">')
-                result.append("")  # blank line so MDX parses markdown inside JSX
-                for line in zone_lines:
-                    result.append(line)
-                result.append("")  # blank line before closing tag
-                result.append("</Tab>")
-            result.append("</Tabs>")
-        zone_groups.clear()
-
     while i < len(lines):
         line = lines[i]
-
-        # Match zone start: :::zone pivot="python" or ::: zone pivot="python"
-        # Use .strip() to handle indented zone markers
         zone_start = re.match(r':::\s*zone\s+pivot="([^"]+)"\s*$', line.strip())
-        if zone_start:
-            pivot_name = zone_start.group(1)
-            zones.append((pivot_name, []))
+        if not zone_start:
+            text_buffer.append(line)
             i += 1
             continue
 
-        # Match zone end: :::zone-end or ::: zone-end
-        if re.match(r':::\s*zone-end\s*$', line.strip()):
-            if zones:
-                pivot_name, zone_content = zones.pop()
-                zone_groups.append((pivot_name, zone_content))
+        flush_text()
+        zone_group = []
+
+        while i < len(lines):
+            zone_start = re.match(r':::\s*zone\s+pivot="([^"]+)"\s*$', lines[i].strip())
+            if not zone_start:
+                break
+
+            pivot_name = zone_start.group(1)
             i += 1
-            # Peek ahead: if next non-blank line is NOT another zone start, flush
+            zone_content = []
+            while i < len(lines) and not re.match(r':::\s*zone-end\s*$', lines[i].strip()):
+                zone_content.append(lines[i])
+                i += 1
+            if i < len(lines):
+                i += 1
+            zone_group.append((pivot_name, zone_content))
+
             j = i
             while j < len(lines) and not lines[j].strip():
                 j += 1
-            if j >= len(lines) or not re.match(r':::\s*zone\s+pivot="', lines[j]):
-                flush_zone_group()
+            next_zone_start = re.match(r':::\s*zone\s+pivot="([^"]+)"\s*$', lines[j].strip()) if j < len(lines) else None
+            current_pivot_names = {name for name, _ in zone_group}
+            if next_zone_start and next_zone_start.group(1) not in current_pivot_names:
+                i = j
+                continue
+            if next_zone_start:
+                i = j
+            break
+
+        segments.append(("zones", zone_group))
+
+    flush_text()
+
+    result = []
+    i = 0
+    while i < len(segments):
+        kind, value = segments[i]
+        if kind == "text":
+            result.extend(value)
+            i += 1
             continue
 
-        if zones:
-            zones[-1][1].append(line)
-        else:
-            # If we have pending zone groups and hit non-zone content, check
-            # whether a subsequent zone start follows (skipping blank lines).
-            # Blank lines between consecutive zones should not trigger a flush.
-            if zone_groups:
-                if not line.strip():
-                    # Blank line: peek ahead to see if another zone follows
-                    j = i + 1
-                    while j < len(lines) and not lines[j].strip():
-                        j += 1
-                    if j < len(lines) and re.match(r':::\s*zone\s+pivot="', lines[j].strip()):
-                        # Another zone is coming — skip this blank line
-                        i += 1
-                        continue
-                # Non-blank line (or no zone follows): flush pending zones first
-                flush_zone_group()
-            result.append(line)
-
+        zone_group = value
+        result.extend(emit_zone_components(zone_group))
         i += 1
 
-    # Flush any remaining
-    flush_zone_group()
-
     return "\n".join(result)
+
+
+def add_zone_pivot_import(body: str) -> str:
+    """Import custom zone pivot components when a converted page uses them."""
+    if "<ZonePivot" not in body and "<ZoneContent" not in body:
+        return body
+    if 'from "/snippets/zone-pivot.jsx"' in body:
+        return body
+    return 'import { ZoneContent, ZonePivot } from "/snippets/zone-pivot.jsx"\n\n' + body
 
 
 def rewrite_links(content: str, source_path: str) -> str:
@@ -1318,6 +1404,9 @@ def convert_doc(doc: dict) -> str | None:
     # Step 11: Strip table CSS wrappers
     body = strip_table_wrappers(body)
 
+    # Step 11b: Normalize malformed Markdown table delimiter rows
+    body = normalize_markdown_tables(body)
+
     # Step 12: Replace HTML comments with MDX-compatible JSX comments
     body = replace_html_comments(body)
 
@@ -1357,9 +1446,24 @@ def convert_doc(doc: dict) -> str | None:
     # Mintlify renders frontmatter title as the page H1, so body H1 creates a duplicate
     body = strip_leading_h1(body, meta)
 
+    # Step 22: Add imports for custom snippets emitted during conversion
+    body = add_zone_pivot_import(body)
+
     # Build final MDX
     front_matter = build_mdx_front_matter(meta)
     return front_matter + body
+
+
+def normalize_existing_mdx_tables() -> int:
+    """Normalize table delimiter rows in all existing generated MDX files."""
+    changed = 0
+    for mdx_file in DOCS_DIR.rglob("*.mdx"):
+        content = mdx_file.read_text(encoding="utf-8", errors="replace")
+        normalized = normalize_markdown_tables(content)
+        if normalized != content:
+            mdx_file.write_text(normalized, encoding="utf-8")
+            changed += 1
+    return changed
 
 
 def main():
@@ -1405,8 +1509,11 @@ def main():
                 shutil.copy2(src, dest)
                 images_copied += 1
 
+    normalized_tables = normalize_existing_mdx_tables()
+
     print(f"\nConversion complete: {success} docs converted, {failed} failed", file=sys.stderr)
     print(f"Images copied: {images_copied}", file=sys.stderr)
+    print(f"MDX files with normalized tables: {normalized_tables}", file=sys.stderr)
 
 
 if __name__ == "__main__":

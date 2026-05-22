@@ -2,6 +2,8 @@
 title: "How to use global batch processing with Azure OpenAI in Microsoft Foundry Models"
 description: "Learn how to use global batch with Azure OpenAI"
 ---
+import { ZoneContent, ZonePivot } from "/snippets/zone-pivot.jsx"
+
 
 The Azure OpenAI Batch API efficiently handles large-scale and high-volume processing tasks. It processes asynchronous groups of requests with separate quota and offers a 24-hour target turnaround at [50% less cost than global standard](https://azure.microsoft.com/pricing/details/cognitive-services/openai-service/). With batch processing, you send a large number of requests in a single file instead of sending one request at a time. Global batch requests have a separate enqueued token quota, so your online workloads aren't disrupted.  
 
@@ -123,8 +125,9 @@ We recommend enabling **dynamic quota** for all global batch model deployments t
 
 </Tip>
 
-<Tabs>
-<Tab title="Foundry portal">
+<ZonePivot group="ai-foundry-portal__programming-language-python__rest-api" options={[{"id": "ai-foundry-portal", "title": "Foundry portal"}, {"id": "programming-language-python", "title": "Python"}, {"id": "rest-api", "title": "REST API"}]} defaultValue="ai-foundry-portal" />
+
+<ZoneContent group="ai-foundry-portal__programming-language-python__rest-api" value="ai-foundry-portal" options={[{"id": "ai-foundry-portal", "title": "Foundry portal"}, {"id": "programming-language-python", "title": "Python"}, {"id": "rest-api", "title": "REST API"}]} values={["ai-foundry-portal", "programming-language-python", "rest-api"]} defaultValue="ai-foundry-portal">
 
 ## Prerequisites
 
@@ -263,8 +266,8 @@ Once your job has completed or reached a terminal state, it will generate an err
 
 Cancels an in-progress batch. The batch will be in status `cancelling` for up to 10 minutes, before changing to `cancelled`, where it will have partial results (if any) available in the output file.
 
-</Tab>
-<Tab title="Python">
+</ZoneContent>
+<ZoneContent group="ai-foundry-portal__programming-language-python__rest-api" value="programming-language-python" options={[{"id": "ai-foundry-portal", "title": "Foundry portal"}, {"id": "programming-language-python", "title": "Python"}, {"id": "rest-api", "title": "REST API"}]} values={["ai-foundry-portal", "programming-language-python", "rest-api"]} defaultValue="ai-foundry-portal">
 
 ## Prerequisites
 
@@ -1140,8 +1143,8 @@ while True:
 }
 ```
 
-</Tab>
-<Tab title="REST API">
+</ZoneContent>
+<ZoneContent group="ai-foundry-portal__programming-language-python__rest-api" value="rest-api" options={[{"id": "ai-foundry-portal", "title": "Foundry portal"}, {"id": "programming-language-python", "title": "Python"}, {"id": "rest-api", "title": "REST API"}]} values={["ai-foundry-portal", "programming-language-python", "rest-api"]} defaultValue="ai-foundry-portal">
 
 ## Prerequisites
 
@@ -1464,8 +1467,7 @@ curl "YOUR_RESOURCE_NAME.openai.azure.com/batches?api-version=2025-04-01-preview
 
 To avoid the error `URL rejected: Malformed input to a URL function` spaces are replaced with `%20`.
 
-</Tab>
-</Tabs>
+</ZoneContent>
 
 ## Batch limits
 

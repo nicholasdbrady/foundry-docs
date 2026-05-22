@@ -2,6 +2,8 @@
 title: "Curate intent-based toolbox in Foundry (preview)"
 description: "Use toolbox in Microsoft Foundry to add MCP servers, web search, Azure AI Search, file search, code interpreter tool and more to hosted agents through a single managed endpoint."
 ---
+import { ZoneContent, ZonePivot } from "/snippets/zone-pivot.jsx"
+
 <Info>
 
 Items marked (preview) in this article are currently in public preview. This preview is provided without a service-level agreement, and we don't recommend it for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
@@ -89,8 +91,9 @@ For tool configuration syntax and authentication options for each tool type, see
 
 Create a toolbox version based on the tools you need.
 
-<Tabs>
-<Tab title="Python">
+<ZonePivot group="azd__dotnet__javascript__python__rest-api__vscode" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} defaultValue="python" />
+
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="python" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 ```python
 from azure.identity import DefaultAzureCredential
@@ -121,8 +124,8 @@ toolbox_version = project.beta.toolboxes.create_toolbox_version(
 print(f"Created toolbox: {toolbox_version.name}, version: {toolbox_version.version}")
 ```
 
-</Tab>
-<Tab title=".NET">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="dotnet" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 ```csharp
 using Azure.Identity;
@@ -152,8 +155,8 @@ ToolboxVersion toolboxVersion = await toolboxClient.CreateToolboxVersionAsync(
 Console.WriteLine($"Created toolbox: {toolboxVersion.Name}, version: {toolboxVersion.Version}");
 ```
 
-</Tab>
-<Tab title="REST API">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="rest-api" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 ```http
 POST {project_endpoint}/toolboxes/my-toolbox/versions?api-version=v1
@@ -184,8 +187,8 @@ Use token scope `https://ai.azure.com/.default` when getting the bearer token.
 
 </Note>
 
-</Tab>
-<Tab title="JavaScript">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="javascript" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 ```javascript
 import { DefaultAzureCredential } from "@azure/identity";
@@ -218,8 +221,8 @@ const toolboxVersion = await project.beta.toolboxes.createVersion(
 console.log(`Created toolbox: ${toolboxVersion.name}, version: ${toolboxVersion.version}`);
 ```
 
-</Tab>
-<Tab title="VS Code">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="vscode" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 Use Foundry Toolkit in Visual Studio Code to create and publish a toolbox from the **Tools** view.
 
@@ -234,8 +237,8 @@ Publishing a new toolbox creates its first version. That version becomes the def
   <img src="/images/toolbox-vscode-create.png" alt="Screenshot of Foundry Toolkit in Visual Studio Code showing the Build a Custom Toolbox view with fields for the toolbox name, description, and tools, plus the Publish action." />
 </Frame>
 
-</Tab>
-<Tab title="Azure Developer CLI">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="azd" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 By using `azd`, you declare toolbox resources in an `agent.yaml` file instead of calling the SDK. Define your tools in the `resources` section and deploy by using `azd ai agent init`. For `agent.yaml` examples for each tool type, see [Configure tools](#configure-tools). For the full deployment workflow, see [Deploy with azd](#deploy-with-azd).
 
@@ -336,8 +339,7 @@ resources:
         project_connection_id: github-mcp-conn
 ```
 
-</Tab>
-</Tabs>
+</ZoneContent>
 
 ## Step 2: Get the toolbox MCP endpoint
 
@@ -377,8 +379,7 @@ The **Endpoint URL** value is the toolbox consumer endpoint. To construct a vers
 
 Before running the full agent, confirm that the toolbox loads the expected tools by using an MCP client SDK against the endpoint. Use the **version-specific endpoint** to validate a version before promoting it to default.
 
-<Tabs>
-<Tab title="Python">
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="python" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 Install the MCP client SDK:
 
@@ -420,8 +421,8 @@ async def verify_toolbox():
 asyncio.run(verify_toolbox())
 ```
 
-</Tab>
-<Tab title=".NET">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="dotnet" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 <Note>
 
@@ -429,8 +430,8 @@ Use the REST API tab to verify tool availability from .NET, or use the Python MC
 
 </Note>
 
-</Tab>
-<Tab title="REST API">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="rest-api" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 Use the version-specific endpoint (`/versions/{version}/mcp`) to validate a version before promoting it.
 
@@ -478,8 +479,8 @@ Foundry-Features: Toolboxes=V1Preview
 {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"<TOOL_NAME>","arguments":{}}}
 ```
 
-</Tab>
-<Tab title="JavaScript">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="javascript" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 Install the MCP client SDK:
 
@@ -528,8 +529,8 @@ console.log(result);
 await client.close();
 ```
 
-</Tab>
-<Tab title="VS Code">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="vscode" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 Use the endpoint from Step 2 together with a scaffolded Hosted agent sample to validate toolbox loading in VS Code.
 
@@ -541,8 +542,8 @@ Use the endpoint from Step 2 together with a scaffolded Hosted agent sample to v
 
 For version-specific validation before you promote a new toolbox version, use the Python or REST API tab in this step.
 
-</Tab>
-<Tab title="Azure Developer CLI">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="azd" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 <Note>
 
@@ -550,8 +551,7 @@ Use the REST API tab to verify tool availability, or use the Python MCP client S
 
 </Note>
 
-</Tab>
-</Tabs>
+</ZoneContent>
 
 **Check — initialize**: HTTP 200. If you skip the initialize step, subsequent calls fail.
 
@@ -588,8 +588,7 @@ Tool-specific `tools/call` argument examples:
 
 ## Step 4: Integrate the toolbox into your agent
 
-<Tabs>
-<Tab title="Python">
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="python" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 ### LangGraph
 
@@ -716,8 +715,8 @@ agent = Agent(
 
 See the [full sample](https://aka.ms/foundry-toolbox-copilotsdk) for the complete implementation.
 
-</Tab>
-<Tab title=".NET">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="dotnet" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 ### Microsoft Agent Framework
 
@@ -764,8 +763,8 @@ ResponsesServer.Run<ToolboxHandler>(configure: builder =>
 
 `ToolboxMcpClient` wraps direct JSON-RPC calls to the MCP endpoint. `ToolboxHandler` connects LLM tool calls back to the MCP client by using a standard tool-calling loop. For the complete implementation of both classes, see the [full sample](https://github.com/microsoft/hosted-agents-vnext-private-preview/tree/main/samples/dotnet/toolbox/maf).
 
-</Tab>
-<Tab title="REST API">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="rest-api" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 <Note>
 
@@ -773,8 +772,8 @@ Integration samples for this step are available for Python and .NET only.
 
 </Note>
 
-</Tab>
-<Tab title="JavaScript">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="javascript" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 <Note>
 
@@ -782,8 +781,8 @@ Integration samples for this step are available for Python and .NET only.
 
 </Note>
 
-</Tab>
-<Tab title="VS Code">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="vscode" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 Use Foundry Toolkit to scaffold a Hosted agent sample that's already wired to your toolbox.
 
@@ -797,8 +796,8 @@ The generated project includes the Hosted agent entry point, deployment files, a
 
 If you want to integrate a toolbox into an existing Hosted agent project instead of generating a new sample, use the copied endpoint from Step 2 with the Python or .NET patterns in this section.
 
-</Tab>
-<Tab title="Azure Developer CLI">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="azd" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 ### Deploy with azd
 
@@ -902,8 +901,7 @@ azd deploy -e my-env
 azd ai agent invoke --new-session "Hello, what tools do you have?" --timeout 120
 ```
 
-</Tab>
-</Tabs>
+</ZoneContent>
 
 ### Handle tool approval requirements
 
@@ -976,8 +974,7 @@ always_approval = [name for name, val in approval_map.items() if val == "always"
 
 Set `require_approval` when you create a toolbox version. The MCP tool examples in [Step 1](#step-1-create-a-toolbox-version) show both `"always"` and `"never"` values. You can also set it through the SDK:
 
-<Tabs>
-<Tab title="Python">
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="python" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 ```python
 from azure.ai.projects.models import MCPTool
@@ -996,8 +993,8 @@ toolbox_version = project.beta.toolboxes.create_toolbox_version(
 )
 ```
 
-</Tab>
-<Tab title="REST API">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="rest-api" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 ```json
 {
@@ -1013,8 +1010,8 @@ toolbox_version = project.beta.toolboxes.create_toolbox_version(
 }
 ```
 
-</Tab>
-<Tab title=".NET">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="dotnet" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 ```csharp
 ProjectsAgentTool mcpTool = ProjectsAgentTool.AsProjectTool(ResponseTool.CreateMcpTool(
@@ -1026,8 +1023,8 @@ ProjectsAgentTool mcpTool = ProjectsAgentTool.AsProjectTool(ResponseTool.CreateM
 ));
 ```
 
-</Tab>
-<Tab title="JavaScript">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="javascript" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 ```javascript
 const tools = [
@@ -1041,13 +1038,13 @@ const tools = [
 ];
 ```
 
-</Tab>
-<Tab title="VS Code">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="vscode" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 Use the Python, .NET, JavaScript, REST API, or azd tab to configure `require_approval` in your toolbox definition. The Foundry Toolkit workflow in this article focuses on creating and consuming the toolbox in Visual Studio Code.
 
-</Tab>
-<Tab title="Azure Developer CLI">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="azd" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 ```yaml
 resources:
@@ -1061,8 +1058,7 @@ resources:
         project_connection_id: my-connection
 ```
 
-</Tab>
-</Tabs>
+</ZoneContent>
 
 ## Step 5: Manage toolbox versions
 
@@ -1083,8 +1079,7 @@ Toolbox versions are immutable snapshots of a toolbox's tool configuration. Ever
 
 Each create call produces a new version. If the toolbox doesn't exist yet, the process automatically creates it. When you create the first version of a new toolbox, the default version is `v1` until you **manually** update to another version.
 
-<Tabs>
-<Tab title="Python">
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="python" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 ```python
 # Create a new toolbox version
@@ -1096,8 +1091,8 @@ toolbox_version = project.beta.toolboxes.create_toolbox_version(
 print(f"Created version: {toolbox_version.version}")
 ```
 
-</Tab>
-<Tab title=".NET">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="dotnet" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 ```csharp
 ToolboxVersion toolboxVersion = await toolboxClient.CreateToolboxVersionAsync(
@@ -1108,8 +1103,8 @@ ToolboxVersion toolboxVersion = await toolboxClient.CreateToolboxVersionAsync(
 Console.WriteLine($"Created version: {toolboxVersion.Version}");
 ```
 
-</Tab>
-<Tab title="REST API">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="rest-api" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 ```
 
@@ -1123,8 +1118,8 @@ Content-Type: application/json
 }
 ```
 
-</Tab>
-<Tab title="JavaScript">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="javascript" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 ```javascript
 const toolboxVersion = await project.beta.toolboxes.createVersion(
@@ -1135,25 +1130,23 @@ const toolboxVersion = await project.beta.toolboxes.createVersion(
 console.log(`Created version: ${toolboxVersion.version}`);
 ```
 
-</Tab>
-<Tab title="VS Code">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="vscode" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 Use the Python, .NET, JavaScript, or REST API tab to create a new toolbox version. The Foundry Toolkit workflow in this article focuses on creating a toolbox and scaffolding a Hosted agent that consumes it.
 
-</Tab>
-<Tab title="Azure Developer CLI">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="azd" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 This operation isn't supported with azd. To create a toolbox version, use the **Python**, **.NET**, **REST API**, or **JavaScript** tab.
 
-</Tab>
-</Tabs>
+</ZoneContent>
 
 The response is a `ToolboxVersionObject` containing the new `version` identifier.
 
 ### List versions
 
-<Tabs>
-<Tab title="Python">
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="python" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 ```python
 # List all toolbox versions
@@ -1162,8 +1155,8 @@ for v in versions:
     print(f"{v.version} — created {v.created_at}")
 ```
 
-</Tab>
-<Tab title=".NET">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="dotnet" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 ```csharp
 List<ToolboxVersion> versions = await toolboxClient
@@ -1176,16 +1169,16 @@ foreach (ToolboxVersion v in versions)
 }
 ```
 
-</Tab>
-<Tab title="REST API">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="rest-api" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 ```http
 GET {project_endpoint}/toolboxes/my-toolbox/versions?api-version=v1
 Authorization: Bearer {token}
 ```
 
-</Tab>
-<Tab title="JavaScript">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="javascript" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 ```javascript
 const versions = project.beta.toolboxes.listVersions("my-toolbox");
@@ -1194,23 +1187,21 @@ for await (const v of versions) {
 }
 ```
 
-</Tab>
-<Tab title="VS Code">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="vscode" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 Use the Python, .NET, JavaScript, or REST API tab to list toolbox versions.
 
-</Tab>
-<Tab title="Azure Developer CLI">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="azd" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 This operation isn't supported with azd. To list toolbox versions, use the **Python**, **.NET**, **REST API**, or **JavaScript** tab.
 
-</Tab>
-</Tabs>
+</ZoneContent>
 
 ### Get a specific version
 
-<Tabs>
-<Tab title="Python">
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="python" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 ```python
 # Get a specific toolbox version
@@ -1220,8 +1211,8 @@ version_obj = project.beta.toolboxes.get_toolbox_version(
 )
 ```
 
-</Tab>
-<Tab title=".NET">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="dotnet" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 ```csharp
 ToolboxVersion versionObj = await toolboxClient.GetToolboxVersionAsync(
@@ -1231,16 +1222,16 @@ ToolboxVersion versionObj = await toolboxClient.GetToolboxVersionAsync(
 Console.WriteLine($"Retrieved toolbox: {versionObj.Name} ({versionObj.Id})");
 ```
 
-</Tab>
-<Tab title="REST API">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="rest-api" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 ```http
 GET {project_endpoint}/toolboxes/my-toolbox/versions/{version}?api-version=v1
 Authorization: Bearer {token}
 ```
 
-</Tab>
-<Tab title="JavaScript">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="javascript" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 ```javascript
 const versionObj = await project.beta.toolboxes.getVersion(
@@ -1250,25 +1241,23 @@ const versionObj = await project.beta.toolboxes.getVersion(
 console.log(`Retrieved version: ${versionObj.version}`);
 ```
 
-</Tab>
-<Tab title="VS Code">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="vscode" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 Use the Python, .NET, JavaScript, or REST API tab to get a specific toolbox version.
 
-</Tab>
-<Tab title="Azure Developer CLI">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="azd" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 This operation isn't supported with azd. To get a specific toolbox version, use the **Python**, **.NET**, **REST API**, or **JavaScript** tab.
 
-</Tab>
-</Tabs>
+</ZoneContent>
 
 ### Promote a version to default
 
 The MCP endpoint always serves the `default_version`. To switch which version is active, update the toolbox:
 
-<Tabs>
-<Tab title="Python">
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="python" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 ```python
 # Promote a version to default
@@ -1279,8 +1268,8 @@ toolbox = project.beta.toolboxes.update(
 print(f"Active version: {toolbox.default_version}")
 ```
 
-</Tab>
-<Tab title=".NET">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="dotnet" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 ```csharp
 ToolboxRecord record = await toolboxClient.UpdateToolboxAsync(
@@ -1290,8 +1279,8 @@ ToolboxRecord record = await toolboxClient.UpdateToolboxAsync(
 Console.WriteLine($"Active version: {record.DefaultVersion}");
 ```
 
-</Tab>
-<Tab title="REST API">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="rest-api" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 ```http
 PATCH {project_endpoint}/toolboxes/my-toolbox?api-version=v1
@@ -1305,8 +1294,8 @@ Content-Type: application/json
 
 `default_version` can't be empty. Replace it with a new version. 
 
-</Tab>
-<Tab title="JavaScript">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="javascript" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 ```javascript
 const toolbox = await project.beta.toolboxes.update(
@@ -1316,23 +1305,21 @@ const toolbox = await project.beta.toolboxes.update(
 console.log(`Active version: ${toolbox.defaultVersion}`);
 ```
 
-</Tab>
-<Tab title="VS Code">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="vscode" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 Use the Python, .NET, JavaScript, or REST API tab to promote a toolbox version to default.
 
-</Tab>
-<Tab title="Azure Developer CLI">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="azd" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 This operation isn't supported with azd. To promote a version to default, use the **Python**, **.NET**, **REST API**, or **JavaScript** tab.
 
-</Tab>
-</Tabs>
+</ZoneContent>
 
 ### Delete a version
 
-<Tabs>
-<Tab title="Python">
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="python" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 ```python
 # Delete a toolbox version
@@ -1342,8 +1329,8 @@ project.beta.toolboxes.delete_toolbox_version(
 )
 ```
 
-</Tab>
-<Tab title=".NET">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="dotnet" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 ```csharp
 await toolboxClient.DeleteToolboxVersionAsync(
@@ -1352,16 +1339,16 @@ await toolboxClient.DeleteToolboxVersionAsync(
 );
 ```
 
-</Tab>
-<Tab title="REST API">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="rest-api" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 ```http
 DELETE {project_endpoint}/toolboxes/my-toolbox/versions/{version}?api-version=v1
 Authorization: Bearer {token}
 ```
 
-</Tab>
-<Tab title="JavaScript">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="javascript" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 ```javascript
 await project.beta.toolboxes.deleteVersion(
@@ -1370,18 +1357,17 @@ await project.beta.toolboxes.deleteVersion(
 );
 ```
 
-</Tab>
-<Tab title="VS Code">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="vscode" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 Use the Python, .NET, JavaScript, or REST API tab to delete a toolbox version.
 
-</Tab>
-<Tab title="Azure Developer CLI">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="azd" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
 
 This operation isn't supported with azd. To delete a toolbox version, use the **Python**, **.NET**, **REST API**, or **JavaScript** tab.
 
-</Tab>
-</Tabs>
+</ZoneContent>
 
 ## Configure tools
 
@@ -1479,8 +1465,9 @@ The following sections show each tool type's configuration in detail.
 
 ### [Model Context Protocol (MCP)](/agent-service/model-context-protocol)
 
-<Tabs>
-<Tab title="REST API">
+<ZonePivot group="azd__dotnet__javascript__python__rest-api" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} defaultValue="rest-api" />
+
+<ZoneContent group="azd__dotnet__javascript__python__rest-api" value="rest-api" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest-api", "python", "dotnet", "javascript", "azd"]} defaultValue="rest-api">
 
 **Key-based auth:**
 
@@ -1533,8 +1520,8 @@ For OAuth (managed connector, custom app registration), agent identity, or user 
 
 The connection's `authType` determines the authentication flow. Supported connection auth types for MCP include `CustomKeys`, `OAuth2` (managed or custom), `AgenticIdentity`, and `UserEntraToken`. See the [azd tab](#model-context-protocol-mcp) for connection configuration examples for each auth type.
 
-</Tab>
-<Tab title="Python">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api" value="python" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest-api", "python", "dotnet", "javascript", "azd"]} defaultValue="rest-api">
 
 ```python
 from azure.ai.projects.models import MCPTool
@@ -1548,8 +1535,8 @@ tools = [
 ]
 ```
 
-</Tab>
-<Tab title=".NET">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api" value="dotnet" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest-api", "python", "dotnet", "javascript", "azd"]} defaultValue="rest-api">
 
 ```csharp
 ProjectsAgentTool tool = ProjectsAgentTool.AsProjectTool(ResponseTool.CreateMcpTool(
@@ -1564,8 +1551,8 @@ ToolboxVersion toolboxVersion = await toolboxClient.CreateToolboxVersionAsync(
 );
 ```
 
-</Tab>
-<Tab title="JavaScript">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api" value="javascript" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest-api", "python", "dotnet", "javascript", "azd"]} defaultValue="rest-api">
 
 ```javascript
 const tools = [
@@ -1578,8 +1565,8 @@ const tools = [
 ];
 ```
 
-</Tab>
-<Tab title="Azure Developer CLI">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api" value="azd" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest-api", "python", "dotnet", "javascript", "azd"]} defaultValue="rest-api">
 
 **No auth:**
 
@@ -1729,8 +1716,7 @@ The `audience` field is required for `UserEntraToken` connections. Without it, `
 
 </Note>
 
-</Tab>
-</Tabs>
+</ZoneContent>
 
 <Info>
 
@@ -1762,8 +1748,7 @@ This error is expected. Open the consent URL in a browser, complete the OAuth au
 
 Use this pattern to add web search. No project connection is required for the web search with Grounding with Bing. To use a Grounding with custom Bing Search instance, add a `web_search.custom_search_configuration` object pointing to your Grounding with Bing Custom Search connection.
 
-<Tabs>
-<Tab title="REST API">
+<ZoneContent group="azd__dotnet__javascript__python__rest-api" value="rest-api" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest-api", "python", "dotnet", "javascript", "azd"]} defaultValue="rest-api">
 
 ```json
 {
@@ -1799,8 +1784,8 @@ Use this pattern to add web search. No project connection is required for the we
 }
 ```
 
-</Tab>
-<Tab title="Python">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api" value="python" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest-api", "python", "dotnet", "javascript", "azd"]} defaultValue="rest-api">
 
 ```python
 from azure.ai.projects.models import WebSearchTool
@@ -1810,8 +1795,8 @@ tools = [
 ]
 ```
 
-</Tab>
-<Tab title=".NET">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api" value="dotnet" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest-api", "python", "dotnet", "javascript", "azd"]} defaultValue="rest-api">
 
 ```csharp
 ProjectsAgentTool tool = ProjectsAgentTool.AsProjectTool(
@@ -1825,8 +1810,8 @@ ToolboxVersion toolboxVersion = await toolboxClient.CreateToolboxVersionAsync(
 );
 ```
 
-</Tab>
-<Tab title="JavaScript">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api" value="javascript" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest-api", "python", "dotnet", "javascript", "azd"]} defaultValue="rest-api">
 
 ```javascript
 const tools = [
@@ -1838,8 +1823,8 @@ const tools = [
 ];
 ```
 
-</Tab>
-<Tab title="Azure Developer CLI">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api" value="azd" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest-api", "python", "dotnet", "javascript", "azd"]} defaultValue="rest-api">
 
 ```yaml
 resources:
@@ -1878,8 +1863,7 @@ resources:
         project_connection_id: bing-custom-conn
 ```
 
-</Tab>
-</Tabs>
+</ZoneContent>
 
 <Note>
 
@@ -1935,8 +1919,9 @@ When Web Search returns results over MCP, the response is a `resource` content i
 
 ### [Azure AI Search](/agent-service/ai-search)
 
-<CodeGroup>
-```json REST API
+<ZoneContent group="azd__dotnet__javascript__python__rest-api" value="rest-api" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest-api", "python", "dotnet", "javascript", "azd"]} defaultValue="rest-api">
+
+```json
 {
   "description": "Azure AI Search over my data",
   "tools": [
@@ -1957,7 +1942,10 @@ When Web Search returns results over MCP, the response is a `resource` content i
 }
 ```
 
-```python Python
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api" value="python" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest-api", "python", "dotnet", "javascript", "azd"]} defaultValue="rest-api">
+
+```python
 from azure.ai.projects.models import AzureAISearchTool
 
 tools = [
@@ -1968,7 +1956,10 @@ tools = [
 ]
 ```
 
-```csharp .NET
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api" value="dotnet" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest-api", "python", "dotnet", "javascript", "azd"]} defaultValue="rest-api">
+
+```csharp
 ProjectsAgentTool tool = new AzureAISearchTool(
     new AzureAISearchToolOptions(
         indexes: [
@@ -1987,7 +1978,10 @@ ToolboxVersion toolboxVersion = await toolboxClient.CreateToolboxVersionAsync(
 );
 ```
 
-```javascript JavaScript
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api" value="javascript" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest-api", "python", "dotnet", "javascript", "azd"]} defaultValue="rest-api">
+
+```javascript
 const tools = [
   {
     type: "azure_ai_search",
@@ -2005,7 +1999,10 @@ const tools = [
 ];
 ```
 
-```yaml Azure Developer CLI
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api" value="azd" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest-api", "python", "dotnet", "javascript", "azd"]} defaultValue="rest-api">
+
+```yaml
 parameters:
   ai_search_key:
     secret: true
@@ -2026,7 +2023,8 @@ resources:
         index_name: your-index-name
         project_connection_id: aisearch-conn
 ```
-</CodeGroup>
+
+</ZoneContent>
 
 #### Configure tool parameters
 
@@ -2052,8 +2050,9 @@ When Code Interpreter is used through a toolbox in a Hosted agent, **user isolat
 
 </Info>
 
-<CodeGroup>
-```json REST API
+<ZoneContent group="azd__dotnet__javascript__python__rest-api" value="rest-api" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest-api", "python", "dotnet", "javascript", "azd"]} defaultValue="rest-api">
+
+```json
 {
   "description": "Code interpreter for data analysis",
   "tools": [
@@ -2070,7 +2069,10 @@ When Code Interpreter is used through a toolbox in a Hosted agent, **user isolat
 }
 ```
 
-```python Python
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api" value="python" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest-api", "python", "dotnet", "javascript", "azd"]} defaultValue="rest-api">
+
+```python
 from azure.ai.projects.models import CodeInterpreterTool
 
 tools = [
@@ -2078,7 +2080,10 @@ tools = [
 ]
 ```
 
-```csharp .NET
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api" value="dotnet" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest-api", "python", "dotnet", "javascript", "azd"]} defaultValue="rest-api">
+
+```csharp
 ProjectsAgentTool tool = ProjectsAgentTool.AsProjectTool(
     ResponseTool.CreateCodeInterpreterTool(
         new CodeInterpreterToolContainer()
@@ -2092,7 +2097,10 @@ ToolboxVersion toolboxVersion = await toolboxClient.CreateToolboxVersionAsync(
 );
 ```
 
-```javascript JavaScript
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api" value="javascript" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest-api", "python", "dotnet", "javascript", "azd"]} defaultValue="rest-api">
+
+```javascript
 const tools = [
   {
     type: "code_interpreter",
@@ -2106,7 +2114,10 @@ const tools = [
 ];
 ```
 
-```yaml Azure Developer CLI
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api" value="azd" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest-api", "python", "dotnet", "javascript", "azd"]} defaultValue="rest-api">
+
+```yaml
 resources:
   - kind: toolbox
     name: codeinterp-tools
@@ -2114,7 +2125,8 @@ resources:
     tools:
       - type: code_interpreter
 ```
-</CodeGroup>
+
+</ZoneContent>
 
 #### Download output files from Code Interpreter
 
@@ -2152,8 +2164,7 @@ When File Search is used through a toolbox in a Hosted agent, **user isolation i
 
 </Info>
 
-<Tabs>
-<Tab title="REST API">
+<ZoneContent group="azd__dotnet__javascript__python__rest-api" value="rest-api" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest-api", "python", "dotnet", "javascript", "azd"]} defaultValue="rest-api">
 
 ```json
 {
@@ -2171,8 +2182,8 @@ When File Search is used through a toolbox in a Hosted agent, **user isolation i
 }
 ```
 
-</Tab>
-<Tab title="Python">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api" value="python" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest-api", "python", "dotnet", "javascript", "azd"]} defaultValue="rest-api">
 
 ```python
 from azure.ai.projects.models import FileSearchTool
@@ -2184,8 +2195,8 @@ tools = [
 ]
 ```
 
-</Tab>
-<Tab title=".NET">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api" value="dotnet" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest-api", "python", "dotnet", "javascript", "azd"]} defaultValue="rest-api">
 
 ```csharp
 ProjectsAgentTool tool = ProjectsAgentTool.AsProjectTool(
@@ -2201,8 +2212,8 @@ ToolboxVersion toolboxVersion = await toolboxClient.CreateToolboxVersionAsync(
 );
 ```
 
-</Tab>
-<Tab title="JavaScript">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api" value="javascript" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest-api", "python", "dotnet", "javascript", "azd"]} defaultValue="rest-api">
 
 ```javascript
 const tools = [
@@ -2217,8 +2228,8 @@ const tools = [
 ];
 ```
 
-</Tab>
-<Tab title="Azure Developer CLI">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api" value="azd" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest-api", "python", "dotnet", "javascript", "azd"]} defaultValue="rest-api">
 
 ```yaml
 resources:
@@ -2237,8 +2248,7 @@ Set the vector store ID before deploying:
 azd env set FILE_SEARCH_VECTOR_STORE_ID "vs_xxxxxxxxxxxx"
 ```
 
-</Tab>
-</Tabs>
+</ZoneContent>
 
 <Note>
 
@@ -2282,8 +2292,7 @@ When managed identity auth is used, you must assign the appropriate RBAC role to
 
 </Info>
 
-<Tabs>
-<Tab title="REST API">
+<ZoneContent group="azd__dotnet__javascript__python__rest-api" value="rest-api" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest-api", "python", "dotnet", "javascript", "azd"]} defaultValue="rest-api">
 
 **Anonymous auth:**
 
@@ -2355,8 +2364,8 @@ Use this pattern when the target API authenticates via Microsoft Entra ID. The F
 }
 ```
 
-</Tab>
-<Tab title="Python">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api" value="python" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest-api", "python", "dotnet", "javascript", "azd"]} defaultValue="rest-api">
 
 ```python
 from azure.ai.projects.models import OpenAPITool
@@ -2370,8 +2379,8 @@ tools = [
 ]
 ```
 
-</Tab>
-<Tab title=".NET">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api" value="dotnet" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest-api", "python", "dotnet", "javascript", "azd"]} defaultValue="rest-api">
 
 ```csharp
 BinaryData specBytes = BinaryData.FromString("<OpenAPI spec JSON>");
@@ -2390,8 +2399,8 @@ ToolboxVersion toolboxVersion = await toolboxClient.CreateToolboxVersionAsync(
 );
 ```
 
-</Tab>
-<Tab title="JavaScript">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api" value="javascript" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest-api", "python", "dotnet", "javascript", "azd"]} defaultValue="rest-api">
 
 ```javascript
 const tools = [
@@ -2408,8 +2417,8 @@ const tools = [
 ];
 ```
 
-</Tab>
-<Tab title="Azure Developer CLI">
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api" value="azd" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest-api", "python", "dotnet", "javascript", "azd"]} defaultValue="rest-api">
 
 **Key-based auth:**
 
@@ -2459,15 +2468,15 @@ resources:
             connection_id: api-conn
 ```
 
-</Tab>
-</Tabs>
+</ZoneContent>
 
 ### [Agent-to-Agent (A2A)](/agent-service/agent-to-agent)
 
 Use this pattern to call another agent as a tool. Provide the base URL of the remote agent and, if it requires authentication, a project connection.
 
-<CodeGroup>
-```json REST API
+<ZoneContent group="azd__dotnet__javascript__python__rest-api" value="rest-api" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest-api", "python", "dotnet", "javascript", "azd"]} defaultValue="rest-api">
+
+```json
 {
   "description": "Delegate tasks to a specialist agent",
   "tools": [
@@ -2482,7 +2491,10 @@ Use this pattern to call another agent as a tool. Provide the base URL of the re
 }
 ```
 
-```python Python
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api" value="python" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest-api", "python", "dotnet", "javascript", "azd"]} defaultValue="rest-api">
+
+```python
 from azure.ai.projects.models import A2APreviewTool
 
 tools = [
@@ -2495,7 +2507,10 @@ tools = [
 ]
 ```
 
-```csharp .NET
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api" value="dotnet" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest-api", "python", "dotnet", "javascript", "azd"]} defaultValue="rest-api">
+
+```csharp
 ProjectsAgentTool tool = new A2APreviewTool()
 {
     ProjectConnectionId = "<CONNECTION_NAME>",
@@ -2508,7 +2523,10 @@ ToolboxVersion toolboxVersion = await toolboxClient.CreateToolboxVersionAsync(
 );
 ```
 
-```javascript JavaScript
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api" value="javascript" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest-api", "python", "dotnet", "javascript", "azd"]} defaultValue="rest-api">
+
+```javascript
 const tools = [
   {
     type: "a2a_preview",
@@ -2520,7 +2538,10 @@ const tools = [
 ];
 ```
 
-```yaml Azure Developer CLI
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api" value="azd" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest-api", "python", "dotnet", "javascript", "azd"]} defaultValue="rest-api">
+
+```yaml
 resources:
   - kind: connection
     name: a2a-conn
@@ -2534,7 +2555,8 @@ resources:
       - type: a2a_preview
         project_connection_id: a2a-conn
 ```
-</CodeGroup>
+
+</ZoneContent>
 
 ## Troubleshoot
 

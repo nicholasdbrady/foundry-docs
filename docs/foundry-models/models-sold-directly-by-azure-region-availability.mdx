@@ -2,6 +2,8 @@
 title: "Region availability for Foundry Models sold by Azure"
 description: "Find region availability, capabilities, and deployments types available for Microsoft Foundry Models sold by Azure, to inform their use in AI applications."
 ---
+import { ZoneContent, ZonePivot } from "/snippets/zone-pivot.jsx"
+
 
 Microsoft Foundry provides customers with choices on the hosting structure that fits their business and usage patterns. The service offers two main deployment categories, *standard* (pay-per-token) and *provisioned* (reserved capacity), along with other categories like *batch* (for asynchronous requests). Within these categories, you can choose global, data zone, or regional processing based on your compliance requirements.
 
@@ -18,8 +20,9 @@ Use the tabs at the top of this page to switch deployment categories: [Standard 
 
 </Tip>
 
-<Tabs>
-<Tab title="Standard deployment options">
+<ZonePivot group="batch__provisioned__standard" options={[{"id": "standard", "title": "Standard deployment options"}, {"id": "provisioned", "title": "Provisioned deployment options"}, {"id": "batch", "title": "Batch deployment options"}]} defaultValue="standard" />
+
+<ZoneContent group="batch__provisioned__standard" value="standard" options={[{"id": "standard", "title": "Standard deployment options"}, {"id": "provisioned", "title": "Provisioned deployment options"}, {"id": "batch", "title": "Batch deployment options"}]} values={["standard", "provisioned", "batch"]} defaultValue="standard">
 
 ## Global standard
 
@@ -422,8 +425,8 @@ For **Standard/Regional** deployments, prompts and responses are processed in th
   </Tab>
 </Tabs>
 
-</Tab>
-<Tab title="Provisioned deployment options">
+</ZoneContent>
+<ZoneContent group="batch__provisioned__standard" value="provisioned" options={[{"id": "standard", "title": "Standard deployment options"}, {"id": "provisioned", "title": "Provisioned deployment options"}, {"id": "batch", "title": "Batch deployment options"}]} values={["standard", "provisioned", "batch"]} defaultValue="standard">
 
 ## Global Provisioned Managed
 
@@ -690,8 +693,8 @@ For **Standard/Regional** deployments, prompts and responses are processed in th
   </Tab>
 </Tabs>
 
-</Tab>
-<Tab title="Batch deployment options">
+</ZoneContent>
+<ZoneContent group="batch__provisioned__standard" value="batch" options={[{"id": "standard", "title": "Standard deployment options"}, {"id": "provisioned", "title": "Provisioned deployment options"}, {"id": "batch", "title": "Batch deployment options"}]} values={["standard", "provisioned", "batch"]} defaultValue="standard">
 
 ## Global Batch
 
@@ -820,8 +823,7 @@ For **Data Zone** deployments, prompts and responses are processed anywhere with
   </Tab>
 </Tabs>
 
-</Tab>
-</Tabs>
+</ZoneContent>
 
 ## Related content
 

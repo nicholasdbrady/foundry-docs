@@ -2,6 +2,8 @@
 title: "Use the Microsoft Fabric data agent with Foundry agents"
 description: "Learn how to connect a Microsoft Fabric data agent to Foundry Agent Service so your agent can analyze enterprise data by using identity passthrough."
 ---
+import { ZoneContent, ZonePivot } from "/snippets/zone-pivot.jsx"
+
 <Info>
 
 Items marked (preview) in this article are currently in public preview. This preview is provided without a service-level agreement, and we don't recommend it for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
@@ -100,8 +102,9 @@ The following table shows SDK and setup support.
 
 </Note>
 
-<Tabs>
-<Tab title="Python">
+<ZonePivot group="csharp__java__python__rest__typescript" options={[{"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "typescript", "title": "TypeScript"}, {"id": "java", "title": "Java"}, {"id": "rest", "title": "REST"}]} defaultValue="python" />
+
+<ZoneContent group="csharp__java__python__rest__typescript" value="python" options={[{"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "typescript", "title": "TypeScript"}, {"id": "java", "title": "Java"}, {"id": "rest", "title": "REST"}]} values={["python", "csharp", "typescript", "java", "rest"]} defaultValue="python">
 
 ```python
 from azure.identity import DefaultAzureCredential
@@ -169,8 +172,8 @@ print("Agent deleted")
 
 For more details, see the [full Python sample for Fabric data agent](https://github.com/Azure/azure-sdk-for-python/blob/main/sdk/ai/azure-ai-agents/samples/agents_tools/sample_agents_fabric.py).
 
-</Tab>
-<Tab title="C#">
+</ZoneContent>
+<ZoneContent group="csharp__java__python__rest__typescript" value="csharp" options={[{"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "typescript", "title": "TypeScript"}, {"id": "java", "title": "Java"}, {"id": "rest", "title": "REST"}]} values={["python", "csharp", "typescript", "java", "rest"]} defaultValue="python">
 
 To enable your agent to access the Fabric data agent, use `MicrosoftFabricAgentTool`.
 
@@ -221,8 +224,8 @@ projectClient.AgentAdministrationClient.DeleteAgentVersion(agentName: agentVersi
 
 - The response text printed to the console. For the sample question, the response should include the number of public holidays (for example, `62`).
 
-</Tab>
-<Tab title="TypeScript">
+</ZoneContent>
+<ZoneContent group="csharp__java__python__rest__typescript" value="typescript" options={[{"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "typescript", "title": "TypeScript"}, {"id": "java", "title": "Java"}, {"id": "rest", "title": "REST"}]} values={["python", "csharp", "typescript", "java", "rest"]} defaultValue="python">
 
 The following TypeScript example demonstrates how to create an AI agent with Microsoft Fabric capabilities by using the `MicrosoftFabricAgentTool` and synchronous Azure AI Projects client. The agent can query Fabric data sources and provide responses based on data analysis. For a JavaScript version of this sample, see the [JavaScript sample for Fabric data agent](https://github.com/Azure/azure-sdk-for-js/blob/main/sdk/ai/ai-projects/samples/v2-beta/javascript/agents/tools/agentFabric.js) in the Azure SDK for JavaScript repository on GitHub.
 
@@ -309,8 +312,8 @@ main().catch((err) => {
 - A line that starts with `Response output:` followed by the response text.
 - A final confirmation that the agent was deleted.
 
-</Tab>
-<Tab title="Java">
+</ZoneContent>
+<ZoneContent group="csharp__java__python__rest__typescript" value="java" options={[{"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "typescript", "title": "TypeScript"}, {"id": "java", "title": "Java"}, {"id": "rest", "title": "REST"}]} values={["python", "csharp", "typescript", "java", "rest"]} defaultValue="python">
 
 ## Use Microsoft Fabric in a Java agent
 
@@ -384,8 +387,8 @@ public class FabricToolExample {
 }
 ```
 
-</Tab>
-<Tab title="REST">
+</ZoneContent>
+<ZoneContent group="csharp__java__python__rest__typescript" value="rest" options={[{"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "typescript", "title": "TypeScript"}, {"id": "java", "title": "Java"}, {"id": "rest", "title": "REST"}]} values={["python", "csharp", "typescript", "java", "rest"]} defaultValue="python">
 
 The following example shows how to call the Foundry Agent REST API by using the Fabric data agent tool.
 
@@ -429,8 +432,7 @@ curl --request POST \
 
 - A `200` response with a JSON body that contains the model output.
 
-</Tab>
-</Tabs>
+</ZoneContent>
 
 ## Troubleshooting
 
