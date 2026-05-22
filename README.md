@@ -65,6 +65,9 @@ python scripts/extract_manifest.py
 # 2. Download docs from GitHub
 python scripts/download_docs.py
 
+# Force a fresh download of files that already exist in raw_docs/
+python scripts/download_docs.py --force
+
 # 3. Convert to Mintlify MDX
 python scripts/convert_to_mdx.py
 
