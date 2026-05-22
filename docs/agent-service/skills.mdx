@@ -104,46 +104,46 @@ You can create a skill in two ways: submit the content directly as JSON, or uplo
 
 Use this option when you want to supply the skill's `instructions` text directly without packaging a file.
 
-```http
-POST {endpoint}/skills?api-version=v1
-Authorization: Bearer {token}
-Content-Type: application/json
-Accept: application/json
-
-{
-  "name": "greeting",
-  "description": "Generate a personalized greeting for the user.",
-  "instructions": "You are a friendly greeting assistant. Include the user's name and keep greetings concise."
-}
-```
-
-```python
-from azure.identity import DefaultAzureCredential
-from azure.ai.projects import AIProjectClient
-
-# Create Foundry project client
-endpoint = "https://<your-foundry-account>.services.ai.azure.com/api/projects/<your-project>"
-
-with (
-    DefaultAzureCredential() as credential,
-    AIProjectClient(
-        endpoint=endpoint, credential=credential, allow_preview=True
-    ) as project,
-):
-    # Create skill from JSON
-    created = project.beta.skills.create(
-        name="greeting",
-        description="Generate a personalized greeting for the user.",
-        instructions="You are a friendly greeting assistant. Include the user's name and keep greetings concise.",
-    )
-    print(
-        f"Created skill: {created.name} ({created.skill_id}) "
-        f"has_blob={created.has_blob}"
-    )
-```
-
 <CodeGroup>
-```csharp Dotnet
+```http REST API
+  POST {endpoint}/skills?api-version=v1
+  Authorization: Bearer {token}
+  Content-Type: application/json
+  Accept: application/json
+
+  {
+    "name": "greeting",
+    "description": "Generate a personalized greeting for the user.",
+    "instructions": "You are a friendly greeting assistant. Include the user's name and keep greetings concise."
+  }
+  ```
+
+```python Python
+  from azure.identity import DefaultAzureCredential
+  from azure.ai.projects import AIProjectClient
+
+  # Create Foundry project client
+  endpoint = "https://<your-foundry-account>.services.ai.azure.com/api/projects/<your-project>"
+
+  with (
+      DefaultAzureCredential() as credential,
+      AIProjectClient(
+          endpoint=endpoint, credential=credential, allow_preview=True
+      ) as project,
+  ):
+      # Create skill from JSON
+      created = project.beta.skills.create(
+          name="greeting",
+          description="Generate a personalized greeting for the user.",
+          instructions="You are a friendly greeting assistant. Include the user's name and keep greetings concise.",
+      )
+      print(
+          f"Created skill: {created.name} ({created.skill_id}) "
+          f"has_blob={created.has_blob}"
+      )
+  ```
+
+```csharp .NET
   #pragma warning disable AAIP001
   using Azure.AI.Projects.Agents;
   using Azure.Core.Pipeline;
@@ -179,7 +179,7 @@ with (
   }
   ```
 
-```javascript Javascript
+```javascript JavaScript
   import { DefaultAzureCredential } from "@azure/identity";
   import { AIProjectClient } from "@azure/ai-projects";
 
@@ -212,56 +212,58 @@ Example response:
 
 Use this option when you have a `SKILL.md` file. Package it as a ZIP and POST to the `:import` endpoint. The skill name and description come from the `SKILL.md` front matter. The request body must be a valid ZIP file with a `SKILL.md` entry at the root.
 
-```http
-POST {endpoint}/skills:import?api-version=v1
-Authorization: Bearer {token}
-Content-Type: application/zip
-Accept: application/json
-Foundry-Features: Skills=V1Preview
+<CodeGroup>
+```http REST API
+  POST {endpoint}/skills:import?api-version=v1
+  Authorization: Bearer {token}
+  Content-Type: application/zip
+  Accept: application/json
+  Foundry-Features: Skills=V1Preview
 
-<ZIP bytes containing SKILL.md at the root>
-```
+  <ZIP bytes containing SKILL.md at the root>
+  ```
 
-```python
-from pathlib import Path
-from azure.identity import DefaultAzureCredential
-from azure.ai.projects import AIProjectClient
+```python Python
+  from pathlib import Path
+  from azure.identity import DefaultAzureCredential
+  from azure.ai.projects import AIProjectClient
 
-# Create Foundry project client
-endpoint = "https://<your-foundry-account>.services.ai.azure.com/api/projects/<your-project>"
+  # Create Foundry project client
+  endpoint = "https://<your-foundry-account>.services.ai.azure.com/api/projects/<your-project>"
 
-with (
-    DefaultAzureCredential() as credential,
-    AIProjectClient(
-        endpoint=endpoint, credential=credential, allow_preview=True
-    ) as project,
-):
-    # Import skill from ZIP package
-    imported = project.beta.skills.create_from_package(
-        Path("greeting.zip").read_bytes()
-    )
-    print(
-        f"Imported skill: {imported.name} ({imported.skill_id}) "
-        f"has_blob={imported.has_blob}"
-    )
-```
+  with (
+      DefaultAzureCredential() as credential,
+      AIProjectClient(
+          endpoint=endpoint, credential=credential, allow_preview=True
+      ) as project,
+  ):
+      # Import skill from ZIP package
+      imported = project.beta.skills.create_from_package(
+          Path("greeting.zip").read_bytes()
+      )
+      print(
+          f"Imported skill: {imported.name} ({imported.skill_id}) "
+          f"has_blob={imported.has_blob}"
+      )
+  ```
 
-```csharp
-#pragma warning disable AAIP001
-// See the FeaturePolicy class definition and client setup in the Create a skill section above.
+```csharp .NET
+  #pragma warning disable AAIP001
+  // See the FeaturePolicy class definition and client setup in the Create a skill section above.
 
-// CreateSkillFromPackage accepts a local directory path containing a SKILL.md file.
-AgentsSkill imported = skillsClient.CreateSkillFromPackage("path/to/skill-directory");
-Console.WriteLine($"Imported skill: {imported.Name} ({imported.SkillId}) HasBlob={imported.HasBlob}");
-```
+  // CreateSkillFromPackage accepts a local directory path containing a SKILL.md file.
+  AgentsSkill imported = skillsClient.CreateSkillFromPackage("path/to/skill-directory");
+  Console.WriteLine($"Imported skill: {imported.Name} ({imported.SkillId}) HasBlob={imported.HasBlob}");
+  ```
 
-```javascript
-import { readFileSync } from "fs";
+```javascript JavaScript
+  import { readFileSync } from "fs";
 
-const zipBytes = readFileSync("greeting.zip");
-const skill = await project.beta.skills.createFromPackage(zipBytes);
-console.log(`Imported skill: ${skill.name} (has_blob: ${skill.hasBlob})`);
-```
+  const zipBytes = readFileSync("greeting.zip");
+  const skill = await project.beta.skills.createFromPackage(zipBytes);
+  console.log(`Imported skill: ${skill.name} (has_blob: ${skill.hasBlob})`);
+  ```
+</CodeGroup>
 
 <Note>
 
@@ -286,35 +288,35 @@ Example response:
 
 ### List skills
 
-```http
-GET {endpoint}/skills?api-version=v1&limit=20&order=desc
-Authorization: Bearer {token}
-Accept: application/json
-Foundry-Features: Skills=V1Preview
-```
-
-```python
-from azure.identity import DefaultAzureCredential
-from azure.ai.projects import AIProjectClient
-
-# Create Foundry project client
-endpoint = "https://<your-foundry-account>.services.ai.azure.com/api/projects/<your-project>"
-
-with (
-    DefaultAzureCredential() as credential,
-    AIProjectClient(
-        endpoint=endpoint, credential=credential, allow_preview=True
-    ) as project,
-):
-    # List all skills in the project
-    skills = list(project.beta.skills.list())
-    print(f"Found {len(skills)} skill(s)")
-    for skill in skills:
-        print(f"  {skill.name} (has_blob: {skill.has_blob})")
-```
-
 <CodeGroup>
-```csharp Dotnet
+```http REST API
+  GET {endpoint}/skills?api-version=v1&limit=20&order=desc
+  Authorization: Bearer {token}
+  Accept: application/json
+  Foundry-Features: Skills=V1Preview
+  ```
+
+```python Python
+  from azure.identity import DefaultAzureCredential
+  from azure.ai.projects import AIProjectClient
+
+  # Create Foundry project client
+  endpoint = "https://<your-foundry-account>.services.ai.azure.com/api/projects/<your-project>"
+
+  with (
+      DefaultAzureCredential() as credential,
+      AIProjectClient(
+          endpoint=endpoint, credential=credential, allow_preview=True
+      ) as project,
+  ):
+      # List all skills in the project
+      skills = list(project.beta.skills.list())
+      print(f"Found {len(skills)} skill(s)")
+      for skill in skills:
+          print(f"  {skill.name} (has_blob: {skill.has_blob})")
+  ```
+
+```csharp .NET
   #pragma warning disable AAIP001
   // See the FeaturePolicy class definition and client setup in the Create a skill section above.
 
@@ -326,7 +328,7 @@ with (
   }
   ```
 
-```javascript Javascript
+```javascript JavaScript
   const skills = project.beta.skills.list({ limit: 20, order: "desc" });
   for await (const skill of skills) {
     console.log(`${skill.name} (has_blob: ${skill.hasBlob})`);
@@ -359,43 +361,45 @@ for cursor-based pagination.
 
 ### Get a skill
 
-```http
-GET {endpoint}/skills/{name}?api-version=v1
-Authorization: Bearer {token}
-Accept: application/json
-Foundry-Features: Skills=V1Preview
-```
+<CodeGroup>
+```http REST API
+  GET {endpoint}/skills/{name}?api-version=v1
+  Authorization: Bearer {token}
+  Accept: application/json
+  Foundry-Features: Skills=V1Preview
+  ```
 
-```python
-from azure.identity import DefaultAzureCredential
-from azure.ai.projects import AIProjectClient
+```python Python
+  from azure.identity import DefaultAzureCredential
+  from azure.ai.projects import AIProjectClient
 
-# Create Foundry project client
-endpoint = "https://<your-foundry-account>.services.ai.azure.com/api/projects/<your-project>"
+  # Create Foundry project client
+  endpoint = "https://<your-foundry-account>.services.ai.azure.com/api/projects/<your-project>"
 
-with (
-    DefaultAzureCredential() as credential,
-    AIProjectClient(
-        endpoint=endpoint, credential=credential, allow_preview=True
-    ) as project,
-):
-    # Get skill by name
-    skill = project.beta.skills.get("greeting")
-    print(f"{skill.name}: {skill.description}")
-```
+  with (
+      DefaultAzureCredential() as credential,
+      AIProjectClient(
+          endpoint=endpoint, credential=credential, allow_preview=True
+      ) as project,
+  ):
+      # Get skill by name
+      skill = project.beta.skills.get("greeting")
+      print(f"{skill.name}: {skill.description}")
+  ```
 
-```csharp
-#pragma warning disable AAIP001
-// See the FeaturePolicy class definition and client setup in the Create a skill section above.
+```csharp .NET
+  #pragma warning disable AAIP001
+  // See the FeaturePolicy class definition and client setup in the Create a skill section above.
 
-AgentsSkill skill = skillsClient.GetSkill(skillName: "greeting");
-Console.WriteLine($"Retrieved skill: {skill.Name}, description: {skill.Description}");
-```
+  AgentsSkill skill = skillsClient.GetSkill(skillName: "greeting");
+  Console.WriteLine($"Retrieved skill: {skill.Name}, description: {skill.Description}");
+  ```
 
-```javascript
-const skill = await project.beta.skills.get("greeting");
-console.log(`${skill.name}: ${skill.description}`);
-```
+```javascript JavaScript
+  const skill = await project.beta.skills.get("greeting");
+  console.log(`${skill.name}: ${skill.description}`);
+  ```
+</CodeGroup>
 
 Returns the skill metadata. Returns HTTP 404 if the skill doesn't exist.
 
@@ -403,49 +407,64 @@ Returns the skill metadata. Returns HTTP 404 if the skill doesn't exist.
 
 Downloads the original ZIP archive for skills created through `:import` (`has_blob: true`). Returns HTTP 404 for skills created through JSON.
 
-```http
-GET {endpoint}/skills/{name}:download?api-version=v1
-Authorization: Bearer {token}
-Accept: application/zip
-Foundry-Features: Skills=V1Preview
-```
+<Tabs>
+  <Tab title="REST API">
 
-```python
-import tempfile
-from datetime import datetime
-from pathlib import Path
-from azure.identity import DefaultAzureCredential
-from azure.ai.projects import AIProjectClient
+  ```http
+  GET {endpoint}/skills/{name}:download?api-version=v1
+  Authorization: Bearer {token}
+  Accept: application/zip
+  Foundry-Features: Skills=V1Preview
+  ```
 
-# Create Foundry project client
-endpoint = "https://<your-foundry-account>.services.ai.azure.com/api/projects/<your-project>"
-download_folder = Path(tempfile.gettempdir()).resolve()
+  </Tab>
+  <Tab title="Python">
 
-with (
-    DefaultAzureCredential() as credential,
-    AIProjectClient(
-        endpoint=endpoint, credential=credential, allow_preview=True
-    ) as project,
-):
-    # Download skill package
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    download_path = download_folder / f"greeting_{timestamp}.zip"
-    download_path.write_bytes(
-        b"".join(project.beta.skills.download("greeting"))
-    )
-    print(f"Downloaded skill package to: {download_path}")
-```
+  ```python
+  import tempfile
+  from datetime import datetime
+  from pathlib import Path
+  from azure.identity import DefaultAzureCredential
+  from azure.ai.projects import AIProjectClient
 
-<Note>
+  # Create Foundry project client
+  endpoint = "https://<your-foundry-account>.services.ai.azure.com/api/projects/<your-project>"
+  download_folder = Path(tempfile.gettempdir()).resolve()
 
-.NET sample isn't available yet.
+  with (
+      DefaultAzureCredential() as credential,
+      AIProjectClient(
+          endpoint=endpoint, credential=credential, allow_preview=True
+      ) as project,
+  ):
+      # Download skill package
+      timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+      download_path = download_folder / f"greeting_{timestamp}.zip"
+      download_path.write_bytes(
+          b"".join(project.beta.skills.download("greeting"))
+      )
+      print(f"Downloaded skill package to: {download_path}")
+  ```
 
-</Note>
+  </Tab>
+  <Tab title=".NET">
 
-```javascript
-const response = await project.beta.skills.download("greeting");
-// response.body contains the ZIP archive bytes
-```
+  <Note>
+
+  .NET sample isn't available yet.
+
+  </Note>
+
+  </Tab>
+  <Tab title="JavaScript">
+
+  ```javascript
+  const response = await project.beta.skills.download("greeting");
+  // response.body contains the ZIP archive bytes
+  ```
+
+  </Tab>
+</Tabs>
 
 <Note>
 
@@ -455,43 +474,45 @@ The response body is a binary ZIP archive (`Content-Type: application/zip`).
 
 ### Delete a skill
 
-```http
-DELETE {endpoint}/skills/{name}?api-version=v1
-Authorization: Bearer {token}
-Accept: application/json
-Foundry-Features: Skills=V1Preview
-```
+<CodeGroup>
+```http REST API
+  DELETE {endpoint}/skills/{name}?api-version=v1
+  Authorization: Bearer {token}
+  Accept: application/json
+  Foundry-Features: Skills=V1Preview
+  ```
 
-```python
-from azure.identity import DefaultAzureCredential
-from azure.ai.projects import AIProjectClient
+```python Python
+  from azure.identity import DefaultAzureCredential
+  from azure.ai.projects import AIProjectClient
 
-# Create Foundry project client
-endpoint = "https://<your-foundry-account>.services.ai.azure.com/api/projects/<your-project>"
+  # Create Foundry project client
+  endpoint = "https://<your-foundry-account>.services.ai.azure.com/api/projects/<your-project>"
 
-with (
-    DefaultAzureCredential() as credential,
-    AIProjectClient(
-        endpoint=endpoint, credential=credential, allow_preview=True
-    ) as project,
-):
-    # Delete skill
-    deleted = project.beta.skills.delete("greeting")
-    print(f"Deleted skill: {deleted}")
-```
+  with (
+      DefaultAzureCredential() as credential,
+      AIProjectClient(
+          endpoint=endpoint, credential=credential, allow_preview=True
+      ) as project,
+  ):
+      # Delete skill
+      deleted = project.beta.skills.delete("greeting")
+      print(f"Deleted skill: {deleted}")
+  ```
 
-```csharp
-#pragma warning disable AAIP001
-// See the FeaturePolicy class definition and client setup in the Create a skill section above.
+```csharp .NET
+  #pragma warning disable AAIP001
+  // See the FeaturePolicy class definition and client setup in the Create a skill section above.
 
-skillsClient.DeleteSkill("greeting");
-Console.WriteLine("Skill deleted.");
-```
+  skillsClient.DeleteSkill("greeting");
+  Console.WriteLine("Skill deleted.");
+  ```
 
-```javascript
-const result = await project.beta.skills.delete("greeting");
-console.log(`Deleted: ${result.name} (${result.deleted})`);
-```
+```javascript JavaScript
+  const result = await project.beta.skills.delete("greeting");
+  console.log(`Deleted: ${result.name} (${result.deleted})`);
+  ```
+</CodeGroup>
 
 Returns HTTP 200 on success:
 

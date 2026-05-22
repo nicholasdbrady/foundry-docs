@@ -23,113 +23,115 @@ To complete this article, you need the following:
 
 * [Foundry Models from partners and community](/foundry-models/models-from-partners) require access to **Azure Marketplace**. Ensure you have the [permissions required to subscribe to model offerings](../how-to/configure-marketplace). [Foundry Models sold by Azure](/foundry-models/models-sold-directly-by-azure) don't have this requirement.
 
-* Install the [Azure CLI](https://learn.microsoft.com/cli/azure/) (version 2.60 or later) and the `cognitiveservices` extension.
+<Tabs>
+  <Tab title="Speech CLI">
 
-    ```azurecli
-    az extension add -n cognitiveservices
-    ```
+  * Install the [Azure CLI](https://learn.microsoft.com/cli/azure/) (version 2.60 or later) and the `cognitiveservices` extension.
 
-* Some commands in this tutorial use the `jq` tool, which might not be installed on your system. For installation instructions, see [Download `jq`](https://stedolan.github.io/jq/download/).
+      ```azurecli
+      az extension add -n cognitiveservices
+      ```
 
-* Identify the following information:
+  * Some commands in this tutorial use the `jq` tool, which might not be installed on your system. For installation instructions, see [Download `jq`](https://stedolan.github.io/jq/download/).
 
-  * Your Azure subscription ID
+  * Identify the following information:
 
-  * Your Foundry resource name
+    * Your Azure subscription ID
 
-  * The resource group where you deployed the Foundry resource
-    
-    
-## Add models
+    * Your Foundry resource name
 
-To add a model, first identify the model that you want to deploy. Query the available models as follows:
+    * The resource group where you deployed the Foundry resource
 
-1. Sign in to your Azure subscription.
+  ## Add models
 
-    ```azurecli
-    az login
-    ```
+  To add a model, first identify the model that you want to deploy. Query the available models as follows:
 
-1. If you have more than one subscription, select the subscription where your resource is located.
+  1. Sign in to your Azure subscription.
 
-    ```azurecli
-    az account set --subscription $subscriptionId
-    ```
+      ```azurecli
+      az login
+      ```
 
-1. Set the following environment variables with the name of the Foundry resource you plan to use and resource group.
+  1. If you have more than one subscription, select the subscription where your resource is located.
 
-    ```azurecli
-    accountName="<ai-services-resource-name>"
-    resourceGroupName="<resource-group>"
-    location="eastus2"
-    ```
+      ```azurecli
+      az account set --subscription $subscriptionId
+      ```
 
-1. If you haven't created a Foundry resource yet, create one.
+  1. Set the following environment variables with the name of the Foundry resource you plan to use and resource group.
 
-    ```azurecli
-    az cognitiveservices account create -n $accountName -g $resourceGroupName --custom-domain $accountName --location $location --kind AIServices --sku S0
-    ```
+      ```azurecli
+      accountName="<ai-services-resource-name>"
+      resourceGroupName="<resource-group>"
+      location="eastus2"
+      ```
 
-    Reference: [az cognitiveservices account](https://learn.microsoft.com/cli/azure/cognitiveservices/account)
+  1. If you haven't created a Foundry resource yet, create one.
 
-1. Check which models are available to you and under which SKU. SKUs, also known as [deployment types](/foundry-models/deployment-types), define how Azure infrastructure processes requests. Models might offer different deployment types. The following command lists all the model definitions available:
-    
-    ```azurecli
-    az cognitiveservices account list-models \
-        -n $accountName \
-        -g $resourceGroupName \
-    | jq '.[] | { name: .name, format: .format, version: .version, sku: .skus[0].name, capacity: .skus[0].capacity.default }'
-    ```
+      ```azurecli
+      az cognitiveservices account create -n $accountName -g $resourceGroupName --custom-domain $accountName --location $location --kind AIServices --sku S0
+      ```
 
-    The output includes available models with their properties:
+      Reference: [az cognitiveservices account](https://learn.microsoft.com/cli/azure/cognitiveservices/account)
 
-    ```output
-    {
-      "name": "Phi-4-mini-instruct",
-      "format": "Microsoft",
-      "version": "1",
-      "sku": "GlobalStandard",
-      "capacity": 1
-    }
-    ```
+  1. Check which models are available to you and under which SKU. SKUs, also known as [deployment types](/foundry-models/deployment-types), define how Azure infrastructure processes requests. Models might offer different deployment types. The following command lists all the model definitions available:
 
-    Reference: [az cognitiveservices account list-models](https://learn.microsoft.com/cli/azure/cognitiveservices/account#az-cognitiveservices-account-list-models)
+      ```azurecli
+      az cognitiveservices account list-models \
+          -n $accountName \
+          -g $resourceGroupName \
+      | jq '.[] | { name: .name, format: .format, version: .version, sku: .skus[0].name, capacity: .skus[0].capacity.default }'
+      ```
 
-1. Identify the model you want to deploy. You need the properties `name`, `format`, `version`, and `sku`. The property `format` indicates the provider offering the model. Depending on the type of deployment, you might also need capacity.
+      The output includes available models with their properties:
 
-1. Add the model deployment to the resource. The following example adds `Phi-4-mini-instruct`:
+      ```output
+      {
+        "name": "Phi-4-mini-instruct",
+        "format": "Microsoft",
+        "version": "1",
+        "sku": "GlobalStandard",
+        "capacity": 1
+      }
+      ```
 
-    ```azurecli
-    az cognitiveservices account deployment create \
-        -n $accountName \
-        -g $resourceGroupName \
-        --deployment-name Phi-4-mini-instruct \
-        --model-name Phi-4-mini-instruct \
-        --model-version 1 \
-        --model-format Microsoft \
-        --sku-capacity 1 \
-        --sku-name GlobalStandard
-    ```
+      Reference: [az cognitiveservices account list-models](https://learn.microsoft.com/cli/azure/cognitiveservices/account#az-cognitiveservices-account-list-models)
 
-    Reference: [az cognitiveservices account deployment](https://learn.microsoft.com/cli/azure/cognitiveservices/account/deployment)
+  1. Identify the model you want to deploy. You need the properties `name`, `format`, `version`, and `sku`. The property `format` indicates the provider offering the model. Depending on the type of deployment, you might also need capacity.
 
-1. Verify the deployment completed successfully:
+  1. Add the model deployment to the resource. The following example adds `Phi-4-mini-instruct`:
 
-    ```azurecli
-    az cognitiveservices account deployment show \
-        --deployment-name Phi-4-mini-instruct \
-        -n $accountName \
-        -g $resourceGroupName \
-    | jq '.properties.provisioningState'
-    ```
+      ```azurecli
+      az cognitiveservices account deployment create \
+          -n $accountName \
+          -g $resourceGroupName \
+          --deployment-name Phi-4-mini-instruct \
+          --model-name Phi-4-mini-instruct \
+          --model-version 1 \
+          --model-format Microsoft \
+          --sku-capacity 1 \
+          --sku-name GlobalStandard
+      ```
 
-    The output should display `"Succeeded"`. The model is ready to use after provisioning completes.
+      Reference: [az cognitiveservices account deployment](https://learn.microsoft.com/cli/azure/cognitiveservices/account/deployment)
 
-    Reference: [az cognitiveservices account list-models](https://learn.microsoft.com/cli/azure/cognitiveservices/account#az-cognitiveservices-account-deployment-show)
+  1. Verify the deployment completed successfully:
 
-You can deploy the same model multiple times if needed as long as it's under a different deployment name. This capability is useful if you want to test different configurations for a given model, including content filters.
+      ```azurecli
+      az cognitiveservices account deployment show \
+          --deployment-name Phi-4-mini-instruct \
+          -n $accountName \
+          -g $resourceGroupName \
+      | jq '.properties.provisioningState'
+      ```
 
-## Use the model
+      The output should display `"Succeeded"`. The model is ready to use after provisioning completes.
+
+      Reference: [az cognitiveservices account list-models](https://learn.microsoft.com/cli/azure/cognitiveservices/account#az-cognitiveservices-account-deployment-show)
+
+  You can deploy the same model multiple times if needed as long as it's under a different deployment name. This capability is useful if you want to test different configurations for a given model, including content filters.
+
+  ## Use the model
 
 <Note>
 
@@ -137,149 +139,153 @@ This section is identical for both the CLI and Bicep approaches.
 
 </Note>
 
-You can consume deployed models using the [Endpoints for Foundry Models](/foundry-models/endpoints) for the resource. When you construct your request, specify the parameter `model` and insert the model deployment name you created. You can programmatically get the URI for the inference endpoint by using the following code:
+  You can consume deployed models using the [Endpoints for Foundry Models](/foundry-models/endpoints) for the resource. When you construct your request, specify the parameter `model` and insert the model deployment name you created. You can programmatically get the URI for the inference endpoint by using the following code:
 
-**Inference endpoint**
+  **Inference endpoint**
 
-```azurecli
-az cognitiveservices account show  -n $accountName -g $resourceGroupName | jq '.properties.endpoints["Azure AI Model Inference API"]'
-```
+  ```azurecli
+  az cognitiveservices account show  -n $accountName -g $resourceGroupName | jq '.properties.endpoints["Azure AI Model Inference API"]'
+  ```
 
-To make requests to the Foundry Models endpoint, append the route `models`. For example: `https://<resource>.services.ai.azure.com/models`. See the [Azure AI Model Inference API reference](https://learn.microsoft.com/rest/api/aifoundry/modelinference/) for all supported operations.
+  To make requests to the Foundry Models endpoint, append the route `models`. For example: `https://<resource>.services.ai.azure.com/models`. See the [Azure AI Model Inference API reference](https://learn.microsoft.com/rest/api/aifoundry/modelinference/) for all supported operations.
 
-**Inference keys**
+  **Inference keys**
 
-```azurecli
-az cognitiveservices account keys list  -n $accountName -g $resourceGroupName
-```
+  ```azurecli
+  az cognitiveservices account keys list  -n $accountName -g $resourceGroupName
+  ```
 
-## Manage deployments
+  ## Manage deployments
 
-You can see all the deployments available using the CLI:
+  You can see all the deployments available using the CLI:
 
-1. Run the following command to see all the active deployments:
+  1. Run the following command to see all the active deployments:
 
-    ```azurecli
-    az cognitiveservices account deployment list -n $accountName -g $resourceGroupName
-    ```
+      ```azurecli
+      az cognitiveservices account deployment list -n $accountName -g $resourceGroupName
+      ```
 
-    Reference: [az cognitiveservices account deployment list](https://learn.microsoft.com/cli/azure/cognitiveservices/account/deployment#az-cognitiveservices-account-deployment-list)
+      Reference: [az cognitiveservices account deployment list](https://learn.microsoft.com/cli/azure/cognitiveservices/account/deployment#az-cognitiveservices-account-deployment-list)
 
-1. You can see the details of a given deployment:
+  1. You can see the details of a given deployment:
 
-    ```azurecli
-    az cognitiveservices account deployment show \
-        --deployment-name "Phi-4-mini-instruct" \
-        -n $accountName \
-        -g $resourceGroupName
-    ```
+      ```azurecli
+      az cognitiveservices account deployment show \
+          --deployment-name "Phi-4-mini-instruct" \
+          -n $accountName \
+          -g $resourceGroupName
+      ```
 
-    Reference: [az cognitiveservices account deployment show](https://learn.microsoft.com/cli/azure/cognitiveservices/account/deployment#az-cognitiveservices-account-deployment-show)
+      Reference: [az cognitiveservices account deployment show](https://learn.microsoft.com/cli/azure/cognitiveservices/account/deployment#az-cognitiveservices-account-deployment-show)
 
-1. You can delete a given deployment as follows:
+  1. You can delete a given deployment as follows:
 
-    ```azurecli
-    az cognitiveservices account deployment delete \
-        --deployment-name "Phi-4-mini-instruct" \
-        -n $accountName \
-        -g $resourceGroupName
-    ```
+      ```azurecli
+      az cognitiveservices account deployment delete \
+          --deployment-name "Phi-4-mini-instruct" \
+          -n $accountName \
+          -g $resourceGroupName
+      ```
 
-    Reference: [az cognitiveservices account deployment delete](https://learn.microsoft.com/cli/azure/cognitiveservices/account/deployment#az-cognitiveservices-account-deployment-delete)
+      Reference: [az cognitiveservices account deployment delete](https://learn.microsoft.com/cli/azure/cognitiveservices/account/deployment#az-cognitiveservices-account-deployment-delete)
 
-* Install the [Azure CLI](https://learn.microsoft.com/cli/azure/).
+  </Tab>
+  <Tab title="Bicep">
 
-* Identify the following information:
+  * Install the [Azure CLI](https://learn.microsoft.com/cli/azure/).
 
-  * Your Azure subscription ID
+  * Identify the following information:
 
-* Your Foundry resource (formerly known as Azure AI Services resource) name
+    * Your Azure subscription ID
 
-* The resource group where the Foundry resource is deployed
+  * Your Foundry resource (formerly known as Azure AI Services resource) name
 
-* The model name, provider, version, and SKU you want to deploy. You can use the Foundry portal or the Azure CLI to find this information. In this example, you deploy the following model:
+  * The resource group where the Foundry resource is deployed
 
-  * **Model name**: `Phi-4-mini-instruct`
-  * **Provider**: `Microsoft`
-  * **Version**: `1`
-  * **Deployment type**: Global standard
+  * The model name, provider, version, and SKU you want to deploy. You can use the Foundry portal or the Azure CLI to find this information. In this example, you deploy the following model:
 
-## Set up the environment
+    * **Model name**: `Phi-4-mini-instruct`
+    * **Provider**: `Microsoft`
+    * **Version**: `1`
+    * **Deployment type**: Global standard
 
-The example in this article is based on code samples contained in the [Azure-Samples/azureai-model-inference-bicep](https://github.com/Azure-Samples/azureai-model-inference-bicep) repository. To run the commands locally without having to copy or paste file content, clone the repository:
+  ## Set up the environment
 
-```bash
-git clone https://github.com/Azure-Samples/azureai-model-inference-bicep
-```
+  The example in this article is based on code samples contained in the [Azure-Samples/azureai-model-inference-bicep](https://github.com/Azure-Samples/azureai-model-inference-bicep) repository. To run the commands locally without having to copy or paste file content, clone the repository:
 
-The files for this example are in:
+  ```bash
+  git clone https://github.com/Azure-Samples/azureai-model-inference-bicep
+  ```
 
-```bash
-cd azureai-model-inference-bicep/infra
-```
+  The files for this example are in:
 
-## Permissions required to subscribe to Models from partners and community
+  ```bash
+  cd azureai-model-inference-bicep/infra
+  ```
 
-[Foundry Models from partners and community](../../concepts/models-from-partners) available for deployment (for example, Cohere models) require Azure Marketplace. Model providers define the license terms and set the price for use of their models using Azure Marketplace.
+  ## Permissions required to subscribe to Models from partners and community
 
-When deploying third-party models, ensure you have the following permissions in your account:
+  [Foundry Models from partners and community](../../concepts/models-from-partners) available for deployment (for example, Cohere models) require Azure Marketplace. Model providers define the license terms and set the price for use of their models using Azure Marketplace.
 
-- On the Azure subscription:
-- `Microsoft.MarketplaceOrdering/agreements/offers/plans/read`
-- `Microsoft.MarketplaceOrdering/agreements/offers/plans/sign/action`
-- `Microsoft.MarketplaceOrdering/offerTypes/publishers/offers/plans/agreements/read`
-- `Microsoft.Marketplace/offerTypes/publishers/offers/plans/agreements/read`
-- `Microsoft.SaaS/register/action`
-- On the resource group—to create and use the SaaS resource:
-- `Microsoft.SaaS/resources/read`
-- `Microsoft.SaaS/resources/write`
-The **Owner** and **Contributor** built-in roles on the Azure subscription include these permissions. If you don't have the required permissions, ask your subscription administrator to assign you the **Contributor** role, or [create a custom role](https://learn.microsoft.com/azure/role-based-access-control/custom-roles) that includes the listed actions.
+  When deploying third-party models, ensure you have the following permissions in your account:
 
-To verify your permissions, go to the [Azure portal](https://portal.azure.com), open your subscription, select **Access control (IAM)** > **Check access**, and review your assigned roles.
+  - On the Azure subscription:
+  - `Microsoft.MarketplaceOrdering/agreements/offers/plans/read`
+  - `Microsoft.MarketplaceOrdering/agreements/offers/plans/sign/action`
+  - `Microsoft.MarketplaceOrdering/offerTypes/publishers/offers/plans/agreements/read`
+  - `Microsoft.Marketplace/offerTypes/publishers/offers/plans/agreements/read`
+  - `Microsoft.SaaS/register/action`
+  - On the resource group—to create and use the SaaS resource:
+  - `Microsoft.SaaS/resources/read`
+  - `Microsoft.SaaS/resources/write`
+  The **Owner** and **Contributor** built-in roles on the Azure subscription include these permissions. If you don't have the required permissions, ask your subscription administrator to assign you the **Contributor** role, or [create a custom role](https://learn.microsoft.com/azure/role-based-access-control/custom-roles) that includes the listed actions.
+
+  To verify your permissions, go to the [Azure portal](https://portal.azure.com), open your subscription, select **Access control (IAM)** > **Check access**, and review your assigned roles.
 
 <Tip>
 
 `Microsoft.SaaS/register/action` is a one-time registration of the SaaS resource provider on the subscription. After registration, it doesn't need to be repeated for each deployment.
 
 </Tip>
-## Add the model
 
-1. Use the template `ai-services-deployment-template.bicep` to describe model deployments:
+  ## Add the model
 
-    __ai-services-deployment-template.bicep__
+  1. Use the template `ai-services-deployment-template.bicep` to describe model deployments:
 
-    ```bicep
-    // Source: ai-services-deployment-template.bicep (not available)
-    ```
+      __ai-services-deployment-template.bicep__
 
-1. Run the deployment:
+      ```bicep
+      // Source: ai-services-deployment-template.bicep (not available)
+      ```
 
-    ```azurecli
-    RESOURCE_GROUP="<resource-group-name>"
-    ACCOUNT_NAME="<azure-ai-model-inference-name>" 
-    MODEL_NAME="Phi-4-mini-instruct"
-    PROVIDER="Microsoft"
-    VERSION=1
-    
-    az deployment group create \
-        --resource-group $RESOURCE_GROUP \
-        --template-file ai-services-deployment-template.bicep \
-        --parameters accountName=$ACCOUNT_NAME modelName=$MODEL_NAME modelVersion=$VERSION modelPublisherFormat=$PROVIDER
-    ```
+  1. Run the deployment:
 
-1. Verify the deployment completed successfully:
+      ```azurecli
+      RESOURCE_GROUP="<resource-group-name>"
+      ACCOUNT_NAME="<azure-ai-model-inference-name>" 
+      MODEL_NAME="Phi-4-mini-instruct"
+      PROVIDER="Microsoft"
+      VERSION=1
 
-    ```azurecli
-    az cognitiveservices account deployment show \
-        --deployment-name $MODEL_NAME \
-        -n $ACCOUNT_NAME \
-        -g $RESOURCE_GROUP \
-    | jq '.properties.provisioningState'
-    ```
+      az deployment group create \
+          --resource-group $RESOURCE_GROUP \
+          --template-file ai-services-deployment-template.bicep \
+          --parameters accountName=$ACCOUNT_NAME modelName=$MODEL_NAME modelVersion=$VERSION modelPublisherFormat=$PROVIDER
+      ```
 
-    The output should display `"Succeeded"`.
+  1. Verify the deployment completed successfully:
 
-## Use the model
+      ```azurecli
+      az cognitiveservices account deployment show \
+          --deployment-name $MODEL_NAME \
+          -n $ACCOUNT_NAME \
+          -g $RESOURCE_GROUP \
+      | jq '.properties.provisioningState'
+      ```
+
+      The output should display `"Succeeded"`.
+
+  ## Use the model
 
 <Note>
 
@@ -287,21 +293,24 @@ This section is identical for both the CLI and Bicep approaches.
 
 </Note>
 
-You can consume deployed models using the [Endpoints for Foundry Models](/foundry-models/endpoints) for the resource. When you construct your request, specify the parameter `model` and insert the model deployment name you created. You can programmatically get the URI for the inference endpoint by using the following code:
+  You can consume deployed models using the [Endpoints for Foundry Models](/foundry-models/endpoints) for the resource. When you construct your request, specify the parameter `model` and insert the model deployment name you created. You can programmatically get the URI for the inference endpoint by using the following code:
 
-**Inference endpoint**
+  **Inference endpoint**
 
-```azurecli
-az cognitiveservices account show  -n $accountName -g $resourceGroupName | jq '.properties.endpoints["Azure AI Model Inference API"]'
-```
+  ```azurecli
+  az cognitiveservices account show  -n $accountName -g $resourceGroupName | jq '.properties.endpoints["Azure AI Model Inference API"]'
+  ```
 
-To make requests to the Foundry Models endpoint, append the route `models`. For example: `https://<resource>.services.ai.azure.com/models`. See the [Azure AI Model Inference API reference](https://learn.microsoft.com/rest/api/aifoundry/modelinference/) for all supported operations.
+  To make requests to the Foundry Models endpoint, append the route `models`. For example: `https://<resource>.services.ai.azure.com/models`. See the [Azure AI Model Inference API reference](https://learn.microsoft.com/rest/api/aifoundry/modelinference/) for all supported operations.
 
-**Inference keys**
+  **Inference keys**
 
-```azurecli
-az cognitiveservices account keys list  -n $accountName -g $resourceGroupName
-```
+  ```azurecli
+  az cognitiveservices account keys list  -n $accountName -g $resourceGroupName
+  ```
+
+  </Tab>
+</Tabs>
 
 ## Troubleshooting
 

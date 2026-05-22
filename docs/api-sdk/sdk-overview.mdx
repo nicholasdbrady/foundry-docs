@@ -61,25 +61,25 @@ Before proceeding, confirm:
 - Azure subscription is active: `az account show`
 - You have the required RBAC role: Check Azure portal → Foundry resource → Access control (IAM)
 <Tabs>
-  <Tab title="Programming Language Python">
+  <Tab title="Python">
 
   - Language runtime installed:
     - Python: `python --version` (≥3.8)
 
   </Tab>
-  <Tab title="Programming Language Javascript">
+  <Tab title="JavaScript">
 
   - Language runtime installed:
     - Node.js: `node --version` (≥18)
 
   </Tab>
-  <Tab title="Programming Language Csharp">
+  <Tab title="C#">
 
   - Language runtime installed:
     - .NET: `dotnet --version` (≥6.0)
 
   </Tab>
-  <Tab title="Programming Language Java">
+  <Tab title="Java">
 
   - Language runtime installed:
     - Java: `java --version` (≥11)
@@ -105,68 +105,92 @@ This approach simplifies application configuration. Instead of managing multiple
 
 ### Install the SDK
 
-| SDK Version   | Portal Version  | Status  | Python Package    |
-| -- | -- | --| -- |
-| 2.x  | Foundry (new)   | Stable | `azure-ai-projects>=2.0.0`  |
-| 1.x  | Foundry (classic) | Stable  | `azure-ai-projects==1.0.0`    |
+<Tabs>
+  <Tab title="Python">
 
-The [Azure AI Projects client library for Python](https://learn.microsoft.com/python/api/overview/azure/ai-projects-readme) is a unified library that enables you to use multiple client libraries together by connecting to a single project endpoint.
+  | SDK Version   | Portal Version  | Status  | Python Package    |
+  | -- | -- | --| -- |
+  | 2.x  | Foundry (new)   | Stable | `azure-ai-projects>=2.0.0`  |
+  | 1.x  | Foundry (classic) | Stable  | `azure-ai-projects==1.0.0`    |
 
-Run this command to install the packages for Foundry projects.
-```bash
-pip install "azure-ai-projects>=2.0.0"
-```
+  The [Azure AI Projects client library for Python](https://learn.microsoft.com/python/api/overview/azure/ai-projects-readme) is a unified library that enables you to use multiple client libraries together by connecting to a single project endpoint.
 
-| SDK Version   | Portal Version  | Status  | Java Package                    |
-|---------------|-----------------|---------|---------------------------------|
-| 2.0.0 | Foundry (new)   | Stable | `azure-ai-projects`<br />`azure-ai-agents` |
+  Run this command to install the packages for Foundry projects.
+  ```bash
+  pip install "azure-ai-projects>=2.0.0"
+  ```
 
-| SDK Version   | Portal Version  | Status  | JavaScript Package                    |
-|---------------|-----------------|---------|---------------------------------|
-| 2.0.1 | Foundry (new)   | Stable | `@azure/ai-projects` |
-| 1.0.1 | Foundry classic | Stable | `@azure/ai-projects`             |
+  </Tab>
+  <Tab title="Java">
 
-| SDK Version   | Portal Version  | Status  | .NET Package                    |
-|---------------|-----------------|---------|---------------------------------|
-| 2.0.0 (GA) | Foundry (new)   | Stable | `Azure.AI.Projects`<br />`Azure.AI.Projects.Agents`<br />`Azure.AI.Extensions.OpenAI` |
-| 1.1.0 (GA)      | Foundry classic | Stable  | `Azure.AI.Projects`             |
+  | SDK Version   | Portal Version  | Status  | Java Package                    |
+  |---------------|-----------------|---------|---------------------------------|
+  | 2.0.0 | Foundry (new)   | Stable | `azure-ai-projects`<br />`azure-ai-agents` |
 
-<Info>
+  </Tab>
+  <Tab title="JavaScript">
 
-Don't install `Azure.AI.Projects.OpenAI` (preview) alongside `Azure.AI.Extensions.OpenAI` (GA). Both packages define the same types in different namespaces, which causes ambiguous reference errors. Use only `Azure.AI.Extensions.OpenAI` for agent scenarios.
+  | SDK Version   | Portal Version  | Status  | JavaScript Package                    |
+  |---------------|-----------------|---------|---------------------------------|
+  | 2.0.1 | Foundry (new)   | Stable | `@azure/ai-projects` |
+  | 1.0.1 | Foundry classic | Stable | `@azure/ai-projects`             |
 
-</Info>
+  </Tab>
+  <Tab title="C#">
 
-The [Azure AI Projects client library for Java](https://learn.microsoft.com/java/api/overview/azure/ai-projects-readme) is a unified library that enables you to use multiple client libraries together by connecting to a single project endpoint.
+  | SDK Version   | Portal Version  | Status  | .NET Package                    |
+  |---------------|-----------------|---------|---------------------------------|
+  | 2.0.0 (GA) | Foundry (new)   | Stable | `Azure.AI.Projects`<br />`Azure.AI.Projects.Agents`<br />`Azure.AI.Extensions.OpenAI` |
+  | 1.1.0 (GA)      | Foundry classic | Stable  | `Azure.AI.Projects`             |
 
-Add these packages to your installation for Foundry projects.
+  <Info>
 
-```java
-package com.azure.ai.agents;
+  Don't install `Azure.AI.Projects.OpenAI` (preview) alongside `Azure.AI.Extensions.OpenAI` (GA). Both packages define the same types in different namespaces, which causes ambiguous reference errors. Use only `Azure.AI.Extensions.OpenAI` for agent scenarios.
 
-import com.azure.core.util.Configuration;
-import com.azure.identity.DefaultAzureCredentialBuilder;
-import com.openai.models.responses.Response;
-import com.openai.models.responses.ResponseCreateParams;
-```
+  </Info>
 
-The [Azure AI Projects client library for JavaScript](https://learn.microsoft.com/javascript/api/overview/azure/ai-projects-readme) is a unified library that enables you to use multiple client libraries together by connecting to a single project endpoint.
+  </Tab>
+  <Tab title="Java">
 
-Run this command to install the JavaScript packages for Foundry projects.
-```bash
-npm install @azure/ai-projects @azure/identity dotenv
-```
+  The [Azure AI Projects client library for Java](https://learn.microsoft.com/java/api/overview/azure/ai-projects-readme) is a unified library that enables you to use multiple client libraries together by connecting to a single project endpoint.
 
-The [Azure AI Projects client library for .NET](https://learn.microsoft.com/dotnet/api/overview/azure/ai.projects-readme) is a unified library that enables you to use multiple client libraries together by connecting to a single project endpoint.
+  Add these packages to your installation for Foundry projects.
 
-Run these commands to add the required packages to your .NET project.
+  ```java
+  package com.azure.ai.agents;
 
-```bash
-dotnet add package Azure.AI.Projects
-dotnet add package Azure.AI.Projects.Agents
-dotnet add package Azure.AI.Extensions.OpenAI
-dotnet add package Azure.Identity
-```
+  import com.azure.core.util.Configuration;
+  import com.azure.identity.DefaultAzureCredentialBuilder;
+  import com.openai.models.responses.Response;
+  import com.openai.models.responses.ResponseCreateParams;
+  ```
+
+  </Tab>
+  <Tab title="JavaScript">
+
+  The [Azure AI Projects client library for JavaScript](https://learn.microsoft.com/javascript/api/overview/azure/ai-projects-readme) is a unified library that enables you to use multiple client libraries together by connecting to a single project endpoint.
+
+  Run this command to install the JavaScript packages for Foundry projects.
+  ```bash
+  npm install @azure/ai-projects @azure/identity dotenv
+  ```
+
+  </Tab>
+  <Tab title="C#">
+
+  The [Azure AI Projects client library for .NET](https://learn.microsoft.com/dotnet/api/overview/azure/ai.projects-readme) is a unified library that enables you to use multiple client libraries together by connecting to a single project endpoint.
+
+  Run these commands to add the required packages to your .NET project.
+
+  ```bash
+  dotnet add package Azure.AI.Projects
+  dotnet add package Azure.AI.Projects.Agents
+  dotnet add package Azure.AI.Extensions.OpenAI
+  dotnet add package Azure.Identity
+  ```
+
+  </Tab>
+</Tabs>
 
 ### Using the Foundry SDK
 
@@ -177,90 +201,105 @@ The SDK exposes two client types because Foundry and OpenAI have different API s
 
 Most apps use both clients. Use the project client for setup and configuration, then use the OpenAI-compatible client for running agents, evaluations, and calling models (including Foundry direct models).
 
-**Create a project client:**
-```python
-from azure.identity import DefaultAzureCredential
-from azure.ai.projects import AIProjectClient
+<Tabs>
+  <Tab title="Python">
 
-project_client = AIProjectClient(
-  endpoint="https://<resource-name>.services.ai.azure.com/api/projects/<project-name>",
-  credential=DefaultAzureCredential())
-```
+  **Create a project client:**
+  ```python
+  from azure.identity import DefaultAzureCredential
+  from azure.ai.projects import AIProjectClient
 
-**Create an OpenAI-compatible client from your project:**
+  project_client = AIProjectClient(
+    endpoint="https://<resource-name>.services.ai.azure.com/api/projects/<project-name>",
+    credential=DefaultAzureCredential())
+  ```
 
-```python
-with project_client.get_openai_client() as openai_client:
-    response = openai_client.responses.create(
-        model="gpt-5.2",
-        input="What is the size of France in square miles?",
-    )
-    print(f"Response output: {response.output_text}")
-```
+  **Create an OpenAI-compatible client from your project:**
 
-**Expected output**:
-```
-Response output: France has an area of approximately 213,011 square miles (551,695 square kilometers).
-```
+  ```python
+  with project_client.get_openai_client() as openai_client:
+      response = openai_client.responses.create(
+          model="gpt-5.2",
+          input="What is the size of France in square miles?",
+      )
+      print(f"Response output: {response.output_text}")
+  ```
 
-**Create a project client:**
-```java
-import com.azure.ai.projects.ProjectsClient;
-import com.azure.ai.projects.ProjectsClientBuilder;
-import com.azure.identity.DefaultAzureCredentialBuilder;
+  **Expected output**:
+  ```
+  Response output: France has an area of approximately 213,011 square miles (551,695 square kilometers).
+  ```
 
-String endpoint = "https://<resource-name>.services.ai.azure.com/api/projects/<project-name>";
+  </Tab>
+  <Tab title="Java">
 
-ProjectsClient projectClient = new ProjectsClientBuilder()
-    .credential(new DefaultAzureCredentialBuilder().build())
-    .endpoint(endpoint)
-    .buildClient();
-```**Create and use an OpenAI-compatible client from your project:**
-```java
-OpenAIClient openAIClient = projectClient.getOpenAIClient();
-```
+  **Create a project client:**
+  ```java
+  import com.azure.ai.projects.ProjectsClient;
+  import com.azure.ai.projects.ProjectsClientBuilder;
+  import com.azure.identity.DefaultAzureCredentialBuilder;
 
-**Create a project client:**
+  String endpoint = "https://<resource-name>.services.ai.azure.com/api/projects/<project-name>";
 
-```javascript
-import { DefaultAzureCredential } from "@azure/identity";
-import { AIProjectClient } from "@azure/ai-projects";
-import "dotenv/config";
+  ProjectsClient projectClient = new ProjectsClientBuilder()
+      .credential(new DefaultAzureCredentialBuilder().build())
+      .endpoint(endpoint)
+      .buildClient();
+  ```**Create and use an OpenAI-compatible client from your project:**
+  ```java
+  OpenAIClient openAIClient = projectClient.getOpenAIClient();
+  ```
 
-const projectEndpoint = "https://<resource-name>.services.ai.azure.com/api/projects/<project-name>";
-const deploymentName = "gpt-5.2";
-const project = new AIProjectClient(projectEndpoint, new DefaultAzureCredential());
-```
-**Create an OpenAI-compatible client from your project:**
-```javascript
-const openAIClient = await project.getOpenAIClient();
-const response = await openAIClient.responses.create({
-    model: deploymentName,
-    input: "What is the size of France in square miles?",
-});
-console.log(`Response output: ${response.output_text}`);
-```
+  </Tab>
+  <Tab title="JavaScript">
 
-**Create a project client:**
+  **Create a project client:**
 
-```csharp
-using Azure.AI.Projects;
-using Azure.AI.Extensions.OpenAI;
-using Azure.Identity;
+  ```javascript
+  import { DefaultAzureCredential } from "@azure/identity";
+  import { AIProjectClient } from "@azure/ai-projects";
+  import "dotenv/config";
 
-string endpoint = "https://<resource-name>.services.ai.azure.com/api/projects/<project-name>";
+  const projectEndpoint = "https://<resource-name>.services.ai.azure.com/api/projects/<project-name>";
+  const deploymentName = "gpt-5.2";
+  const project = new AIProjectClient(projectEndpoint, new DefaultAzureCredential());
+  ```
+  **Create an OpenAI-compatible client from your project:**
+  ```javascript
+  const openAIClient = await project.getOpenAIClient();
+  const response = await openAIClient.responses.create({
+      model: deploymentName,
+      input: "What is the size of France in square miles?",
+  });
+  console.log(`Response output: ${response.output_text}`);
+  ```
 
-AIProjectClient projectClient = new(
-    endpoint: new Uri(endpoint), 
-    tokenProvider: new DefaultAzureCredential());
-```
-**Create an OpenAI-compatible client from your project:**
+  </Tab>
+  <Tab title="C#">
 
-```csharp
-var responseClient = projectClient.ProjectOpenAIClient.GetProjectResponsesClientForModel("gpt-5.2");
-var response = responseClient.CreateResponse("What is the speed of light?");
-Console.WriteLine(response.GetOutputText());
-```
+  **Create a project client:**
+
+  ```csharp
+  using Azure.AI.Projects;
+  using Azure.AI.Extensions.OpenAI;
+  using Azure.Identity;
+
+  string endpoint = "https://<resource-name>.services.ai.azure.com/api/projects/<project-name>";
+
+  AIProjectClient projectClient = new(
+      endpoint: new Uri(endpoint), 
+      tokenProvider: new DefaultAzureCredential());
+  ```
+  **Create an OpenAI-compatible client from your project:**
+
+  ```csharp
+  var responseClient = projectClient.ProjectOpenAIClient.GetProjectResponsesClientForModel("gpt-5.2");
+  var response = responseClient.CreateResponse("What is the speed of light?");
+  Console.WriteLine(response.GetOutputText());
+  ```
+
+  </Tab>
+</Tabs>
 
 ### What you can do with the Foundry SDK
 
@@ -330,130 +369,145 @@ Use the OpenAI SDK endpoint for [generating embeddings](/foundry-models/embeddin
 
 The following snippet shows how to use the Azure OpenAI `/openai/v1` endpoint directly.
 
-```python
-from openai import OpenAI
-from azure.identity import DefaultAzureCredential, get_bearer_token_provider
+<Tabs>
+  <Tab title="Python">
 
-token_provider = get_bearer_token_provider(
-    DefaultAzureCredential(), "https://ai.azure.com/.default"
-)
+  ```python
+  from openai import OpenAI
+  from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 
-client = OpenAI(  
-  base_url = "https://<resource-name>.openai.azure.com/openai/v1/",  
-  api_key=token_provider,
-)
+  token_provider = get_bearer_token_provider(
+      DefaultAzureCredential(), "https://ai.azure.com/.default"
+  )
 
-response = client.responses.create(
-    model="model_deployment_name",
-    input= "What is the size of France in square miles?" 
-)
+  client = OpenAI(  
+    base_url = "https://<resource-name>.openai.azure.com/openai/v1/",  
+    api_key=token_provider,
+  )
 
-print(response.model_dump_json(indent=2)) 
-```
+  response = client.responses.create(
+      model="model_deployment_name",
+      input= "What is the size of France in square miles?" 
+  )
 
-**Expected output**:
-```json
-{
-  "id": "resp_abc123",
-  "object": "response",
-  "created": 1234567890,
-  "model": "gpt-5.2",
-  "output_text": "France has an area of approximately 213,011 square miles (551,695 square kilometers)."
-}
-```
+  print(response.model_dump_json(indent=2)) 
+  ```
 
-For more information, see [Azure OpenAI supported programming languages](https://learn.microsoft.com/azure/ai-foundry/openai/supported-languages)
+  **Expected output**:
+  ```json
+  {
+    "id": "resp_abc123",
+    "object": "response",
+    "created": 1234567890,
+    "model": "gpt-5.2",
+    "output_text": "France has an area of approximately 213,011 square miles (551,695 square kilometers)."
+  }
+  ```
 
-The following snippet shows how to use the Azure OpenAI `/openai/v1` endpoint directly.
+  For more information, see [Azure OpenAI supported programming languages](https://learn.microsoft.com/azure/ai-foundry/openai/supported-languages)
 
-```java
-import com.azure.identity.AuthenticationUtil;
-import com.azure.identity.DefaultAzureCredential;
-import com.azure.identity.DefaultAzureCredentialBuilder;
-import com.openai.client.OpenAIClient;
-import com.openai.client.okhttp.OpenAIOkHttpClient;
-import com.openai.credential.BearerTokenCredential;
+  </Tab>
+  <Tab title="Java">
 
-import java.util.function.Supplier;
+  The following snippet shows how to use the Azure OpenAI `/openai/v1` endpoint directly.
 
-DefaultAzureCredential tokenCredential = new DefaultAzureCredentialBuilder().build();
-String endpoint = "https://<resource-name>.openai.azure.com/openai/v1";
-String deploymentName = "gpt-5.2";
-Supplier<String> bearerTokenSupplier = AuthenticationUtil.getBearerTokenSupplier(
-        tokenCredential, "https://ai.azure.com/.default");
-OpenAIClient openAIClient = OpenAIOkHttpClient.builder()
-        .baseUrl(endpoint)
-        .credential(BearerTokenCredential.create(bearerTokenSupplier))
-        .build();
+  ```java
+  import com.azure.identity.AuthenticationUtil;
+  import com.azure.identity.DefaultAzureCredential;
+  import com.azure.identity.DefaultAzureCredentialBuilder;
+  import com.openai.client.OpenAIClient;
+  import com.openai.client.okhttp.OpenAIOkHttpClient;
+  import com.openai.credential.BearerTokenCredential;
 
-ResponseCreateParams responseCreateParams = ResponseCreateParams.builder()
-        .input("What is the speed of light?")
-        .model(deploymentName) 
-        .build();
+  import java.util.function.Supplier;
 
-Response response = openAIClient.responses().create(responseCreateParams);
+  DefaultAzureCredential tokenCredential = new DefaultAzureCredentialBuilder().build();
+  String endpoint = "https://<resource-name>.openai.azure.com/openai/v1";
+  String deploymentName = "gpt-5.2";
+  Supplier<String> bearerTokenSupplier = AuthenticationUtil.getBearerTokenSupplier(
+          tokenCredential, "https://ai.azure.com/.default");
+  OpenAIClient openAIClient = OpenAIOkHttpClient.builder()
+          .baseUrl(endpoint)
+          .credential(BearerTokenCredential.create(bearerTokenSupplier))
+          .build();
 
-System.out.println("Response output: " + response.getOutputText());
-```
-For more information on using the OpenAI SDK, see [Azure OpenAI supported programming languages](https://learn.microsoft.com/azure/ai-foundry/openai/supported-languages)
+  ResponseCreateParams responseCreateParams = ResponseCreateParams.builder()
+          .input("What is the speed of light?")
+          .model(deploymentName) 
+          .build();
 
-```javascript
-const endpoint = "https://<resource-name>.openai.azure.com/openai/v1";
-const scope = "https://ai.azure.com/.default";
-const azureADTokenProvider = getBearerTokenProvider(new DefaultAzureCredential(), scope);
-const client = new OpenAI({ baseURL: endpoint, apiKey: azureADTokenProvider });
-const response = await client.responses.create({
-        model: deploymentName,
-        input: "What is the size of France in square miles?",
-    });
-console.log(`Response output: ${response.output_text}`);
-```
+  Response response = openAIClient.responses().create(responseCreateParams);
 
-For more information on using the OpenAI SDK, see [Azure OpenAI supported programming languages](https://learn.microsoft.com/azure/ai-foundry/openai/supported-languages)
+  System.out.println("Response output: " + response.getOutputText());
+  ```
+  For more information on using the OpenAI SDK, see [Azure OpenAI supported programming languages](https://learn.microsoft.com/azure/ai-foundry/openai/supported-languages)
 
-1. Install the OpenAI package:
-   Run this command to add the OpenAI client library to your .NET project.
-   ```bash
-   dotnet add package OpenAI
-   ```When it succeeds, the .NET CLI confirms that it installed the `OpenAI` package.
+  </Tab>
+  <Tab title="JavaScript">
 
-   This snippet configures `DefaultAzureCredential`, builds `OpenAIClientOptions`, and creates a `ResponsesClient` for the Azure OpenAI v1 endpoint.
-   ```csharp
-   using Azure.Identity;
-   using OpenAI;
-   using OpenAI.Responses;
-   using System.ClientModel.Primitives;
-   
-   #pragma warning disable OPENAI001
- 
-   const string directModelEndpoint  = "https://<resource-name>.openai.azure.com/openai/v1/";
-   const string deploymentName = "gpt-5.2";    
+  ```javascript
+  const endpoint = "https://<resource-name>.openai.azure.com/openai/v1";
+  const scope = "https://ai.azure.com/.default";
+  const azureADTokenProvider = getBearerTokenProvider(new DefaultAzureCredential(), scope);
+  const client = new OpenAI({ baseURL: endpoint, apiKey: azureADTokenProvider });
+  const response = await client.responses.create({
+          model: deploymentName,
+          input: "What is the size of France in square miles?",
+      });
+  console.log(`Response output: ${response.output_text}`);
+  ```
 
-   BearerTokenPolicy tokenPolicy = new(
-        new DefaultAzureCredential(),
-        "https://ai.azure.com/.default");
-    
-   OpenAIClient openAIClient = new(
-        authenticationPolicy: tokenPolicy,
-        options: new OpenAIClientOptions()
-        {
-            Endpoint = new($"{directModelEndpoint}"),
-        });
-   ResponsesClient client = openAIClient.GetResponsesClient();
+  For more information on using the OpenAI SDK, see [Azure OpenAI supported programming languages](https://learn.microsoft.com/azure/ai-foundry/openai/supported-languages)
 
-   CreateResponseOptions options = new()
-    {
-        Model = deploymentName,
-        InputItems = { ResponseItem.CreateUserMessageItem("What is the size of France in square miles?") },
-        Temperature = (float)0.7,
-    };
-    
-   var modelDirectResponse = client.CreateResponse(options);
-    
-   Console.WriteLine($"[ASSISTANT]: {modelDirectResponse.Value.GetOutputText()}");
-   #pragma warning restore OPENAI001
-   ```
-For more information on using the OpenAI SDK, see [Azure OpenAI supported programming languages](https://learn.microsoft.com/azure/ai-foundry/openai/supported-languages)
+  </Tab>
+  <Tab title="C#">
+
+  1. Install the OpenAI package:
+     Run this command to add the OpenAI client library to your .NET project.
+     ```bash
+     dotnet add package OpenAI
+     ```When it succeeds, the .NET CLI confirms that it installed the `OpenAI` package.
+
+     This snippet configures `DefaultAzureCredential`, builds `OpenAIClientOptions`, and creates a `ResponsesClient` for the Azure OpenAI v1 endpoint.
+     ```csharp
+     using Azure.Identity;
+     using OpenAI;
+     using OpenAI.Responses;
+     using System.ClientModel.Primitives;
+
+     #pragma warning disable OPENAI001
+
+     const string directModelEndpoint  = "https://<resource-name>.openai.azure.com/openai/v1/";
+     const string deploymentName = "gpt-5.2";    
+
+     BearerTokenPolicy tokenPolicy = new(
+          new DefaultAzureCredential(),
+          "https://ai.azure.com/.default");
+
+     OpenAIClient openAIClient = new(
+          authenticationPolicy: tokenPolicy,
+          options: new OpenAIClientOptions()
+          {
+              Endpoint = new($"{directModelEndpoint}"),
+          });
+     ResponsesClient client = openAIClient.GetResponsesClient();
+
+     CreateResponseOptions options = new()
+      {
+          Model = deploymentName,
+          InputItems = { ResponseItem.CreateUserMessageItem("What is the size of France in square miles?") },
+          Temperature = (float)0.7,
+      };
+
+     var modelDirectResponse = client.CreateResponse(options);
+
+     Console.WriteLine($"[ASSISTANT]: {modelDirectResponse.Value.GetOutputText()}");
+     #pragma warning restore OPENAI001
+     ```
+  For more information on using the OpenAI SDK, see [Azure OpenAI supported programming languages](https://learn.microsoft.com/azure/ai-foundry/openai/supported-languages)
+
+  </Tab>
+</Tabs>
 
 ## Anthropic SDK
 
@@ -471,126 +525,141 @@ The Messages API is available at:
 https://<resource-name>.services.ai.azure.com/anthropic/v1/messages
 ```
 
-```python
-from anthropic import AnthropicFoundry
-from azure.identity import DefaultAzureCredential, get_bearer_token_provider
+<Tabs>
+  <Tab title="Python">
 
-token_provider = get_bearer_token_provider(
-    DefaultAzureCredential(), "https://ai.azure.com/.default"
-)
+  ```python
+  from anthropic import AnthropicFoundry
+  from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 
-client = AnthropicFoundry(
-    azure_ad_token_provider=token_provider,
-    base_url="https://<resource-name>.services.ai.azure.com/anthropic",
-)
+  token_provider = get_bearer_token_provider(
+      DefaultAzureCredential(), "https://ai.azure.com/.default"
+  )
 
-message = client.messages.create(
-    model="claude-sonnet-4-6",  # Replace with your deployment name
-    messages=[
-        {"role": "user", "content": "What are 3 things to visit in Seattle?"}
-    ],
-    max_tokens=1048,
-)
+  client = AnthropicFoundry(
+      azure_ad_token_provider=token_provider,
+      base_url="https://<resource-name>.services.ai.azure.com/anthropic",
+  )
 
-print(message.content)
-```
+  message = client.messages.create(
+      model="claude-sonnet-4-6",  # Replace with your deployment name
+      messages=[
+          {"role": "user", "content": "What are 3 things to visit in Seattle?"}
+      ],
+      max_tokens=1048,
+  )
 
-The Anthropic SDK doesn't provide a native C# client. Use the REST API with `HttpClient` to call Claude models.
+  print(message.content)
+  ```
 
-```csharp
-using System.Net.Http.Headers;
-using System.Text;
-using System.Text.Json;
-using Azure.Identity;
+  </Tab>
+  <Tab title="C#">
 
-string endpoint = "https://<resource-name>.services.ai.azure.com/anthropic/v1/messages";
-string deploymentName = "claude-sonnet-4-6"; // Replace with your deployment name
+  The Anthropic SDK doesn't provide a native C# client. Use the REST API with `HttpClient` to call Claude models.
 
-var credential = new DefaultAzureCredential();
-var token = await credential.GetTokenAsync(
-    new Azure.Core.TokenRequestContext(["https://ai.azure.com/.default"]));
+  ```csharp
+  using System.Net.Http.Headers;
+  using System.Text;
+  using System.Text.Json;
+  using Azure.Identity;
 
-using var httpClient = new HttpClient();
-httpClient.DefaultRequestHeaders.Authorization =
-    new AuthenticationHeaderValue("Bearer", token.Token);
-httpClient.DefaultRequestHeaders.Add("anthropic-version", "2023-06-01");
+  string endpoint = "https://<resource-name>.services.ai.azure.com/anthropic/v1/messages";
+  string deploymentName = "claude-sonnet-4-6"; // Replace with your deployment name
 
-var requestBody = new
-{
-    model = deploymentName,
-    messages = new[] { new { role = "user", content = "What are 3 things to visit in Seattle?" } },
-    max_tokens = 1048
-};
+  var credential = new DefaultAzureCredential();
+  var token = await credential.GetTokenAsync(
+      new Azure.Core.TokenRequestContext(["https://ai.azure.com/.default"]));
 
-var response = await httpClient.PostAsync(
-    endpoint,
-    new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json"));
+  using var httpClient = new HttpClient();
+  httpClient.DefaultRequestHeaders.Authorization =
+      new AuthenticationHeaderValue("Bearer", token.Token);
+  httpClient.DefaultRequestHeaders.Add("anthropic-version", "2023-06-01");
 
-string result = await response.Content.ReadAsStringAsync();
-Console.WriteLine(result);
-```
+  var requestBody = new
+  {
+      model = deploymentName,
+      messages = new[] { new { role = "user", content = "What are 3 things to visit in Seattle?" } },
+      max_tokens = 1048
+  };
 
-```javascript
-import AnthropicFoundry from '@anthropic-ai/foundry-sdk';
-import { getBearerTokenProvider, DefaultAzureCredential } from "@azure/identity";
+  var response = await httpClient.PostAsync(
+      endpoint,
+      new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json"));
 
-const tokenProvider = getBearerTokenProvider(
-    new DefaultAzureCredential(),
-    'https://ai.azure.com/.default');
+  string result = await response.Content.ReadAsStringAsync();
+  Console.WriteLine(result);
+  ```
 
-const client = new AnthropicFoundry({
-    azureADTokenProvider: tokenProvider,
-    baseURL: "https://<resource-name>.services.ai.azure.com/anthropic",
-    apiVersion: "2023-06-01"
-});
+  </Tab>
+  <Tab title="JavaScript">
 
-const message = await client.messages.create({
-    model: "claude-sonnet-4-6", // Replace with your deployment name
-    messages: [{ role: "user", content: "What are 3 things to visit in Seattle?" }],
-    max_tokens: 1048,
-});
+  ```javascript
+  import AnthropicFoundry from '@anthropic-ai/foundry-sdk';
+  import { getBearerTokenProvider, DefaultAzureCredential } from "@azure/identity";
 
-console.log(message);
-```
+  const tokenProvider = getBearerTokenProvider(
+      new DefaultAzureCredential(),
+      'https://ai.azure.com/.default');
 
-The Anthropic SDK doesn't provide a native Java client. Use the REST API with `HttpClient` to call Claude models.
+  const client = new AnthropicFoundry({
+      azureADTokenProvider: tokenProvider,
+      baseURL: "https://<resource-name>.services.ai.azure.com/anthropic",
+      apiVersion: "2023-06-01"
+  });
 
-```java
-import com.azure.identity.DefaultAzureCredentialBuilder;
-import com.azure.core.credential.TokenRequestContext;
+  const message = await client.messages.create({
+      model: "claude-sonnet-4-6", // Replace with your deployment name
+      messages: [{ role: "user", content: "What are 3 things to visit in Seattle?" }],
+      max_tokens: 1048,
+  });
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
+  console.log(message);
+  ```
 
-String endpoint = "https://<resource-name>.services.ai.azure.com/anthropic/v1/messages";
-String deploymentName = "claude-sonnet-4-6"; // Replace with your deployment name
+  </Tab>
+  <Tab title="Java">
 
-var credential = new DefaultAzureCredentialBuilder().build();
-var token = credential.getToken(
-    new TokenRequestContext().addScopes("https://ai.azure.com/.default")).block();
+  The Anthropic SDK doesn't provide a native Java client. Use the REST API with `HttpClient` to call Claude models.
 
-String requestBody = """
-    {
-        "model": "%s",
-        "messages": [{"role": "user", "content": "What are 3 things to visit in Seattle?"}],
-        "max_tokens": 1048
-    }
-    """.formatted(deploymentName);
+  ```java
+  import com.azure.identity.DefaultAzureCredentialBuilder;
+  import com.azure.core.credential.TokenRequestContext;
 
-HttpClient httpClient = HttpClient.newHttpClient();
-HttpRequest request = HttpRequest.newBuilder()
-    .uri(URI.create(endpoint))
-    .header("Authorization", "Bearer " + token.getToken())
-    .header("Content-Type", "application/json")
-    .header("anthropic-version", "2023-06-01")
-    .POST(HttpRequest.BodyPublishers.ofString(requestBody))
-    .build();
+  import java.net.URI;
+  import java.net.http.HttpClient;
+  import java.net.http.HttpRequest;
+  import java.net.http.HttpResponse;
 
-HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-System.out.println(response.body());
-```
+  String endpoint = "https://<resource-name>.services.ai.azure.com/anthropic/v1/messages";
+  String deploymentName = "claude-sonnet-4-6"; // Replace with your deployment name
+
+  var credential = new DefaultAzureCredentialBuilder().build();
+  var token = credential.getToken(
+      new TokenRequestContext().addScopes("https://ai.azure.com/.default")).block();
+
+  String requestBody = """
+      {
+          "model": "%s",
+          "messages": [{"role": "user", "content": "What are 3 things to visit in Seattle?"}],
+          "max_tokens": 1048
+      }
+      """.formatted(deploymentName);
+
+  HttpClient httpClient = HttpClient.newHttpClient();
+  HttpRequest request = HttpRequest.newBuilder()
+      .uri(URI.create(endpoint))
+      .header("Authorization", "Bearer " + token.getToken())
+      .header("Content-Type", "application/json")
+      .header("anthropic-version", "2023-06-01")
+      .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+      .build();
+
+  HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+  System.out.println(response.body());
+  ```
+
+  </Tab>
+</Tabs>
 
 For more information, see [Use Anthropic Claude models in Microsoft Foundry](/foundry-models/use-foundry-models-claude).
 
@@ -697,29 +766,38 @@ For migration options, see [Migrate from Language Studio to Microsoft Foundry](h
 ::: zone-end 
 */}
 
-### Java supported Foundry Tools
+<Tabs>
+  <Tab title="Java">
 
-| Foundry Tool | Description | Quickstarts and reference documentation |
-| --- | --- | --- |
-| ![Speech icon](/images/ai-services/speech.svg) [Speech](https://learn.microsoft.com/azure/ai-services/speech-service/overview) | Add speech to text, text to speech, translation, and speaker recognition capabilities to applications. | &bullet;&NonBreakingSpace;[Speech to text quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/get-started-speech-to-text) <br /><br />&bullet;&NonBreakingSpace;[Text to speech quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/get-started-text-to-speech) <br /><br />&bullet;&NonBreakingSpace;[Speech translation quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/get-started-speech-translation) <br /><br />&bullet;&NonBreakingSpace;[Speech SDK for Java](https://learn.microsoft.com/java/api/com.microsoft.cognitiveservices.speech) <br /><br />&bullet;&NonBreakingSpace;[Speech Maven package](https://central.sonatype.com/artifact/com.microsoft.cognitiveservices.speech/client-sdk/1.34.0?smo=true)|
-| ![Language icon](/images/ai-services/language.svg) [Language](https://learn.microsoft.com/azure/ai-services/language-service/overview) | Build applications with natural language understanding capabilities. Supported features: Language Detection, PII Detection, Text Analytics for Health, Prebuilt NER, and Custom NER. **Retiring March 31, 2029**: Sentiment Analysis and Opinion Mining, Key Phrase Extraction, Summarization, Entity Linking, CQA, and CLU. | &bullet;&NonBreakingSpace;[Entity linking quickstart](https://learn.microsoft.com/azure/ai-services/language-service/entity-linking/quickstart) *(retiring March 31, 2029)* <br /><br />&bullet;&NonBreakingSpace;[Language detection quickstart](https://learn.microsoft.com/azure/ai-services/language-service/language-detection/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Key Phrase extraction quickstart](https://learn.microsoft.com/azure/ai-services/language-service/key-phrase-extraction/quickstart) *(retiring March 31, 2029)* <br /><br />&bullet;&NonBreakingSpace;[Detecting named entities (NER) quickstart](https://learn.microsoft.com/azure/ai-services/language-service/named-entity-recognition/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Detect Personally Identifiable Information (PII) quickstart](https://learn.microsoft.com/azure/ai-services/language-service/personally-identifiable-information/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Sentiment analysis and opinion mining quickstart](https://learn.microsoft.com/azure/ai-services/language-service/sentiment-opinion-mining/quickstart) *(retiring March 31, 2029)* <br /><br />&bullet;&NonBreakingSpace;[Using text, document and conversation summarization quickstart](https://learn.microsoft.com/azure/ai-services/language-service/summarization/quickstart) *(retiring March 31, 2029)* <br /><br />&bullet;&NonBreakingSpace;[Using Text Analytics for health quickstart](https://learn.microsoft.com/azure/ai-services/language-service/text-analytics-for-health/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Language SDK for Java (text analysis)](https://learn.microsoft.com/java/api/overview/azure/ai-textanalytics-readme) <br /><br />&bullet;&NonBreakingSpace;[Language Maven package](https://central.sonatype.com/artifact/com.microsoft.azure.cognitiveservices/azure-cognitiveservices-language)<br /><br />&bullet;&NonBreakingSpace;[Migrate from Language Studio to Microsoft Foundry](https://learn.microsoft.com/azure/ai-services/language-service/migration-studio-to-foundry) for guidance on migrating workloads with retiring features |
-| ![Translator icon](/images/ai-services/translator.svg) [Translator](https://learn.microsoft.com/azure/ai-services/translator/overview) |   Use AI-powered translation technology to translate more than 100 in-use, at-risk, and endangered languages and dialects. | &bullet;&NonBreakingSpace;[Translator SDK for Java (text)](https://learn.microsoft.com/java/api/overview/azure/ai-translation-text-readme) <br /><br />&bullet;&NonBreakingSpace;[Translator Maven package (text)](https://central.sonatype.com/artifact/com.azure/azure-ai-translation-text)  |
-| ![Azure AI Search icon](/images/ai-services/search.svg) [Azure AI Search](https://learn.microsoft.com/azure/search/search-what-is-azure-search) | Bring AI-powered cloud search to your mobile and web apps. |&bullet;&NonBreakingSpace;[Use agentic retrieval quickstart](https://learn.microsoft.com/azure/search/search-get-started-agentic-retrieval) <br /><br />&bullet;&NonBreakingSpace;[Vector search quickstart](https://learn.microsoft.com/azure/search/search-get-started-vector) <br /><br />&bullet;&NonBreakingSpace;[Classic generative search (RAG) using grounding data quickstart](https://learn.microsoft.com/azure/search/search-get-started-rag) <br /><br />&bullet;&NonBreakingSpace;[Full-text search quickstart](https://learn.microsoft.com/azure/search/search-get-started-text) <br /><br />&bullet;&NonBreakingSpace;[Semantic ranking quickstart](https://learn.microsoft.com/azure/search/search-get-started-semantic) <br /><br />&bullet;&NonBreakingSpace;[Chat with Azure OpenAI models using your own data quickstart](https://learn.microsoft.com/azure/ai-foundry/openai/use-your-data-quickstart) <br /><br />&bullet;&NonBreakingSpace;[Azure AI Search SDK for Java](https://learn.microsoft.com/java/api/overview/azure/search-documents-readme) <br /><br />&bullet;&NonBreakingSpace;[Azure AI Search Maven package](https://central.sonatype.com/artifact/com.azure/azure-search-documents/11.7.0-beta.1?smo=true) |
-| ![Content Safety icon](/images/ai-services/content-safety.svg) [Content Safety](https://learn.microsoft.com/azure/ai-services/content-safety/overview) | Detect harmful content in applications and services.| &bullet;&NonBreakingSpace;[Analyze text content quickstart](https://learn.microsoft.com/azure/ai-services/content-safety/quickstart-text) <br /><br />&bullet;&NonBreakingSpace;[Use a text blocklist quickstart](https://learn.microsoft.com/azure/ai-services/content-safety/quickstart-blocklist) <br /><br />&bullet;&NonBreakingSpace;[Analyze image content quickstart](https://learn.microsoft.com/azure/ai-services/content-safety/quickstart-image) <br /><br />&bullet;&NonBreakingSpace;[Content Safety SDK for Java](https://learn.microsoft.com/java/api/overview/azure/ai-contentsafety-readme) <br /><br />&bullet;&NonBreakingSpace;[Content Safety Maven package](https://central.sonatype.com/artifact/com.azure/azure-ai-contentsafety) |
-| ![Document Intelligence icon](/images/ai-services/document-intelligence.svg) [Document Intelligence](https://learn.microsoft.com/azure/ai-services/document-intelligence/overview) | Turn documents into intelligent data-driven solutions. | &bullet;&NonBreakingSpace;[Document Intelligence quickstart](https://learn.microsoft.com/azure/ai-services/document-intelligence/quickstarts/get-started-sdks-rest-api) <br /><br />&bullet;&NonBreakingSpace;[Document Intelligence SDK for Java](https://learn.microsoft.com/java/api/overview/azure/ai-documentintelligence-readme) <br /><br />&bullet;&NonBreakingSpace;[Document Intelligence Maven package](https://mvnrepository.com/artifact/com.azure/azure-ai-documentintelligence/1.0.0-beta.1) |
-| ![Vision icon](/images/ai-services/vision.svg) [Vision](https://learn.microsoft.com/azure/ai-services/computer-vision/overview) | Analyze content in digital images and rich media assets.| &bullet;&NonBreakingSpace;[Image Analysis quickstart](https://learn.microsoft.com/azure/ai-services/computer-vision/quickstarts-sdk/image-analysis-client-library-40) <br /><br />&bullet;&NonBreakingSpace;[Use the Face service quickstart](https://learn.microsoft.com/azure/ai-services/computer-vision/quickstarts-sdk/identity-client-library) <br /><br />&bullet;&NonBreakingSpace;[Vision SDK for Java](https://learn.microsoft.com/java/api/overview/azure/ai-vision-imageanalysis-readme) <br /><br />&bullet;&NonBreakingSpace;[Vision Maven package](https://central.sonatype.com/artifact/com.azure/azure-ai-vision-imageanalysis) |
+  ### Java supported Foundry Tools
 
-### JavaScript supported Foundry Tools
+  | Foundry Tool | Description | Quickstarts and reference documentation |
+  | --- | --- | --- |
+  | ![Speech icon](/images/ai-services/speech.svg) [Speech](https://learn.microsoft.com/azure/ai-services/speech-service/overview) | Add speech to text, text to speech, translation, and speaker recognition capabilities to applications. | &bullet;&NonBreakingSpace;[Speech to text quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/get-started-speech-to-text) <br /><br />&bullet;&NonBreakingSpace;[Text to speech quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/get-started-text-to-speech) <br /><br />&bullet;&NonBreakingSpace;[Speech translation quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/get-started-speech-translation) <br /><br />&bullet;&NonBreakingSpace;[Speech SDK for Java](https://learn.microsoft.com/java/api/com.microsoft.cognitiveservices.speech) <br /><br />&bullet;&NonBreakingSpace;[Speech Maven package](https://central.sonatype.com/artifact/com.microsoft.cognitiveservices.speech/client-sdk/1.34.0?smo=true)|
+  | ![Language icon](/images/ai-services/language.svg) [Language](https://learn.microsoft.com/azure/ai-services/language-service/overview) | Build applications with natural language understanding capabilities. Supported features: Language Detection, PII Detection, Text Analytics for Health, Prebuilt NER, and Custom NER. **Retiring March 31, 2029**: Sentiment Analysis and Opinion Mining, Key Phrase Extraction, Summarization, Entity Linking, CQA, and CLU. | &bullet;&NonBreakingSpace;[Entity linking quickstart](https://learn.microsoft.com/azure/ai-services/language-service/entity-linking/quickstart) *(retiring March 31, 2029)* <br /><br />&bullet;&NonBreakingSpace;[Language detection quickstart](https://learn.microsoft.com/azure/ai-services/language-service/language-detection/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Key Phrase extraction quickstart](https://learn.microsoft.com/azure/ai-services/language-service/key-phrase-extraction/quickstart) *(retiring March 31, 2029)* <br /><br />&bullet;&NonBreakingSpace;[Detecting named entities (NER) quickstart](https://learn.microsoft.com/azure/ai-services/language-service/named-entity-recognition/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Detect Personally Identifiable Information (PII) quickstart](https://learn.microsoft.com/azure/ai-services/language-service/personally-identifiable-information/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Sentiment analysis and opinion mining quickstart](https://learn.microsoft.com/azure/ai-services/language-service/sentiment-opinion-mining/quickstart) *(retiring March 31, 2029)* <br /><br />&bullet;&NonBreakingSpace;[Using text, document and conversation summarization quickstart](https://learn.microsoft.com/azure/ai-services/language-service/summarization/quickstart) *(retiring March 31, 2029)* <br /><br />&bullet;&NonBreakingSpace;[Using Text Analytics for health quickstart](https://learn.microsoft.com/azure/ai-services/language-service/text-analytics-for-health/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Language SDK for Java (text analysis)](https://learn.microsoft.com/java/api/overview/azure/ai-textanalytics-readme) <br /><br />&bullet;&NonBreakingSpace;[Language Maven package](https://central.sonatype.com/artifact/com.microsoft.azure.cognitiveservices/azure-cognitiveservices-language)<br /><br />&bullet;&NonBreakingSpace;[Migrate from Language Studio to Microsoft Foundry](https://learn.microsoft.com/azure/ai-services/language-service/migration-studio-to-foundry) for guidance on migrating workloads with retiring features |
+  | ![Translator icon](/images/ai-services/translator.svg) [Translator](https://learn.microsoft.com/azure/ai-services/translator/overview) |   Use AI-powered translation technology to translate more than 100 in-use, at-risk, and endangered languages and dialects. | &bullet;&NonBreakingSpace;[Translator SDK for Java (text)](https://learn.microsoft.com/java/api/overview/azure/ai-translation-text-readme) <br /><br />&bullet;&NonBreakingSpace;[Translator Maven package (text)](https://central.sonatype.com/artifact/com.azure/azure-ai-translation-text)  |
+  | ![Azure AI Search icon](/images/ai-services/search.svg) [Azure AI Search](https://learn.microsoft.com/azure/search/search-what-is-azure-search) | Bring AI-powered cloud search to your mobile and web apps. |&bullet;&NonBreakingSpace;[Use agentic retrieval quickstart](https://learn.microsoft.com/azure/search/search-get-started-agentic-retrieval) <br /><br />&bullet;&NonBreakingSpace;[Vector search quickstart](https://learn.microsoft.com/azure/search/search-get-started-vector) <br /><br />&bullet;&NonBreakingSpace;[Classic generative search (RAG) using grounding data quickstart](https://learn.microsoft.com/azure/search/search-get-started-rag) <br /><br />&bullet;&NonBreakingSpace;[Full-text search quickstart](https://learn.microsoft.com/azure/search/search-get-started-text) <br /><br />&bullet;&NonBreakingSpace;[Semantic ranking quickstart](https://learn.microsoft.com/azure/search/search-get-started-semantic) <br /><br />&bullet;&NonBreakingSpace;[Chat with Azure OpenAI models using your own data quickstart](https://learn.microsoft.com/azure/ai-foundry/openai/use-your-data-quickstart) <br /><br />&bullet;&NonBreakingSpace;[Azure AI Search SDK for Java](https://learn.microsoft.com/java/api/overview/azure/search-documents-readme) <br /><br />&bullet;&NonBreakingSpace;[Azure AI Search Maven package](https://central.sonatype.com/artifact/com.azure/azure-search-documents/11.7.0-beta.1?smo=true) |
+  | ![Content Safety icon](/images/ai-services/content-safety.svg) [Content Safety](https://learn.microsoft.com/azure/ai-services/content-safety/overview) | Detect harmful content in applications and services.| &bullet;&NonBreakingSpace;[Analyze text content quickstart](https://learn.microsoft.com/azure/ai-services/content-safety/quickstart-text) <br /><br />&bullet;&NonBreakingSpace;[Use a text blocklist quickstart](https://learn.microsoft.com/azure/ai-services/content-safety/quickstart-blocklist) <br /><br />&bullet;&NonBreakingSpace;[Analyze image content quickstart](https://learn.microsoft.com/azure/ai-services/content-safety/quickstart-image) <br /><br />&bullet;&NonBreakingSpace;[Content Safety SDK for Java](https://learn.microsoft.com/java/api/overview/azure/ai-contentsafety-readme) <br /><br />&bullet;&NonBreakingSpace;[Content Safety Maven package](https://central.sonatype.com/artifact/com.azure/azure-ai-contentsafety) |
+  | ![Document Intelligence icon](/images/ai-services/document-intelligence.svg) [Document Intelligence](https://learn.microsoft.com/azure/ai-services/document-intelligence/overview) | Turn documents into intelligent data-driven solutions. | &bullet;&NonBreakingSpace;[Document Intelligence quickstart](https://learn.microsoft.com/azure/ai-services/document-intelligence/quickstarts/get-started-sdks-rest-api) <br /><br />&bullet;&NonBreakingSpace;[Document Intelligence SDK for Java](https://learn.microsoft.com/java/api/overview/azure/ai-documentintelligence-readme) <br /><br />&bullet;&NonBreakingSpace;[Document Intelligence Maven package](https://mvnrepository.com/artifact/com.azure/azure-ai-documentintelligence/1.0.0-beta.1) |
+  | ![Vision icon](/images/ai-services/vision.svg) [Vision](https://learn.microsoft.com/azure/ai-services/computer-vision/overview) | Analyze content in digital images and rich media assets.| &bullet;&NonBreakingSpace;[Image Analysis quickstart](https://learn.microsoft.com/azure/ai-services/computer-vision/quickstarts-sdk/image-analysis-client-library-40) <br /><br />&bullet;&NonBreakingSpace;[Use the Face service quickstart](https://learn.microsoft.com/azure/ai-services/computer-vision/quickstarts-sdk/identity-client-library) <br /><br />&bullet;&NonBreakingSpace;[Vision SDK for Java](https://learn.microsoft.com/java/api/overview/azure/ai-vision-imageanalysis-readme) <br /><br />&bullet;&NonBreakingSpace;[Vision Maven package](https://central.sonatype.com/artifact/com.azure/azure-ai-vision-imageanalysis) |
 
-| Foundry Tool | Description | Quickstarts and reference documentation  |
-| --- | --- | --- |
-| ![Speech icon](/images/ai-services/speech.svg) [Speech](https://learn.microsoft.com/azure/ai-services/speech-service/overview) | Add speech to text, text to speech, translation, and speaker recognition capabilities to applications. | &bullet;&NonBreakingSpace;[Speech to text quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/get-started-speech-to-text) <br /><br />&bullet;&NonBreakingSpace;[Text to speech quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/get-started-text-to-speech) <br /><br />&bullet;&NonBreakingSpace;[Speech translation quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/get-started-speech-translation) <br /><br />&bullet;&NonBreakingSpace;[Speech SDK for JavaScript](https://learn.microsoft.com/javascript/api/microsoft-cognitiveservices-speech-sdk/) <br /><br />&bullet;&NonBreakingSpace;[Speech npm package](https://www.npmjs.com/package/microsoft-cognitiveservices-speech-sdk)|
-| ![Language icon](/images/ai-services/language.svg) [Language](https://learn.microsoft.com/azure/ai-services/language-service/overview) | Build applications with natural language understanding capabilities. Supported features: Language Detection, PII Detection, Text Analytics for Health, Prebuilt NER, and Custom NER. **Retiring March 31, 2029**: Sentiment Analysis and Opinion Mining, Key Phrase Extraction, Summarization, Entity Linking, CQA, and CLU. | &bullet;&NonBreakingSpace;[Entity linking quickstart](https://learn.microsoft.com/azure/ai-services/language-service/entity-linking/quickstart) *(retiring March 31, 2029)* <br /><br />&bullet;&NonBreakingSpace;[Language detection quickstart](https://learn.microsoft.com/azure/ai-services/language-service/language-detection/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Key Phrase extraction quickstart](https://learn.microsoft.com/azure/ai-services/language-service/key-phrase-extraction/quickstart) *(retiring March 31, 2029)* <br /><br />&bullet;&NonBreakingSpace;[Detecting named entities (NER) quickstart](https://learn.microsoft.com/azure/ai-services/language-service/named-entity-recognition/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Detect Personally Identifiable Information (PII) quickstart](https://learn.microsoft.com/azure/ai-services/language-service/personally-identifiable-information/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Sentiment analysis and opinion mining quickstart](https://learn.microsoft.com/azure/ai-services/language-service/sentiment-opinion-mining/quickstart) *(retiring March 31, 2029)* <br /><br />&bullet;&NonBreakingSpace;[Using text, document and conversation summarization quickstart](https://learn.microsoft.com/azure/ai-services/language-service/summarization/quickstart) *(retiring March 31, 2029)* <br /><br />&bullet;&NonBreakingSpace;[Using Text Analytics for health quickstart](https://learn.microsoft.com/azure/ai-services/language-service/text-analytics-for-health/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Language SDK for JavaScript (text analysis)](https://learn.microsoft.com/javascript/api/overview/azure/ai-language-text-readme) <br /><br />&bullet;&NonBreakingSpace;[Language npm package](https://www.npmjs.com/package/@azure/ai-language-text)<br /><br />&bullet;&NonBreakingSpace;[Migrate from Language Studio to Microsoft Foundry](https://learn.microsoft.com/azure/ai-services/language-service/migration-studio-to-foundry) for guidance on migrating workloads with retiring features |
-| ![Translator icon](/images/ai-services/translator.svg) [Translator](https://learn.microsoft.com/azure/ai-services/translator/overview) |   Use AI-powered translation technology to translate more than 100 in-use, at-risk, and endangered languages and dialects. | &bullet;&NonBreakingSpace;[Translator SDK for JavaScript (text)](https://learn.microsoft.com/javascript/api/overview/azure/text-translation) <br /><br />&bullet;&NonBreakingSpace;[Translator npm package (text)](https://www.npmjs.com/package/@azure-rest/ai-translation-text/v/1.0.0-beta.1) |
-| ![Azure AI Search icon](/images/ai-services/search.svg) [Azure AI Search](https://learn.microsoft.com/azure/search/search-what-is-azure-search) | Bring AI-powered cloud search to your mobile and web apps. |&bullet;&NonBreakingSpace;[Use agentic retrieval quickstart](https://learn.microsoft.com/azure/search/search-get-started-agentic-retrieval) <br /><br />&bullet;&NonBreakingSpace;[Vector search quickstart](https://learn.microsoft.com/azure/search/search-get-started-vector) <br /><br />&bullet;&NonBreakingSpace;[Classic generative search (RAG) using grounding data quickstart](https://learn.microsoft.com/azure/search/search-get-started-rag) <br /><br />&bullet;&NonBreakingSpace;[Full-text search quickstart](https://learn.microsoft.com/azure/search/search-get-started-text) <br /><br />&bullet;&NonBreakingSpace;[Semantic ranking quickstart](https://learn.microsoft.com/azure/search/search-get-started-semantic) <br /><br />&bullet;&NonBreakingSpace;[Chat with Azure OpenAI models using your own data quickstart](https://learn.microsoft.com/azure/ai-foundry/openai/use-your-data-quickstart) <br /><br />&bullet;&NonBreakingSpace;[Azure AI Search SDK for JavaScript](https://learn.microsoft.com/javascript/api/overview/azure/search-documents-readme) <br /><br />&bullet;&NonBreakingSpace;[Azure AI Search npm package](https://www.npmjs.com/package/@azure/search-documents/v/12.0.0?activeTab=readme)  |
-| ![Content Safety icon](/images/ai-services/content-safety.svg) [Content Safety](https://learn.microsoft.com/azure/ai-services/content-safety/overview) | Detect harmful content in applications and services.| &bullet;&NonBreakingSpace;[Analyze text content quickstart](https://learn.microsoft.com/azure/ai-services/content-safety/quickstart-text) <br /><br />&bullet;&NonBreakingSpace;[Use a text blocklist quickstart](https://learn.microsoft.com/azure/ai-services/content-safety/quickstart-blocklist) <br /><br />&bullet;&NonBreakingSpace;[Analyze image content quickstart](https://learn.microsoft.com/azure/ai-services/content-safety/quickstart-image) <br /><br />&bullet;&NonBreakingSpace;[Content Safety npm package](https://www.npmjs.com/package/@azure-rest/ai-content-safety/v/1.0.0-beta.1) |
-| ![Document Intelligence icon](/images/ai-services/document-intelligence.svg) [Document Intelligence](https://learn.microsoft.com/azure/ai-services/document-intelligence/overview) | Turn documents into intelligent data-driven solutions. | &bullet;&NonBreakingSpace;[Document Intelligence quickstart](https://learn.microsoft.com/azure/ai-services/document-intelligence/quickstarts/get-started-sdks-rest-api) <br /><br />&bullet;&NonBreakingSpace;[Document Intelligence SDK for JavaScript](https://learn.microsoft.com/javascript/api/overview/azure/ai-document-intelligence-rest-readme) <br /><br />&bullet;&NonBreakingSpace;[Document Intelligence npm package](https://www.npmjs.com/package/@azure-rest/ai-document-intelligence/v/1.0.0-beta.1)  |
-| ![Vision icon](/images/ai-services/vision.svg) [Vision](https://learn.microsoft.com/azure/ai-services/computer-vision/overview) | Analyze content in digital images and rich media assets.| &bullet;&NonBreakingSpace;[Azure Vision in Foundry Tools v3.2 GA Read quickstart](https://learn.microsoft.com/azure/ai-services/computer-vision/quickstarts-sdk/client-library) <br /><br />&bullet;&NonBreakingSpace;[Image Analysis quickstart](https://learn.microsoft.com/azure/ai-services/computer-vision/quickstarts-sdk/image-analysis-client-library-40) <br /><br />&bullet;&NonBreakingSpace;[Use the Face service quickstart](https://learn.microsoft.com/azure/ai-services/computer-vision/quickstarts-sdk/identity-client-library) <br /><br />&bullet;&NonBreakingSpace;[Vision SDK for JavaScript](https://learn.microsoft.com/javascript/api/overview/azure/ai-vision-image-analysis-rest-readme) <br /><br />&bullet;&NonBreakingSpace;[Vision npm package](https://www.npmjs.com/package/@azure-rest/ai-vision-image-analysis/v/1.0.0-beta.2) |
+  </Tab>
+  <Tab title="JavaScript">
+
+  ### JavaScript supported Foundry Tools
+
+  | Foundry Tool | Description | Quickstarts and reference documentation  |
+  | --- | --- | --- |
+  | ![Speech icon](/images/ai-services/speech.svg) [Speech](https://learn.microsoft.com/azure/ai-services/speech-service/overview) | Add speech to text, text to speech, translation, and speaker recognition capabilities to applications. | &bullet;&NonBreakingSpace;[Speech to text quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/get-started-speech-to-text) <br /><br />&bullet;&NonBreakingSpace;[Text to speech quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/get-started-text-to-speech) <br /><br />&bullet;&NonBreakingSpace;[Speech translation quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/get-started-speech-translation) <br /><br />&bullet;&NonBreakingSpace;[Speech SDK for JavaScript](https://learn.microsoft.com/javascript/api/microsoft-cognitiveservices-speech-sdk/) <br /><br />&bullet;&NonBreakingSpace;[Speech npm package](https://www.npmjs.com/package/microsoft-cognitiveservices-speech-sdk)|
+  | ![Language icon](/images/ai-services/language.svg) [Language](https://learn.microsoft.com/azure/ai-services/language-service/overview) | Build applications with natural language understanding capabilities. Supported features: Language Detection, PII Detection, Text Analytics for Health, Prebuilt NER, and Custom NER. **Retiring March 31, 2029**: Sentiment Analysis and Opinion Mining, Key Phrase Extraction, Summarization, Entity Linking, CQA, and CLU. | &bullet;&NonBreakingSpace;[Entity linking quickstart](https://learn.microsoft.com/azure/ai-services/language-service/entity-linking/quickstart) *(retiring March 31, 2029)* <br /><br />&bullet;&NonBreakingSpace;[Language detection quickstart](https://learn.microsoft.com/azure/ai-services/language-service/language-detection/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Key Phrase extraction quickstart](https://learn.microsoft.com/azure/ai-services/language-service/key-phrase-extraction/quickstart) *(retiring March 31, 2029)* <br /><br />&bullet;&NonBreakingSpace;[Detecting named entities (NER) quickstart](https://learn.microsoft.com/azure/ai-services/language-service/named-entity-recognition/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Detect Personally Identifiable Information (PII) quickstart](https://learn.microsoft.com/azure/ai-services/language-service/personally-identifiable-information/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Sentiment analysis and opinion mining quickstart](https://learn.microsoft.com/azure/ai-services/language-service/sentiment-opinion-mining/quickstart) *(retiring March 31, 2029)* <br /><br />&bullet;&NonBreakingSpace;[Using text, document and conversation summarization quickstart](https://learn.microsoft.com/azure/ai-services/language-service/summarization/quickstart) *(retiring March 31, 2029)* <br /><br />&bullet;&NonBreakingSpace;[Using Text Analytics for health quickstart](https://learn.microsoft.com/azure/ai-services/language-service/text-analytics-for-health/quickstart) <br /><br />&bullet;&NonBreakingSpace;[Language SDK for JavaScript (text analysis)](https://learn.microsoft.com/javascript/api/overview/azure/ai-language-text-readme) <br /><br />&bullet;&NonBreakingSpace;[Language npm package](https://www.npmjs.com/package/@azure/ai-language-text)<br /><br />&bullet;&NonBreakingSpace;[Migrate from Language Studio to Microsoft Foundry](https://learn.microsoft.com/azure/ai-services/language-service/migration-studio-to-foundry) for guidance on migrating workloads with retiring features |
+  | ![Translator icon](/images/ai-services/translator.svg) [Translator](https://learn.microsoft.com/azure/ai-services/translator/overview) |   Use AI-powered translation technology to translate more than 100 in-use, at-risk, and endangered languages and dialects. | &bullet;&NonBreakingSpace;[Translator SDK for JavaScript (text)](https://learn.microsoft.com/javascript/api/overview/azure/text-translation) <br /><br />&bullet;&NonBreakingSpace;[Translator npm package (text)](https://www.npmjs.com/package/@azure-rest/ai-translation-text/v/1.0.0-beta.1) |
+  | ![Azure AI Search icon](/images/ai-services/search.svg) [Azure AI Search](https://learn.microsoft.com/azure/search/search-what-is-azure-search) | Bring AI-powered cloud search to your mobile and web apps. |&bullet;&NonBreakingSpace;[Use agentic retrieval quickstart](https://learn.microsoft.com/azure/search/search-get-started-agentic-retrieval) <br /><br />&bullet;&NonBreakingSpace;[Vector search quickstart](https://learn.microsoft.com/azure/search/search-get-started-vector) <br /><br />&bullet;&NonBreakingSpace;[Classic generative search (RAG) using grounding data quickstart](https://learn.microsoft.com/azure/search/search-get-started-rag) <br /><br />&bullet;&NonBreakingSpace;[Full-text search quickstart](https://learn.microsoft.com/azure/search/search-get-started-text) <br /><br />&bullet;&NonBreakingSpace;[Semantic ranking quickstart](https://learn.microsoft.com/azure/search/search-get-started-semantic) <br /><br />&bullet;&NonBreakingSpace;[Chat with Azure OpenAI models using your own data quickstart](https://learn.microsoft.com/azure/ai-foundry/openai/use-your-data-quickstart) <br /><br />&bullet;&NonBreakingSpace;[Azure AI Search SDK for JavaScript](https://learn.microsoft.com/javascript/api/overview/azure/search-documents-readme) <br /><br />&bullet;&NonBreakingSpace;[Azure AI Search npm package](https://www.npmjs.com/package/@azure/search-documents/v/12.0.0?activeTab=readme)  |
+  | ![Content Safety icon](/images/ai-services/content-safety.svg) [Content Safety](https://learn.microsoft.com/azure/ai-services/content-safety/overview) | Detect harmful content in applications and services.| &bullet;&NonBreakingSpace;[Analyze text content quickstart](https://learn.microsoft.com/azure/ai-services/content-safety/quickstart-text) <br /><br />&bullet;&NonBreakingSpace;[Use a text blocklist quickstart](https://learn.microsoft.com/azure/ai-services/content-safety/quickstart-blocklist) <br /><br />&bullet;&NonBreakingSpace;[Analyze image content quickstart](https://learn.microsoft.com/azure/ai-services/content-safety/quickstart-image) <br /><br />&bullet;&NonBreakingSpace;[Content Safety npm package](https://www.npmjs.com/package/@azure-rest/ai-content-safety/v/1.0.0-beta.1) |
+  | ![Document Intelligence icon](/images/ai-services/document-intelligence.svg) [Document Intelligence](https://learn.microsoft.com/azure/ai-services/document-intelligence/overview) | Turn documents into intelligent data-driven solutions. | &bullet;&NonBreakingSpace;[Document Intelligence quickstart](https://learn.microsoft.com/azure/ai-services/document-intelligence/quickstarts/get-started-sdks-rest-api) <br /><br />&bullet;&NonBreakingSpace;[Document Intelligence SDK for JavaScript](https://learn.microsoft.com/javascript/api/overview/azure/ai-document-intelligence-rest-readme) <br /><br />&bullet;&NonBreakingSpace;[Document Intelligence npm package](https://www.npmjs.com/package/@azure-rest/ai-document-intelligence/v/1.0.0-beta.1)  |
+  | ![Vision icon](/images/ai-services/vision.svg) [Vision](https://learn.microsoft.com/azure/ai-services/computer-vision/overview) | Analyze content in digital images and rich media assets.| &bullet;&NonBreakingSpace;[Azure Vision in Foundry Tools v3.2 GA Read quickstart](https://learn.microsoft.com/azure/ai-services/computer-vision/quickstarts-sdk/client-library) <br /><br />&bullet;&NonBreakingSpace;[Image Analysis quickstart](https://learn.microsoft.com/azure/ai-services/computer-vision/quickstarts-sdk/image-analysis-client-library-40) <br /><br />&bullet;&NonBreakingSpace;[Use the Face service quickstart](https://learn.microsoft.com/azure/ai-services/computer-vision/quickstarts-sdk/identity-client-library) <br /><br />&bullet;&NonBreakingSpace;[Vision SDK for JavaScript](https://learn.microsoft.com/javascript/api/overview/azure/ai-vision-image-analysis-rest-readme) <br /><br />&bullet;&NonBreakingSpace;[Vision npm package](https://www.npmjs.com/package/@azure-rest/ai-vision-image-analysis/v/1.0.0-beta.2) |
+
+  </Tab>
+</Tabs>
 
 {/* ::: zone pivot="programming-language-objectivec"
 ### Objective-C supported services

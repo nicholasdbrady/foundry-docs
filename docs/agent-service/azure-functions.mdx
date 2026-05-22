@@ -41,720 +41,738 @@ The basic agent setup isn't supported.
 
 The following code samples demonstrate how to define an Azure Function tool that gets weather information for a specified location by using queue-based integration.
 
-### Install the package
-
-Install the Azure AI Projects client library:
-
-```bash
-pip install "azure-ai-projects>=2.0.0"
-```
-
-### Define the tool and create an agent
-
-```python
-from azure.identity import DefaultAzureCredential
-from azure.ai.projects import AIProjectClient
-from azure.ai.projects.models import (
-    AzureFunctionBinding,
-    AzureFunctionDefinition,
-    AzureFunctionStorageQueue,
-    AzureFunctionDefinitionFunction,
-    AzureFunctionTool,
-    PromptAgentDefinition,
-)
-
-# Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-PROJECT_ENDPOINT = "your_project_endpoint"
-STORAGE_QUEUE_ENDPOINT = "your_storage_queue_service_endpoint"
-
-# Create clients to call Foundry API
-project = AIProjectClient(
-    endpoint=PROJECT_ENDPOINT,
-    credential=DefaultAzureCredential(),
-)
-openai = project.get_openai_client()
-
-# Define the Azure Function tool
-tool = AzureFunctionTool(
-    azure_function=AzureFunctionDefinition(
-        input_binding=AzureFunctionBinding(
-            storage_queue=AzureFunctionStorageQueue(
-                queue_name="get-weather-input-queue",
-                queue_service_endpoint=STORAGE_QUEUE_ENDPOINT,
-            )
-        ),
-        output_binding=AzureFunctionBinding(
-            storage_queue=AzureFunctionStorageQueue(
-                queue_name="get-weather-output-queue",
-                queue_service_endpoint=STORAGE_QUEUE_ENDPOINT,
-            )
-        ),
-        function=AzureFunctionDefinitionFunction(
-            name="GetWeather",
-            description="Get the weather in a location.",
-            parameters={
-                "type": "object",
-                "properties": {
-                    "location": {
-                        "type": "string",
-                        "description": "The location to look up.",
-                    }
-                },
-            },
-        ),
-    )
-)
-
-# Create the agent with the Azure Function tool
-agent = project.agents.create_version(
-    agent_name="azure-function-agent-get-weather",
-    definition=PromptAgentDefinition(
-        model="gpt-5.1",
-        instructions="You are a helpful support agent. Answer the user's questions to the best of your ability.",
-        tools=[tool],
-    ),
-)
-print(f"Agent created (id: {agent.id}, name: {agent.name}, version: {agent.version})")
-```
-
-### Create a response
-
-```python
-response = openai.responses.create(
-    input="What is the weather in Seattle, WA?",
-    extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
-)
-
-print(f"Response: {response.output_text}")
-```
-
-### Clean up
-
-```python
-project.agents.delete_version(agent_name=agent.name, agent_version=agent.version)
-print("Agent deleted")
-```
-
-### Write the Azure Function
-
-The previous code samples show how to define the Azure Function tool on the agent side. You also need to write the function that processes the queue messages. The function receives input from the input queue, runs your custom logic, and returns a result through the output queue.
-
-The following example shows a queue-triggered function that gets weather information for a location. The function parses the incoming message, extracts the function arguments, and returns a response with a `CorrelationId` that the agent uses to match the result to the original request.
-
-```python
-import azure.functions as func
-import logging
-import json
-
-app = func.FunctionApp()
-
-# Queue trigger receives agent tool calls from the input queue
-# and returns results through the output queue binding
-@app.queue_trigger(
-    arg_name="msg",
-    queue_name="get-weather-input-queue",
-    connection="STORAGE_CONNECTION",
-)
-@app.queue_output(
-    arg_name="outputQueue",
-    queue_name="get-weather-output-queue",
-    connection="STORAGE_CONNECTION",
-)
-def queue_trigger(
-    msg: func.QueueMessage, outputQueue: func.Out[str]
-):
-    try:
-        # Parse the incoming message from the agent
-        messagepayload = json.loads(
-            msg.get_body().decode("utf-8")
-        )
-        logging.info("Received: %s", json.dumps(messagepayload))
-
-        # Extract the function arguments
-        function_args = messagepayload.get("function_args", {})
-        location = function_args.get("location")
-
-        # Run your custom logic (replace with real API calls)
-        weather_result = (
-            f"Weather is {len(location)} degrees "
-            f"and sunny in {location}"
-        )
-
-        # Return result with the CorrelationId from the request
-        response_message = {
-            "Value": weather_result,
-            "CorrelationId": messagepayload["CorrelationId"],
-        }
-        outputQueue.set(json.dumps(response_message))
-
-    except Exception as e:
-        logging.error("Error processing message: %s", e)
-```
-
-<Info>
-
-The response message must include the `CorrelationId` from the original message. The agent uses this value to match the function output to the correct tool call.
-
-</Info>
-
-For the full sample, see [Azure Functions weather sample](https://github.com/Azure/azure-sdk-for-python/blob/main/sdk/ai/azure-ai-projects/samples/agents/tools/get_weather_func_app.py) in the Azure SDK for Python repository.
-
-### Install the packages
-
-Install the Azure AI Projects client libraries:
-
-```dotnetcli
-dotnet add package Azure.AI.Projects
-dotnet add package Azure.AI.Extensions.OpenAI
-dotnet add package Azure.Identity
-```
-
-### Define the tool and create an agent
-
-```csharp
-using System;
-using System.Text.Json;
-using Azure.AI.Projects;
-using Azure.AI.Extensions.OpenAI;
-using Azure.Identity;
-
-// Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-var projectEndpoint = "your_project_endpoint";
-var storageQueueUri = "your_storage_queue_service_endpoint";
-
-AIProjectClient projectClient = new(
-    endpoint: new Uri(projectEndpoint),
-    tokenProvider: new DefaultAzureCredential());
-
-AzureFunctionDefinitionFunction functionDefinition = new(
-    name: "GetWeather",
-    parameters: BinaryData.FromObjectAsJson(
-        new
-        {
-            Type = "object",
-            Properties = new
-            {
-                location = new
-                {
-                    Type = "string",
-                    Description = "The location to look up.",
-                }
-            }
-        },
-        new JsonSerializerOptions() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
-    )
-)
-{
-    Description = "Get the weather in a location.",
-};
-
-AzureFunctionTool azureFnTool = new(
-    new AzureFunctionDefinition(
-        function: functionDefinition,
-        inputBinding: new AzureFunctionBinding(
-            new AzureFunctionStorageQueue(
-                queueServiceEndpoint: storageQueueUri,
-                queueName: "input")),
-        outputBinding: new AzureFunctionBinding(
-            new AzureFunctionStorageQueue(
-                queueServiceEndpoint: storageQueueUri,
-                queueName: "output"))
-    )
-);
-
-DeclarativeAgentDefinition agentDefinition = new(model: "gpt-5-mini")
-{
-    Instructions = "You are a helpful support agent. Answer the user's questions "
-        + "to the best of your ability.",
-    Tools = { azureFnTool },
-};
-
-AgentVersion agentVersion = await projectClient.AgentAdministrationClient.CreateAgentVersionAsync(
-    agentName: "azure-function-agent-get-weather",
-    options: new(agentDefinition));
-Console.WriteLine($"Agent created (id: {agentVersion.Id}, name: {agentVersion.Name}, "
-    + $"version: {agentVersion.Version})");
-```
-
-### Create a response
-
-```csharp
-ProjectResponsesClient responseClient =
-    projectClient.ProjectOpenAIClient.GetProjectResponsesClientForAgent(agentVersion.Name);
-
-CreateResponseOptions responseOptions = new()
-{
-    InputItems =
-    {
-        ResponseItem.CreateUserMessageItem("What is the weather in Seattle, WA?")
-    },
-};
-
-ResponseResult response = await responseClient.CreateResponseAsync(responseOptions);
-Console.WriteLine(response.GetOutputText());
-```
-
-### Clean up
-
-```csharp
-await projectClient.AgentAdministrationClient.DeleteAgentVersionAsync(
-    agentName: agentVersion.Name,
-    agentVersion: agentVersion.Version);
-Console.WriteLine("Agent deleted");
-```
-
-### Write the Azure Function
-
-The previous code samples show how to define the Azure Function tool on the agent side. You also need to write the function that processes the queue messages. The function receives input from the input queue, runs your custom logic, and returns a result through the output queue.
-
-The following example shows a queue-triggered function that gets weather information for a location. This example uses the [isolated worker model](https://learn.microsoft.com/azure/azure-functions/dotnet-isolated-process-guide). The function parses the incoming message, extracts the function arguments, and returns a response with a `CorrelationId` that the agent uses to match the result to the original request.
-
-```csharp
-using System.Text.Json;
-using Microsoft.Azure.Functions.Worker;
-using Microsoft.Extensions.Logging;
-
-public class GetWeather
-{
-    private readonly ILogger<GetWeather> _logger;
-
-    public GetWeather(ILogger<GetWeather> logger)
-    {
-        _logger = logger;
-    }
-
-    // Queue trigger receives agent tool calls from the input
-    // queue and returns results through the output queue
-    [Function("GetWeather")]
-    [QueueOutput(
-        "get-weather-output-queue",
-        Connection = "STORAGE_CONNECTION")]
-    public string Run(
-        [QueueTrigger(
-            "get-weather-input-queue",
-            Connection = "STORAGE_CONNECTION")]
-        string message)
-    {
-        _logger.LogInformation("Received: {Message}", message);
-
-        // Parse the incoming message from the agent
-        var payload = JsonSerializer.Deserialize<JsonElement>(
-            message);
-        var correlationId = payload
-            .GetProperty("CorrelationId").GetString();
-        var functionArgs = payload
-            .GetProperty("function_args");
-        var location = functionArgs
-            .GetProperty("location").GetString();
-
-        // Run your custom logic (replace with real API calls)
-        var weatherResult =
-            $"Weather is {location!.Length} degrees "
-            + $"and sunny in {location}";
-
-        // Return result with the CorrelationId from the request
-        var response = new
-        {
-            Value = weatherResult,
-            CorrelationId = correlationId,
-        };
-        return JsonSerializer.Serialize(response);
-    }
-}
-```
-
-<Info>
-
-The response message must include the `CorrelationId` from the original message. The agent uses this value to match the function output to the correct tool call.
-
-</Info>
-
-### Install the package
-
-Add the Azure AI Agents dependency to your `pom.xml`:
-
-```xml
-<dependency>
-    <groupId>com.azure</groupId>
-    <artifactId>azure-ai-agents</artifactId>
-    <version>2.0.0</version>
-</dependency>
-<dependency>
-    <groupId>com.azure</groupId>
-    <artifactId>azure-identity</artifactId>
-</dependency>
-```
-
-### Define the tool and create an agent
-
-```java
-import com.azure.ai.agents.*;
-import com.azure.ai.agents.models.*;
-import com.azure.core.util.BinaryData;
-import com.azure.identity.DefaultAzureCredentialBuilder;
-import com.openai.models.responses.Response;
-import com.openai.models.responses.ResponseCreateParams;
-
-import java.util.*;
-
-// Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-String projectEndpoint = "your_project_endpoint";
-String storageQueueUri = "your_storage_queue_service_endpoint";
-
-AgentsClientBuilder builder = new AgentsClientBuilder()
-    .credential(new DefaultAzureCredentialBuilder().build())
-    .endpoint(projectEndpoint)
-    .serviceVersion(AgentsServiceVersion.getLatest());
-
-AgentsClient agentsClient = builder.buildAgentsClient();
-ResponsesClient responsesClient = builder.buildResponsesClient();
-
-// Define the function parameters
-Map<String, BinaryData> parameters = new HashMap<>();
-parameters.put("type", BinaryData.fromString("\"object\""));
-parameters.put("properties", BinaryData.fromString(
-    "{\"location\": {\"type\": \"string\", "
-    + "\"description\": \"The location to look up.\"}}"));
-
-AzureFunctionDefinitionDetails function =
-    new AzureFunctionDefinitionDetails("GetWeather", parameters)
-        .setDescription("Get the weather in a location.");
-
-AzureFunctionTool azureFnTool = new AzureFunctionTool(
-    new AzureFunctionDefinition(
-        function,
-        new AzureFunctionBinding(
-            new AzureFunctionStorageQueue(storageQueueUri, "input")),
-        new AzureFunctionBinding(
-            new AzureFunctionStorageQueue(storageQueueUri, "output"))
-    )
-);
-
-PromptAgentDefinition agentDefinition = new PromptAgentDefinition("gpt-5.1")
-    .setInstructions("You are a helpful support agent. Answer the user's "
-        + "questions to the best of your ability.")
-    .setTools(Collections.singletonList(azureFnTool));
-
-AgentVersionDetails agent = agentsClient.createAgentVersion(
-    "azure-function-agent-get-weather", agentDefinition);
-System.out.printf("Agent created (id: %s, name: %s, version: %s)%n",
-    agent.getId(), agent.getName(), agent.getVersion());
-```
-
-### Create a response
-
-```java
-AgentReference agentReference = new AgentReference(agent.getName())
-    .setVersion(agent.getVersion());
-
-Response response = responsesClient.createAzureResponse(
-    new AzureCreateResponseOptions().setAgentReference(agentReference),
-    ResponseCreateParams.builder()
-        .input("What is the weather in Seattle, WA?"));
-
-System.out.println("Response: " + response.output());
-```
-
-### Clean up
-
-```java
-agentsClient.deleteAgentVersion(agent.getName(), agent.getVersion());
-System.out.println("Agent deleted");
-```
-
-### Write the Azure Function
-
-The previous code samples show how to define the Azure Function tool on the agent side. You also need to write the function that processes the queue messages. The function receives input from the input queue, runs your custom logic, and returns a result through the output queue.
-
-The following example shows a queue-triggered function that gets weather information for a location. The function parses the incoming message, extracts the function arguments, and returns a response with a `CorrelationId` that the agent uses to match the result to the original request.
-
-```java
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.microsoft.azure.functions.*;
-import com.microsoft.azure.functions.annotation.*;
-
-import java.util.logging.Logger;
-
-public class GetWeather {
-
-    // Queue trigger receives agent tool calls from the input
-    // queue and returns results through the output queue
-    @FunctionName("GetWeather")
-    @QueueOutput(
-        name = "output",
-        queueName = "get-weather-output-queue",
-        connection = "STORAGE_CONNECTION")
-    public String run(
-            @QueueTrigger(
-                name = "msg",
-                queueName = "get-weather-input-queue",
-                connection = "STORAGE_CONNECTION")
-            String message,
-            final ExecutionContext context) {
-
-        Logger logger = context.getLogger();
-        logger.info("Received: " + message);
-
-        // Parse the incoming message from the agent
-        JsonObject payload =
-            JsonParser.parseString(message)
-                .getAsJsonObject();
-        String correlationId =
-            payload.get("CorrelationId").getAsString();
-        JsonObject functionArgs =
-            payload.getAsJsonObject("function_args");
-        String location =
-            functionArgs.get("location").getAsString();
-
-        // Run your custom logic (replace with real API calls)
-        String weatherResult =
-            "Weather is " + location.length()
-            + " degrees and sunny in " + location;
-
-        // Return result with the CorrelationId
-        JsonObject response = new JsonObject();
-        response.addProperty("Value", weatherResult);
-        response.addProperty(
-            "CorrelationId", correlationId);
-        return response.toString();
-    }
-}
-```
-
-<Info>
-
-The response message must include the `CorrelationId` from the original message. The agent uses this value to match the function output to the correct tool call.
-
-</Info>
-
-### Install the packages
-
-Install the Azure AI Projects client library:
-
-```bash
-npm install @azure/ai-projects @azure/identity
-```
-
-### Define the tool and create an agent
-
-```typescript
-import { AIProjectClient } from "@azure/ai-projects";
-import { DefaultAzureCredential } from "@azure/identity";
-
-// Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-const PROJECT_ENDPOINT = "your_project_endpoint";
-const STORAGE_QUEUE_ENDPOINT = "your_storage_queue_service_endpoint";
-
-// Create clients to call Foundry API
-const project = new AIProjectClient(PROJECT_ENDPOINT, new DefaultAzureCredential());
-const openai = project.getOpenAIClient();
-
-const agent = await project.agents.createVersion(
-  "azure-function-agent-get-weather",
-  {
-    kind: "prompt",
-    model: "gpt-5.1",
-    instructions:
-      "You are a helpful support agent. Answer the user's questions to the best of your ability.",
-    tools: [
-      {
-        type: "azure_function",
-        azure_function: {
-          function: {
-            name: "GetWeather",
-            description: "Get the weather in a location.",
-            parameters: {
-              type: "object",
-              properties: {
-                location: {
-                  type: "string",
-                  description: "The location to look up.",
-                },
+<Tabs>
+  <Tab title="Python">
+
+  ### Install the package
+
+  Install the Azure AI Projects client library:
+
+  ```bash
+  pip install "azure-ai-projects>=2.0.0"
+  ```
+
+  ### Define the tool and create an agent
+
+  ```python
+  from azure.identity import DefaultAzureCredential
+  from azure.ai.projects import AIProjectClient
+  from azure.ai.projects.models import (
+      AzureFunctionBinding,
+      AzureFunctionDefinition,
+      AzureFunctionStorageQueue,
+      AzureFunctionDefinitionFunction,
+      AzureFunctionTool,
+      PromptAgentDefinition,
+  )
+
+  # Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+  PROJECT_ENDPOINT = "your_project_endpoint"
+  STORAGE_QUEUE_ENDPOINT = "your_storage_queue_service_endpoint"
+
+  # Create clients to call Foundry API
+  project = AIProjectClient(
+      endpoint=PROJECT_ENDPOINT,
+      credential=DefaultAzureCredential(),
+  )
+  openai = project.get_openai_client()
+
+  # Define the Azure Function tool
+  tool = AzureFunctionTool(
+      azure_function=AzureFunctionDefinition(
+          input_binding=AzureFunctionBinding(
+              storage_queue=AzureFunctionStorageQueue(
+                  queue_name="get-weather-input-queue",
+                  queue_service_endpoint=STORAGE_QUEUE_ENDPOINT,
+              )
+          ),
+          output_binding=AzureFunctionBinding(
+              storage_queue=AzureFunctionStorageQueue(
+                  queue_name="get-weather-output-queue",
+                  queue_service_endpoint=STORAGE_QUEUE_ENDPOINT,
+              )
+          ),
+          function=AzureFunctionDefinitionFunction(
+              name="GetWeather",
+              description="Get the weather in a location.",
+              parameters={
+                  "type": "object",
+                  "properties": {
+                      "location": {
+                          "type": "string",
+                          "description": "The location to look up.",
+                      }
+                  },
               },
-            },
-          },
-          input_binding: {
-            type: "storage_queue",
-            storage_queue: {
-              queue_service_endpoint: STORAGE_QUEUE_ENDPOINT,
-              queue_name: "get-weather-input-queue",
-            },
-          },
-          output_binding: {
-            type: "storage_queue",
-            storage_queue: {
-              queue_service_endpoint: STORAGE_QUEUE_ENDPOINT,
-              queue_name: "get-weather-output-queue",
-            },
-          },
-        },
-      },
-    ],
-  },
-);
-console.log(`Agent created (id: ${agent.id}, name: ${agent.name}, version: ${agent.version})`);
-```
+          ),
+      )
+  )
 
-### Create a response
+  # Create the agent with the Azure Function tool
+  agent = project.agents.create_version(
+      agent_name="azure-function-agent-get-weather",
+      definition=PromptAgentDefinition(
+          model="gpt-5.1",
+          instructions="You are a helpful support agent. Answer the user's questions to the best of your ability.",
+          tools=[tool],
+      ),
+  )
+  print(f"Agent created (id: {agent.id}, name: {agent.name}, version: {agent.version})")
+  ```
 
-```typescript
-const response = await openai.responses.create(
-  {
-    input: "What is the weather in Seattle, WA?",
-  },
-  {
-    body: {
-      agent: { name: agent.name, type: "agent_reference" },
-    },
-  },
-);
-console.log(`Response: ${response.output_text}`);
-```
+  ### Create a response
 
-### Clean up
+  ```python
+  response = openai.responses.create(
+      input="What is the weather in Seattle, WA?",
+      extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
+  )
 
-```typescript
-await project.agents.deleteVersion(agent.name, agent.version);
-console.log("Agent deleted");
-```
+  print(f"Response: {response.output_text}")
+  ```
 
-### Write the Azure Function
+  ### Clean up
 
-The previous code samples show how to define the Azure Function tool on the agent side. You also need to write the function that processes the queue messages. The function receives input from the input queue, runs your custom logic, and returns a result through the output queue.
+  ```python
+  project.agents.delete_version(agent_name=agent.name, agent_version=agent.version)
+  print("Agent deleted")
+  ```
 
-The following example shows a queue-triggered function that gets weather information for a location. This example uses the [v4 programming model](https://learn.microsoft.com/azure/azure-functions/functions-reference-node). The function parses the incoming message, extracts the function arguments, and returns a response with a `CorrelationId` that the agent uses to match the result to the original request.
+  ### Write the Azure Function
 
-```typescript
-import {
-  app,
-  InvocationContext,
-  output,
-} from "@azure/functions";
+  The previous code samples show how to define the Azure Function tool on the agent side. You also need to write the function that processes the queue messages. The function receives input from the input queue, runs your custom logic, and returns a result through the output queue.
 
-// Define the output queue binding
-const queueOutput = output.storageQueue({
-  queueName: "get-weather-output-queue",
-  connection: "STORAGE_CONNECTION",
-});
+  The following example shows a queue-triggered function that gets weather information for a location. The function parses the incoming message, extracts the function arguments, and returns a response with a `CorrelationId` that the agent uses to match the result to the original request.
 
-interface AgentMessage {
-  CorrelationId: string;
-  function_args: { location: string };
-}
+  ```python
+  import azure.functions as func
+  import logging
+  import json
 
-// Queue trigger receives agent tool calls from the input
-// queue and returns results through the output queue
-async function getWeather(
-  message: unknown,
-  context: InvocationContext
-): Promise<void> {
-  const payload = message as AgentMessage;
-  context.log("Received:", JSON.stringify(payload));
+  app = func.FunctionApp()
 
-  // Extract the function arguments
-  const location = payload.function_args.location;
+  # Queue trigger receives agent tool calls from the input queue
+  # and returns results through the output queue binding
+  @app.queue_trigger(
+      arg_name="msg",
+      queue_name="get-weather-input-queue",
+      connection="STORAGE_CONNECTION",
+  )
+  @app.queue_output(
+      arg_name="outputQueue",
+      queue_name="get-weather-output-queue",
+      connection="STORAGE_CONNECTION",
+  )
+  def queue_trigger(
+      msg: func.QueueMessage, outputQueue: func.Out[str]
+  ):
+      try:
+          # Parse the incoming message from the agent
+          messagepayload = json.loads(
+              msg.get_body().decode("utf-8")
+          )
+          logging.info("Received: %s", json.dumps(messagepayload))
 
-  // Run your custom logic (replace with real API calls)
-  const weatherResult =
-    `Weather is ${location.length} degrees ` +
-    `and sunny in ${location}`;
+          # Extract the function arguments
+          function_args = messagepayload.get("function_args", {})
+          location = function_args.get("location")
 
-  // Return result with the CorrelationId from the request
-  const response = {
-    Value: weatherResult,
-    CorrelationId: payload.CorrelationId,
-  };
-  context.extraOutputs.set(queueOutput, response);
-}
+          # Run your custom logic (replace with real API calls)
+          weather_result = (
+              f"Weather is {len(location)} degrees "
+              f"and sunny in {location}"
+          )
 
-// Register the queue trigger function
-app.storageQueue("getWeather", {
-  queueName: "get-weather-input-queue",
-  connection: "STORAGE_CONNECTION",
-  extraOutputs: [queueOutput],
-  handler: getWeather,
-});
-```
+          # Return result with the CorrelationId from the request
+          response_message = {
+              "Value": weather_result,
+              "CorrelationId": messagepayload["CorrelationId"],
+          }
+          outputQueue.set(json.dumps(response_message))
 
-<Info>
+      except Exception as e:
+          logging.error("Error processing message: %s", e)
+  ```
 
-The response message must include the `CorrelationId` from the original message. The agent uses this value to match the function output to the correct tool call.
+  <Info>
 
-</Info>
+  The response message must include the `CorrelationId` from the original message. The agent uses this value to match the function output to the correct tool call.
 
-### Create an agent version
+  </Info>
 
-Create an agent version by using the Azure Function tool definition.
+  For the full sample, see [Azure Functions weather sample](https://github.com/Azure/azure-sdk-for-python/blob/main/sdk/ai/azure-ai-projects/samples/agents/tools/get_weather_func_app.py) in the Azure SDK for Python repository.
 
-```bash
-curl --request POST \
-  --url $FOUNDRY_PROJECT_ENDPOINT/agents/azure-function-agent-get-weather/versions?api-version=$API_VERSION \
-  -H "Authorization: Bearer $AGENT_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "description": "Agent with Azure Function tool",
-    "definition": {
-      "kind": "prompt",
-      "model": "gpt-5.1",
-      "instructions": "You are a helpful support agent. Answer the user's questions to the best of your ability.",
-      "tools": [
-        { 
-          "type": "azure_function",
-          "azure_function": {
-              "function": {
-                  "name": "GetWeather",
-                  "description": "Get the weather in a location.",
-                  "parameters": {
-                      "type": "object",
-                      "properties": {
-                          "location": {"type": "string", "description": "The location to look up."}
-                      },
-                      "required": ["location"]
-                  }
-              },
-              "input_binding": {
-                  "type": "storage_queue",
-                  "storage_queue": {
-                      "queue_service_endpoint": "https://storageaccount.queue.core.windows.net",
-                      "queue_name": "input"
-                  }
-              },
-              "output_binding": {
-                  "type": "storage_queue",
-                  "storage_queue": {
-                      "queue_service_endpoint": "https://storageaccount.queue.core.windows.net",
-                      "queue_name": "output"
+  </Tab>
+  <Tab title="C#">
+
+  ### Install the packages
+
+  Install the Azure AI Projects client libraries:
+
+  ```dotnetcli
+  dotnet add package Azure.AI.Projects
+  dotnet add package Azure.AI.Extensions.OpenAI
+  dotnet add package Azure.Identity
+  ```
+
+  ### Define the tool and create an agent
+
+  ```csharp
+  using System;
+  using System.Text.Json;
+  using Azure.AI.Projects;
+  using Azure.AI.Extensions.OpenAI;
+  using Azure.Identity;
+
+  // Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+  var projectEndpoint = "your_project_endpoint";
+  var storageQueueUri = "your_storage_queue_service_endpoint";
+
+  AIProjectClient projectClient = new(
+      endpoint: new Uri(projectEndpoint),
+      tokenProvider: new DefaultAzureCredential());
+
+  AzureFunctionDefinitionFunction functionDefinition = new(
+      name: "GetWeather",
+      parameters: BinaryData.FromObjectAsJson(
+          new
+          {
+              Type = "object",
+              Properties = new
+              {
+                  location = new
+                  {
+                      Type = "string",
+                      Description = "The location to look up.",
                   }
               }
+          },
+          new JsonSerializerOptions() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
+      )
+  )
+  {
+      Description = "Get the weather in a location.",
+  };
+
+  AzureFunctionTool azureFnTool = new(
+      new AzureFunctionDefinition(
+          function: functionDefinition,
+          inputBinding: new AzureFunctionBinding(
+              new AzureFunctionStorageQueue(
+                  queueServiceEndpoint: storageQueueUri,
+                  queueName: "input")),
+          outputBinding: new AzureFunctionBinding(
+              new AzureFunctionStorageQueue(
+                  queueServiceEndpoint: storageQueueUri,
+                  queueName: "output"))
+      )
+  );
+
+  DeclarativeAgentDefinition agentDefinition = new(model: "gpt-5-mini")
+  {
+      Instructions = "You are a helpful support agent. Answer the user's questions "
+          + "to the best of your ability.",
+      Tools = { azureFnTool },
+  };
+
+  AgentVersion agentVersion = await projectClient.AgentAdministrationClient.CreateAgentVersionAsync(
+      agentName: "azure-function-agent-get-weather",
+      options: new(agentDefinition));
+  Console.WriteLine($"Agent created (id: {agentVersion.Id}, name: {agentVersion.Name}, "
+      + $"version: {agentVersion.Version})");
+  ```
+
+  ### Create a response
+
+  ```csharp
+  ProjectResponsesClient responseClient =
+      projectClient.ProjectOpenAIClient.GetProjectResponsesClientForAgent(agentVersion.Name);
+
+  CreateResponseOptions responseOptions = new()
+  {
+      InputItems =
+      {
+          ResponseItem.CreateUserMessageItem("What is the weather in Seattle, WA?")
+      },
+  };
+
+  ResponseResult response = await responseClient.CreateResponseAsync(responseOptions);
+  Console.WriteLine(response.GetOutputText());
+  ```
+
+  ### Clean up
+
+  ```csharp
+  await projectClient.AgentAdministrationClient.DeleteAgentVersionAsync(
+      agentName: agentVersion.Name,
+      agentVersion: agentVersion.Version);
+  Console.WriteLine("Agent deleted");
+  ```
+
+  ### Write the Azure Function
+
+  The previous code samples show how to define the Azure Function tool on the agent side. You also need to write the function that processes the queue messages. The function receives input from the input queue, runs your custom logic, and returns a result through the output queue.
+
+  The following example shows a queue-triggered function that gets weather information for a location. This example uses the [isolated worker model](https://learn.microsoft.com/azure/azure-functions/dotnet-isolated-process-guide). The function parses the incoming message, extracts the function arguments, and returns a response with a `CorrelationId` that the agent uses to match the result to the original request.
+
+  ```csharp
+  using System.Text.Json;
+  using Microsoft.Azure.Functions.Worker;
+  using Microsoft.Extensions.Logging;
+
+  public class GetWeather
+  {
+      private readonly ILogger<GetWeather> _logger;
+
+      public GetWeather(ILogger<GetWeather> logger)
+      {
+          _logger = logger;
+      }
+
+      // Queue trigger receives agent tool calls from the input
+      // queue and returns results through the output queue
+      [Function("GetWeather")]
+      [QueueOutput(
+          "get-weather-output-queue",
+          Connection = "STORAGE_CONNECTION")]
+      public string Run(
+          [QueueTrigger(
+              "get-weather-input-queue",
+              Connection = "STORAGE_CONNECTION")]
+          string message)
+      {
+          _logger.LogInformation("Received: {Message}", message);
+
+          // Parse the incoming message from the agent
+          var payload = JsonSerializer.Deserialize<JsonElement>(
+              message);
+          var correlationId = payload
+              .GetProperty("CorrelationId").GetString();
+          var functionArgs = payload
+              .GetProperty("function_args");
+          var location = functionArgs
+              .GetProperty("location").GetString();
+
+          // Run your custom logic (replace with real API calls)
+          var weatherResult =
+              $"Weather is {location!.Length} degrees "
+              + $"and sunny in {location}";
+
+          // Return result with the CorrelationId from the request
+          var response = new
+          {
+              Value = weatherResult,
+              CorrelationId = correlationId,
+          };
+          return JsonSerializer.Serialize(response);
+      }
+  }
+  ```
+
+  <Info>
+
+  The response message must include the `CorrelationId` from the original message. The agent uses this value to match the function output to the correct tool call.
+
+  </Info>
+
+  </Tab>
+  <Tab title="Java">
+
+  ### Install the package
+
+  Add the Azure AI Agents dependency to your `pom.xml`:
+
+  ```xml
+  <dependency>
+      <groupId>com.azure</groupId>
+      <artifactId>azure-ai-agents</artifactId>
+      <version>2.0.0</version>
+  </dependency>
+  <dependency>
+      <groupId>com.azure</groupId>
+      <artifactId>azure-identity</artifactId>
+  </dependency>
+  ```
+
+  ### Define the tool and create an agent
+
+  ```java
+  import com.azure.ai.agents.*;
+  import com.azure.ai.agents.models.*;
+  import com.azure.core.util.BinaryData;
+  import com.azure.identity.DefaultAzureCredentialBuilder;
+  import com.openai.models.responses.Response;
+  import com.openai.models.responses.ResponseCreateParams;
+
+  import java.util.*;
+
+  // Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+  String projectEndpoint = "your_project_endpoint";
+  String storageQueueUri = "your_storage_queue_service_endpoint";
+
+  AgentsClientBuilder builder = new AgentsClientBuilder()
+      .credential(new DefaultAzureCredentialBuilder().build())
+      .endpoint(projectEndpoint)
+      .serviceVersion(AgentsServiceVersion.getLatest());
+
+  AgentsClient agentsClient = builder.buildAgentsClient();
+  ResponsesClient responsesClient = builder.buildResponsesClient();
+
+  // Define the function parameters
+  Map<String, BinaryData> parameters = new HashMap<>();
+  parameters.put("type", BinaryData.fromString("\"object\""));
+  parameters.put("properties", BinaryData.fromString(
+      "{\"location\": {\"type\": \"string\", "
+      + "\"description\": \"The location to look up.\"}}"));
+
+  AzureFunctionDefinitionDetails function =
+      new AzureFunctionDefinitionDetails("GetWeather", parameters)
+          .setDescription("Get the weather in a location.");
+
+  AzureFunctionTool azureFnTool = new AzureFunctionTool(
+      new AzureFunctionDefinition(
+          function,
+          new AzureFunctionBinding(
+              new AzureFunctionStorageQueue(storageQueueUri, "input")),
+          new AzureFunctionBinding(
+              new AzureFunctionStorageQueue(storageQueueUri, "output"))
+      )
+  );
+
+  PromptAgentDefinition agentDefinition = new PromptAgentDefinition("gpt-5.1")
+      .setInstructions("You are a helpful support agent. Answer the user's "
+          + "questions to the best of your ability.")
+      .setTools(Collections.singletonList(azureFnTool));
+
+  AgentVersionDetails agent = agentsClient.createAgentVersion(
+      "azure-function-agent-get-weather", agentDefinition);
+  System.out.printf("Agent created (id: %s, name: %s, version: %s)%n",
+      agent.getId(), agent.getName(), agent.getVersion());
+  ```
+
+  ### Create a response
+
+  ```java
+  AgentReference agentReference = new AgentReference(agent.getName())
+      .setVersion(agent.getVersion());
+
+  Response response = responsesClient.createAzureResponse(
+      new AzureCreateResponseOptions().setAgentReference(agentReference),
+      ResponseCreateParams.builder()
+          .input("What is the weather in Seattle, WA?"));
+
+  System.out.println("Response: " + response.output());
+  ```
+
+  ### Clean up
+
+  ```java
+  agentsClient.deleteAgentVersion(agent.getName(), agent.getVersion());
+  System.out.println("Agent deleted");
+  ```
+
+  ### Write the Azure Function
+
+  The previous code samples show how to define the Azure Function tool on the agent side. You also need to write the function that processes the queue messages. The function receives input from the input queue, runs your custom logic, and returns a result through the output queue.
+
+  The following example shows a queue-triggered function that gets weather information for a location. The function parses the incoming message, extracts the function arguments, and returns a response with a `CorrelationId` that the agent uses to match the result to the original request.
+
+  ```java
+  import com.google.gson.JsonObject;
+  import com.google.gson.JsonParser;
+  import com.microsoft.azure.functions.*;
+  import com.microsoft.azure.functions.annotation.*;
+
+  import java.util.logging.Logger;
+
+  public class GetWeather {
+
+      // Queue trigger receives agent tool calls from the input
+      // queue and returns results through the output queue
+      @FunctionName("GetWeather")
+      @QueueOutput(
+          name = "output",
+          queueName = "get-weather-output-queue",
+          connection = "STORAGE_CONNECTION")
+      public String run(
+              @QueueTrigger(
+                  name = "msg",
+                  queueName = "get-weather-input-queue",
+                  connection = "STORAGE_CONNECTION")
+              String message,
+              final ExecutionContext context) {
+
+          Logger logger = context.getLogger();
+          logger.info("Received: " + message);
+
+          // Parse the incoming message from the agent
+          JsonObject payload =
+              JsonParser.parseString(message)
+                  .getAsJsonObject();
+          String correlationId =
+              payload.get("CorrelationId").getAsString();
+          JsonObject functionArgs =
+              payload.getAsJsonObject("function_args");
+          String location =
+              functionArgs.get("location").getAsString();
+
+          // Run your custom logic (replace with real API calls)
+          String weatherResult =
+              "Weather is " + location.length()
+              + " degrees and sunny in " + location;
+
+          // Return result with the CorrelationId
+          JsonObject response = new JsonObject();
+          response.addProperty("Value", weatherResult);
+          response.addProperty(
+              "CorrelationId", correlationId);
+          return response.toString();
+      }
+  }
+  ```
+
+  <Info>
+
+  The response message must include the `CorrelationId` from the original message. The agent uses this value to match the function output to the correct tool call.
+
+  </Info>
+
+  </Tab>
+  <Tab title="TypeScript">
+
+  ### Install the packages
+
+  Install the Azure AI Projects client library:
+
+  ```bash
+  npm install @azure/ai-projects @azure/identity
+  ```
+
+  ### Define the tool and create an agent
+
+  ```typescript
+  import { AIProjectClient } from "@azure/ai-projects";
+  import { DefaultAzureCredential } from "@azure/identity";
+
+  // Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+  const PROJECT_ENDPOINT = "your_project_endpoint";
+  const STORAGE_QUEUE_ENDPOINT = "your_storage_queue_service_endpoint";
+
+  // Create clients to call Foundry API
+  const project = new AIProjectClient(PROJECT_ENDPOINT, new DefaultAzureCredential());
+  const openai = project.getOpenAIClient();
+
+  const agent = await project.agents.createVersion(
+    "azure-function-agent-get-weather",
+    {
+      kind: "prompt",
+      model: "gpt-5.1",
+      instructions:
+        "You are a helpful support agent. Answer the user's questions to the best of your ability.",
+      tools: [
+        {
+          type: "azure_function",
+          azure_function: {
+            function: {
+              name: "GetWeather",
+              description: "Get the weather in a location.",
+              parameters: {
+                type: "object",
+                properties: {
+                  location: {
+                    type: "string",
+                    description: "The location to look up.",
+                  },
+                },
+              },
+            },
+            input_binding: {
+              type: "storage_queue",
+              storage_queue: {
+                queue_service_endpoint: STORAGE_QUEUE_ENDPOINT,
+                queue_name: "get-weather-input-queue",
+              },
+            },
+            output_binding: {
+              type: "storage_queue",
+              storage_queue: {
+                queue_service_endpoint: STORAGE_QUEUE_ENDPOINT,
+                queue_name: "get-weather-output-queue",
+              },
+            },
+          },
+        },
+      ],
+    },
+  );
+  console.log(`Agent created (id: ${agent.id}, name: ${agent.name}, version: ${agent.version})`);
+  ```
+
+  ### Create a response
+
+  ```typescript
+  const response = await openai.responses.create(
+    {
+      input: "What is the weather in Seattle, WA?",
+    },
+    {
+      body: {
+        agent: { name: agent.name, type: "agent_reference" },
+      },
+    },
+  );
+  console.log(`Response: ${response.output_text}`);
+  ```
+
+  ### Clean up
+
+  ```typescript
+  await project.agents.deleteVersion(agent.name, agent.version);
+  console.log("Agent deleted");
+  ```
+
+  ### Write the Azure Function
+
+  The previous code samples show how to define the Azure Function tool on the agent side. You also need to write the function that processes the queue messages. The function receives input from the input queue, runs your custom logic, and returns a result through the output queue.
+
+  The following example shows a queue-triggered function that gets weather information for a location. This example uses the [v4 programming model](https://learn.microsoft.com/azure/azure-functions/functions-reference-node). The function parses the incoming message, extracts the function arguments, and returns a response with a `CorrelationId` that the agent uses to match the result to the original request.
+
+  ```typescript
+  import {
+    app,
+    InvocationContext,
+    output,
+  } from "@azure/functions";
+
+  // Define the output queue binding
+  const queueOutput = output.storageQueue({
+    queueName: "get-weather-output-queue",
+    connection: "STORAGE_CONNECTION",
+  });
+
+  interface AgentMessage {
+    CorrelationId: string;
+    function_args: { location: string };
+  }
+
+  // Queue trigger receives agent tool calls from the input
+  // queue and returns results through the output queue
+  async function getWeather(
+    message: unknown,
+    context: InvocationContext
+  ): Promise<void> {
+    const payload = message as AgentMessage;
+    context.log("Received:", JSON.stringify(payload));
+
+    // Extract the function arguments
+    const location = payload.function_args.location;
+
+    // Run your custom logic (replace with real API calls)
+    const weatherResult =
+      `Weather is ${location.length} degrees ` +
+      `and sunny in ${location}`;
+
+    // Return result with the CorrelationId from the request
+    const response = {
+      Value: weatherResult,
+      CorrelationId: payload.CorrelationId,
+    };
+    context.extraOutputs.set(queueOutput, response);
+  }
+
+  // Register the queue trigger function
+  app.storageQueue("getWeather", {
+    queueName: "get-weather-input-queue",
+    connection: "STORAGE_CONNECTION",
+    extraOutputs: [queueOutput],
+    handler: getWeather,
+  });
+  ```
+
+  <Info>
+
+  The response message must include the `CorrelationId` from the original message. The agent uses this value to match the function output to the correct tool call.
+
+  </Info>
+
+  </Tab>
+  <Tab title="REST">
+
+  ### Create an agent version
+
+  Create an agent version by using the Azure Function tool definition.
+
+  ```bash
+  curl --request POST \
+    --url $FOUNDRY_PROJECT_ENDPOINT/agents/azure-function-agent-get-weather/versions?api-version=$API_VERSION \
+    -H "Authorization: Bearer $AGENT_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "description": "Agent with Azure Function tool",
+      "definition": {
+        "kind": "prompt",
+        "model": "gpt-5.1",
+        "instructions": "You are a helpful support agent. Answer the user's questions to the best of your ability.",
+        "tools": [
+          { 
+            "type": "azure_function",
+            "azure_function": {
+                "function": {
+                    "name": "GetWeather",
+                    "description": "Get the weather in a location.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "location": {"type": "string", "description": "The location to look up."}
+                        },
+                        "required": ["location"]
+                    }
+                },
+                "input_binding": {
+                    "type": "storage_queue",
+                    "storage_queue": {
+                        "queue_service_endpoint": "https://storageaccount.queue.core.windows.net",
+                        "queue_name": "input"
+                    }
+                },
+                "output_binding": {
+                    "type": "storage_queue",
+                    "storage_queue": {
+                        "queue_service_endpoint": "https://storageaccount.queue.core.windows.net",
+                        "queue_name": "output"
+                    }
+                }
+            }
           }
-        }
-      ]
-    }
-  }'
-```
+        ]
+      }
+    }'
+  ```
 
-### Create a response
+  ### Create a response
 
-Create a response that uses the agent version to get weather information.
+  Create a response that uses the agent version to get weather information.
 
-```bash
-curl --request POST \
-  --url $FOUNDRY_PROJECT_ENDPOINT/openai/responses?api-version=$API_VERSION \
-  -H "Authorization: Bearer $AGENT_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "input": "What is the weather in Seattle, WA?",
-    "agent": {
-      "name": "azure-function-agent-get-weather",
-      "type": "agent_reference"
-    }
-  }'
-```
+  ```bash
+  curl --request POST \
+    --url $FOUNDRY_PROJECT_ENDPOINT/openai/responses?api-version=$API_VERSION \
+    -H "Authorization: Bearer $AGENT_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "input": "What is the weather in Seattle, WA?",
+      "agent": {
+        "name": "azure-function-agent-get-weather",
+        "type": "agent_reference"
+      }
+    }'
+  ```
 
-### Write the Azure Function
+  ### Write the Azure Function
 
-The REST API examples show how to configure the Azure Function tool definition. The Azure Function itself is server-side code that you write in a supported Functions language. Select one of the other languages (Python, C#, Java, or TypeScript) to see the function implementation.
+  The REST API examples show how to configure the Azure Function tool definition. The Azure Function itself is server-side code that you write in a supported Functions language. Select one of the other languages (Python, C#, Java, or TypeScript) to see the function implementation.
+
+  </Tab>
+</Tabs>
 
 ## When to use Azure Functions vs function calling
 

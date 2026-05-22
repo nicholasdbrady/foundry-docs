@@ -11,29 +11,41 @@ The platform manages the container lifecycle automatically. Compute is provision
 
 - A [deployed Hosted agent](/agent-service/deploy-hosted-agent).
 
-- [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) version 2.80 or later, authenticated with `az login`.
+<Tabs>
+  <Tab title="REST">
 
-- Python SDK: `azure-ai-projects>=2.1.0` and `azure-identity`.
+  - [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) version 2.80 or later, authenticated with `az login`.
 
-- [Azure Developer CLI](https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd) version 1.23.0 or later.
-- The Foundry agents extension:
+  </Tab>
+  <Tab title="Python">
 
-    ```bash
-    azd ext install azure.ai.agents
-    ```
+  - Python SDK: `azure-ai-projects>=2.1.0` and `azure-identity`.
 
-## Set up variables
+  </Tab>
+  <Tab title="Azure Developer CLI">
 
-The REST API examples in this article use `az rest` to call the Foundry Agent Service endpoints directly. Set the following variables before running the commands:
+  - [Azure Developer CLI](https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd) version 1.23.0 or later.
+  - The Foundry agents extension:
 
-```bash
-ACCOUNT_NAME="<your-foundry-account-name>"
-PROJECT_NAME="<your-project-name>"
-AGENT_NAME="<your-agent-name>"
-BASE_URL="https://${ACCOUNT_NAME}.services.ai.azure.com/api/projects/${PROJECT_NAME}"
-API_VERSION="v1"
-RESOURCE="https://ai.azure.com"
-```
+      ```bash
+      azd ext install azure.ai.agents
+      ```
+
+  </Tab>
+  <Tab title="REST">
+
+  ## Set up variables
+
+  The REST API examples in this article use `az rest` to call the Foundry Agent Service endpoints directly. Set the following variables before running the commands:
+
+  ```bash
+  ACCOUNT_NAME="<your-foundry-account-name>"
+  PROJECT_NAME="<your-project-name>"
+  AGENT_NAME="<your-agent-name>"
+  BASE_URL="https://${ACCOUNT_NAME}.services.ai.azure.com/api/projects/${PROJECT_NAME}"
+  API_VERSION="v1"
+  RESOURCE="https://ai.azure.com"
+  ```
 
 <Info>
 
@@ -41,137 +53,200 @@ The `--resource` parameter is required for all `az rest` calls to Foundry Agent 
 
 </Info>
 
+  </Tab>
+</Tabs>
+
 ## View agents and versions
 
 Use the following commands to list agents and inspect version details.
 
 ### List all agents in a project
 
-```bash
-az rest --method GET \
-    --url "${BASE_URL}/agents?api-version=${API_VERSION}" \
-    --resource "${RESOURCE}"
-```
+<Tabs>
+  <Tab title="REST">
 
-```python
-from azure.identity import DefaultAzureCredential
-from azure.ai.projects import AIProjectClient
+  ```bash
+  az rest --method GET \
+      --url "${BASE_URL}/agents?api-version=${API_VERSION}" \
+      --resource "${RESOURCE}"
+  ```
 
-project = AIProjectClient(
-    endpoint=PROJECT_ENDPOINT,
-    credential=DefaultAzureCredential(),
-)
+  </Tab>
+  <Tab title="Python">
 
-for agent in project.agents.list():
-    print(agent.name)
-```
+  ```python
+  from azure.identity import DefaultAzureCredential
+  from azure.ai.projects import AIProjectClient
 
-```bash
-azd ai agent show
-```
+  project = AIProjectClient(
+      endpoint=PROJECT_ENDPOINT,
+      credential=DefaultAzureCredential(),
+  )
 
-<Note>
+  for agent in project.agents.list():
+      print(agent.name)
+  ```
 
-`azd ai agent show` reads the agent name and version from the `azd` service entry in your project configuration.
+  </Tab>
+  <Tab title="Azure Developer CLI">
 
-</Note>
+  ```bash
+  azd ai agent show
+  ```
+
+  <Note>
+
+  `azd ai agent show` reads the agent name and version from the `azd` service entry in your project configuration.
+
+  </Note>
+
+  </Tab>
+</Tabs>
 
 ### Get agent details
 
-```bash
-az rest --method GET \
-    --url "${BASE_URL}/agents/${AGENT_NAME}?api-version=${API_VERSION}" \
-    --resource "${RESOURCE}"
-```
+<Tabs>
+  <Tab title="REST">
 
-The response includes the agent's latest version, status, and definition.
+  ```bash
+  az rest --method GET \
+      --url "${BASE_URL}/agents/${AGENT_NAME}?api-version=${API_VERSION}" \
+      --resource "${RESOURCE}"
+  ```
 
-```python
-agent = project.agents.get(agent_name="my-agent")
-print(f"Name: {agent.name}")
-print(f"Status: {agent.versions['latest']['status']}")
-```
+  The response includes the agent's latest version, status, and definition.
 
-```bash
-azd ai agent show
-```
+  </Tab>
+  <Tab title="Python">
+
+  ```python
+  agent = project.agents.get(agent_name="my-agent")
+  print(f"Name: {agent.name}")
+  print(f"Status: {agent.versions['latest']['status']}")
+  ```
+
+  </Tab>
+  <Tab title="Azure Developer CLI">
+
+  ```bash
+  azd ai agent show
+  ```
+
+  </Tab>
+</Tabs>
 
 ### Get a specific version
 
-```bash
-az rest --method GET \
-    --url "${BASE_URL}/agents/${AGENT_NAME}/versions/1?api-version=${API_VERSION}" \
-    --resource "${RESOURCE}"
-```
+<Tabs>
+  <Tab title="REST">
 
-```python
-agent_version = project.agents.get_version(
-    agent_name="my-agent", agent_version="1"
-)
-print(f"Version: {agent_version.version}")
-print(f"Status: {agent_version['status']}")
-```
+  ```bash
+  az rest --method GET \
+      --url "${BASE_URL}/agents/${AGENT_NAME}/versions/1?api-version=${API_VERSION}" \
+      --resource "${RESOURCE}"
+  ```
 
-Version information is included in the output of `azd ai agent show`.
+  </Tab>
+  <Tab title="Python">
+
+  ```python
+  agent_version = project.agents.get_version(
+      agent_name="my-agent", agent_version="1"
+  )
+  print(f"Version: {agent_version.version}")
+  print(f"Status: {agent_version['status']}")
+  ```
+
+  </Tab>
+  <Tab title="Azure Developer CLI">
+
+  Version information is included in the output of `azd ai agent show`.
+
+  </Tab>
+</Tabs>
 
 ### List all versions of an agent
 
-```bash
-az rest --method GET \
-    --url "${BASE_URL}/agents/${AGENT_NAME}/versions?api-version=${API_VERSION}" \
-    --resource "${RESOURCE}"
-```
+<Tabs>
+  <Tab title="REST">
 
-```python
-for version in project.agents.list_versions(agent_name="my-agent"):
-    print(f"Version: {version.version}, Status: {version['status']}")
-```
+  ```bash
+  az rest --method GET \
+      --url "${BASE_URL}/agents/${AGENT_NAME}/versions?api-version=${API_VERSION}" \
+      --resource "${RESOURCE}"
+  ```
 
-Version information is included in the output of `azd ai agent show`.
+  </Tab>
+  <Tab title="Python">
+
+  ```python
+  for version in project.agents.list_versions(agent_name="my-agent"):
+      print(f"Version: {version.version}, Status: {version['status']}")
+  ```
+
+  </Tab>
+  <Tab title="Azure Developer CLI">
+
+  Version information is included in the output of `azd ai agent show`.
+
+  </Tab>
+</Tabs>
 
 ### Create a new version
 
 Create a new agent version when you need to update the container image, change resource allocation, or modify environment variables.
 
-```bash
-az rest --method POST \
-    --url "${BASE_URL}/agents/${AGENT_NAME}/versions?api-version=${API_VERSION}" \
-    --resource "${RESOURCE}" \
-    --body '{
-        "definition": {
-            "kind": "hosted",
-            "image": "myregistry.azurecr.io/my-agent:v2",
-            "cpu": "1",
-            "memory": "2Gi",
-            "container_protocol_versions": [
-                {"protocol": "responses", "version": "1.0.0"}
-            ]
-        }
-    }'
-```
+<Tabs>
+  <Tab title="REST">
 
-Replace `responses` with `invocations` if your agent uses the Invocations protocol, or include both to expose both protocols. For details on protocol selection, see [Deploy a Hosted agent](/agent-service/deploy-hosted-agent#container-requirements).
+  ```bash
+  az rest --method POST \
+      --url "${BASE_URL}/agents/${AGENT_NAME}/versions?api-version=${API_VERSION}" \
+      --resource "${RESOURCE}" \
+      --body '{
+          "definition": {
+              "kind": "hosted",
+              "image": "myregistry.azurecr.io/my-agent:v2",
+              "cpu": "1",
+              "memory": "2Gi",
+              "container_protocol_versions": [
+                  {"protocol": "responses", "version": "1.0.0"}
+              ]
+          }
+      }'
+  ```
 
-```python
-from azure.ai.projects.models import HostedAgentDefinition, ProtocolVersionRecord
+  Replace `responses` with `invocations` if your agent uses the Invocations protocol, or include both to expose both protocols. For details on protocol selection, see [Deploy a Hosted agent](/agent-service/deploy-hosted-agent#container-requirements).
 
-agent = project.agents.create_version(
-    agent_name="my-agent",
-    definition=HostedAgentDefinition(
-        cpu="1",
-        memory="2Gi",
-        image="myregistry.azurecr.io/my-agent:v2",
-        container_protocol_versions=[
-            ProtocolVersionRecord(protocol="responses", version="1.0.0"),
-        ],
-    ),
-)
-print(f"Created version: {agent.version}")
-```
+  </Tab>
+  <Tab title="Python">
 
-Replace `responses` with `invocations` if your agent uses the Invocations protocol, or pass both to expose both protocols.
+  ```python
+  from azure.ai.projects.models import HostedAgentDefinition, ProtocolVersionRecord
 
-New versions are created automatically when you run `azd deploy` with updated code or configuration.
+  agent = project.agents.create_version(
+      agent_name="my-agent",
+      definition=HostedAgentDefinition(
+          cpu="1",
+          memory="2Gi",
+          image="myregistry.azurecr.io/my-agent:v2",
+          container_protocol_versions=[
+              ProtocolVersionRecord(protocol="responses", version="1.0.0"),
+          ],
+      ),
+  )
+  print(f"Created version: {agent.version}")
+  ```
+
+  Replace `responses` with `invocations` if your agent uses the Invocations protocol, or pass both to expose both protocols.
+
+  </Tab>
+  <Tab title="Azure Developer CLI">
+
+  New versions are created automatically when you run `azd deploy` with updated code or configuration.
+
+  </Tab>
+</Tabs>
 
 ### Version status values
 
@@ -211,17 +286,29 @@ You can delete a specific version or an entire agent with all its versions.
 
 ### Delete a specific version
 
-```bash
-az rest --method DELETE \
-    --url "${BASE_URL}/agents/${AGENT_NAME}/versions/1?api-version=${API_VERSION}" \
-    --resource "${RESOURCE}"
-```
+<Tabs>
+  <Tab title="REST">
 
-```python
-project.agents.delete_version(agent_name="my-agent", agent_version="1")
-```
+  ```bash
+  az rest --method DELETE \
+      --url "${BASE_URL}/agents/${AGENT_NAME}/versions/1?api-version=${API_VERSION}" \
+      --resource "${RESOURCE}"
+  ```
 
-Not currently supported as a standalone command. Use the REST API or SDK.
+  </Tab>
+  <Tab title="Python">
+
+  ```python
+  project.agents.delete_version(agent_name="my-agent", agent_version="1")
+  ```
+
+  </Tab>
+  <Tab title="Azure Developer CLI">
+
+  Not currently supported as a standalone command. Use the REST API or SDK.
+
+  </Tab>
+</Tabs>
 
 ### Delete an agent and all versions
 
@@ -231,50 +318,74 @@ This action permanently deletes the agent and all its versions. Active sessions 
 
 </Warning>
 
-```bash
-az rest --method DELETE \
-    --url "${BASE_URL}/agents/${AGENT_NAME}?api-version=${API_VERSION}" \
-    --resource "${RESOURCE}"
-```
+<Tabs>
+  <Tab title="REST">
 
-```python
-project.agents.delete(agent_name="my-agent")
-```
+  ```bash
+  az rest --method DELETE \
+      --url "${BASE_URL}/agents/${AGENT_NAME}?api-version=${API_VERSION}" \
+      --resource "${RESOURCE}"
+  ```
 
-Not currently supported as a standalone command. Use the REST API or SDK.
+  </Tab>
+  <Tab title="Python">
+
+  ```python
+  project.agents.delete(agent_name="my-agent")
+  ```
+
+  </Tab>
+  <Tab title="Azure Developer CLI">
+
+  Not currently supported as a standalone command. Use the REST API or SDK.
+
+  </Tab>
+</Tabs>
 
 ## View logs and monitor
 
 Access container logs for debugging provisioning and runtime issues.
 
-Stream logs from a specific agent session:
+<Tabs>
+  <Tab title="REST">
 
-```bash
-AGENT_VERSION="<version>"
-SESSION_ID="<session-id>"
+  Stream logs from a specific agent session:
 
-az rest --method GET \
-    --url "${BASE_URL}/agents/${AGENT_NAME}/versions/${AGENT_VERSION}/sessions/${SESSION_ID}:logstream?api-version=${API_VERSION}" \
-    --resource "${RESOURCE}" \
-    --headers "Foundry-Features=HostedAgents=V1Preview" "Accept=text/event-stream"
-```
+  ```bash
+  AGENT_VERSION="<version>"
+  SESSION_ID="<session-id>"
 
-The logstream endpoint returns Server-Sent Events (SSE) with `event: log` frames. Each frame contains a JSON payload with `timestamp`, `stream` (`stdout`, `stderr`, or `status`), and `message` fields.
+  az rest --method GET \
+      --url "${BASE_URL}/agents/${AGENT_NAME}/versions/${AGENT_VERSION}/sessions/${SESSION_ID}:logstream?api-version=${API_VERSION}" \
+      --resource "${RESOURCE}" \
+      --headers "Foundry-Features=HostedAgents=V1Preview" "Accept=text/event-stream"
+  ```
 
-Timeouts:
+  The logstream endpoint returns Server-Sent Events (SSE) with `event: log` frames. Each frame contains a JSON payload with `timestamp`, `stream` (`stdout`, `stderr`, or `status`), and `message` fields.
 
-- Maximum connection duration: 30 minutes
-- Idle timeout: 2 minutes
+  Timeouts:
 
-Viewing container logs isn't currently supported through the Python SDK. Use the REST API or Azure Developer CLI.
+  - Maximum connection duration: 30 minutes
+  - Idle timeout: 2 minutes
 
-Monitor a running agent with real-time status and log information:
+  </Tab>
+  <Tab title="Python">
 
-```bash
-azd ai agent monitor
-```
+  Viewing container logs isn't currently supported through the Python SDK. Use the REST API or Azure Developer CLI.
 
-This command reads the agent name and version from the `azd` service entry in your project configuration.
+  </Tab>
+  <Tab title="Azure Developer CLI">
+
+  Monitor a running agent with real-time status and log information:
+
+  ```bash
+  azd ai agent monitor
+  ```
+
+  This command reads the agent name and version from the `azd` service entry in your project configuration.
+
+  </Tab>
+</Tabs>
 
 ### Example log output
 
@@ -288,73 +399,85 @@ This command reads the agent name and version from the `azd` service entry in yo
 
 Agent endpoints control how traffic is distributed across agent versions. Use version selectors to route a percentage of traffic to specific versions, enabling canary deployments or gradual rollouts.
 
-Endpoint routing is configured by patching the agent object. Use `PATCH /agents/{agent_name}` with `Content-Type: application/merge-patch+json`:
+<Tabs>
+  <Tab title="REST">
 
-```bash
-az rest --method PATCH \
-    --url "${BASE_URL}/agents/${AGENT_NAME}?api-version=${API_VERSION}" \
-    --resource "${RESOURCE}" \
-    --headers "Content-Type=application/merge-patch+json" "Foundry-Features=AgentEndpoints=V1Preview" \
-    --body '{
-        "agent_endpoint": {
-            "version_selector": {
-                "version_selection_rules": [
-                    {"agent_version": "1", "traffic_percentage": 100, "type": "FixedRatio"}
-                ]
-            },
-            "protocols": ["responses"]
-        }
-    }'
-```
+  Endpoint routing is configured by patching the agent object. Use `PATCH /agents/{agent_name}` with `Content-Type: application/merge-patch+json`:
 
-Set `protocols` to `["invocations"]` or `["responses", "invocations"]` to match the protocols your agent exposes.
+  ```bash
+  az rest --method PATCH \
+      --url "${BASE_URL}/agents/${AGENT_NAME}?api-version=${API_VERSION}" \
+      --resource "${RESOURCE}" \
+      --headers "Content-Type=application/merge-patch+json" "Foundry-Features=AgentEndpoints=V1Preview" \
+      --body '{
+          "agent_endpoint": {
+              "version_selector": {
+                  "version_selection_rules": [
+                      {"agent_version": "1", "traffic_percentage": 100, "type": "FixedRatio"}
+                  ]
+              },
+              "protocols": ["responses"]
+          }
+      }'
+  ```
 
-To split traffic between two versions (for example, 90/10 for a canary deployment):
+  Set `protocols` to `["invocations"]` or `["responses", "invocations"]` to match the protocols your agent exposes.
 
-```bash
-az rest --method PATCH \
-    --url "${BASE_URL}/agents/${AGENT_NAME}?api-version=${API_VERSION}" \
-    --resource "${RESOURCE}" \
-    --headers "Content-Type=application/merge-patch+json" "Foundry-Features=AgentEndpoints=V1Preview" \
-    --body '{
-        "agent_endpoint": {
-            "version_selector": {
-                "version_selection_rules": [
-                    {"agent_version": "1", "traffic_percentage": 90, "type": "FixedRatio"},
-                    {"agent_version": "2", "traffic_percentage": 10, "type": "FixedRatio"}
-                ]
-            },
-            "protocols": ["responses"]
-        }
-    }'
-```
+  To split traffic between two versions (for example, 90/10 for a canary deployment):
 
-```python
-from azure.ai.projects.models import (
-    AgentEndpoint,
-    AgentEndpointProtocol,
-    FixedRatioVersionSelectionRule,
-    VersionSelector,
-)
+  ```bash
+  az rest --method PATCH \
+      --url "${BASE_URL}/agents/${AGENT_NAME}?api-version=${API_VERSION}" \
+      --resource "${RESOURCE}" \
+      --headers "Content-Type=application/merge-patch+json" "Foundry-Features=AgentEndpoints=V1Preview" \
+      --body '{
+          "agent_endpoint": {
+              "version_selector": {
+                  "version_selection_rules": [
+                      {"agent_version": "1", "traffic_percentage": 90, "type": "FixedRatio"},
+                      {"agent_version": "2", "traffic_percentage": 10, "type": "FixedRatio"}
+                  ]
+              },
+              "protocols": ["responses"]
+          }
+      }'
+  ```
 
-endpoint_config = AgentEndpoint(
-    version_selector=VersionSelector(
-        version_selection_rules=[
-            FixedRatioVersionSelectionRule(
-                agent_version="1", traffic_percentage=100
-            ),
-        ]
-    ),
-    protocols=[AgentEndpointProtocol.RESPONSES],
-)
+  </Tab>
+  <Tab title="Python">
 
-project.beta.agents.patch_agent_details(
-    agent_name="my-agent",
-    agent_endpoint=endpoint_config,
-)
-```
+  ```python
+  from azure.ai.projects.models import (
+      AgentEndpoint,
+      AgentEndpointProtocol,
+      FixedRatioVersionSelectionRule,
+      VersionSelector,
+  )
 
-Endpoint routing is configured automatically during `azd deploy`. To customize traffic distribution, use the REST API or SDK.
+  endpoint_config = AgentEndpoint(
+      version_selector=VersionSelector(
+          version_selection_rules=[
+              FixedRatioVersionSelectionRule(
+                  agent_version="1", traffic_percentage=100
+              ),
+          ]
+      ),
+      protocols=[AgentEndpointProtocol.RESPONSES],
+  )
+
+  project.beta.agents.patch_agent_details(
+      agent_name="my-agent",
+      agent_endpoint=endpoint_config,
+  )
+  ```
+
+  </Tab>
+  <Tab title="Azure Developer CLI">
+
+  Endpoint routing is configured automatically during `azd deploy`. To customize traffic distribution, use the REST API or SDK.
+
+  </Tab>
+</Tabs>
 
 ## Retrieve the agent identity for role assignments
 
@@ -364,25 +487,37 @@ For more information on how agent identities work, see [Agent identity concepts]
 
 ### Extract the agent identity principal ID
 
-Use the `--query` parameter to extract the `instance_identity.principal_id` directly from the agent details:
+<Tabs>
+  <Tab title="REST">
 
-```bash
-AGENT_IDENTITY=$(az rest --method GET \
-    --url "${BASE_URL}/agents/${AGENT_NAME}?api-version=${API_VERSION}" \
-    --resource "${RESOURCE}" \
-    --query "instance_identity.principal_id" \
-    --output tsv)
+  Use the `--query` parameter to extract the `instance_identity.principal_id` directly from the agent details:
 
-echo "Agent identity principal ID: ${AGENT_IDENTITY}"
-```
+  ```bash
+  AGENT_IDENTITY=$(az rest --method GET \
+      --url "${BASE_URL}/agents/${AGENT_NAME}?api-version=${API_VERSION}" \
+      --resource "${RESOURCE}" \
+      --query "instance_identity.principal_id" \
+      --output tsv)
 
-```python
-agent = project.agents.get(agent_name="my-agent")
-agent_identity = agent.instance_identity["principal_id"]
-print(f"Agent identity principal ID: {agent_identity}")
-```
+  echo "Agent identity principal ID: ${AGENT_IDENTITY}"
+  ```
 
-Use the REST API or Python SDK to retrieve the agent identity principal ID.
+  </Tab>
+  <Tab title="Python">
+
+  ```python
+  agent = project.agents.get(agent_name="my-agent")
+  agent_identity = agent.instance_identity["principal_id"]
+  print(f"Agent identity principal ID: {agent_identity}")
+  ```
+
+  </Tab>
+  <Tab title="Azure Developer CLI">
+
+  Use the REST API or Python SDK to retrieve the agent identity principal ID.
+
+  </Tab>
+</Tabs>
 
 ### Assign roles to the agent identity
 
@@ -390,53 +525,77 @@ After you have the principal ID, assign RBAC roles to the agent identity at the 
 
 The agent identity works with any Azure resource that supports RBAC. The following examples show two common scenarios: granting access to the Foundry project and granting access to a storage account.
 
-Assign a role on the Foundry project (for example, to allow the agent to use project resources):
+<Tabs>
+  <Tab title="REST">
 
-```bash
-az role assignment create \
-    --assignee-object-id "$AGENT_IDENTITY" \
-    --assignee-principal-type ServicePrincipal \
-    --role "Azure AI Developer" \
-    --scope "/subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.CognitiveServices/accounts/<account-name>/projects/<project-name>"
-```
+  Assign a role on the Foundry project (for example, to allow the agent to use project resources):
 
-Assign a role on a storage account (for example, to allow the agent to read and write blobs):
+  ```bash
+  az role assignment create \
+      --assignee-object-id "$AGENT_IDENTITY" \
+      --assignee-principal-type ServicePrincipal \
+      --role "Azure AI Developer" \
+      --scope "/subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.CognitiveServices/accounts/<account-name>/projects/<project-name>"
+  ```
 
-```bash
-az role assignment create \
-    --assignee-object-id "$AGENT_IDENTITY" \
-    --assignee-principal-type ServicePrincipal \
-    --role "Storage Blob Data Contributor" \
-    --scope "/subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.Storage/storageAccounts/<storage-account>"
-```
+  Assign a role on a storage account (for example, to allow the agent to read and write blobs):
 
-Role assignments are an Azure Resource Manager operation. Use the Azure CLI commands shown in the REST tab with the `agent_identity` value from the previous step, or use the [Azure Authorization Management](https://learn.microsoft.com/python/api/azure-mgmt-authorization) SDK to create role assignments programmatically.
+  ```bash
+  az role assignment create \
+      --assignee-object-id "$AGENT_IDENTITY" \
+      --assignee-principal-type ServicePrincipal \
+      --role "Storage Blob Data Contributor" \
+      --scope "/subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.Storage/storageAccounts/<storage-account>"
+  ```
 
-Use the Azure CLI directly to create role assignments. Retrieve the agent identity principal ID by using the REST API or Python SDK, then run `az role assignment create` as shown in the REST tab.
+  </Tab>
+  <Tab title="Python">
+
+  Role assignments are an Azure Resource Manager operation. Use the Azure CLI commands shown in the REST tab with the `agent_identity` value from the previous step, or use the [Azure Authorization Management](https://learn.microsoft.com/python/api/azure-mgmt-authorization) SDK to create role assignments programmatically.
+
+  </Tab>
+  <Tab title="Azure Developer CLI">
+
+  Use the Azure CLI directly to create role assignments. Retrieve the agent identity principal ID by using the REST API or Python SDK, then run `az role assignment create` as shown in the REST tab.
+
+  </Tab>
+</Tabs>
 
 ### Verify role assignments
 
-List the roles assigned to the agent identity on the Foundry project:
+<Tabs>
+  <Tab title="REST">
 
-```bash
-az role assignment list \
-    --assignee "$AGENT_IDENTITY" \
-    --scope "/subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.CognitiveServices/accounts/<account-name>/projects/<project-name>" \
-    --output table
-```
+  List the roles assigned to the agent identity on the Foundry project:
 
-List the roles assigned to the agent identity on a storage account:
+  ```bash
+  az role assignment list \
+      --assignee "$AGENT_IDENTITY" \
+      --scope "/subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.CognitiveServices/accounts/<account-name>/projects/<project-name>" \
+      --output table
+  ```
 
-```bash
-az role assignment list \
-    --assignee "$AGENT_IDENTITY" \
-    --scope "/subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.Storage/storageAccounts/<storage-account>" \
-    --output table
-```
+  List the roles assigned to the agent identity on a storage account:
 
-Use the Azure CLI commands shown in the REST tab to verify role assignments.
+  ```bash
+  az role assignment list \
+      --assignee "$AGENT_IDENTITY" \
+      --scope "/subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.Storage/storageAccounts/<storage-account>" \
+      --output table
+  ```
 
-Use the Azure CLI directly to verify role assignments as shown in the REST tab.
+  </Tab>
+  <Tab title="Python">
+
+  Use the Azure CLI commands shown in the REST tab to verify role assignments.
+
+  </Tab>
+  <Tab title="Azure Developer CLI">
+
+  Use the Azure CLI directly to verify role assignments as shown in the REST tab.
+
+  </Tab>
+</Tabs>
 
 ## Next steps
 

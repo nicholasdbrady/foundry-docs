@@ -21,9 +21,18 @@ This article covers creating a workflow project, running it locally, visualizing
 > The Foundry RBAC roles were recently renamed. **Foundry User**, **Foundry Owner**, **Foundry Account Owner**, and **Foundry Project Manager** were previously named Azure AI User, Azure AI Owner, Azure AI Account Owner, and Azure AI Project Manager. You might still see the previous names in some places while the rename rolls out. The role IDs and core permissions are unchanged by the rename.
 - A [supported region](/agent-service/hosted-agents#region-availability) for Hosted agents.
 
-- Python 3.12 or higher.
+<Tabs>
+  <Tab title="Python">
 
-- [.NET 9 SDK](https://dotnet.microsoft.com/download) or later.
+  - Python 3.12 or higher.
+
+  </Tab>
+  <Tab title="C#">
+
+  - [.NET 9 SDK](https://dotnet.microsoft.com/download) or later.
+
+  </Tab>
+</Tabs>
 
 ## Create a hosted agent workflow  
 
@@ -48,130 +57,144 @@ The files for your Hosted agent project are generated in your selected folder ba
 ### Install dependencies
 
 Install the required dependencies for your Hosted agent project. The dependencies vary based on the programming language that you selected when you created the project.
+<Tabs>
+  <Tab title="Python">
 
-1. Create virtual environment.
+  1. Create virtual environment.
 
-   ```bash
-    python -m venv .venv
-   ```
+     ```bash
+      python -m venv .venv
+     ```
 
-1. Activate the virtual environment.
+  1. Activate the virtual environment.
 
-   ```bash
-   # PowerShell
-   ./.venv/Scripts/Activate.ps1
+     ```bash
+     # PowerShell
+     ./.venv/Scripts/Activate.ps1
 
-   # Windows cmd
-   .venv\Scripts\activate.bat
+     # Windows cmd
+     .venv\Scripts\activate.bat
 
-   # Unix/MacOS
-   source .venv/bin/activate
-   ```
+     # Unix/MacOS
+     source .venv/bin/activate
+     ```
 
-1. Install the following package:
+  1. Install the following package:
 
-    ```bash
-    pip install azure-ai-agentserver-agentframework
-    ```
+      ```bash
+      pip install azure-ai-agentserver-agentframework
+      ```
 
-1. Go to your project directory and run this command to get the necessary NuGet packages:
+  </Tab>
+  <Tab title="C#">
 
-    ```bash
-    dotnet restore
-    ```
+  1. Go to your project directory and run this command to get the necessary NuGet packages:
+
+      ```bash
+      dotnet restore
+      ```
+
+  </Tab>
+</Tabs>
 
 ## Run your hosted workflow locally
 
-The sample workflow project creates an .env file with the necessary environment variables. Create or update the .env file with your Foundry credentials:
+<Tabs>
+  <Tab title="Python">
 
-```
-PROJECT_ENDPOINT=https://<your-resource-name>.services.ai.azure.com/api/projects/<your-project-name>
+  The sample workflow project creates an .env file with the necessary environment variables. Create or update the .env file with your Foundry credentials:
 
-MODEL_DEPLOYMENT_NAME=<your-model-deployment-name>
-```
+  ```
+  PROJECT_ENDPOINT=https://<your-resource-name>.services.ai.azure.com/api/projects/<your-project-name>
 
-<Info>
+  MODEL_DEPLOYMENT_NAME=<your-model-deployment-name>
+  ```
 
-Never commit the `.env` file to version control. Add it to your `.gitignore` file.
+  <Info>
 
-</Info>
+  Never commit the `.env` file to version control. Add it to your `.gitignore` file.
 
-### Authenticate your hosted agent
+  </Info>
 
-The Hosted agent sample authenticates using [DefaultAzureCredential](https://learn.microsoft.com/python/api/azure-identity/azure.identity.defaultazurecredential). Configure your development environment to provide credentials via one of the supported sources, for example:
+  ### Authenticate your hosted agent
 
-- Azure CLI (`az login`)
-- Visual Studio Code account sign-in
-- Visual Studio account sign-in
-- Environment variables for a service principal (AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET)
+  The Hosted agent sample authenticates using [DefaultAzureCredential](https://learn.microsoft.com/python/api/azure-identity/azure.identity.defaultazurecredential). Configure your development environment to provide credentials via one of the supported sources, for example:
 
-Confirm authentication locally by running either the Azure CLI `az account show` or `az account get-access-token` commands before running the sample.
+  - Azure CLI (`az login`)
+  - Visual Studio Code account sign-in
+  - Visual Studio account sign-in
+  - Environment variables for a service principal (AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET)
 
-You can run the Hosted agent in interactive mode or container mode.
+  Confirm authentication locally by running either the Azure CLI `az account show` or `az account get-access-token` commands before running the sample.
 
-### Run your hosted agent in the Agent Inspector
+  You can run the Hosted agent in interactive mode or container mode.
 
-To run your Hosted agent locally in Visual Studio Code, select the **F5** key. This opens the Agent Inspector and executes your application.
+  ### Run your hosted agent in the Agent Inspector
 
-This will:
+  To run your Hosted agent locally in Visual Studio Code, select the **F5** key. This opens the Agent Inspector and executes your application.
 
-1. **Start the agent server:** The `agentdev` CLI wraps your agent as an HTTP server on port 8087, with debugpy attached on port 5679.
-1. **Discover agents:** The UI fetches available agents/workflows from `/agentdev/entities`.
-1. **Stream execution:** Chat inputs go to `/v1/responses`, which streams back events via SSE for real-time visualization.
-1. **Enable code navigation:** Double-click workflow nodes to open the corresponding source file in the editor.
-1. **Enable chatting with the local agent** and viewing responses, hitting breakpoints for debugging, and so on.
+  This will:
 
-The sample workflow project creates an .env file with the necessary environment variables. Create or update the .env file with your Foundry credentials:
+  1. **Start the agent server:** The `agentdev` CLI wraps your agent as an HTTP server on port 8087, with debugpy attached on port 5679.
+  1. **Discover agents:** The UI fetches available agents/workflows from `/agentdev/entities`.
+  1. **Stream execution:** Chat inputs go to `/v1/responses`, which streams back events via SSE for real-time visualization.
+  1. **Enable code navigation:** Double-click workflow nodes to open the corresponding source file in the editor.
+  1. **Enable chatting with the local agent** and viewing responses, hitting breakpoints for debugging, and so on.
 
-1. Set up your environment variables based on your operating system:
+  </Tab>
+  <Tab title="C#">
 
-   #### [Windows (PowerShell)](#tab/windows-powershell)
+  The sample workflow project creates an .env file with the necessary environment variables. Create or update the .env file with your Foundry credentials:
 
-   ```powershell
-   $env:AZURE_AI_PROJECT_ENDPOINT="https://<your-resource-name>.services.ai.azure.com/api/projects/<your-project-name>"
-   $env:AZURE_AI_MODEL_DEPLOYMENT_NAME="your-deployment-name"
-   ```
+  1. Set up your environment variables based on your operating system:
 
-   #### [Windows (command prompt)](#tab/windows-command-prompt)
+     #### [Windows (PowerShell)](#tab/windows-powershell)
 
-   ```dos
-   set AZURE_AI_PROJECT_ENDPOINT=https://your-resource-name.openai.azure.com/
-   set AZURE_AI_MODEL_DEPLOYMENT_NAME=your-deployment-name
-   ```
+     ```powershell
+     $env:AZURE_AI_PROJECT_ENDPOINT="https://<your-resource-name>.services.ai.azure.com/api/projects/<your-project-name>"
+     $env:AZURE_AI_MODEL_DEPLOYMENT_NAME="your-deployment-name"
+     ```
 
-   #### [macOS/Linux (Bash)](#tab/macos-linux-bash)
+     #### [Windows (command prompt)](#tab/windows-command-prompt)
 
-   ```bash
-   export AZURE_AI_PROJECT_ENDPOINT="https://your-resource-name.openai.azure.com/"
-   export AZURE_AI_MODEL_DEPLOYMENT_NAME="your-deployment-name"
-   ```
+     ```dos
+     set AZURE_AI_PROJECT_ENDPOINT=https://your-resource-name.openai.azure.com/
+     set AZURE_AI_MODEL_DEPLOYMENT_NAME=your-deployment-name
+     ```
 
-    ---
+     #### [macOS/Linux (Bash)](#tab/macos-linux-bash)
 
-### Authenticate your hosted agent
+     ```bash
+     export AZURE_AI_PROJECT_ENDPOINT="https://your-resource-name.openai.azure.com/"
+     export AZURE_AI_MODEL_DEPLOYMENT_NAME="your-deployment-name"
+     ```
 
-The Hosted agent sample authenticates using [DefaultAzureCredential](https://learn.microsoft.com/dotnet/azure/sdk/authentication/credential-chains). Configure your development environment to provide credentials via one of the supported sources, for example:
+      ---
 
-- Azure CLI (`az login`)
-- Visual Studio Code account sign-in
-- Visual Studio account sign-in
-- Environment variables for a service principal (AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET)
+  ### Authenticate your hosted agent
 
-Confirm authentication locally by running either the Azure CLI `az account show` or `az account get-access-token` commands before running the sample.
+  The Hosted agent sample authenticates using [DefaultAzureCredential](https://learn.microsoft.com/dotnet/azure/sdk/authentication/credential-chains). Configure your development environment to provide credentials via one of the supported sources, for example:
 
-You can run the Hosted agent in interactive mode or container mode.
+  - Azure CLI (`az login`)
+  - Visual Studio Code account sign-in
+  - Visual Studio account sign-in
+  - Environment variables for a service principal (AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET)
 
-### Run your hosted agent in interactive mode
+  Confirm authentication locally by running either the Azure CLI `az account show` or `az account get-access-token` commands before running the sample.
 
-Run the Hosted agent directly for development and testing:
+  You can run the Hosted agent in interactive mode or container mode.
 
-```bash
-dotnet restore
-dotnet build
-dotnet run
-```
+  ### Run your hosted agent in interactive mode
 
-### Run your hosted agent in container mode
+  Run the Hosted agent directly for development and testing:
+
+  ```bash
+  dotnet restore
+  dotnet build
+  dotnet run
+  ```
+
+  ### Run your hosted agent in container mode
 
 <Tip>
 
@@ -179,97 +202,100 @@ Open the local playground before starting the container agent to ensure the visu
 
 </Tip>
 
-To run the agent in container mode:
+  To run the agent in container mode:
 
-1. Open the Visual Studio Code Command Palette and execute the `Microsoft Foundry: Open Container Agent Playground Locally` command.
-2. Use the following command to initialize the containerized Hosted agent.
-   ```bash
-   dotnet restore
-   dotnet build
-   dotnet run
-   ```
-3. Submit a request to the agent through the playground interface. For example, enter a prompt such as: "Create a slogan for a new electric SUV that's affordable and fun to drive."
-4. Review the agent's response in the playground interface.
+  1. Open the Visual Studio Code Command Palette and execute the `Microsoft Foundry: Open Container Agent Playground Locally` command.
+  2. Use the following command to initialize the containerized Hosted agent.
+     ```bash
+     dotnet restore
+     dotnet build
+     dotnet run
+     ```
+  3. Submit a request to the agent through the playground interface. For example, enter a prompt such as: "Create a slogan for a new electric SUV that's affordable and fun to drive."
+  4. Review the agent's response in the playground interface.
 
-## Visualize hosted agent workflow execution
+  ## Visualize hosted agent workflow execution
 
-The Foundry Toolkit for Visual Studio Code provides a real-time execution graph that shows how agents in your workflow interact and collaborate. Enable observability in your project to use this visualization.
+  The Foundry Toolkit for Visual Studio Code provides a real-time execution graph that shows how agents in your workflow interact and collaborate. Enable observability in your project to use this visualization.
 
-Add the following reference to your csproj file:
+  Add the following reference to your csproj file:
 
-```xml
-<ItemGroup>
-    <PackageReference Include="OpenTelemetry" Version="1.12.0" />
-    <PackageReference Include="OpenTelemetry.Exporter.Console" Version="1.12.0" />
-    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.12.0" />
-    <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="9.0.10" />
-</ItemGroup>
-```
+  ```xml
+  <ItemGroup>
+      <PackageReference Include="OpenTelemetry" Version="1.12.0" />
+      <PackageReference Include="OpenTelemetry.Exporter.Console" Version="1.12.0" />
+      <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.12.0" />
+      <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="9.0.10" />
+  </ItemGroup>
+  ```
 
-Update your program to include the following code snippet:
+  Update your program to include the following code snippet:
 
-```CSharp
-using System.Diagnostics;
-using OpenTelemetry;
-using OpenTelemetry.Logs;
-using OpenTelemetry.Metrics;
-using OpenTelemetry.Resources;
-using OpenTelemetry.Trace;
+  ```CSharp
+  using System.Diagnostics;
+  using OpenTelemetry;
+  using OpenTelemetry.Logs;
+  using OpenTelemetry.Metrics;
+  using OpenTelemetry.Resources;
+  using OpenTelemetry.Trace;
 
-var otlpEndpoint =
-    Environment.GetEnvironmentVariable("OTLP_ENDPOINT") ?? "http://localhost:4319";
+  var otlpEndpoint =
+      Environment.GetEnvironmentVariable("OTLP_ENDPOINT") ?? "http://localhost:4319";
 
-var resourceBuilder = OpenTelemetry
-    .Resources.ResourceBuilder.CreateDefault()
-    .AddService("WorkflowSample");
+  var resourceBuilder = OpenTelemetry
+      .Resources.ResourceBuilder.CreateDefault()
+      .AddService("WorkflowSample");
 
-var s_tracerProvider = OpenTelemetry
-    .Sdk.CreateTracerProviderBuilder()
-    .SetResourceBuilder(resourceBuilder)
-    .AddSource("Microsoft.Agents.AI.*") // All agent framework sources
-    .SetSampler(new AlwaysOnSampler()) // Ensure all traces are sampled
-    .AddOtlpExporter(options =>
-    {
-        options.Endpoint = new Uri(otlpEndpoint);
-        options.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
-    })
-    .Build();
-```
+  var s_tracerProvider = OpenTelemetry
+      .Sdk.CreateTracerProviderBuilder()
+      .SetResourceBuilder(resourceBuilder)
+      .AddSource("Microsoft.Agents.AI.*") // All agent framework sources
+      .SetSampler(new AlwaysOnSampler()) // Ensure all traces are sampled
+      .AddOtlpExporter(options =>
+      {
+          options.Endpoint = new Uri(otlpEndpoint);
+          options.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
+      })
+      .Build();
+  ```
 
-### Monitor and visualize your hosted agent workflow
+  ### Monitor and visualize your hosted agent workflow
 
-To monitor and visualize your Hosted agent workflow execution in real time:
+  To monitor and visualize your Hosted agent workflow execution in real time:
 
-1. Open the command palette (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd>).
+  1. Open the command palette (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd>).
 
-1. Run this command: `>Microsoft Foundry: Open Visualizer for Hosted Agents`.
+  1. Run this command: `>Microsoft Foundry: Open Visualizer for Hosted Agents`.
 
-A new tab opens in VS Code to display the execution graph. The visualization updates itself automatically as your workflow progresses, to show the flow between agents and their interactions.
+  A new tab opens in VS Code to display the execution graph. The visualization updates itself automatically as your workflow progresses, to show the flow between agents and their interactions.
 
-#### Port conflicts
+  #### Port conflicts
 
-For port conflicts, you can change the visualization port by setting it in the Foundry extension settings. To do that, follow these steps:
+  For port conflicts, you can change the visualization port by setting it in the Foundry extension settings. To do that, follow these steps:
 
-1. In the left sidebar of VS Code, select the gear icon to open the settings menu.
-1. Select `Extensions` > `Microsoft Foundry Configuration`.
-1. Locate the `Hosted Agent Visualization Port` setting and change it to an available port number.
-1. Restart VS Code to apply the changes.
+  1. In the left sidebar of VS Code, select the gear icon to open the settings menu.
+  1. Select `Extensions` > `Microsoft Foundry Configuration`.
+  1. Locate the `Hosted Agent Visualization Port` setting and change it to an available port number.
+  1. Restart VS Code to apply the changes.
 
-#### Change port in code
+  #### Change port in code
 
-For any port conflicts, change the visualization port by setting the `FOUNDRY_OTLP_PORT` environment variable. Update the OTLP endpoint in your program accordingly.
+  For any port conflicts, change the visualization port by setting the `FOUNDRY_OTLP_PORT` environment variable. Update the OTLP endpoint in your program accordingly.
 
-For example, to change the port to 4318, use this command:
+  For example, to change the port to 4318, use this command:
 
-```powershell
-  $env:FOUNDRY_OTLP_PORT="4318"
-```
-In your program, update the OTLP endpoint to use the new port number:
+  ```powershell
+    $env:FOUNDRY_OTLP_PORT="4318"
+  ```
+  In your program, update the OTLP endpoint to use the new port number:
 
-```CSharp
-var otlpEndpoint =
-    Environment.GetEnvironmentVariable("OTLP_ENDPOINT") ?? "http://localhost:4318";
-```
+  ```CSharp
+  var otlpEndpoint =
+      Environment.GetEnvironmentVariable("OTLP_ENDPOINT") ?? "http://localhost:4318";
+  ```
+
+  </Tab>
+</Tabs>
 
 ## Deploy the hosted agent
 
@@ -281,15 +307,24 @@ Make sure you give the necessary permissions to deploy Hosted agents in your Fou
 
 </Info>
 
-1. Open the Visual Studio Code Command Palette and run the `Microsoft Foundry: Deploy Hosted Agent` command.
-1. Configure the deployment settings by selecting your target workspace, specifying the container agent file (`container.py`), and defining any other deployment parameters as needed.
-1. Upon successful deployment, the Hosted agent appears in the `Hosted Agents (Preview)` section of the Microsoft Foundry extension tree view.
-1. Select the deployed agent to access detailed information and test functionality using the integrated playground interface.
+<Tabs>
+  <Tab title="Python">
 
-1. Open the Visual Studio Code Command Palette and run the `Microsoft Foundry: Deploy Hosted Agent` command.
-1. Configure the deployment settings by selecting your target workspace, specifying the container agent file (`<your-project-name>.csproj`), and defining any other deployment parameters as needed.
-1. Upon successful deployment, the Hosted agent appears in the `Hosted Agents (Preview)` section of the Microsoft Foundry extension tree view.
-1. Select the deployed agent to access detailed information and test functionality using the integrated playground interface.
+  1. Open the Visual Studio Code Command Palette and run the `Microsoft Foundry: Deploy Hosted Agent` command.
+  1. Configure the deployment settings by selecting your target workspace, specifying the container agent file (`container.py`), and defining any other deployment parameters as needed.
+  1. Upon successful deployment, the Hosted agent appears in the `Hosted Agents (Preview)` section of the Microsoft Foundry extension tree view.
+  1. Select the deployed agent to access detailed information and test functionality using the integrated playground interface.
+
+  </Tab>
+  <Tab title="C#">
+
+  1. Open the Visual Studio Code Command Palette and run the `Microsoft Foundry: Deploy Hosted Agent` command.
+  1. Configure the deployment settings by selecting your target workspace, specifying the container agent file (`<your-project-name>.csproj`), and defining any other deployment parameters as needed.
+  1. Upon successful deployment, the Hosted agent appears in the `Hosted Agents (Preview)` section of the Microsoft Foundry extension tree view.
+  1. Select the deployed agent to access detailed information and test functionality using the integrated playground interface.
+
+  </Tab>
+</Tabs>
 
 ## Related content
 

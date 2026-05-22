@@ -37,744 +37,762 @@ See [best practices](/agent-service/tool-best-practice) for information on optim
 
 </Note>
 
-### General Web Search
-
-The following example shows how to set up the AI Project client by using the Azure Identity library for authentication.
-
-```python
-from azure.identity import DefaultAzureCredential
-from azure.ai.projects import AIProjectClient
-from azure.ai.projects.models import (
-    PromptAgentDefinition,
-    WebSearchTool,
-    WebSearchApproximateLocation,
-)
-
-# Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-PROJECT_ENDPOINT = "your_project_endpoint"
-
-# Create clients to call Foundry API
-project = AIProjectClient(
-    endpoint=PROJECT_ENDPOINT,
-    credential=DefaultAzureCredential(),
-)
-openai = project.get_openai_client()
-
-# Create an agent with the web search tool
-agent = project.agents.create_version(
-    agent_name="MyAgent",
-    definition=PromptAgentDefinition(
-        model="gpt-5-mini",
-        instructions="You are a helpful assistant that can search the web",
-        tools=[
-            WebSearchTool(
-                user_location=WebSearchApproximateLocation(
-                    country="GB", city="London", region="London"
-                )
-            )
-        ],
-    ),
-    description="Agent for web search.",
-)
-print(f"Agent created (id: {agent.id}, name: {agent.name}, version: {agent.version})")
-
-# Send a query and stream the response
-stream_response = openai.responses.create(
-    stream=True,
-    tool_choice="required",
-    input="What is today's date and weather in Seattle?",
-    extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
-)
-
-# Process streaming events
-for event in stream_response:
-    if event.type == "response.created":
-        print(f"Follow-up response created with ID: {event.response.id}")
-    elif event.type == "response.output_text.delta":
-        print(f"Delta: {event.delta}")
-    elif event.type == "response.text.done":
-        print(f"\nFollow-up response done!")
-    elif event.type == "response.output_item.done":
-        if event.item.type == "message":
-            item = event.item
-            if item.content[-1].type == "output_text":
-                text_content = item.content[-1]
-                for annotation in text_content.annotations:
-                    if annotation.type == "url_citation":
-                        print(f"URL Citation: {annotation.url}")
-    elif event.type == "response.completed":
-        print(f"\nFollow-up completed!")
-        print(f"Full response: {event.response.output_text}")
-
-project.agents.delete_version(agent_name=agent.name, agent_version=agent.version)
-print("Agent deleted")
-```
-
-#### Expected output
-
-```output
-Agent created: <agent-name> (version 1)
-Response: The latest trends in renewable energy include ...
-URL Citation: https://example.com/source
-
-Follow-up completed!
-Full response: Based on current data ...
-Agent deleted
-```
-
-### Domain-Restricted Search with Bing Custom Search
-
-The following example shows how to restrict web search to specific domains using a Bing Custom Search instance. This approach gives you control over which websites your agent can search.
-
-```python
-from azure.identity import DefaultAzureCredential
-from azure.ai.projects import AIProjectClient
-from azure.ai.projects.models import (
-    PromptAgentDefinition,
-    WebSearchTool,
-    WebSearchConfiguration,
-)
-
-# Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-PROJECT_ENDPOINT = "your_project_endpoint"
-BING_CUSTOM_SEARCH_CONNECTION_ID = "your_bing_custom_search_connection_id"
-BING_CUSTOM_SEARCH_INSTANCE_NAME = "your_bing_custom_search_instance_name"
-
-# Create clients to call Foundry API
-project = AIProjectClient(
-    endpoint=PROJECT_ENDPOINT,
-    credential=DefaultAzureCredential(),
-)
-openai = project.get_openai_client()
-
-# Create an agent with the web search tool and custom search configuration
-agent = project.agents.create_version(
-    agent_name="MyAgent",
-    definition=PromptAgentDefinition(
-        model="gpt-5-mini",
-        instructions="You are a helpful assistant that can search the web",
-        tools=[
-            WebSearchTool(
-                custom_search_configuration=WebSearchConfiguration(
-                    project_connection_id=BING_CUSTOM_SEARCH_CONNECTION_ID,
-                    instance_name=BING_CUSTOM_SEARCH_INSTANCE_NAME,
-                )
-            )
-        ],
-    ),
-    description="Agent for domain-restricted web search.",
-)
-print(f"Agent created (id: {agent.id}, name: {agent.name}, version: {agent.version})")
-
-# Send a query and stream the response
-stream_response = openai.responses.create(
-    stream=True,
-    tool_choice="required",
-    input="What are the latest updates from Microsoft Learn?",
-    extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
-)
-
-# Process streaming events
-for event in stream_response:
-    if event.type == "response.created":
-        print(f"Response created with ID: {event.response.id}")
-    elif event.type == "response.output_text.delta":
-        print(f"Delta: {event.delta}")
-    elif event.type == "response.text.done":
-        print(f"\nResponse done!")
-    elif event.type == "response.output_item.done":
-        if event.item.type == "message":
-            item = event.item
-            if item.content[-1].type == "output_text":
-                text_content = item.content[-1]
-                for annotation in text_content.annotations:
-                    if annotation.type == "url_citation":
-                        print(f"URL Citation: {annotation.url}")
-    elif event.type == "response.completed":
-        print(f"\nResponse completed!")
-        print(f"Full response: {event.response.output_text}")
-
-project.agents.delete_version(agent_name=agent.name, agent_version=agent.version)
-print("Agent deleted")
-```
-
-#### Expected output
-
-```output
-Agent created (id: abc123, name: MyAgent, version: 1)
-Response created with ID: resp_456
-Delta: Based on your custom search ...
-Response done!
-URL Citation: https://your-allowed-domain.com/article
-
-Response completed!
-Full response: Based on your custom search ...
-Agent deleted
-```
-
-#### Tips for domain-restricted search
-
-Grounding with Bing Custom Search is a powerful tool that you can use to select a subspace of the web to limit your agent's grounding knowledge. Here are a few tips to help you take full advantage of this capability:
-
-- If you own a public site that you want to include in the search but Bing hasn't indexed, see the [Bing Webmaster Guidelines](https://www.bing.com/webmasters/help/webmasters-guidelines-30fba23a) for details about getting your site indexed. The webmaster documentation also provides details about getting Bing to crawl your site if the index is out of date.
-- You need at least the **Contributor** role for the Bing Custom Search resource to create a configuration.
-- You can block certain domains and perform a search against the rest of the web (a competitor's site, for example).
-- Grounding with Bing Custom Search only returns results for domains and webpages that are public and indexed by Bing.
-- You can specify different levels of granularity:
-  - Domain (for example, `https://www.microsoft.com`)
-  - Domain and path (for example, `https://www.microsoft.com/surface`)
-  - Webpage (for example, `https://www.microsoft.com/en-us/p/surface-earbuds/8r9cpq146064`)
-
-### Deep Research with Web Search
-
-The following example shows how to use the `o3-deep-research` model with the web search tool. This approach replaces the deprecated [Deep Research tool](https://learn.microsoft.com/en-us/azure/foundry-classic/agents/how-to/tools-classic/deep-research), enabling multi-step research using public web data directly through the web search tool.
-
-```python
-from azure.identity import DefaultAzureCredential
-from azure.ai.projects import AIProjectClient
-from azure.ai.projects.models import PromptAgentDefinition, WebSearchPreviewTool
-
-# Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-PROJECT_ENDPOINT = "your_project_endpoint"
-
-# Create clients to call Foundry API
-project = AIProjectClient(
-    endpoint=PROJECT_ENDPOINT,
-    credential=DefaultAzureCredential(),
-)
-openai = project.get_openai_client()
-
-# Create agent with web search tool using o3-deep-research model
-agent = project.agents.create_version(
-    agent_name="MyDeepResearchAgent",
-    definition=PromptAgentDefinition(
-        model="o3-deep-research",
-        instructions="You are a helpful assistant that can search the web",
-        tools=[WebSearchPreviewTool()],
-    ),
-    description="Agent for deep research with web search.",
-)
-print(f"Agent created (id: {agent.id}, name: {agent.name}, version: {agent.version})")
-
-# Create a conversation for the agent interaction
-conversation = openai.conversations.create()
-print(f"Created conversation (id: {conversation.id})")
-
-# Send a query to search the web
-stream_response = openai.responses.create(
-    stream=True,
-    conversation=conversation.id,
-    input="What are the latest advancements in quantum computing?",
-    extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
-)
-
-# Process streaming events as they arrive
-for event in stream_response:
-    if event.type == "response.created":
-        print(f"Response created with ID: {event.response.id}")
-    elif event.type == "response.output_text.delta":
-        print(f"Delta: {event.delta}")
-    elif event.type == "response.text.done":
-        print(f"\nResponse done!")
-    elif event.type == "response.completed":
-        print(f"\nResponse completed!")
-        print(f"Full response: {event.response.output_text}")
-
-# Clean up resources
-project.agents.delete_version(agent_name=agent.name, agent_version=agent.version)
-print("Agent deleted")
-```
-
-### General Web Search
-
-In this example, you use the agent to perform the web search in the given location. The example in this section uses synchronous calls. For an asynchronous example, see the [sample code](https://github.com/Azure/azure-sdk-for-net/blob/main/sdk/ai/Azure.AI.Extensions.OpenAI/samples/Sample13_WebSearch.md) in the Azure SDK for .NET repository on GitHub.
-
-```csharp
-using System;
-using Azure.AI.Projects;
-using Azure.AI.Extensions.OpenAI;
-using Azure.Identity;
-
-// Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-var projectEndpoint = "your_project_endpoint";
-
-// Create project client to call Foundry API
-AIProjectClient projectClient = new(
-    endpoint: new Uri(projectEndpoint),
-    tokenProvider: new DefaultAzureCredential());
-
-// Create an agent with the web search tool
-DeclarativeAgentDefinition agentDefinition = new(model: "gpt-5-mini")
-{
-    Instructions = "You are a helpful assistant that can search the web",
-    Tools = {
-        ResponseTool.CreateWebSearchTool(userLocation: WebSearchToolLocation.CreateApproximateLocation(
-            country: "GB",
-            city: "London",
-            region: "London"
-            )
-        ),
-    }
-};
-AgentVersion agentVersion = projectClient.AgentAdministrationClient.CreateAgentVersion(
-    agentName: "myAgent",
-    options: new(agentDefinition));
-
-// Ask a question related to London.
-ProjectResponsesClient responseClient = projectClient.ProjectOpenAIClient.GetProjectResponsesClientForAgent(agentVersion.Name);
-
-ResponseResult response = responseClient.CreateResponse("Show me the latest London Underground service updates");
-
-// Create the response and verify it completed.
-Console.WriteLine($"Response status: {response.Status}");
-Console.WriteLine(response.GetOutputText());
-
-// Delete the created agent version.
-projectClient.AgentAdministrationClient.DeleteAgentVersion(agentName: agentVersion.Name, agentVersion: agentVersion.Version);
-```
-
-**Expected output**
-
-The following is an example of the expected output when running the C# code:
-
-```console
-Response status: Completed
-The London Underground currently has service disruptions on ...
-Agent deleted
-```
-
-### Domain restricted web search
-To enable your Agent to use Web Search with Grounding with Bing Custom Search instance.
-
-1. First, create the project client and define the values used in the next steps.
-
-```C# Snippet:Sample_CreateAgentClient_WebSearchCustomStreaming
-// Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-var projectEndpoint = "your_project_endpoint";
-var modelDeploymentName = "gpt-4.1-mini";
-var connectionName = "your_custom_bing_connection_name";
-var customInstanceName = "your_bing_custom_search_instance_name";
-AIProjectClient projectClient = new(endpoint: new Uri(projectEndpoint), tokenProvider: new DefaultAzureCredential());
-```
-
-2. Create an Agent capable of using Web search on Grounding with Bing Custom Search instance.
-
-Synchronous sample:
-```C# Snippet:Sample_CreateAgent_WebSearchCustomStreaming_Sync
-AIProjectConnection bingConnection = projectClient.Connections.GetConnection(connectionName: connectionName);
-WebSearchTool webSearchTool = ResponseTool.CreateWebSearchTool();
-webSearchTool.CustomSearchConfiguration = new(bingConnection.Id, customInstanceName);
-DeclarativeAgentDefinition agentDefinition = new(model: modelDeploymentName)
-{
-    Instructions = "You are a helpful agent.",
-    Tools = { webSearchTool }
-};
-AgentVersion agentVersion = projectClient.AgentAdministrationClient.CreateAgentVersion(
-    agentName: "myAgent",
-    options: new(agentDefinition));
-```
-
-Asynchronous sample:
-```C# Snippet:Sample_CreateAgent_WebSearchCustomStreaming_Async
-AIProjectConnection bingConnection = projectClient.Connections.GetConnection(connectionName: connectionName);
-WebSearchTool webSearchTool = ResponseTool.CreateWebSearchTool();
-webSearchTool.CustomSearchConfiguration = new(bingConnection.Id, customInstanceName);
-DeclarativeAgentDefinition agentDefinition = new(model: modelDeploymentName)
-{
-    Instructions = "You are a helpful agent.",
-    Tools = { webSearchTool }
-};
-AgentVersion agentVersion = await projectClient.AgentAdministrationClient.CreateAgentVersionAsync(
-    agentName: "myAgent",
-    options: new(agentDefinition));
-```
-
-3. To get the formatted annotation we have created the `GetFormattedAnnotation` method.
-
-```C# Snippet:Sample_FormatReference_WebSearchCustomStreaming
-private static string GetFormattedAnnotation(ResponseItem item)
-{
-    if (item is MessageResponseItem messageItem)
-    {
-        foreach (ResponseContentPart content in messageItem.Content)
-        {
-            foreach (ResponseMessageAnnotation annotation in content.OutputTextAnnotations)
-            {
-                if (annotation is UriCitationMessageAnnotation uriAnnotation)
-                {
-                    return $" [{uriAnnotation.Title}]({uriAnnotation.Uri})";
-                }
-            }
-        }
-    }
-    return "";
-}
-```
-
-4. Ask the question and stream the response.
-
-Synchronous sample:
-```C# Snippet:Sample_StreamResponse_WebSearchCustomStreaming_Sync
-ProjectResponsesClient responseClient = projectClient.ProjectOpenAIClient.GetProjectResponsesClientForAgent(agentVersion.Name);
-
-string annotation = "";
-string text = "";
-CreateResponseOptions options = new()
-{
-    ToolChoice = ResponseToolChoice.CreateRequiredChoice(),
-    InputItems = { ResponseItem.CreateUserMessageItem("How many medals did the USA win in the 2024 summer olympics?") },
-};
-foreach (StreamingResponseUpdate streamResponse in responseClient.CreateResponseStreaming(options))
-{
-    if (streamResponse is StreamingResponseCreatedUpdate createUpdate)
-    {
-        Console.WriteLine($"Stream response created with ID: {createUpdate.Response.Id}");
-    }
-    else if (streamResponse is StreamingResponseOutputTextDeltaUpdate textDelta)
-    {
-        Console.WriteLine($"Delta: {textDelta.Delta}");
-    }
-    else if (streamResponse is StreamingResponseOutputTextDoneUpdate textDoneUpdate)
-    {
-        text = textDoneUpdate.Text;
-    }
-    else if (streamResponse is StreamingResponseOutputItemDoneUpdate itemDoneUpdate)
-    {
-        if (annotation.Length == 0)
-        {
-            annotation = GetFormattedAnnotation(itemDoneUpdate.Item);
-        }
-    }
-    else if (streamResponse is StreamingResponseErrorUpdate errorUpdate)
-    {
-        throw new InvalidOperationException($"The stream has failed: {errorUpdate.Message}");
-    }
-}
-Console.WriteLine($"{text}{annotation}");
-```
-
-Asynchronous sample:
-```C# Snippet:Sample_StreamResponse_WebSearchCustomStreaming_Async
-ProjectResponsesClient responseClient = projectClient.ProjectOpenAIClient.GetProjectResponsesClientForAgent(agentVersion.Name);
-
-string annotation = "";
-string text = "";
-CreateResponseOptions options = new()
-{
-    ToolChoice = ResponseToolChoice.CreateRequiredChoice(),
-    InputItems = { ResponseItem.CreateUserMessageItem("How many medals did the USA win in the 2024 summer olympics?") },
-};
-await foreach (StreamingResponseUpdate streamResponse in responseClient.CreateResponseStreamingAsync(options))
-{
-    if (streamResponse is StreamingResponseCreatedUpdate createUpdate)
-    {
-        Console.WriteLine($"Stream response created with ID: {createUpdate.Response.Id}");
-    }
-    else if (streamResponse is StreamingResponseOutputTextDeltaUpdate textDelta)
-    {
-        Console.WriteLine($"Delta: {textDelta.Delta}");
-    }
-    else if (streamResponse is StreamingResponseOutputTextDoneUpdate textDoneUpdate)
-    {
-        text = textDoneUpdate.Text;
-    }
-    else if (streamResponse is StreamingResponseOutputItemDoneUpdate itemDoneUpdate)
-    {
-        if (annotation.Length == 0)
-        {
-            annotation = GetFormattedAnnotation(itemDoneUpdate.Item);
-        }
-    }
-    else if (streamResponse is StreamingResponseErrorUpdate errorUpdate)
-    {
-        throw new InvalidOperationException($"The stream has failed: {errorUpdate.Message}");
-    }
-}
-Console.WriteLine($"{text}{annotation}");
-```
-
-5. Finally, delete all the resources we have created in this sample.
-
-Synchronous sample:
-```C# Snippet:Sample_Cleanup_WebSearchCustomStreaming_Sync
-projectClient.AgentAdministrationClient.DeleteAgentVersionAsync(agentName: agentVersion.Name, agentVersion: agentVersion.Version);
-```
-
-Asynchronous sample:
-```C# Snippet:Sample_Cleanup_WebSearchCustomStreaming_Async
-await projectClient.AgentAdministrationClient.DeleteAgentVersionAsync(agentName: agentVersion.Name, agentVersion: agentVersion.Version);
-```
-**Expected output**
-
-The following is an example of the expected output when running the C# code:
-
-```console
-Response status: Completed
-The London Underground currently has service disruptions on ...
-Agent deleted
-```
-
-### General Web Search
-
-Get an access token:
-
-```bash
-export AGENT_TOKEN=$(az account get-access-token --scope "https://ai.azure.com/.default" --query accessToken -o tsv)
-```
-
-The following example shows how to create a response by using an agent that has the web search tool enabled.
-
-```bash
-curl --request POST \
-  --url "$FOUNDRY_PROJECT_ENDPOINT/openai/v1/responses" \
-  -H "Authorization: Bearer $AGENT_TOKEN" \
-  -H "Content-Type: application/json" \
-  --data '{
-    "model": "'$FOUNDRY_MODEL_DEPLOYMENT_NAME'",
-    "input": "Tell me about the latest news about AI",
-    "tool_choice": "required",
-    "tools": [
-      {
-        "type": "web_search"
+<Tabs>
+  <Tab title="Python">
+
+  ### General Web Search
+
+  The following example shows how to set up the AI Project client by using the Azure Identity library for authentication.
+
+  ```python
+  from azure.identity import DefaultAzureCredential
+  from azure.ai.projects import AIProjectClient
+  from azure.ai.projects.models import (
+      PromptAgentDefinition,
+      WebSearchTool,
+      WebSearchApproximateLocation,
+  )
+
+  # Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+  PROJECT_ENDPOINT = "your_project_endpoint"
+
+  # Create clients to call Foundry API
+  project = AIProjectClient(
+      endpoint=PROJECT_ENDPOINT,
+      credential=DefaultAzureCredential(),
+  )
+  openai = project.get_openai_client()
+
+  # Create an agent with the web search tool
+  agent = project.agents.create_version(
+      agent_name="MyAgent",
+      definition=PromptAgentDefinition(
+          model="gpt-5-mini",
+          instructions="You are a helpful assistant that can search the web",
+          tools=[
+              WebSearchTool(
+                  user_location=WebSearchApproximateLocation(
+                      country="GB", city="London", region="London"
+                  )
+              )
+          ],
+      ),
+      description="Agent for web search.",
+  )
+  print(f"Agent created (id: {agent.id}, name: {agent.name}, version: {agent.version})")
+
+  # Send a query and stream the response
+  stream_response = openai.responses.create(
+      stream=True,
+      tool_choice="required",
+      input="What is today's date and weather in Seattle?",
+      extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
+  )
+
+  # Process streaming events
+  for event in stream_response:
+      if event.type == "response.created":
+          print(f"Follow-up response created with ID: {event.response.id}")
+      elif event.type == "response.output_text.delta":
+          print(f"Delta: {event.delta}")
+      elif event.type == "response.text.done":
+          print(f"\nFollow-up response done!")
+      elif event.type == "response.output_item.done":
+          if event.item.type == "message":
+              item = event.item
+              if item.content[-1].type == "output_text":
+                  text_content = item.content[-1]
+                  for annotation in text_content.annotations:
+                      if annotation.type == "url_citation":
+                          print(f"URL Citation: {annotation.url}")
+      elif event.type == "response.completed":
+          print(f"\nFollow-up completed!")
+          print(f"Full response: {event.response.output_text}")
+
+  project.agents.delete_version(agent_name=agent.name, agent_version=agent.version)
+  print("Agent deleted")
+  ```
+
+  #### Expected output
+
+  ```output
+  Agent created: <agent-name> (version 1)
+  Response: The latest trends in renewable energy include ...
+  URL Citation: https://example.com/source
+
+  Follow-up completed!
+  Full response: Based on current data ...
+  Agent deleted
+  ```
+
+  ### Domain-Restricted Search with Bing Custom Search
+
+  The following example shows how to restrict web search to specific domains using a Bing Custom Search instance. This approach gives you control over which websites your agent can search.
+
+  ```python
+  from azure.identity import DefaultAzureCredential
+  from azure.ai.projects import AIProjectClient
+  from azure.ai.projects.models import (
+      PromptAgentDefinition,
+      WebSearchTool,
+      WebSearchConfiguration,
+  )
+
+  # Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+  PROJECT_ENDPOINT = "your_project_endpoint"
+  BING_CUSTOM_SEARCH_CONNECTION_ID = "your_bing_custom_search_connection_id"
+  BING_CUSTOM_SEARCH_INSTANCE_NAME = "your_bing_custom_search_instance_name"
+
+  # Create clients to call Foundry API
+  project = AIProjectClient(
+      endpoint=PROJECT_ENDPOINT,
+      credential=DefaultAzureCredential(),
+  )
+  openai = project.get_openai_client()
+
+  # Create an agent with the web search tool and custom search configuration
+  agent = project.agents.create_version(
+      agent_name="MyAgent",
+      definition=PromptAgentDefinition(
+          model="gpt-5-mini",
+          instructions="You are a helpful assistant that can search the web",
+          tools=[
+              WebSearchTool(
+                  custom_search_configuration=WebSearchConfiguration(
+                      project_connection_id=BING_CUSTOM_SEARCH_CONNECTION_ID,
+                      instance_name=BING_CUSTOM_SEARCH_INSTANCE_NAME,
+                  )
+              )
+          ],
+      ),
+      description="Agent for domain-restricted web search.",
+  )
+  print(f"Agent created (id: {agent.id}, name: {agent.name}, version: {agent.version})")
+
+  # Send a query and stream the response
+  stream_response = openai.responses.create(
+      stream=True,
+      tool_choice="required",
+      input="What are the latest updates from Microsoft Learn?",
+      extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
+  )
+
+  # Process streaming events
+  for event in stream_response:
+      if event.type == "response.created":
+          print(f"Response created with ID: {event.response.id}")
+      elif event.type == "response.output_text.delta":
+          print(f"Delta: {event.delta}")
+      elif event.type == "response.text.done":
+          print(f"\nResponse done!")
+      elif event.type == "response.output_item.done":
+          if event.item.type == "message":
+              item = event.item
+              if item.content[-1].type == "output_text":
+                  text_content = item.content[-1]
+                  for annotation in text_content.annotations:
+                      if annotation.type == "url_citation":
+                          print(f"URL Citation: {annotation.url}")
+      elif event.type == "response.completed":
+          print(f"\nResponse completed!")
+          print(f"Full response: {event.response.output_text}")
+
+  project.agents.delete_version(agent_name=agent.name, agent_version=agent.version)
+  print("Agent deleted")
+  ```
+
+  #### Expected output
+
+  ```output
+  Agent created (id: abc123, name: MyAgent, version: 1)
+  Response created with ID: resp_456
+  Delta: Based on your custom search ...
+  Response done!
+  URL Citation: https://your-allowed-domain.com/article
+
+  Response completed!
+  Full response: Based on your custom search ...
+  Agent deleted
+  ```
+
+  #### Tips for domain-restricted search
+
+  Grounding with Bing Custom Search is a powerful tool that you can use to select a subspace of the web to limit your agent's grounding knowledge. Here are a few tips to help you take full advantage of this capability:
+
+  - If you own a public site that you want to include in the search but Bing hasn't indexed, see the [Bing Webmaster Guidelines](https://www.bing.com/webmasters/help/webmasters-guidelines-30fba23a) for details about getting your site indexed. The webmaster documentation also provides details about getting Bing to crawl your site if the index is out of date.
+  - You need at least the **Contributor** role for the Bing Custom Search resource to create a configuration.
+  - You can block certain domains and perform a search against the rest of the web (a competitor's site, for example).
+  - Grounding with Bing Custom Search only returns results for domains and webpages that are public and indexed by Bing.
+  - You can specify different levels of granularity:
+    - Domain (for example, `https://www.microsoft.com`)
+    - Domain and path (for example, `https://www.microsoft.com/surface`)
+    - Webpage (for example, `https://www.microsoft.com/en-us/p/surface-earbuds/8r9cpq146064`)
+
+  ### Deep Research with Web Search
+
+  The following example shows how to use the `o3-deep-research` model with the web search tool. This approach replaces the deprecated [Deep Research tool](https://learn.microsoft.com/en-us/azure/foundry-classic/agents/how-to/tools-classic/deep-research), enabling multi-step research using public web data directly through the web search tool.
+
+  ```python
+  from azure.identity import DefaultAzureCredential
+  from azure.ai.projects import AIProjectClient
+  from azure.ai.projects.models import PromptAgentDefinition, WebSearchPreviewTool
+
+  # Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+  PROJECT_ENDPOINT = "your_project_endpoint"
+
+  # Create clients to call Foundry API
+  project = AIProjectClient(
+      endpoint=PROJECT_ENDPOINT,
+      credential=DefaultAzureCredential(),
+  )
+  openai = project.get_openai_client()
+
+  # Create agent with web search tool using o3-deep-research model
+  agent = project.agents.create_version(
+      agent_name="MyDeepResearchAgent",
+      definition=PromptAgentDefinition(
+          model="o3-deep-research",
+          instructions="You are a helpful assistant that can search the web",
+          tools=[WebSearchPreviewTool()],
+      ),
+      description="Agent for deep research with web search.",
+  )
+  print(f"Agent created (id: {agent.id}, name: {agent.name}, version: {agent.version})")
+
+  # Create a conversation for the agent interaction
+  conversation = openai.conversations.create()
+  print(f"Created conversation (id: {conversation.id})")
+
+  # Send a query to search the web
+  stream_response = openai.responses.create(
+      stream=True,
+      conversation=conversation.id,
+      input="What are the latest advancements in quantum computing?",
+      extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
+  )
+
+  # Process streaming events as they arrive
+  for event in stream_response:
+      if event.type == "response.created":
+          print(f"Response created with ID: {event.response.id}")
+      elif event.type == "response.output_text.delta":
+          print(f"Delta: {event.delta}")
+      elif event.type == "response.text.done":
+          print(f"\nResponse done!")
+      elif event.type == "response.completed":
+          print(f"\nResponse completed!")
+          print(f"Full response: {event.response.output_text}")
+
+  # Clean up resources
+  project.agents.delete_version(agent_name=agent.name, agent_version=agent.version)
+  print("Agent deleted")
+  ```
+
+  </Tab>
+  <Tab title="C#">
+
+  ### General Web Search
+
+  In this example, you use the agent to perform the web search in the given location. The example in this section uses synchronous calls. For an asynchronous example, see the [sample code](https://github.com/Azure/azure-sdk-for-net/blob/main/sdk/ai/Azure.AI.Extensions.OpenAI/samples/Sample13_WebSearch.md) in the Azure SDK for .NET repository on GitHub.
+
+  ```csharp
+  using System;
+  using Azure.AI.Projects;
+  using Azure.AI.Extensions.OpenAI;
+  using Azure.Identity;
+
+  // Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+  var projectEndpoint = "your_project_endpoint";
+
+  // Create project client to call Foundry API
+  AIProjectClient projectClient = new(
+      endpoint: new Uri(projectEndpoint),
+      tokenProvider: new DefaultAzureCredential());
+
+  // Create an agent with the web search tool
+  DeclarativeAgentDefinition agentDefinition = new(model: "gpt-5-mini")
+  {
+      Instructions = "You are a helpful assistant that can search the web",
+      Tools = {
+          ResponseTool.CreateWebSearchTool(userLocation: WebSearchToolLocation.CreateApproximateLocation(
+              country: "GB",
+              city: "London",
+              region: "London"
+              )
+          ),
       }
-    ]
-  }'
-```
+  };
+  AgentVersion agentVersion = projectClient.AgentAdministrationClient.CreateAgentVersion(
+      agentName: "myAgent",
+      options: new(agentDefinition));
 
-#### Expected output
+  // Ask a question related to London.
+  ProjectResponsesClient responseClient = projectClient.ProjectOpenAIClient.GetProjectResponsesClientForAgent(agentVersion.Name);
 
-The following example shows the expected output when using the web search tool via the REST API:
+  ResponseResult response = responseClient.CreateResponse("Show me the latest London Underground service updates");
 
-```json
-{
-  "id": "resp_abc123xyz",
-  "object": "response",
-  "created_at": 1702345678,
-  "status": "completed",
-  "output_text": "Here is a grounded response with citations.",
-  "output_items": [
-    {
-      "type": "message",
-      "content": [
+  // Create the response and verify it completed.
+  Console.WriteLine($"Response status: {response.Status}");
+  Console.WriteLine(response.GetOutputText());
+
+  // Delete the created agent version.
+  projectClient.AgentAdministrationClient.DeleteAgentVersion(agentName: agentVersion.Name, agentVersion: agentVersion.Version);
+  ```
+
+  **Expected output**
+
+  The following is an example of the expected output when running the C# code:
+
+  ```console
+  Response status: Completed
+  The London Underground currently has service disruptions on ...
+  Agent deleted
+  ```
+
+  ### Domain restricted web search
+  To enable your Agent to use Web Search with Grounding with Bing Custom Search instance.
+
+  1. First, create the project client and define the values used in the next steps.
+
+  ```C# Snippet:Sample_CreateAgentClient_WebSearchCustomStreaming
+  // Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+  var projectEndpoint = "your_project_endpoint";
+  var modelDeploymentName = "gpt-4.1-mini";
+  var connectionName = "your_custom_bing_connection_name";
+  var customInstanceName = "your_bing_custom_search_instance_name";
+  AIProjectClient projectClient = new(endpoint: new Uri(projectEndpoint), tokenProvider: new DefaultAzureCredential());
+  ```
+
+  2. Create an Agent capable of using Web search on Grounding with Bing Custom Search instance.
+
+  Synchronous sample:
+  ```C# Snippet:Sample_CreateAgent_WebSearchCustomStreaming_Sync
+  AIProjectConnection bingConnection = projectClient.Connections.GetConnection(connectionName: connectionName);
+  WebSearchTool webSearchTool = ResponseTool.CreateWebSearchTool();
+  webSearchTool.CustomSearchConfiguration = new(bingConnection.Id, customInstanceName);
+  DeclarativeAgentDefinition agentDefinition = new(model: modelDeploymentName)
+  {
+      Instructions = "You are a helpful agent.",
+      Tools = { webSearchTool }
+  };
+  AgentVersion agentVersion = projectClient.AgentAdministrationClient.CreateAgentVersion(
+      agentName: "myAgent",
+      options: new(agentDefinition));
+  ```
+
+  Asynchronous sample:
+  ```C# Snippet:Sample_CreateAgent_WebSearchCustomStreaming_Async
+  AIProjectConnection bingConnection = projectClient.Connections.GetConnection(connectionName: connectionName);
+  WebSearchTool webSearchTool = ResponseTool.CreateWebSearchTool();
+  webSearchTool.CustomSearchConfiguration = new(bingConnection.Id, customInstanceName);
+  DeclarativeAgentDefinition agentDefinition = new(model: modelDeploymentName)
+  {
+      Instructions = "You are a helpful agent.",
+      Tools = { webSearchTool }
+  };
+  AgentVersion agentVersion = await projectClient.AgentAdministrationClient.CreateAgentVersionAsync(
+      agentName: "myAgent",
+      options: new(agentDefinition));
+  ```
+
+  3. To get the formatted annotation we have created the `GetFormattedAnnotation` method.
+
+  ```C# Snippet:Sample_FormatReference_WebSearchCustomStreaming
+  private static string GetFormattedAnnotation(ResponseItem item)
+  {
+      if (item is MessageResponseItem messageItem)
+      {
+          foreach (ResponseContentPart content in messageItem.Content)
+          {
+              foreach (ResponseMessageAnnotation annotation in content.OutputTextAnnotations)
+              {
+                  if (annotation is UriCitationMessageAnnotation uriAnnotation)
+                  {
+                      return $" [{uriAnnotation.Title}]({uriAnnotation.Uri})";
+                  }
+              }
+          }
+      }
+      return "";
+  }
+  ```
+
+  4. Ask the question and stream the response.
+
+  Synchronous sample:
+  ```C# Snippet:Sample_StreamResponse_WebSearchCustomStreaming_Sync
+  ProjectResponsesClient responseClient = projectClient.ProjectOpenAIClient.GetProjectResponsesClientForAgent(agentVersion.Name);
+
+  string annotation = "";
+  string text = "";
+  CreateResponseOptions options = new()
+  {
+      ToolChoice = ResponseToolChoice.CreateRequiredChoice(),
+      InputItems = { ResponseItem.CreateUserMessageItem("How many medals did the USA win in the 2024 summer olympics?") },
+  };
+  foreach (StreamingResponseUpdate streamResponse in responseClient.CreateResponseStreaming(options))
+  {
+      if (streamResponse is StreamingResponseCreatedUpdate createUpdate)
+      {
+          Console.WriteLine($"Stream response created with ID: {createUpdate.Response.Id}");
+      }
+      else if (streamResponse is StreamingResponseOutputTextDeltaUpdate textDelta)
+      {
+          Console.WriteLine($"Delta: {textDelta.Delta}");
+      }
+      else if (streamResponse is StreamingResponseOutputTextDoneUpdate textDoneUpdate)
+      {
+          text = textDoneUpdate.Text;
+      }
+      else if (streamResponse is StreamingResponseOutputItemDoneUpdate itemDoneUpdate)
+      {
+          if (annotation.Length == 0)
+          {
+              annotation = GetFormattedAnnotation(itemDoneUpdate.Item);
+          }
+      }
+      else if (streamResponse is StreamingResponseErrorUpdate errorUpdate)
+      {
+          throw new InvalidOperationException($"The stream has failed: {errorUpdate.Message}");
+      }
+  }
+  Console.WriteLine($"{text}{annotation}");
+  ```
+
+  Asynchronous sample:
+  ```C# Snippet:Sample_StreamResponse_WebSearchCustomStreaming_Async
+  ProjectResponsesClient responseClient = projectClient.ProjectOpenAIClient.GetProjectResponsesClientForAgent(agentVersion.Name);
+
+  string annotation = "";
+  string text = "";
+  CreateResponseOptions options = new()
+  {
+      ToolChoice = ResponseToolChoice.CreateRequiredChoice(),
+      InputItems = { ResponseItem.CreateUserMessageItem("How many medals did the USA win in the 2024 summer olympics?") },
+  };
+  await foreach (StreamingResponseUpdate streamResponse in responseClient.CreateResponseStreamingAsync(options))
+  {
+      if (streamResponse is StreamingResponseCreatedUpdate createUpdate)
+      {
+          Console.WriteLine($"Stream response created with ID: {createUpdate.Response.Id}");
+      }
+      else if (streamResponse is StreamingResponseOutputTextDeltaUpdate textDelta)
+      {
+          Console.WriteLine($"Delta: {textDelta.Delta}");
+      }
+      else if (streamResponse is StreamingResponseOutputTextDoneUpdate textDoneUpdate)
+      {
+          text = textDoneUpdate.Text;
+      }
+      else if (streamResponse is StreamingResponseOutputItemDoneUpdate itemDoneUpdate)
+      {
+          if (annotation.Length == 0)
+          {
+              annotation = GetFormattedAnnotation(itemDoneUpdate.Item);
+          }
+      }
+      else if (streamResponse is StreamingResponseErrorUpdate errorUpdate)
+      {
+          throw new InvalidOperationException($"The stream has failed: {errorUpdate.Message}");
+      }
+  }
+  Console.WriteLine($"{text}{annotation}");
+  ```
+
+  5. Finally, delete all the resources we have created in this sample.
+
+  Synchronous sample:
+  ```C# Snippet:Sample_Cleanup_WebSearchCustomStreaming_Sync
+  projectClient.AgentAdministrationClient.DeleteAgentVersionAsync(agentName: agentVersion.Name, agentVersion: agentVersion.Version);
+  ```
+
+  Asynchronous sample:
+  ```C# Snippet:Sample_Cleanup_WebSearchCustomStreaming_Async
+  await projectClient.AgentAdministrationClient.DeleteAgentVersionAsync(agentName: agentVersion.Name, agentVersion: agentVersion.Version);
+  ```
+  **Expected output**
+
+  The following is an example of the expected output when running the C# code:
+
+  ```console
+  Response status: Completed
+  The London Underground currently has service disruptions on ...
+  Agent deleted
+  ```
+
+  </Tab>
+  <Tab title="REST API">
+
+  ### General Web Search
+
+  Get an access token:
+
+  ```bash
+  export AGENT_TOKEN=$(az account get-access-token --scope "https://ai.azure.com/.default" --query accessToken -o tsv)
+  ```
+
+  The following example shows how to create a response by using an agent that has the web search tool enabled.
+
+  ```bash
+  curl --request POST \
+    --url "$FOUNDRY_PROJECT_ENDPOINT/openai/v1/responses" \
+    -H "Authorization: Bearer $AGENT_TOKEN" \
+    -H "Content-Type: application/json" \
+    --data '{
+      "model": "'$FOUNDRY_MODEL_DEPLOYMENT_NAME'",
+      "input": "Tell me about the latest news about AI",
+      "tool_choice": "required",
+      "tools": [
         {
-          "type": "output_text",
-          "text": "Here is a grounded response with citations.",
-          "annotations": [
-            {
-              "type": "url_citation",
-              "url": "https://contoso.com/example-source",
-              "start_index": 0,
-              "end_index": 43
-            }
-          ]
+          "type": "web_search"
         }
       ]
-    }
-  ]
-}
-```
-### Domain restricted web search
+    }'
+  ```
 
-Get an access token:
+  #### Expected output
 
-```bash
-export AGENT_TOKEN=$(az account get-access-token --scope "https://ai.azure.com/.default" --query accessToken -o tsv)
-```
+  The following example shows the expected output when using the web search tool via the REST API:
 
-The following example shows how to create a response by using an agent that has the web search tool enabled.
-
-```bash
-curl --request POST \
-  --url "$FOUNDRY_PROJECT_ENDPOINT/openai/v1/responses" \
-  -H "Authorization: Bearer $AGENT_TOKEN" \
-  -H "Content-Type: application/json" \
-  --data '{
-    "model": "'$FOUNDRY_MODEL_DEPLOYMENT_NAME'",
-    "input": "Tell me about the latest news about AI",
-    "tool_choice": "required",
-    "tools": [
+  ```json
+  {
+    "id": "resp_abc123xyz",
+    "object": "response",
+    "created_at": 1702345678,
+    "status": "completed",
+    "output_text": "Here is a grounded response with citations.",
+    "output_items": [
       {
-        "type": "web_search",
-        "custom_search_configuration": [
+        "type": "message",
+        "content": [
           {
-            "project_connection_id": "'$BING_CUSTOM_SEARCH_PROJECT_CONNECTION_ID'",
-            "instance_name": "'$BING_CUSTOM_SEARCH_INSTANCE_NAME'",
+            "type": "output_text",
+            "text": "Here is a grounded response with citations.",
+            "annotations": [
+              {
+                "type": "url_citation",
+                "url": "https://contoso.com/example-source",
+                "start_index": 0,
+                "end_index": 43
+              }
+            ]
           }
         ]
       }
     ]
-  }'
-```
+  }
+  ```
+  ### Domain restricted web search
 
-## Use the web search tool with TypeScript
+  Get an access token:
 
-The following TypeScript example demonstrates how to create an agent with the web search tool. For an example that uses JavaScript, see the [sample code](https://github.com/Azure/azure-sdk-for-js/blob/main/sdk/ai/ai-projects/samples/v2-beta/javascript/agents/tools/agentWebSearch.js) example in the Azure SDK for JavaScript repository on GitHub.
+  ```bash
+  export AGENT_TOKEN=$(az account get-access-token --scope "https://ai.azure.com/.default" --query accessToken -o tsv)
+  ```
 
-```typescript
-// Copyright (c) Microsoft Corporation.
-// Licensed under the MIT License.
+  The following example shows how to create a response by using an agent that has the web search tool enabled.
 
-/**
- * This sample demonstrates how to run Prompt Agent operations using the Web Search Tool.
- *
- * @summary This sample demonstrates how to create an agent with web search capabilities,
- * send a query to search the web, and clean up resources.
- *
- * @warning Web Search tool uses Grounding with Bing, which has additional costs and terms: [terms of use](https://www.microsoft.com/bing/apis/grounding-legal-enterprise) and [privacy statement](https://go.microsoft.com/fwlink/?LinkId=521839&clcid=0x409). Customer data will flow outside the Azure compliance boundary. Learn more [here](https://learn.microsoft.com/en-us/azure/foundry/agents/how-to/tools/web-search?pivots=rest-api)
- *
- * @azsdk-weight 100
- */
+  ```bash
+  curl --request POST \
+    --url "$FOUNDRY_PROJECT_ENDPOINT/openai/v1/responses" \
+    -H "Authorization: Bearer $AGENT_TOKEN" \
+    -H "Content-Type: application/json" \
+    --data '{
+      "model": "'$FOUNDRY_MODEL_DEPLOYMENT_NAME'",
+      "input": "Tell me about the latest news about AI",
+      "tool_choice": "required",
+      "tools": [
+        {
+          "type": "web_search",
+          "custom_search_configuration": [
+            {
+              "project_connection_id": "'$BING_CUSTOM_SEARCH_PROJECT_CONNECTION_ID'",
+              "instance_name": "'$BING_CUSTOM_SEARCH_INSTANCE_NAME'",
+            }
+          ]
+        }
+      ]
+    }'
+  ```
 
-import { DefaultAzureCredential } from "@azure/identity";
-import { AIProjectClient } from "@azure/ai-projects";
+  </Tab>
+  <Tab title="TypeScript">
 
-// Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-const PROJECT_ENDPOINT = "your_project_endpoint";
+  ## Use the web search tool with TypeScript
 
-export async function main(): Promise<void> {
-  // Create AI Project client
-  const project = new AIProjectClient(PROJECT_ENDPOINT, new DefaultAzureCredential());
-  const openai = project.getOpenAIClient();
+  The following TypeScript example demonstrates how to create an agent with the web search tool. For an example that uses JavaScript, see the [sample code](https://github.com/Azure/azure-sdk-for-js/blob/main/sdk/ai/ai-projects/samples/v2-beta/javascript/agents/tools/agentWebSearch.js) example in the Azure SDK for JavaScript repository on GitHub.
 
-  console.log("Creating agent with web search tool...");
+  ```typescript
+  // Copyright (c) Microsoft Corporation.
+  // Licensed under the MIT License.
 
-  // Create Agent with web search tool
-  const agent = await project.agents.createVersion("agent-web-search", {
-    kind: "prompt",
-    model: "gpt-5-mini",
-    instructions: "You are a helpful assistant that can search the web",
-    tools: [
-      {
-        type: "web_search",
-        user_location: {
-          type: "approximate",
-          country: "GB",
-          city: "London",
-          region: "London",
+  /**
+   * This sample demonstrates how to run Prompt Agent operations using the Web Search Tool.
+   *
+   * @summary This sample demonstrates how to create an agent with web search capabilities,
+   * send a query to search the web, and clean up resources.
+   *
+   * @warning Web Search tool uses Grounding with Bing, which has additional costs and terms: [terms of use](https://www.microsoft.com/bing/apis/grounding-legal-enterprise) and [privacy statement](https://go.microsoft.com/fwlink/?LinkId=521839&clcid=0x409). Customer data will flow outside the Azure compliance boundary. Learn more [here](https://learn.microsoft.com/en-us/azure/foundry/agents/how-to/tools/web-search?pivots=rest-api)
+   *
+   * @azsdk-weight 100
+   */
+
+  import { DefaultAzureCredential } from "@azure/identity";
+  import { AIProjectClient } from "@azure/ai-projects";
+
+  // Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+  const PROJECT_ENDPOINT = "your_project_endpoint";
+
+  export async function main(): Promise<void> {
+    // Create AI Project client
+    const project = new AIProjectClient(PROJECT_ENDPOINT, new DefaultAzureCredential());
+    const openai = project.getOpenAIClient();
+
+    console.log("Creating agent with web search tool...");
+
+    // Create Agent with web search tool
+    const agent = await project.agents.createVersion("agent-web-search", {
+      kind: "prompt",
+      model: "gpt-5-mini",
+      instructions: "You are a helpful assistant that can search the web",
+      tools: [
+        {
+          type: "web_search",
+          user_location: {
+            type: "approximate",
+            country: "GB",
+            city: "London",
+            region: "London",
+          },
         },
+      ],
+    });
+    console.log(`Agent created (id: ${agent.id}, name: ${agent.name}, version: ${agent.version})`);
+
+    // Create a conversation for the agent interaction
+    const conversation = await openai.conversations.create();
+    console.log(`Created conversation (id: ${conversation.id})`);
+
+    // Send a query to search the web
+    console.log("\nSending web search query...");
+    const response = await openai.responses.create(
+      {
+        conversation: conversation.id,
+        input: "Show me the latest London Underground service updates",
       },
-    ],
+      {
+        body: { agent: { name: agent.name, type: "agent_reference" } },
+      },
+    );
+    console.log(`Response: ${response.output_text}`);
+
+    // Clean up resources
+    console.log("\nCleaning up resources...");
+    await openai.conversations.delete(conversation.id);
+    console.log("Conversation deleted");
+
+    await project.agents.deleteVersion(agent.name, agent.version);
+    console.log("Agent deleted");
+
+    console.log("\nWeb search sample completed!");
+  }
+
+  main().catch((err) => {
+    console.error("The sample encountered an error:", err);
   });
-  console.log(`Agent created (id: ${agent.id}, name: ${agent.name}, version: ${agent.version})`);
+  ```
 
-  // Create a conversation for the agent interaction
-  const conversation = await openai.conversations.create();
-  console.log(`Created conversation (id: ${conversation.id})`);
+  ### Expected output
 
-  // Send a query to search the web
-  console.log("\nSending web search query...");
-  const response = await openai.responses.create(
-    {
-      conversation: conversation.id,
-      input: "Show me the latest London Underground service updates",
-    },
-    {
-      body: { agent: { name: agent.name, type: "agent_reference" } },
-    },
-  );
-  console.log(`Response: ${response.output_text}`);
+  The following example shows the expected output when running the TypeScript code:
 
-  // Clean up resources
-  console.log("\nCleaning up resources...");
-  await openai.conversations.delete(conversation.id);
-  console.log("Conversation deleted");
+  ```console
+  Agent created (id: 12345, name: agent-web-search, version: 1)
+  Response: The agent returns a grounded response that includes citations.
+  Agent deleted
+  ```
 
-  await project.agents.deleteVersion(agent.name, agent.version);
-  console.log("Agent deleted");
+  </Tab>
+  <Tab title="Java">
 
-  console.log("\nWeb search sample completed!");
-}
+  ## Use web search in a Java agent
 
-main().catch((err) => {
-  console.error("The sample encountered an error:", err);
-});
-```
+  Add the dependency to your `pom.xml`:
 
-### Expected output
+  ```xml
+  <dependency>
+      <groupId>com.azure</groupId>
+      <artifactId>azure-ai-agents</artifactId>
+      <version>2.0.0</version>
+  </dependency>
+  ```
 
-The following example shows the expected output when running the TypeScript code:
+  ### Create an agent with web search
 
-```console
-Agent created (id: 12345, name: agent-web-search, version: 1)
-Response: The agent returns a grounded response that includes citations.
-Agent deleted
-```
+  ```java
+  import com.azure.ai.agents.AgentsClient;
+  import com.azure.ai.agents.AgentsClientBuilder;
+  import com.azure.ai.agents.ResponsesClient;
+  import com.azure.ai.agents.models.AgentReference;
+  import com.azure.ai.agents.models.AgentVersionDetails;
+  import com.azure.ai.agents.models.AzureCreateResponseOptions;
+  import com.azure.ai.agents.models.PromptAgentDefinition;
+  import com.azure.ai.agents.models.WebSearchTool;
+  import com.azure.identity.DefaultAzureCredentialBuilder;
+  import com.openai.models.responses.Response;
+  import com.openai.models.responses.ResponseCreateParams;
 
-## Use web search in a Java agent
+  import java.util.Collections;
 
-Add the dependency to your `pom.xml`:
+  public class WebSearchExample {
+      public static void main(String[] args) {
+          // Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+          String projectEndpoint = "your_project_endpoint";
 
-```xml
-<dependency>
-    <groupId>com.azure</groupId>
-    <artifactId>azure-ai-agents</artifactId>
-    <version>2.0.0</version>
-</dependency>
-```
+          AgentsClientBuilder builder = new AgentsClientBuilder()
+              .credential(new DefaultAzureCredentialBuilder().build())
+              .endpoint(projectEndpoint);
 
-### Create an agent with web search
+          AgentsClient agentsClient = builder.buildAgentsClient();
+          ResponsesClient responsesClient = builder.buildResponsesClient();
 
-```java
-import com.azure.ai.agents.AgentsClient;
-import com.azure.ai.agents.AgentsClientBuilder;
-import com.azure.ai.agents.ResponsesClient;
-import com.azure.ai.agents.models.AgentReference;
-import com.azure.ai.agents.models.AgentVersionDetails;
-import com.azure.ai.agents.models.AzureCreateResponseOptions;
-import com.azure.ai.agents.models.PromptAgentDefinition;
-import com.azure.ai.agents.models.WebSearchTool;
-import com.azure.identity.DefaultAzureCredentialBuilder;
-import com.openai.models.responses.Response;
-import com.openai.models.responses.ResponseCreateParams;
+          // Create web search tool with user location
+          WebSearchPreviewTool webSearchTool = new WebSearchTool();
 
-import java.util.Collections;
+          // Create agent with web search tool
+          PromptAgentDefinition agentDefinition = new PromptAgentDefinition("gpt-5-mini")
+              .setInstructions("You are a helpful assistant that can search the web for current information.")
+              .setTools(Collections.singletonList(webSearchTool));
 
-public class WebSearchExample {
-    public static void main(String[] args) {
-        // Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-        String projectEndpoint = "your_project_endpoint";
+          AgentVersionDetails agent = agentsClient.createAgentVersion("web-search-agent", agentDefinition);
+          System.out.printf("Agent created: %s (version %s)%n", agent.getName(), agent.getVersion());
 
-        AgentsClientBuilder builder = new AgentsClientBuilder()
-            .credential(new DefaultAzureCredentialBuilder().build())
-            .endpoint(projectEndpoint);
+          // Create a response
+          AgentReference agentReference = new AgentReference(agent.getName())
+              .setVersion(agent.getVersion());
 
-        AgentsClient agentsClient = builder.buildAgentsClient();
-        ResponsesClient responsesClient = builder.buildResponsesClient();
+          Response response = responsesClient.createAzureResponse(
+              new AzureCreateResponseOptions().setAgentReference(agentReference),
+              ResponseCreateParams.builder()
+                  .input("What are the latest trends in renewable energy?"));
 
-        // Create web search tool with user location
-        WebSearchPreviewTool webSearchTool = new WebSearchTool();
+          System.out.println("Response: " + response.output());
 
-        // Create agent with web search tool
-        PromptAgentDefinition agentDefinition = new PromptAgentDefinition("gpt-5-mini")
-            .setInstructions("You are a helpful assistant that can search the web for current information.")
-            .setTools(Collections.singletonList(webSearchTool));
+          // Clean up
+          agentsClient.deleteAgentVersion(agent.getName(), agent.getVersion());
+      }
+  }
+  ```
 
-        AgentVersionDetails agent = agentsClient.createAgentVersion("web-search-agent", agentDefinition);
-        System.out.printf("Agent created: %s (version %s)%n", agent.getName(), agent.getVersion());
+  ### Expected output
 
-        // Create a response
-        AgentReference agentReference = new AgentReference(agent.getName())
-            .setVersion(agent.getVersion());
+  ```output
+  Agent created: web-search-agent (version 1)
+  Response: [ResponseOutputItem with web search results about renewable energy trends ...]
+  ```
 
-        Response response = responsesClient.createAzureResponse(
-            new AzureCreateResponseOptions().setAgentReference(agentReference),
-            ResponseCreateParams.builder()
-                .input("What are the latest trends in renewable energy?"));
-
-        System.out.println("Response: " + response.output());
-
-        // Clean up
-        agentsClient.deleteAgentVersion(agent.getName(), agent.getVersion());
-    }
-}
-```
-
-### Expected output
-
-```output
-Agent created: web-search-agent (version 1)
-Response: [ResponseOutputItem with web search results about renewable energy trends ...]
-```
+  </Tab>
+</Tabs>
 
 ## Configure the web search tool
 

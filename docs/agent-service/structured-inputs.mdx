@@ -56,1373 +56,1445 @@ The simplest use of structured inputs is to parameterize agent instructions. Def
 
 The following examples create an agent whose instructions include user-specific details and then supply those values when creating a response.
 
-```python
-from azure.ai.projects import AIProjectClient
-from azure.ai.projects.models import PromptAgentDefinition, StructuredInputDefinition
-from azure.identity import DefaultAzureCredential
+<Tabs>
+  <Tab title="Python">
 
-# Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-PROJECT_ENDPOINT = "your_project_endpoint"
+  ```python
+  from azure.ai.projects import AIProjectClient
+  from azure.ai.projects.models import PromptAgentDefinition, StructuredInputDefinition
+  from azure.identity import DefaultAzureCredential
 
-# Create clients to call Foundry API
-project = AIProjectClient(endpoint=PROJECT_ENDPOINT, credential=DefaultAzureCredential())
-openai = project.get_openai_client()
+  # Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+  PROJECT_ENDPOINT = "your_project_endpoint"
 
-# Create agent with handlebar templates in instructions
-agent = project.agents.create_version(
-    agent_name="structured-input-agent",
-    definition=PromptAgentDefinition(
-        model="gpt-5-mini",
-        instructions=(
-            "You are a helpful assistant. "
-            "The user's name is {{userName}} and their role is {{userRole}}. "
-            "Greet them and confirm their details."
-        ),
-        structured_inputs={
-            "userName": StructuredInputDefinition(
-                description="The user's name", required=True, schema={"type": "string"},
-            ),
-            "userRole": StructuredInputDefinition(
-                description="The user's role", required=True, schema={"type": "string"},
-            ),
-        },
-    ),
-)
-print(f"Agent created: {agent.name}, version: {agent.version}")
+  # Create clients to call Foundry API
+  project = AIProjectClient(endpoint=PROJECT_ENDPOINT, credential=DefaultAzureCredential())
+  openai = project.get_openai_client()
 
-# Create conversation and send request with runtime values
-conversation = openai.conversations.create()
-response = openai.responses.create(
-    conversation=conversation.id,
-    input="Hello! Can you confirm my details?",
-    extra_body={
-        "agent_reference": {"name": agent.name, "type": "agent_reference"},
-        "structured_inputs": {"userName": "Alice Smith", "userRole": "Senior Developer"},
-    },
-)
-print(response.output_text)
-```
+  # Create agent with handlebar templates in instructions
+  agent = project.agents.create_version(
+      agent_name="structured-input-agent",
+      definition=PromptAgentDefinition(
+          model="gpt-5-mini",
+          instructions=(
+              "You are a helpful assistant. "
+              "The user's name is {{userName}} and their role is {{userRole}}. "
+              "Greet them and confirm their details."
+          ),
+          structured_inputs={
+              "userName": StructuredInputDefinition(
+                  description="The user's name", required=True, schema={"type": "string"},
+              ),
+              "userRole": StructuredInputDefinition(
+                  description="The user's role", required=True, schema={"type": "string"},
+              ),
+          },
+      ),
+  )
+  print(f"Agent created: {agent.name}, version: {agent.version}")
 
-### Expected output
+  # Create conversation and send request with runtime values
+  conversation = openai.conversations.create()
+  response = openai.responses.create(
+      conversation=conversation.id,
+      input="Hello! Can you confirm my details?",
+      extra_body={
+          "agent_reference": {"name": agent.name, "type": "agent_reference"},
+          "structured_inputs": {"userName": "Alice Smith", "userRole": "Senior Developer"},
+      },
+  )
+  print(response.output_text)
+  ```
 
-```console
-Agent created: structured-input-agent, version: 1
-Hello Alice Smith! I can confirm your details: your name is Alice Smith and your role is Senior Developer. How can I help you today?
-```
+  ### Expected output
 
-The agent replaces the `{{userName}}` and `{{userRole}}` placeholders in the instructions with "Alice Smith" and "Senior Developer" before processing the request.
+  ```console
+  Agent created: structured-input-agent, version: 1
+  Hello Alice Smith! I can confirm your details: your name is Alice Smith and your role is Senior Developer. How can I help you today?
+  ```
 
-```csharp
-using System;
-using Azure.AI.Projects;
-using Azure.AI.Projects.Agents;
-using Azure.AI.Extensions.OpenAI;
-using Azure.Identity;
-using OpenAI.Responses;
+  The agent replaces the `{{userName}}` and `{{userRole}}` placeholders in the instructions with "Alice Smith" and "Senior Developer" before processing the request.
 
-// Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-var projectEndpoint = "your_project_endpoint";
+  </Tab>
+  <Tab title="C#">
 
-// Create project client to call Foundry API
-AIProjectClient projectClient = new(
-    endpoint: new Uri(projectEndpoint),
-    tokenProvider: new DefaultAzureCredential());
+  ```csharp
+  using System;
+  using Azure.AI.Projects;
+  using Azure.AI.Projects.Agents;
+  using Azure.AI.Extensions.OpenAI;
+  using Azure.Identity;
+  using OpenAI.Responses;
 
-// Create agent with handlebar templates in instructions
-DeclarativeAgentDefinition agentDefinition = new(model: "gpt-5-mini")
-{
-    Instructions = "You are a helpful assistant. "
-        + "The user's name is {{userName}} and their role is {{userRole}}. "
-        + "Greet them and confirm their details.",
-    StructuredInputs =
-    {
-        ["userName"] = new StructuredInputDefinition
-            { Description = "The user's name", IsRequired = true },
-        ["userRole"] = new StructuredInputDefinition
-            { Description = "The user's role", IsRequired = true }
-    }
-};
-AgentVersion agent = projectClient.AgentAdministrationClient.CreateAgentVersion(
-    agentName: "structured-input-agent", options: new(agentDefinition));
+  // Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+  var projectEndpoint = "your_project_endpoint";
 
-// Send response with runtime structured input values
-AgentReference agentRef = new(name: agent.Name, version: agent.Version);
-ProjectResponsesClient responseClient =
-    projectClient.ProjectOpenAIClient.GetProjectResponsesClientForAgent(agentRef);
-
-CreateResponseOptions responseOptions = new()
-{
-    Input = [ResponseItem.CreateUserMessageItem("Hello! Can you confirm my details?")]
-};
-responseOptions.Patch.Set(
-    "$.structured_inputs[\"userName\"]"u8,
-    BinaryData.FromObjectAsJson("Alice Smith"));
-responseOptions.Patch.Set(
-    "$.structured_inputs[\"userRole\"]"u8,
-    BinaryData.FromObjectAsJson("Senior Developer"));
-
-ResponseResult response = responseClient.CreateResponse(responseOptions);
-Console.WriteLine(response.GetOutputText());
-
-// Clean up
-projectClient.AgentAdministrationClient.DeleteAgentVersion(
-    agentName: agent.Name, agentVersion: agent.Version);
-```
-
-### Expected output
-
-```console
-Hello Alice Smith! I can confirm your details: your name is Alice Smith and your role is Senior Developer. How can I help you today?
-```
-
-The `StructuredInputs` dictionary on the agent definition maps template names to their schemas. At runtime, use the `Patch.Set` method on `CreateResponseOptions` to supply the actual values via the `$.structured_inputs` JSON path.
-
-```typescript
-import { DefaultAzureCredential } from "@azure/identity";
-import { AIProjectClient } from "@azure/ai-projects";
-
-// Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-const PROJECT_ENDPOINT = "your_project_endpoint";
-
-export async function main(): Promise<void> {
-  // Create clients to call Foundry API
-  const project = new AIProjectClient(PROJECT_ENDPOINT, new DefaultAzureCredential());
-  const openai = project.getOpenAIClient();
+  // Create project client to call Foundry API
+  AIProjectClient projectClient = new(
+      endpoint: new Uri(projectEndpoint),
+      tokenProvider: new DefaultAzureCredential());
 
   // Create agent with handlebar templates in instructions
-  const agent = await project.agents.createVersion("structured-input-agent", {
-    kind: "prompt",
-    model: "gpt-5-mini",
-    instructions:
-      "You are a helpful assistant. " +
-      "The user's name is {{userName}} and their role is {{userRole}}. " +
-      "Greet them and confirm their details.",
-    structured_inputs: {
-      userName: { description: "The user's name", required: true },
-      userRole: { description: "The user's role", required: true },
-    },
-  });
-  console.log(`Agent created: ${agent.name}, version: ${agent.version}`);
+  DeclarativeAgentDefinition agentDefinition = new(model: "gpt-5-mini")
+  {
+      Instructions = "You are a helpful assistant. "
+          + "The user's name is {{userName}} and their role is {{userRole}}. "
+          + "Greet them and confirm their details.",
+      StructuredInputs =
+      {
+          ["userName"] = new StructuredInputDefinition
+              { Description = "The user's name", IsRequired = true },
+          ["userRole"] = new StructuredInputDefinition
+              { Description = "The user's role", IsRequired = true }
+      }
+  };
+  AgentVersion agent = projectClient.AgentAdministrationClient.CreateAgentVersion(
+      agentName: "structured-input-agent", options: new(agentDefinition));
 
-  // Create conversation and send request with runtime values
-  const conversation = await openai.conversations.create();
-  const response = await openai.responses.create(
-    {
-      conversation: conversation.id,
-      input: "Hello! Can you confirm my details?",
-    },
-    {
-      body: {
-        agent_reference: { name: agent.name, type: "agent_reference" },
-        structured_inputs: { userName: "Alice Smith", userRole: "Senior Developer" },
-      },
-    },
-  );
-  console.log(response.output_text);
+  // Send response with runtime structured input values
+  AgentReference agentRef = new(name: agent.Name, version: agent.Version);
+  ProjectResponsesClient responseClient =
+      projectClient.ProjectOpenAIClient.GetProjectResponsesClientForAgent(agentRef);
+
+  CreateResponseOptions responseOptions = new()
+  {
+      Input = [ResponseItem.CreateUserMessageItem("Hello! Can you confirm my details?")]
+  };
+  responseOptions.Patch.Set(
+      "$.structured_inputs[\"userName\"]"u8,
+      BinaryData.FromObjectAsJson("Alice Smith"));
+  responseOptions.Patch.Set(
+      "$.structured_inputs[\"userRole\"]"u8,
+      BinaryData.FromObjectAsJson("Senior Developer"));
+
+  ResponseResult response = responseClient.CreateResponse(responseOptions);
+  Console.WriteLine(response.GetOutputText());
 
   // Clean up
-  await project.agents.deleteVersion(agent.name, agent.version);
-}
+  projectClient.AgentAdministrationClient.DeleteAgentVersion(
+      agentName: agent.Name, agentVersion: agent.Version);
+  ```
 
-main().catch(console.error);
-```
+  ### Expected output
 
-### Expected output
+  ```console
+  Hello Alice Smith! I can confirm your details: your name is Alice Smith and your role is Senior Developer. How can I help you today?
+  ```
 
-```console
-Agent created: structured-input-agent, version: 1
-Hello Alice Smith! I can confirm your details: your name is Alice Smith and your role is Senior Developer. How can I help you today?
-```
+  The `StructuredInputs` dictionary on the agent definition maps template names to their schemas. At runtime, use the `Patch.Set` method on `CreateResponseOptions` to supply the actual values via the `$.structured_inputs` JSON path.
 
-The agent definition uses `structured_inputs` to declare the template schemas. At runtime, pass the actual values in the `body` parameter alongside the `agent_reference`.
+  </Tab>
+  <Tab title="TypeScript">
 
-Add the dependency to your `pom.xml`:
+  ```typescript
+  import { DefaultAzureCredential } from "@azure/identity";
+  import { AIProjectClient } from "@azure/ai-projects";
 
-```xml
-<dependency>
-    <groupId>com.azure</groupId>
-    <artifactId>azure-ai-agents</artifactId>
-    <version>2.0.0</version>
-</dependency>
-```
+  // Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+  const PROJECT_ENDPOINT = "your_project_endpoint";
 
-```java
-import com.azure.ai.agents.AgentsClient;
-import com.azure.ai.agents.AgentsClientBuilder;
-import com.azure.ai.agents.AgentsServiceVersion;
-import com.azure.ai.agents.ResponsesClient;
-import com.azure.ai.agents.models.AgentReference;
-import com.azure.ai.agents.models.AgentVersionDetails;
-import com.azure.ai.agents.models.AzureCreateResponseOptions;
-import com.azure.ai.agents.models.PromptAgentDefinition;
-import com.azure.ai.agents.models.StructuredInputDefinition;
-import com.azure.core.util.BinaryData;
-import com.azure.identity.DefaultAzureCredentialBuilder;
-import com.openai.models.responses.Response;
-import com.openai.models.responses.ResponseCreateParams;
+  export async function main(): Promise<void> {
+    // Create clients to call Foundry API
+    const project = new AIProjectClient(PROJECT_ENDPOINT, new DefaultAzureCredential());
+    const openai = project.getOpenAIClient();
 
-import java.util.LinkedHashMap;
-import java.util.Map;
+    // Create agent with handlebar templates in instructions
+    const agent = await project.agents.createVersion("structured-input-agent", {
+      kind: "prompt",
+      model: "gpt-5-mini",
+      instructions:
+        "You are a helpful assistant. " +
+        "The user's name is {{userName}} and their role is {{userRole}}. " +
+        "Greet them and confirm their details.",
+      structured_inputs: {
+        userName: { description: "The user's name", required: true },
+        userRole: { description: "The user's role", required: true },
+      },
+    });
+    console.log(`Agent created: ${agent.name}, version: ${agent.version}`);
 
-public class StructuredInputInstructionsExample {
-    public static void main(String[] args) {
-        // Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-        String projectEndpoint = "your_project_endpoint";
-
-        AgentsClientBuilder builder = new AgentsClientBuilder()
-            .credential(new DefaultAzureCredentialBuilder().build())
-            .endpoint(projectEndpoint)
-            .serviceVersion(AgentsServiceVersion.getLatest());
-
-        AgentsClient agentsClient = builder.buildAgentsClient();
-        ResponsesClient responsesClient = builder.buildResponsesClient();
-
-        // Define structured input schemas
-        Map<String, StructuredInputDefinition> inputDefs = new LinkedHashMap<>();
-        inputDefs.put("userName",
-            new StructuredInputDefinition().setDescription("The user's name").setRequired(true));
-        inputDefs.put("userRole",
-            new StructuredInputDefinition().setDescription("The user's role").setRequired(true));
-
-        // Create agent with handlebar templates in instructions
-        AgentVersionDetails agent = agentsClient.createAgentVersion(
-            "structured-input-agent",
-            new PromptAgentDefinition("gpt-5-mini")
-                .setInstructions("You are a helpful assistant. "
-                    + "The user's name is {{userName}} and their role is {{userRole}}. "
-                    + "Greet them and confirm their details.")
-                .setStructuredInputs(inputDefs));
-
-        // Supply structured input values at runtime
-        Map<String, BinaryData> inputValues = new LinkedHashMap<>();
-        inputValues.put("userName", BinaryData.fromObject("Alice Smith"));
-        inputValues.put("userRole", BinaryData.fromObject("Senior Developer"));
-
-        Response response = responsesClient.createAzureResponse(
-            new AzureCreateResponseOptions()
-                .setAgentReference(
-                    new AgentReference(agent.getName()).setVersion(agent.getVersion()))
-                .setStructuredInputs(inputValues),
-            ResponseCreateParams.builder()
-                .input("Hello! Can you confirm my details?"));
-
-        System.out.println("Response: " + response.output());
-
-        // Clean up
-        agentsClient.deleteAgentVersion(agent.getName(), agent.getVersion());
-    }
-}
-```
-
-### Expected output
-
-```console
-Response: Hello Alice Smith! I can confirm your details: your name is Alice Smith and your role is Senior Developer. How can I help you today?
-```
-
-The Java SDK uses `StructuredInputDefinition` for the agent schema and `Map<String, BinaryData>` for the runtime values passed through `AzureCreateResponseOptions`.
-
-### Create an agent with structured inputs
-
-```bash
-curl -X POST "$FOUNDRY_PROJECT_ENDPOINT/agents?api-version=v1" \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $AGENT_TOKEN" \
-  -d '{
-    "name": "structured-input-agent",
-    "definition": {
-      "kind": "prompt",
-      "model": "<MODEL_DEPLOYMENT>",
-      "instructions": "You are a helpful assistant. The user'\''s name is {{userName}} and their role is {{userRole}}. Greet them and confirm their details.",
-      "structured_inputs": {
-        "userName": {
-          "type": "string",
-          "description": "The user'\''s name",
-          "default_value": "Unknown"
+    // Create conversation and send request with runtime values
+    const conversation = await openai.conversations.create();
+    const response = await openai.responses.create(
+      {
+        conversation: conversation.id,
+        input: "Hello! Can you confirm my details?",
+      },
+      {
+        body: {
+          agent_reference: { name: agent.name, type: "agent_reference" },
+          structured_inputs: { userName: "Alice Smith", userRole: "Senior Developer" },
         },
-        "userRole": {
-          "type": "string",
-          "description": "The user'\''s role",
-          "default_value": "User"
+      },
+    );
+    console.log(response.output_text);
+
+    // Clean up
+    await project.agents.deleteVersion(agent.name, agent.version);
+  }
+
+  main().catch(console.error);
+  ```
+
+  ### Expected output
+
+  ```console
+  Agent created: structured-input-agent, version: 1
+  Hello Alice Smith! I can confirm your details: your name is Alice Smith and your role is Senior Developer. How can I help you today?
+  ```
+
+  The agent definition uses `structured_inputs` to declare the template schemas. At runtime, pass the actual values in the `body` parameter alongside the `agent_reference`.
+
+  </Tab>
+  <Tab title="Java">
+
+  Add the dependency to your `pom.xml`:
+
+  ```xml
+  <dependency>
+      <groupId>com.azure</groupId>
+      <artifactId>azure-ai-agents</artifactId>
+      <version>2.0.0</version>
+  </dependency>
+  ```
+
+  ```java
+  import com.azure.ai.agents.AgentsClient;
+  import com.azure.ai.agents.AgentsClientBuilder;
+  import com.azure.ai.agents.AgentsServiceVersion;
+  import com.azure.ai.agents.ResponsesClient;
+  import com.azure.ai.agents.models.AgentReference;
+  import com.azure.ai.agents.models.AgentVersionDetails;
+  import com.azure.ai.agents.models.AzureCreateResponseOptions;
+  import com.azure.ai.agents.models.PromptAgentDefinition;
+  import com.azure.ai.agents.models.StructuredInputDefinition;
+  import com.azure.core.util.BinaryData;
+  import com.azure.identity.DefaultAzureCredentialBuilder;
+  import com.openai.models.responses.Response;
+  import com.openai.models.responses.ResponseCreateParams;
+
+  import java.util.LinkedHashMap;
+  import java.util.Map;
+
+  public class StructuredInputInstructionsExample {
+      public static void main(String[] args) {
+          // Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+          String projectEndpoint = "your_project_endpoint";
+
+          AgentsClientBuilder builder = new AgentsClientBuilder()
+              .credential(new DefaultAzureCredentialBuilder().build())
+              .endpoint(projectEndpoint)
+              .serviceVersion(AgentsServiceVersion.getLatest());
+
+          AgentsClient agentsClient = builder.buildAgentsClient();
+          ResponsesClient responsesClient = builder.buildResponsesClient();
+
+          // Define structured input schemas
+          Map<String, StructuredInputDefinition> inputDefs = new LinkedHashMap<>();
+          inputDefs.put("userName",
+              new StructuredInputDefinition().setDescription("The user's name").setRequired(true));
+          inputDefs.put("userRole",
+              new StructuredInputDefinition().setDescription("The user's role").setRequired(true));
+
+          // Create agent with handlebar templates in instructions
+          AgentVersionDetails agent = agentsClient.createAgentVersion(
+              "structured-input-agent",
+              new PromptAgentDefinition("gpt-5-mini")
+                  .setInstructions("You are a helpful assistant. "
+                      + "The user's name is {{userName}} and their role is {{userRole}}. "
+                      + "Greet them and confirm their details.")
+                  .setStructuredInputs(inputDefs));
+
+          // Supply structured input values at runtime
+          Map<String, BinaryData> inputValues = new LinkedHashMap<>();
+          inputValues.put("userName", BinaryData.fromObject("Alice Smith"));
+          inputValues.put("userRole", BinaryData.fromObject("Senior Developer"));
+
+          Response response = responsesClient.createAzureResponse(
+              new AzureCreateResponseOptions()
+                  .setAgentReference(
+                      new AgentReference(agent.getName()).setVersion(agent.getVersion()))
+                  .setStructuredInputs(inputValues),
+              ResponseCreateParams.builder()
+                  .input("Hello! Can you confirm my details?"));
+
+          System.out.println("Response: " + response.output());
+
+          // Clean up
+          agentsClient.deleteAgentVersion(agent.getName(), agent.getVersion());
+      }
+  }
+  ```
+
+  ### Expected output
+
+  ```console
+  Response: Hello Alice Smith! I can confirm your details: your name is Alice Smith and your role is Senior Developer. How can I help you today?
+  ```
+
+  The Java SDK uses `StructuredInputDefinition` for the agent schema and `Map<String, BinaryData>` for the runtime values passed through `AzureCreateResponseOptions`.
+
+  </Tab>
+  <Tab title="REST">
+
+  ### Create an agent with structured inputs
+
+  ```bash
+  curl -X POST "$FOUNDRY_PROJECT_ENDPOINT/agents?api-version=v1" \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer $AGENT_TOKEN" \
+    -d '{
+      "name": "structured-input-agent",
+      "definition": {
+        "kind": "prompt",
+        "model": "<MODEL_DEPLOYMENT>",
+        "instructions": "You are a helpful assistant. The user'\''s name is {{userName}} and their role is {{userRole}}. Greet them and confirm their details.",
+        "structured_inputs": {
+          "userName": {
+            "type": "string",
+            "description": "The user'\''s name",
+            "default_value": "Unknown"
+          },
+          "userRole": {
+            "type": "string",
+            "description": "The user'\''s role",
+            "default_value": "User"
+          }
         }
       }
-    }
-  }'
-```
+    }'
+  ```
 
-### Create a response with structured input values
+  ### Create a response with structured input values
 
-```bash
-curl -X POST "$FOUNDRY_PROJECT_ENDPOINT/openai/v1/responses" \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $AGENT_TOKEN" \
-  -d '{
-    "agent_reference": {
-      "type": "agent_reference",
-      "name": "structured-input-agent"
-    },
-    "input": [
-      {
-        "type": "message",
-        "role": "user",
-        "content": "Hello! Can you confirm my details?"
+  ```bash
+  curl -X POST "$FOUNDRY_PROJECT_ENDPOINT/openai/v1/responses" \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer $AGENT_TOKEN" \
+    -d '{
+      "agent_reference": {
+        "type": "agent_reference",
+        "name": "structured-input-agent"
+      },
+      "input": [
+        {
+          "type": "message",
+          "role": "user",
+          "content": "Hello! Can you confirm my details?"
+        }
+      ],
+      "structured_inputs": {
+        "userName": "Alice Smith",
+        "userRole": "Senior Developer"
       }
-    ],
-    "structured_inputs": {
-      "userName": "Alice Smith",
-      "userRole": "Senior Developer"
-    }
-  }'
-```
+    }'
+  ```
 
-The agent definition's `structured_inputs` object declares the schemas with descriptions and default values. The response request's `structured_inputs` provides the actual runtime values that replace the `{{userName}}` and `{{userRole}}` templates.
+  The agent definition's `structured_inputs` object declares the schemas with descriptions and default values. The response request's `structured_inputs` provides the actual runtime values that replace the `{{userName}}` and `{{userRole}}` templates.
+
+  </Tab>
+</Tabs>
 
 ## Use structured inputs with Code Interpreter
 
 By using structured inputs, you can dynamically configure which files and containers the Code Interpreter tool uses at runtime. Define handlebar templates in the tool's `file_ids` or `container` properties, and then supply actual IDs when creating a response.
 
-```python
-from io import BytesIO
-from azure.ai.projects import AIProjectClient
-from azure.ai.projects.models import (
-    PromptAgentDefinition,
-    CodeInterpreterTool,
-    AutoCodeInterpreterToolParam,
-    StructuredInputDefinition,
-)
-from azure.identity import DefaultAzureCredential
+<Tabs>
+  <Tab title="Python">
 
-# Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-PROJECT_ENDPOINT = "your_project_endpoint"
+  ```python
+  from io import BytesIO
+  from azure.ai.projects import AIProjectClient
+  from azure.ai.projects.models import (
+      PromptAgentDefinition,
+      CodeInterpreterTool,
+      AutoCodeInterpreterToolParam,
+      StructuredInputDefinition,
+  )
+  from azure.identity import DefaultAzureCredential
 
-# Create clients to call Foundry API
-project = AIProjectClient(endpoint=PROJECT_ENDPOINT, credential=DefaultAzureCredential())
-openai = project.get_openai_client()
+  # Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+  PROJECT_ENDPOINT = "your_project_endpoint"
 
-# Upload a CSV file for the code interpreter
-csv_file = BytesIO(b"x\n1\n2\n3\n")
-csv_file.name = "numbers.csv"
-uploaded = openai.files.create(purpose="assistants", file=csv_file)
-print(f"File uploaded (id: {uploaded.id})")
+  # Create clients to call Foundry API
+  project = AIProjectClient(endpoint=PROJECT_ENDPOINT, credential=DefaultAzureCredential())
+  openai = project.get_openai_client()
 
-# Create agent with a template placeholder for the file ID
-tool = CodeInterpreterTool(
-    container=AutoCodeInterpreterToolParam(file_ids=["{{analysis_file_id}}"])
-)
-agent = project.agents.create_version(
-    agent_name="code-interp-structured",
-    definition=PromptAgentDefinition(
-        model="gpt-5-mini",
-        instructions="You are a helpful data analyst.",
-        tools=[tool],
-        structured_inputs={
-            "analysis_file_id": StructuredInputDefinition(
-                description="File ID for the code interpreter",
-                required=True,
-                schema={"type": "string"},
-            ),
-        },
-    ),
-)
+  # Upload a CSV file for the code interpreter
+  csv_file = BytesIO(b"x\n1\n2\n3\n")
+  csv_file.name = "numbers.csv"
+  uploaded = openai.files.create(purpose="assistants", file=csv_file)
+  print(f"File uploaded (id: {uploaded.id})")
 
-# Supply the actual file ID at runtime
-conversation = openai.conversations.create()
-response = openai.responses.create(
-    conversation=conversation.id,
-    input="Read numbers.csv and return the sum of x.",
-    extra_body={
-        "agent_reference": {"name": agent.name, "type": "agent_reference"},
-        "structured_inputs": {"analysis_file_id": uploaded.id},
-    },
-    tool_choice="required",
-)
-print(response.output_text)
-```
+  # Create agent with a template placeholder for the file ID
+  tool = CodeInterpreterTool(
+      container=AutoCodeInterpreterToolParam(file_ids=["{{analysis_file_id}}"])
+  )
+  agent = project.agents.create_version(
+      agent_name="code-interp-structured",
+      definition=PromptAgentDefinition(
+          model="gpt-5-mini",
+          instructions="You are a helpful data analyst.",
+          tools=[tool],
+          structured_inputs={
+              "analysis_file_id": StructuredInputDefinition(
+                  description="File ID for the code interpreter",
+                  required=True,
+                  schema={"type": "string"},
+              ),
+          },
+      ),
+  )
 
-### Expected output
+  # Supply the actual file ID at runtime
+  conversation = openai.conversations.create()
+  response = openai.responses.create(
+      conversation=conversation.id,
+      input="Read numbers.csv and return the sum of x.",
+      extra_body={
+          "agent_reference": {"name": agent.name, "type": "agent_reference"},
+          "structured_inputs": {"analysis_file_id": uploaded.id},
+      },
+      tool_choice="required",
+  )
+  print(response.output_text)
+  ```
 
-```console
-File uploaded (id: <file-id>)
-The sum of x in numbers.csv is 6.
-```
+  ### Expected output
 
-The `{{analysis_file_id}}` placeholder in the tool's `file_ids` array is replaced by the actual file ID at runtime. By using this approach, you can reuse the same agent definition with different files for each request.
+  ```console
+  File uploaded (id: <file-id>)
+  The sum of x in numbers.csv is 6.
+  ```
 
-```csharp
-using System;
-using Azure.AI.Projects;
-using Azure.AI.Projects.Agents;
-using Azure.AI.Extensions.OpenAI;
-using Azure.Identity;
-using OpenAI.Responses;
+  The `{{analysis_file_id}}` placeholder in the tool's `file_ids` array is replaced by the actual file ID at runtime. By using this approach, you can reuse the same agent definition with different files for each request.
 
-// Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-var projectEndpoint = "your_project_endpoint";
+  </Tab>
+  <Tab title="C#">
 
-// Create project client to call Foundry API
-AIProjectClient projectClient = new(
-    endpoint: new Uri(projectEndpoint),
-    tokenProvider: new DefaultAzureCredential());
+  ```csharp
+  using System;
+  using Azure.AI.Projects;
+  using Azure.AI.Projects.Agents;
+  using Azure.AI.Extensions.OpenAI;
+  using Azure.Identity;
+  using OpenAI.Responses;
 
-// Create agent with a structured input placeholder for the file ID
-DeclarativeAgentDefinition agentDefinition = new(model: "gpt-5-mini")
-{
-    Instructions = "You are a helpful data analyst.",
-    Tools = {
-        ResponseTool.CreateCodeInterpreterTool(
-            new CodeInterpreterToolContainer(
-                CodeInterpreterToolContainerConfiguration
-                    .CreateAutomaticContainerConfiguration(
-                        fileIds: ["{{analysis_file_id}}"])))
-    },
-    StructuredInputs =
-    {
-        ["analysis_file_id"] = new StructuredInputDefinition
-            { Description = "File ID for the code interpreter", IsRequired = true }
-    }
-};
-AgentVersion agent = projectClient.AgentAdministrationClient.CreateAgentVersion(
-    agentName: "code-interp-structured", options: new(agentDefinition));
+  // Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+  var projectEndpoint = "your_project_endpoint";
 
-// Supply the actual file ID at runtime
-AgentReference agentRef = new(name: agent.Name, version: agent.Version);
-ProjectResponsesClient responseClient =
-    projectClient.ProjectOpenAIClient.GetProjectResponsesClientForAgent(agentRef);
+  // Create project client to call Foundry API
+  AIProjectClient projectClient = new(
+      endpoint: new Uri(projectEndpoint),
+      tokenProvider: new DefaultAzureCredential());
 
-CreateResponseOptions responseOptions = new()
-{
-    Input = [ResponseItem.CreateUserMessageItem(
-        "Read numbers.csv and return the sum of x.")]
-};
-responseOptions.Patch.Set(
-    "$.structured_inputs[\"analysis_file_id\"]"u8,
-    BinaryData.FromObjectAsJson("<uploaded-file-id>"));
-
-ResponseResult response = responseClient.CreateResponse(responseOptions);
-Console.WriteLine(response.GetOutputText());
-
-// Clean up
-projectClient.AgentAdministrationClient.DeleteAgentVersion(
-    agentName: agent.Name, agentVersion: agent.Version);
-```
-
-### Expected output
-
-```console
-The sum of x in numbers.csv is 6.
-```
-
-```typescript
-import { DefaultAzureCredential } from "@azure/identity";
-import { AIProjectClient } from "@azure/ai-projects";
-
-// Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-const PROJECT_ENDPOINT = "your_project_endpoint";
-
-export async function main(): Promise<void> {
-  const project = new AIProjectClient(PROJECT_ENDPOINT, new DefaultAzureCredential());
-  const openai = project.getOpenAIClient();
-
-  // Upload a file for code interpreter
-  const file = new File(["x\n1\n2\n3\n"], "numbers.csv");
-  const uploaded = await openai.files.create({ file, purpose: "assistants" });
-  console.log(`File uploaded (id: ${uploaded.id})`);
-
-  // Create agent with a template placeholder for the file ID
-  const agent = await project.agents.createVersion("code-interp-structured", {
-    kind: "prompt",
-    model: "gpt-5-mini",
-    instructions: "You are a helpful data analyst.",
-    tools: [
+  // Create agent with a structured input placeholder for the file ID
+  DeclarativeAgentDefinition agentDefinition = new(model: "gpt-5-mini")
+  {
+      Instructions = "You are a helpful data analyst.",
+      Tools = {
+          ResponseTool.CreateCodeInterpreterTool(
+              new CodeInterpreterToolContainer(
+                  CodeInterpreterToolContainerConfiguration
+                      .CreateAutomaticContainerConfiguration(
+                          fileIds: ["{{analysis_file_id}}"])))
+      },
+      StructuredInputs =
       {
-        type: "code_interpreter",
-        container: { type: "auto", file_ids: ["{{analysis_file_id}}"] },
-      },
-    ],
-    structured_inputs: {
-      analysis_file_id: {
-        description: "File ID for the code interpreter",
-        required: true,
-      },
-    },
-  });
+          ["analysis_file_id"] = new StructuredInputDefinition
+              { Description = "File ID for the code interpreter", IsRequired = true }
+      }
+  };
+  AgentVersion agent = projectClient.AgentAdministrationClient.CreateAgentVersion(
+      agentName: "code-interp-structured", options: new(agentDefinition));
 
   // Supply the actual file ID at runtime
-  const conversation = await openai.conversations.create();
-  const response = await openai.responses.create(
-    {
-      conversation: conversation.id,
-      input: "Read numbers.csv and return the sum of x.",
-      tool_choice: "required",
-    },
-    {
-      body: {
-        agent_reference: { name: agent.name, type: "agent_reference" },
-        structured_inputs: { analysis_file_id: uploaded.id },
-      },
-    },
-  );
-  console.log(response.output_text);
+  AgentReference agentRef = new(name: agent.Name, version: agent.Version);
+  ProjectResponsesClient responseClient =
+      projectClient.ProjectOpenAIClient.GetProjectResponsesClientForAgent(agentRef);
+
+  CreateResponseOptions responseOptions = new()
+  {
+      Input = [ResponseItem.CreateUserMessageItem(
+          "Read numbers.csv and return the sum of x.")]
+  };
+  responseOptions.Patch.Set(
+      "$.structured_inputs[\"analysis_file_id\"]"u8,
+      BinaryData.FromObjectAsJson("<uploaded-file-id>"));
+
+  ResponseResult response = responseClient.CreateResponse(responseOptions);
+  Console.WriteLine(response.GetOutputText());
 
   // Clean up
-  await project.agents.deleteVersion(agent.name, agent.version);
-}
+  projectClient.AgentAdministrationClient.DeleteAgentVersion(
+      agentName: agent.Name, agentVersion: agent.Version);
+  ```
 
-main().catch(console.error);
-```
+  ### Expected output
 
-### Expected output
+  ```console
+  The sum of x in numbers.csv is 6.
+  ```
 
-```console
-File uploaded (id: <file-id>)
-The sum of x in numbers.csv is 6.
-```
+  </Tab>
+  <Tab title="TypeScript">
 
-```java
-import com.azure.ai.agents.AgentsClient;
-import com.azure.ai.agents.AgentsClientBuilder;
-import com.azure.ai.agents.AgentsServiceVersion;
-import com.azure.ai.agents.ResponsesClient;
-import com.azure.ai.agents.models.*;
-import com.azure.core.util.BinaryData;
-import com.azure.identity.DefaultAzureCredentialBuilder;
-import com.openai.models.responses.Response;
-import com.openai.models.responses.ResponseCreateParams;
+  ```typescript
+  import { DefaultAzureCredential } from "@azure/identity";
+  import { AIProjectClient } from "@azure/ai-projects";
 
-import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.Map;
+  // Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+  const PROJECT_ENDPOINT = "your_project_endpoint";
 
-public class CodeInterpreterStructuredInputExample {
-    public static void main(String[] args) {
-        // Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-        String projectEndpoint = "your_project_endpoint";
+  export async function main(): Promise<void> {
+    const project = new AIProjectClient(PROJECT_ENDPOINT, new DefaultAzureCredential());
+    const openai = project.getOpenAIClient();
 
-        AgentsClientBuilder builder = new AgentsClientBuilder()
-            .credential(new DefaultAzureCredentialBuilder().build())
-            .endpoint(projectEndpoint)
-            .serviceVersion(AgentsServiceVersion.getLatest());
+    // Upload a file for code interpreter
+    const file = new File(["x\n1\n2\n3\n"], "numbers.csv");
+    const uploaded = await openai.files.create({ file, purpose: "assistants" });
+    console.log(`File uploaded (id: ${uploaded.id})`);
 
-        AgentsClient agentsClient = builder.buildAgentsClient();
-        ResponsesClient responsesClient = builder.buildResponsesClient();
-
-        // Create code interpreter tool with a template placeholder
-        CodeInterpreterTool tool = new CodeInterpreterTool()
-            .setContainer(new AutoCodeInterpreterToolParameter()
-                .setFileIds(Arrays.asList("{{analysis_file_id}}")));
-
-        Map<String, StructuredInputDefinition> inputDefs = new LinkedHashMap<>();
-        inputDefs.put("analysis_file_id",
-            new StructuredInputDefinition()
-                .setDescription("File ID for the code interpreter")
-                .setRequired(true));
-
-        AgentVersionDetails agent = agentsClient.createAgentVersion(
-            "code-interp-structured",
-            new PromptAgentDefinition("gpt-5-mini")
-                .setInstructions("You are a helpful data analyst.")
-                .setTools(Arrays.asList(tool))
-                .setStructuredInputs(inputDefs));
-
-        // Supply the actual file ID at runtime
-        Map<String, BinaryData> inputValues = new LinkedHashMap<>();
-        inputValues.put("analysis_file_id",
-            BinaryData.fromObject("<uploaded-file-id>"));
-
-        Response response = responsesClient.createAzureResponse(
-            new AzureCreateResponseOptions()
-                .setAgentReference(
-                    new AgentReference(agent.getName()).setVersion(agent.getVersion()))
-                .setStructuredInputs(inputValues),
-            ResponseCreateParams.builder()
-                .input("Read numbers.csv and return the sum of x."));
-
-        System.out.println("Response: " + response.output());
-
-        // Clean up
-        agentsClient.deleteAgentVersion(agent.getName(), agent.getVersion());
-    }
-}
-```
-
-### Expected output
-
-```console
-Response: The sum of x in numbers.csv is 6.
-```
-
-### Create an agent with dynamic Code Interpreter files
-
-```bash
-curl -X POST "$FOUNDRY_PROJECT_ENDPOINT/agents?api-version=v1" \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $AGENT_TOKEN" \
-  -d '{
-    "name": "code-interp-structured",
-    "definition": {
-      "kind": "prompt",
-      "model": "<MODEL_DEPLOYMENT>",
-      "instructions": "You are a helpful data analyst.",
-      "tools": [
+    // Create agent with a template placeholder for the file ID
+    const agent = await project.agents.createVersion("code-interp-structured", {
+      kind: "prompt",
+      model: "gpt-5-mini",
+      instructions: "You are a helpful data analyst.",
+      tools: [
         {
-          "type": "code_interpreter",
-          "container": {
-            "type": "auto",
-            "file_ids": ["{{analysis_file_id}}"]
+          type: "code_interpreter",
+          container: { type: "auto", file_ids: ["{{analysis_file_id}}"] },
+        },
+      ],
+      structured_inputs: {
+        analysis_file_id: {
+          description: "File ID for the code interpreter",
+          required: true,
+        },
+      },
+    });
+
+    // Supply the actual file ID at runtime
+    const conversation = await openai.conversations.create();
+    const response = await openai.responses.create(
+      {
+        conversation: conversation.id,
+        input: "Read numbers.csv and return the sum of x.",
+        tool_choice: "required",
+      },
+      {
+        body: {
+          agent_reference: { name: agent.name, type: "agent_reference" },
+          structured_inputs: { analysis_file_id: uploaded.id },
+        },
+      },
+    );
+    console.log(response.output_text);
+
+    // Clean up
+    await project.agents.deleteVersion(agent.name, agent.version);
+  }
+
+  main().catch(console.error);
+  ```
+
+  ### Expected output
+
+  ```console
+  File uploaded (id: <file-id>)
+  The sum of x in numbers.csv is 6.
+  ```
+
+  </Tab>
+  <Tab title="Java">
+
+  ```java
+  import com.azure.ai.agents.AgentsClient;
+  import com.azure.ai.agents.AgentsClientBuilder;
+  import com.azure.ai.agents.AgentsServiceVersion;
+  import com.azure.ai.agents.ResponsesClient;
+  import com.azure.ai.agents.models.*;
+  import com.azure.core.util.BinaryData;
+  import com.azure.identity.DefaultAzureCredentialBuilder;
+  import com.openai.models.responses.Response;
+  import com.openai.models.responses.ResponseCreateParams;
+
+  import java.util.Arrays;
+  import java.util.LinkedHashMap;
+  import java.util.Map;
+
+  public class CodeInterpreterStructuredInputExample {
+      public static void main(String[] args) {
+          // Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+          String projectEndpoint = "your_project_endpoint";
+
+          AgentsClientBuilder builder = new AgentsClientBuilder()
+              .credential(new DefaultAzureCredentialBuilder().build())
+              .endpoint(projectEndpoint)
+              .serviceVersion(AgentsServiceVersion.getLatest());
+
+          AgentsClient agentsClient = builder.buildAgentsClient();
+          ResponsesClient responsesClient = builder.buildResponsesClient();
+
+          // Create code interpreter tool with a template placeholder
+          CodeInterpreterTool tool = new CodeInterpreterTool()
+              .setContainer(new AutoCodeInterpreterToolParameter()
+                  .setFileIds(Arrays.asList("{{analysis_file_id}}")));
+
+          Map<String, StructuredInputDefinition> inputDefs = new LinkedHashMap<>();
+          inputDefs.put("analysis_file_id",
+              new StructuredInputDefinition()
+                  .setDescription("File ID for the code interpreter")
+                  .setRequired(true));
+
+          AgentVersionDetails agent = agentsClient.createAgentVersion(
+              "code-interp-structured",
+              new PromptAgentDefinition("gpt-5-mini")
+                  .setInstructions("You are a helpful data analyst.")
+                  .setTools(Arrays.asList(tool))
+                  .setStructuredInputs(inputDefs));
+
+          // Supply the actual file ID at runtime
+          Map<String, BinaryData> inputValues = new LinkedHashMap<>();
+          inputValues.put("analysis_file_id",
+              BinaryData.fromObject("<uploaded-file-id>"));
+
+          Response response = responsesClient.createAzureResponse(
+              new AzureCreateResponseOptions()
+                  .setAgentReference(
+                      new AgentReference(agent.getName()).setVersion(agent.getVersion()))
+                  .setStructuredInputs(inputValues),
+              ResponseCreateParams.builder()
+                  .input("Read numbers.csv and return the sum of x."));
+
+          System.out.println("Response: " + response.output());
+
+          // Clean up
+          agentsClient.deleteAgentVersion(agent.getName(), agent.getVersion());
+      }
+  }
+  ```
+
+  ### Expected output
+
+  ```console
+  Response: The sum of x in numbers.csv is 6.
+  ```
+
+  </Tab>
+  <Tab title="REST">
+
+  ### Create an agent with dynamic Code Interpreter files
+
+  ```bash
+  curl -X POST "$FOUNDRY_PROJECT_ENDPOINT/agents?api-version=v1" \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer $AGENT_TOKEN" \
+    -d '{
+      "name": "code-interp-structured",
+      "definition": {
+        "kind": "prompt",
+        "model": "<MODEL_DEPLOYMENT>",
+        "instructions": "You are a helpful data analyst.",
+        "tools": [
+          {
+            "type": "code_interpreter",
+            "container": {
+              "type": "auto",
+              "file_ids": ["{{analysis_file_id}}"]
+            }
           }
+        ],
+        "structured_inputs": {
+          "analysis_file_id": {
+            "description": "File ID for the code interpreter",
+            "required": true,
+            "schema": {"type": "string"}
+          }
+        }
+      }
+    }'
+  ```
+
+  ### Create a response with the file ID
+
+  ```bash
+  curl -X POST "$FOUNDRY_PROJECT_ENDPOINT/openai/v1/responses" \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer $AGENT_TOKEN" \
+    -d '{
+      "agent_reference": {
+        "type": "agent_reference",
+        "name": "code-interp-structured"
+      },
+      "input": [
+        {
+          "type": "message",
+          "role": "user",
+          "content": "Read numbers.csv and return the sum of x."
         }
       ],
       "structured_inputs": {
-        "analysis_file_id": {
-          "description": "File ID for the code interpreter",
-          "required": true,
-          "schema": {"type": "string"}
-        }
-      }
-    }
-  }'
-```
+        "analysis_file_id": "<FILE_ID>"
+      },
+      "tool_choice": "required"
+    }'
+  ```
 
-### Create a response with the file ID
+  The `{{analysis_file_id}}` template in `file_ids` is replaced with the actual file ID at runtime. You can define multiple file ID placeholders and leave unused ones empty. Empty values are automatically removed from the array.
 
-```bash
-curl -X POST "$FOUNDRY_PROJECT_ENDPOINT/openai/v1/responses" \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $AGENT_TOKEN" \
-  -d '{
-    "agent_reference": {
-      "type": "agent_reference",
-      "name": "code-interp-structured"
-    },
-    "input": [
-      {
-        "type": "message",
-        "role": "user",
-        "content": "Read numbers.csv and return the sum of x."
-      }
-    ],
-    "structured_inputs": {
-      "analysis_file_id": "<FILE_ID>"
-    },
-    "tool_choice": "required"
-  }'
-```
-
-The `{{analysis_file_id}}` template in `file_ids` is replaced with the actual file ID at runtime. You can define multiple file ID placeholders and leave unused ones empty. Empty values are automatically removed from the array.
+  </Tab>
+</Tabs>
 
 ## Use structured inputs with File Search
 
 By using structured inputs, you can dynamically configure which vector stores the File Search tool queries at runtime. Define template placeholders in the `vector_store_ids` array, and then supply actual vector store IDs when creating a response.
 
-```python
-from azure.ai.projects import AIProjectClient
-from azure.ai.projects.models import (
-    PromptAgentDefinition,
-    FileSearchTool,
-    StructuredInputDefinition,
-)
-from azure.identity import DefaultAzureCredential
+<Tabs>
+  <Tab title="Python">
 
-# Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-PROJECT_ENDPOINT = "your_project_endpoint"
+  ```python
+  from azure.ai.projects import AIProjectClient
+  from azure.ai.projects.models import (
+      PromptAgentDefinition,
+      FileSearchTool,
+      StructuredInputDefinition,
+  )
+  from azure.identity import DefaultAzureCredential
 
-# Create clients to call Foundry API
-project = AIProjectClient(endpoint=PROJECT_ENDPOINT, credential=DefaultAzureCredential())
-openai = project.get_openai_client()
+  # Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+  PROJECT_ENDPOINT = "your_project_endpoint"
 
-# Create a vector store and upload a file
-vector_store = openai.vector_stores.create(name="ProductInfoStore")
-with open("product_info.md", "rb") as f:
-    file = openai.vector_stores.files.upload_and_poll(
-        vector_store_id=vector_store.id, file=f
-    )
-print(f"Vector store created (id: {vector_store.id})")
+  # Create clients to call Foundry API
+  project = AIProjectClient(endpoint=PROJECT_ENDPOINT, credential=DefaultAzureCredential())
+  openai = project.get_openai_client()
 
-# Create agent with a template placeholder for vector store ID
-tool = FileSearchTool(vector_store_ids=["{{vector_store_id}}"])
-agent = project.agents.create_version(
-    agent_name="file-search-structured",
-    definition=PromptAgentDefinition(
-        model="gpt-5-mini",
-        instructions="You are a helpful assistant that searches product information.",
-        tools=[tool],
-        structured_inputs={
-            "vector_store_id": StructuredInputDefinition(
-                description="Vector store ID for file search",
-                required=True,
-                schema={"type": "string"},
-            ),
-        },
-    ),
-)
+  # Create a vector store and upload a file
+  vector_store = openai.vector_stores.create(name="ProductInfoStore")
+  with open("product_info.md", "rb") as f:
+      file = openai.vector_stores.files.upload_and_poll(
+          vector_store_id=vector_store.id, file=f
+      )
+  print(f"Vector store created (id: {vector_store.id})")
 
-# Supply the actual vector store ID at runtime
-conversation = openai.conversations.create()
-response = openai.responses.create(
-    conversation=conversation.id,
-    input="Tell me about Contoso products",
-    extra_body={
-        "agent_reference": {"name": agent.name, "type": "agent_reference"},
-        "structured_inputs": {"vector_store_id": vector_store.id},
-    },
-)
-print(response.output_text)
-```
+  # Create agent with a template placeholder for vector store ID
+  tool = FileSearchTool(vector_store_ids=["{{vector_store_id}}"])
+  agent = project.agents.create_version(
+      agent_name="file-search-structured",
+      definition=PromptAgentDefinition(
+          model="gpt-5-mini",
+          instructions="You are a helpful assistant that searches product information.",
+          tools=[tool],
+          structured_inputs={
+              "vector_store_id": StructuredInputDefinition(
+                  description="Vector store ID for file search",
+                  required=True,
+                  schema={"type": "string"},
+              ),
+          },
+      ),
+  )
 
-### Expected output
+  # Supply the actual vector store ID at runtime
+  conversation = openai.conversations.create()
+  response = openai.responses.create(
+      conversation=conversation.id,
+      input="Tell me about Contoso products",
+      extra_body={
+          "agent_reference": {"name": agent.name, "type": "agent_reference"},
+          "structured_inputs": {"vector_store_id": vector_store.id},
+      },
+  )
+  print(response.output_text)
+  ```
 
-```console
-Vector store created (id: <vector-store-id>)
-Based on the product information, Contoso offers several product lines including...
-```
+  ### Expected output
 
-The `{{vector_store_id}}` placeholder is replaced with the actual vector store ID at runtime. You can define multiple vector store placeholders to enable tiered or context-specific knowledge bases.
+  ```console
+  Vector store created (id: <vector-store-id>)
+  Based on the product information, Contoso offers several product lines including...
+  ```
 
-```csharp
-using System;
-using Azure.AI.Projects;
-using Azure.AI.Projects.Agents;
-using Azure.AI.Extensions.OpenAI;
-using Azure.Identity;
-using OpenAI.Responses;
+  The `{{vector_store_id}}` placeholder is replaced with the actual vector store ID at runtime. You can define multiple vector store placeholders to enable tiered or context-specific knowledge bases.
 
-// Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-var projectEndpoint = "your_project_endpoint";
+  </Tab>
+  <Tab title="C#">
 
-AIProjectClient projectClient = new(
-    endpoint: new Uri(projectEndpoint),
-    tokenProvider: new DefaultAzureCredential());
+  ```csharp
+  using System;
+  using Azure.AI.Projects;
+  using Azure.AI.Projects.Agents;
+  using Azure.AI.Extensions.OpenAI;
+  using Azure.Identity;
+  using OpenAI.Responses;
 
-// Create agent with a template placeholder for vector store ID
-DeclarativeAgentDefinition agentDefinition = new(model: "gpt-5-mini")
-{
-    Instructions = "You are a helpful assistant that searches product information.",
-    Tools = {
-        ResponseTool.CreateFileSearchTool(
-            vectorStoreIds: ["{{vector_store_id}}"])
-    },
-    StructuredInputs =
-    {
-        ["vector_store_id"] = new StructuredInputDefinition
-            { Description = "Vector store ID for file search", IsRequired = true }
-    }
-};
-AgentVersion agent = projectClient.AgentAdministrationClient.CreateAgentVersion(
-    agentName: "file-search-structured", options: new(agentDefinition));
+  // Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+  var projectEndpoint = "your_project_endpoint";
 
-// Supply the actual vector store ID at runtime
-AgentReference agentRef = new(name: agent.Name, version: agent.Version);
-ProjectResponsesClient responseClient =
-    projectClient.ProjectOpenAIClient.GetProjectResponsesClientForAgent(agentRef);
-
-CreateResponseOptions responseOptions = new()
-{
-    Input = [ResponseItem.CreateUserMessageItem("Tell me about Contoso products")]
-};
-responseOptions.Patch.Set(
-    "$.structured_inputs[\"vector_store_id\"]"u8,
-    BinaryData.FromObjectAsJson("<vector-store-id>"));
-
-ResponseResult response = responseClient.CreateResponse(responseOptions);
-Console.WriteLine(response.GetOutputText());
-
-// Clean up
-projectClient.AgentAdministrationClient.DeleteAgentVersion(
-    agentName: agent.Name, agentVersion: agent.Version);
-```
-
-### Expected output
-
-```console
-Based on the product information, Contoso offers several product lines including...
-```
-
-```typescript
-import { DefaultAzureCredential } from "@azure/identity";
-import { AIProjectClient } from "@azure/ai-projects";
-
-// Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-const PROJECT_ENDPOINT = "your_project_endpoint";
-
-export async function main(): Promise<void> {
-  const project = new AIProjectClient(PROJECT_ENDPOINT, new DefaultAzureCredential());
-  const openai = project.getOpenAIClient();
-
-  // Create a vector store (assumes file already uploaded)
-  const vectorStore = await openai.vectorStores.create({ name: "ProductInfoStore" });
-  console.log(`Vector store created (id: ${vectorStore.id})`);
+  AIProjectClient projectClient = new(
+      endpoint: new Uri(projectEndpoint),
+      tokenProvider: new DefaultAzureCredential());
 
   // Create agent with a template placeholder for vector store ID
-  const agent = await project.agents.createVersion("file-search-structured", {
-    kind: "prompt",
-    model: "gpt-5-mini",
-    instructions: "You are a helpful assistant that searches product information.",
-    tools: [
+  DeclarativeAgentDefinition agentDefinition = new(model: "gpt-5-mini")
+  {
+      Instructions = "You are a helpful assistant that searches product information.",
+      Tools = {
+          ResponseTool.CreateFileSearchTool(
+              vectorStoreIds: ["{{vector_store_id}}"])
+      },
+      StructuredInputs =
       {
-        type: "file_search",
-        vector_store_ids: ["{{vector_store_id}}"],
-      },
-    ],
-    structured_inputs: {
-      vector_store_id: {
-        description: "Vector store ID for file search",
-        required: true,
-      },
-    },
-  });
+          ["vector_store_id"] = new StructuredInputDefinition
+              { Description = "Vector store ID for file search", IsRequired = true }
+      }
+  };
+  AgentVersion agent = projectClient.AgentAdministrationClient.CreateAgentVersion(
+      agentName: "file-search-structured", options: new(agentDefinition));
 
   // Supply the actual vector store ID at runtime
-  const conversation = await openai.conversations.create();
-  const response = await openai.responses.create(
-    {
-      conversation: conversation.id,
-      input: "Tell me about Contoso products",
-    },
-    {
-      body: {
-        agent_reference: { name: agent.name, type: "agent_reference" },
-        structured_inputs: { vector_store_id: vectorStore.id },
-      },
-    },
-  );
-  console.log(response.output_text);
+  AgentReference agentRef = new(name: agent.Name, version: agent.Version);
+  ProjectResponsesClient responseClient =
+      projectClient.ProjectOpenAIClient.GetProjectResponsesClientForAgent(agentRef);
+
+  CreateResponseOptions responseOptions = new()
+  {
+      Input = [ResponseItem.CreateUserMessageItem("Tell me about Contoso products")]
+  };
+  responseOptions.Patch.Set(
+      "$.structured_inputs[\"vector_store_id\"]"u8,
+      BinaryData.FromObjectAsJson("<vector-store-id>"));
+
+  ResponseResult response = responseClient.CreateResponse(responseOptions);
+  Console.WriteLine(response.GetOutputText());
 
   // Clean up
-  await project.agents.deleteVersion(agent.name, agent.version);
-}
+  projectClient.AgentAdministrationClient.DeleteAgentVersion(
+      agentName: agent.Name, agentVersion: agent.Version);
+  ```
 
-main().catch(console.error);
-```
+  ### Expected output
 
-### Expected output
+  ```console
+  Based on the product information, Contoso offers several product lines including...
+  ```
 
-```console
-Vector store created (id: <vector-store-id>)
-Based on the product information, Contoso offers several product lines including...
-```
+  </Tab>
+  <Tab title="TypeScript">
 
-```java
-import com.azure.ai.agents.AgentsClient;
-import com.azure.ai.agents.AgentsClientBuilder;
-import com.azure.ai.agents.AgentsServiceVersion;
-import com.azure.ai.agents.ResponsesClient;
-import com.azure.ai.agents.models.AgentReference;
-import com.azure.ai.agents.models.AgentVersionDetails;
-import com.azure.ai.agents.models.AzureCreateResponseOptions;
-import com.azure.ai.agents.models.FileSearchTool;
-import com.azure.ai.agents.models.PromptAgentDefinition;
-import com.azure.ai.agents.models.StructuredInputDefinition;
-import com.azure.core.util.BinaryData;
-import com.azure.identity.DefaultAzureCredentialBuilder;
-import com.openai.models.responses.Response;
-import com.openai.models.responses.ResponseCreateParams;
+  ```typescript
+  import { DefaultAzureCredential } from "@azure/identity";
+  import { AIProjectClient } from "@azure/ai-projects";
 
-import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.Map;
+  // Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+  const PROJECT_ENDPOINT = "your_project_endpoint";
 
-public class FileSearchStructuredInputExample {
-    public static void main(String[] args) {
-        // Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-        String projectEndpoint = "your_project_endpoint";
+  export async function main(): Promise<void> {
+    const project = new AIProjectClient(PROJECT_ENDPOINT, new DefaultAzureCredential());
+    const openai = project.getOpenAIClient();
 
-        AgentsClientBuilder builder = new AgentsClientBuilder()
-            .credential(new DefaultAzureCredentialBuilder().build())
-            .endpoint(projectEndpoint)
-            .serviceVersion(AgentsServiceVersion.getLatest());
+    // Create a vector store (assumes file already uploaded)
+    const vectorStore = await openai.vectorStores.create({ name: "ProductInfoStore" });
+    console.log(`Vector store created (id: ${vectorStore.id})`);
 
-        AgentsClient agentsClient = builder.buildAgentsClient();
-        ResponsesClient responsesClient = builder.buildResponsesClient();
-
-        // Create agent with a template placeholder for vector store ID
-        FileSearchTool tool = new FileSearchTool()
-            .setVectorStoreIds(Arrays.asList("{{vector_store_id}}"));
-
-        Map<String, StructuredInputDefinition> inputDefs = new LinkedHashMap<>();
-        inputDefs.put("vector_store_id",
-            new StructuredInputDefinition()
-                .setDescription("Vector store ID for file search")
-                .setRequired(true));
-
-        AgentVersionDetails agent = agentsClient.createAgentVersion(
-            "file-search-structured",
-            new PromptAgentDefinition("gpt-5-mini")
-                .setInstructions(
-                    "You are a helpful assistant that searches product information.")
-                .setTools(Arrays.asList(tool))
-                .setStructuredInputs(inputDefs));
-
-        // Supply the actual vector store ID at runtime
-        Map<String, BinaryData> inputValues = new LinkedHashMap<>();
-        inputValues.put("vector_store_id",
-            BinaryData.fromObject("<vector-store-id>"));
-
-        Response response = responsesClient.createAzureResponse(
-            new AzureCreateResponseOptions()
-                .setAgentReference(
-                    new AgentReference(agent.getName()).setVersion(agent.getVersion()))
-                .setStructuredInputs(inputValues),
-            ResponseCreateParams.builder()
-                .input("Tell me about Contoso products"));
-
-        System.out.println("Response: " + response.output());
-
-        // Clean up
-        agentsClient.deleteAgentVersion(agent.getName(), agent.getVersion());
-    }
-}
-```
-
-### Expected output
-
-```console
-Response: Based on the product information, Contoso offers several product lines including...
-```
-
-### Create an agent with dynamic file search vector stores
-
-```bash
-curl -X POST "$FOUNDRY_PROJECT_ENDPOINT/agents?api-version=v1" \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $AGENT_TOKEN" \
-  -d '{
-    "name": "file-search-structured",
-    "definition": {
-      "kind": "prompt",
-      "model": "<MODEL_DEPLOYMENT>",
-      "instructions": "You are a helpful assistant that searches product information.",
-      "tools": [
+    // Create agent with a template placeholder for vector store ID
+    const agent = await project.agents.createVersion("file-search-structured", {
+      kind: "prompt",
+      model: "gpt-5-mini",
+      instructions: "You are a helpful assistant that searches product information.",
+      tools: [
         {
-          "type": "file_search",
-          "vector_store_ids": [
-            "vs_base_kb",
-            "{{tier_specific_kb}}"
-          ]
+          type: "file_search",
+          vector_store_ids: ["{{vector_store_id}}"],
+        },
+      ],
+      structured_inputs: {
+        vector_store_id: {
+          description: "Vector store ID for file search",
+          required: true,
+        },
+      },
+    });
+
+    // Supply the actual vector store ID at runtime
+    const conversation = await openai.conversations.create();
+    const response = await openai.responses.create(
+      {
+        conversation: conversation.id,
+        input: "Tell me about Contoso products",
+      },
+      {
+        body: {
+          agent_reference: { name: agent.name, type: "agent_reference" },
+          structured_inputs: { vector_store_id: vectorStore.id },
+        },
+      },
+    );
+    console.log(response.output_text);
+
+    // Clean up
+    await project.agents.deleteVersion(agent.name, agent.version);
+  }
+
+  main().catch(console.error);
+  ```
+
+  ### Expected output
+
+  ```console
+  Vector store created (id: <vector-store-id>)
+  Based on the product information, Contoso offers several product lines including...
+  ```
+
+  </Tab>
+  <Tab title="Java">
+
+  ```java
+  import com.azure.ai.agents.AgentsClient;
+  import com.azure.ai.agents.AgentsClientBuilder;
+  import com.azure.ai.agents.AgentsServiceVersion;
+  import com.azure.ai.agents.ResponsesClient;
+  import com.azure.ai.agents.models.AgentReference;
+  import com.azure.ai.agents.models.AgentVersionDetails;
+  import com.azure.ai.agents.models.AzureCreateResponseOptions;
+  import com.azure.ai.agents.models.FileSearchTool;
+  import com.azure.ai.agents.models.PromptAgentDefinition;
+  import com.azure.ai.agents.models.StructuredInputDefinition;
+  import com.azure.core.util.BinaryData;
+  import com.azure.identity.DefaultAzureCredentialBuilder;
+  import com.openai.models.responses.Response;
+  import com.openai.models.responses.ResponseCreateParams;
+
+  import java.util.Arrays;
+  import java.util.LinkedHashMap;
+  import java.util.Map;
+
+  public class FileSearchStructuredInputExample {
+      public static void main(String[] args) {
+          // Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+          String projectEndpoint = "your_project_endpoint";
+
+          AgentsClientBuilder builder = new AgentsClientBuilder()
+              .credential(new DefaultAzureCredentialBuilder().build())
+              .endpoint(projectEndpoint)
+              .serviceVersion(AgentsServiceVersion.getLatest());
+
+          AgentsClient agentsClient = builder.buildAgentsClient();
+          ResponsesClient responsesClient = builder.buildResponsesClient();
+
+          // Create agent with a template placeholder for vector store ID
+          FileSearchTool tool = new FileSearchTool()
+              .setVectorStoreIds(Arrays.asList("{{vector_store_id}}"));
+
+          Map<String, StructuredInputDefinition> inputDefs = new LinkedHashMap<>();
+          inputDefs.put("vector_store_id",
+              new StructuredInputDefinition()
+                  .setDescription("Vector store ID for file search")
+                  .setRequired(true));
+
+          AgentVersionDetails agent = agentsClient.createAgentVersion(
+              "file-search-structured",
+              new PromptAgentDefinition("gpt-5-mini")
+                  .setInstructions(
+                      "You are a helpful assistant that searches product information.")
+                  .setTools(Arrays.asList(tool))
+                  .setStructuredInputs(inputDefs));
+
+          // Supply the actual vector store ID at runtime
+          Map<String, BinaryData> inputValues = new LinkedHashMap<>();
+          inputValues.put("vector_store_id",
+              BinaryData.fromObject("<vector-store-id>"));
+
+          Response response = responsesClient.createAzureResponse(
+              new AzureCreateResponseOptions()
+                  .setAgentReference(
+                      new AgentReference(agent.getName()).setVersion(agent.getVersion()))
+                  .setStructuredInputs(inputValues),
+              ResponseCreateParams.builder()
+                  .input("Tell me about Contoso products"));
+
+          System.out.println("Response: " + response.output());
+
+          // Clean up
+          agentsClient.deleteAgentVersion(agent.getName(), agent.getVersion());
+      }
+  }
+  ```
+
+  ### Expected output
+
+  ```console
+  Response: Based on the product information, Contoso offers several product lines including...
+  ```
+
+  </Tab>
+  <Tab title="REST">
+
+  ### Create an agent with dynamic file search vector stores
+
+  ```bash
+  curl -X POST "$FOUNDRY_PROJECT_ENDPOINT/agents?api-version=v1" \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer $AGENT_TOKEN" \
+    -d '{
+      "name": "file-search-structured",
+      "definition": {
+        "kind": "prompt",
+        "model": "<MODEL_DEPLOYMENT>",
+        "instructions": "You are a helpful assistant that searches product information.",
+        "tools": [
+          {
+            "type": "file_search",
+            "vector_store_ids": [
+              "vs_base_kb",
+              "{{tier_specific_kb}}"
+            ]
+          }
+        ],
+        "structured_inputs": {
+          "tier_specific_kb": {
+            "description": "Vector store ID for customer tier",
+            "required": true,
+            "schema": {"type": "string"}
+          }
+        }
+      }
+    }'
+  ```
+
+  ### Create a response with the vector store ID
+
+  ```bash
+  curl -X POST "$FOUNDRY_PROJECT_ENDPOINT/openai/v1/responses" \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer $AGENT_TOKEN" \
+    -d '{
+      "agent_reference": {
+        "type": "agent_reference",
+        "name": "file-search-structured"
+      },
+      "input": [
+        {
+          "type": "message",
+          "role": "user",
+          "content": "Tell me about Contoso products"
         }
       ],
       "structured_inputs": {
-        "tier_specific_kb": {
-          "description": "Vector store ID for customer tier",
-          "required": true,
-          "schema": {"type": "string"}
-        }
+        "tier_specific_kb": "vs_premium_kb_2024"
       }
-    }
-  }'
-```
+    }'
+  ```
 
-### Create a response with the vector store ID
+  This example combines a static vector store (`vs_base_kb`) with a dynamic one (`{{tier_specific_kb}}`). The template placeholder is replaced at runtime, and the process automatically removes any empty string values in the array.
 
-```bash
-curl -X POST "$FOUNDRY_PROJECT_ENDPOINT/openai/v1/responses" \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $AGENT_TOKEN" \
-  -d '{
-    "agent_reference": {
-      "type": "agent_reference",
-      "name": "file-search-structured"
-    },
-    "input": [
-      {
-        "type": "message",
-        "role": "user",
-        "content": "Tell me about Contoso products"
-      }
-    ],
-    "structured_inputs": {
-      "tier_specific_kb": "vs_premium_kb_2024"
-    }
-  }'
-```
-
-This example combines a static vector store (`vs_base_kb`) with a dynamic one (`{{tier_specific_kb}}`). The template placeholder is replaced at runtime, and the process automatically removes any empty string values in the array.
+  </Tab>
+</Tabs>
 
 ## Use structured inputs with Azure AI Search
 
 By using structured inputs, you can dynamically configure the [Azure AI Search](/agent-service/ai-search) tool's index `filter` at runtime. Define a handlebar template inside the OData filter expression, and then supply the actual filter value when creating a response. This pattern lets a single agent definition serve users whose queries must be scoped to different subsets of an index without creating a separate agent version per filter value.
 
-```python
-import os
-from azure.ai.projects import AIProjectClient
-from azure.ai.projects.models import (
-    AISearchIndexResource,
-    AzureAISearchQueryType,
-    AzureAISearchTool,
-    AzureAISearchToolResource,
-    PromptAgentDefinition,
-    StructuredInputDefinition,
-)
-from azure.identity import DefaultAzureCredential
+<Tabs>
+  <Tab title="Python">
 
-# Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-PROJECT_ENDPOINT = "your_project_endpoint"
+  ```python
+  import os
+  from azure.ai.projects import AIProjectClient
+  from azure.ai.projects.models import (
+      AISearchIndexResource,
+      AzureAISearchQueryType,
+      AzureAISearchTool,
+      AzureAISearchToolResource,
+      PromptAgentDefinition,
+      StructuredInputDefinition,
+  )
+  from azure.identity import DefaultAzureCredential
 
-# Create clients to call Foundry API
-project = AIProjectClient(endpoint=PROJECT_ENDPOINT, credential=DefaultAzureCredential())
-openai = project.get_openai_client()
+  # Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+  PROJECT_ENDPOINT = "your_project_endpoint"
 
-# Create the AI Search tool with a handlebar template inside the filter expression
-tool = AzureAISearchTool(
-    azure_ai_search=AzureAISearchToolResource(
-        indexes=[
-            AISearchIndexResource(
-                project_connection_id=os.environ["AI_SEARCH_PROJECT_CONNECTION_ID"],
-                index_name=os.environ["AI_SEARCH_INDEX_NAME"],
-                query_type=AzureAISearchQueryType.SIMPLE,
-                filter="search.ismatchscoring('{{userFilter}}')",
-            ),
-        ]
-    )
-)
+  # Create clients to call Foundry API
+  project = AIProjectClient(endpoint=PROJECT_ENDPOINT, credential=DefaultAzureCredential())
+  openai = project.get_openai_client()
 
-# Create the agent with a structured input that supplies the filter value
-agent = project.agents.create_version(
-    agent_name="aisearch-agent-structured-input",
-    definition=PromptAgentDefinition(
-        model="gpt-5-mini",
-        instructions=(
-            "You are a helpful assistant. You must always provide citations for "
-            "answers using the tool and render them as: "
-            "`\u3010message_idx:search_idx\u2020source\u3011`."
-        ),
-        tools=[tool],
-        structured_inputs={
-            "userFilter": StructuredInputDefinition(
-                description="The user's search filter",
-                required=True,
-                schema={"type": "string"},
-            ),
-        },
-    ),
-)
-print(f"Agent created (id: {agent.id}, name: {agent.name}, version: {agent.version})")
+  # Create the AI Search tool with a handlebar template inside the filter expression
+  tool = AzureAISearchTool(
+      azure_ai_search=AzureAISearchToolResource(
+          indexes=[
+              AISearchIndexResource(
+                  project_connection_id=os.environ["AI_SEARCH_PROJECT_CONNECTION_ID"],
+                  index_name=os.environ["AI_SEARCH_INDEX_NAME"],
+                  query_type=AzureAISearchQueryType.SIMPLE,
+                  filter="search.ismatchscoring('{{userFilter}}')",
+              ),
+          ]
+      )
+  )
 
-# Supply the actual filter value at runtime
-stream_response = openai.responses.create(
-    stream=True,
-    tool_choice="required",
-    input="What outdoor gear do you have?",
-    extra_body={
-        "agent_reference": {"name": agent.name, "type": "agent_reference"},
-        "structured_inputs": {"userFilter": "boots"},
-    },
-)
+  # Create the agent with a structured input that supplies the filter value
+  agent = project.agents.create_version(
+      agent_name="aisearch-agent-structured-input",
+      definition=PromptAgentDefinition(
+          model="gpt-5-mini",
+          instructions=(
+              "You are a helpful assistant. You must always provide citations for "
+              "answers using the tool and render them as: "
+              "`\u3010message_idx:search_idx\u2020source\u3011`."
+          ),
+          tools=[tool],
+          structured_inputs={
+              "userFilter": StructuredInputDefinition(
+                  description="The user's search filter",
+                  required=True,
+                  schema={"type": "string"},
+              ),
+          },
+      ),
+  )
+  print(f"Agent created (id: {agent.id}, name: {agent.name}, version: {agent.version})")
 
-for event in stream_response:
-    if event.type == "response.completed":
-        print(f"Agent response: {event.response.output_text}")
-```
+  # Supply the actual filter value at runtime
+  stream_response = openai.responses.create(
+      stream=True,
+      tool_choice="required",
+      input="What outdoor gear do you have?",
+      extra_body={
+          "agent_reference": {"name": agent.name, "type": "agent_reference"},
+          "structured_inputs": {"userFilter": "boots"},
+      },
+  )
 
-### Expected output
+  for event in stream_response:
+      if event.type == "response.completed":
+          print(f"Agent response: {event.response.output_text}")
+  ```
 
-```console
-Agent created (id: <agent-id>, name: aisearch-agent-structured-input, version: 1)
-Agent response: Based on the index, the available outdoor boots include ...
-```
+  ### Expected output
 
-The `{{userFilter}}` placeholder inside the `filter` expression is replaced with the runtime value `boots` before the search runs. You can supply different filter values for each request to scope results without creating a new agent version.
+  ```console
+  Agent created (id: <agent-id>, name: aisearch-agent-structured-input, version: 1)
+  Agent response: Based on the index, the available outdoor boots include ...
+  ```
 
-```csharp
-using System;
-using Azure.AI.Projects;
-using Azure.AI.Projects.Agents;
-using Azure.AI.Extensions.OpenAI;
-using Azure.Identity;
-using OpenAI.Responses;
+  The `{{userFilter}}` placeholder inside the `filter` expression is replaced with the runtime value `boots` before the search runs. You can supply different filter values for each request to scope results without creating a new agent version.
 
-// Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-var projectEndpoint = "your_project_endpoint";
-var searchConnectionName = "my-search-connection";
-var searchIndexName = "my-search-index";
+  </Tab>
+  <Tab title="C#">
 
-AIProjectClient projectClient = new(
-    endpoint: new Uri(projectEndpoint),
-    tokenProvider: new DefaultAzureCredential());
+  ```csharp
+  using System;
+  using Azure.AI.Projects;
+  using Azure.AI.Projects.Agents;
+  using Azure.AI.Extensions.OpenAI;
+  using Azure.Identity;
+  using OpenAI.Responses;
 
-// Resolve the project connection ID from the connection name
-AIProjectConnection aiSearchConnection =
-    projectClient.Connections.GetConnection(connectionName: searchConnectionName);
+  // Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+  var projectEndpoint = "your_project_endpoint";
+  var searchConnectionName = "my-search-connection";
+  var searchIndexName = "my-search-index";
 
-// Define the search index with a handlebar template inside the filter expression
-AzureAISearchToolIndex index = new()
-{
-    ProjectConnectionId = aiSearchConnection.Id,
-    IndexName = searchIndexName,
-    QueryType = AzureAISearchQueryType.Simple,
-    Filter = "search.ismatchscoring('{{userFilter}}')"
-};
-
-// Create the agent with a structured input that supplies the filter value
-DeclarativeAgentDefinition agentDefinition = new(model: "gpt-5-mini")
-{
-    Instructions = "You are a helpful assistant. You must always provide citations for "
-        + "answers using the tool and render them as: "
-        + "`\u3010message_idx:search_idx\u2020source\u3011`.",
-    Tools = { new AzureAISearchTool(new AzureAISearchToolOptions(indexes: [index])) },
-    StructuredInputs =
-    {
-        ["userFilter"] = new StructuredInputDefinition
-            { Description = "The user's search filter", IsRequired = true }
-    }
-};
-AgentVersion agent = projectClient.AgentAdministrationClient.CreateAgentVersion(
-    agentName: "aisearch-agent-structured-input",
-    options: new(agentDefinition));
-
-// Supply the actual filter value at runtime
-AgentReference agentRef = new(name: agent.Name, version: agent.Version);
-ProjectResponsesClient responseClient =
-    projectClient.ProjectOpenAIClient.GetProjectResponsesClientForAgent(agentRef);
-
-CreateResponseOptions responseOptions = new()
-{
-    Input = [ResponseItem.CreateUserMessageItem("What outdoor gear do you have?")]
-};
-responseOptions.Patch.Set(
-    "$.structured_inputs[\"userFilter\"]"u8,
-    BinaryData.FromObjectAsJson("boots"));
-
-ResponseResult response = responseClient.CreateResponse(responseOptions);
-Console.WriteLine(response.GetOutputText());
-
-// Clean up
-projectClient.AgentAdministrationClient.DeleteAgentVersion(
-    agentName: agent.Name, agentVersion: agent.Version);
-```
-
-### Expected output
-
-```console
-Based on the index, the available outdoor boots include ...
-```
-
-The `Filter` property on `AzureAISearchToolIndex` accepts handlebar templates that resolve at runtime. Use `Patch.Set` on `CreateResponseOptions` to supply the filter value via the `$.structured_inputs` JSON path.
-
-```typescript
-import { DefaultAzureCredential } from "@azure/identity";
-import { AIProjectClient } from "@azure/ai-projects";
-
-// Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-const PROJECT_ENDPOINT = "your_project_endpoint";
-const SEARCH_CONNECTION_NAME = "my-search-connection";
-const SEARCH_INDEX_NAME = "my-search-index";
-
-export async function main(): Promise<void> {
-  const project = new AIProjectClient(PROJECT_ENDPOINT, new DefaultAzureCredential());
-  const openai = project.getOpenAIClient();
+  AIProjectClient projectClient = new(
+      endpoint: new Uri(projectEndpoint),
+      tokenProvider: new DefaultAzureCredential());
 
   // Resolve the project connection ID from the connection name
-  const aiSearchConnection = await project.connections.get(SEARCH_CONNECTION_NAME);
+  AIProjectConnection aiSearchConnection =
+      projectClient.Connections.GetConnection(connectionName: searchConnectionName);
 
-  // Create the agent with a handlebar template inside the filter expression
-  const agent = await project.agents.createVersion("aisearch-agent-structured-input", {
-    kind: "prompt",
-    model: "gpt-5-mini",
-    instructions:
-      "You are a helpful assistant. You must always provide citations for " +
-      "answers using the tool and render them as: `[message_idx:search_idx†source]`.",
-    tools: [
+  // Define the search index with a handlebar template inside the filter expression
+  AzureAISearchToolIndex index = new()
+  {
+      ProjectConnectionId = aiSearchConnection.Id,
+      IndexName = searchIndexName,
+      QueryType = AzureAISearchQueryType.Simple,
+      Filter = "search.ismatchscoring('{{userFilter}}')"
+  };
+
+  // Create the agent with a structured input that supplies the filter value
+  DeclarativeAgentDefinition agentDefinition = new(model: "gpt-5-mini")
+  {
+      Instructions = "You are a helpful assistant. You must always provide citations for "
+          + "answers using the tool and render them as: "
+          + "`\u3010message_idx:search_idx\u2020source\u3011`.",
+      Tools = { new AzureAISearchTool(new AzureAISearchToolOptions(indexes: [index])) },
+      StructuredInputs =
       {
-        type: "azure_ai_search",
-        azure_ai_search: {
-          indexes: [
-            {
-              project_connection_id: aiSearchConnection.id,
-              index_name: SEARCH_INDEX_NAME,
-              query_type: "simple",
-              filter: "search.ismatchscoring('{{userFilter}}')",
-            },
-          ],
-        },
-      },
-    ],
-    structured_inputs: {
-      userFilter: { description: "The user's search filter", required: true },
-    },
-  });
-  console.log(`Agent created (id: ${agent.id}, name: ${agent.name}, version: ${agent.version})`);
+          ["userFilter"] = new StructuredInputDefinition
+              { Description = "The user's search filter", IsRequired = true }
+      }
+  };
+  AgentVersion agent = projectClient.AgentAdministrationClient.CreateAgentVersion(
+      agentName: "aisearch-agent-structured-input",
+      options: new(agentDefinition));
 
   // Supply the actual filter value at runtime
-  const response = await openai.responses.create(
-    {
-      input: "What outdoor gear do you have?",
-      tool_choice: "required",
-    },
-    {
-      body: {
-        agent_reference: { name: agent.name, type: "agent_reference" },
-        structured_inputs: { userFilter: "boots" },
-      },
-    },
-  );
-  console.log(response.output_text);
+  AgentReference agentRef = new(name: agent.Name, version: agent.Version);
+  ProjectResponsesClient responseClient =
+      projectClient.ProjectOpenAIClient.GetProjectResponsesClientForAgent(agentRef);
+
+  CreateResponseOptions responseOptions = new()
+  {
+      Input = [ResponseItem.CreateUserMessageItem("What outdoor gear do you have?")]
+  };
+  responseOptions.Patch.Set(
+      "$.structured_inputs[\"userFilter\"]"u8,
+      BinaryData.FromObjectAsJson("boots"));
+
+  ResponseResult response = responseClient.CreateResponse(responseOptions);
+  Console.WriteLine(response.GetOutputText());
 
   // Clean up
-  await project.agents.deleteVersion(agent.name, agent.version);
-}
+  projectClient.AgentAdministrationClient.DeleteAgentVersion(
+      agentName: agent.Name, agentVersion: agent.Version);
+  ```
 
-main().catch(console.error);
-```
+  ### Expected output
 
-### Expected output
+  ```console
+  Based on the index, the available outdoor boots include ...
+  ```
 
-```console
-Agent created (id: <agent-id>, name: aisearch-agent-structured-input, version: 1)
-Based on the index, the available outdoor boots include ...
-```
+  The `Filter` property on `AzureAISearchToolIndex` accepts handlebar templates that resolve at runtime. Use `Patch.Set` on `CreateResponseOptions` to supply the filter value via the `$.structured_inputs` JSON path.
 
-```java
-import com.azure.ai.agents.AgentsClient;
-import com.azure.ai.agents.AgentsClientBuilder;
-import com.azure.ai.agents.AgentsServiceVersion;
-import com.azure.ai.agents.ResponsesClient;
-import com.azure.ai.agents.models.AISearchIndexResource;
-import com.azure.ai.agents.models.AgentReference;
-import com.azure.ai.agents.models.AgentVersionDetails;
-import com.azure.ai.agents.models.AzureAISearchQueryType;
-import com.azure.ai.agents.models.AzureAISearchTool;
-import com.azure.ai.agents.models.AzureAISearchToolResource;
-import com.azure.ai.agents.models.AzureCreateResponseOptions;
-import com.azure.ai.agents.models.PromptAgentDefinition;
-import com.azure.ai.agents.models.StructuredInputDefinition;
-import com.azure.core.util.BinaryData;
-import com.azure.identity.DefaultAzureCredentialBuilder;
-import com.openai.models.responses.Response;
-import com.openai.models.responses.ResponseCreateParams;
+  </Tab>
+  <Tab title="TypeScript">
 
-import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.Map;
+  ```typescript
+  import { DefaultAzureCredential } from "@azure/identity";
+  import { AIProjectClient } from "@azure/ai-projects";
 
-public class AzureAISearchStructuredInputExample {
-    public static void main(String[] args) {
-        // Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-        String projectEndpoint = "your_project_endpoint";
-        String searchConnectionId = "your-search-connection-id";
-        String searchIndexName = "my-search-index";
+  // Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+  const PROJECT_ENDPOINT = "your_project_endpoint";
+  const SEARCH_CONNECTION_NAME = "my-search-connection";
+  const SEARCH_INDEX_NAME = "my-search-index";
 
-        AgentsClientBuilder builder = new AgentsClientBuilder()
-            .credential(new DefaultAzureCredentialBuilder().build())
-            .endpoint(projectEndpoint)
-            .serviceVersion(AgentsServiceVersion.getLatest());
+  export async function main(): Promise<void> {
+    const project = new AIProjectClient(PROJECT_ENDPOINT, new DefaultAzureCredential());
+    const openai = project.getOpenAIClient();
 
-        AgentsClient agentsClient = builder.buildAgentsClient();
-        ResponsesClient responsesClient = builder.buildResponsesClient();
+    // Resolve the project connection ID from the connection name
+    const aiSearchConnection = await project.connections.get(SEARCH_CONNECTION_NAME);
 
-        // Create the AI Search tool with a handlebar template inside the filter expression
-        AzureAISearchTool tool = new AzureAISearchTool(
-            new AzureAISearchToolResource(Arrays.asList(
-                new AISearchIndexResource()
-                    .setProjectConnectionId(searchConnectionId)
-                    .setIndexName(searchIndexName)
-                    .setQueryType(AzureAISearchQueryType.SIMPLE)
-                    .setFilter("search.ismatchscoring('{{userFilter}}')")
-            ))
-        );
-
-        Map<String, StructuredInputDefinition> inputDefs = new LinkedHashMap<>();
-        inputDefs.put("userFilter",
-            new StructuredInputDefinition()
-                .setDescription("The user's search filter")
-                .setRequired(true));
-
-        AgentVersionDetails agent = agentsClient.createAgentVersion(
-            "aisearch-agent-structured-input",
-            new PromptAgentDefinition("gpt-5-mini")
-                .setInstructions("You are a helpful assistant. Always provide citations.")
-                .setTools(Arrays.asList(tool))
-                .setStructuredInputs(inputDefs));
-
-        // Supply the actual filter value at runtime
-        Map<String, BinaryData> inputValues = new LinkedHashMap<>();
-        inputValues.put("userFilter", BinaryData.fromObject("boots"));
-
-        Response response = responsesClient.createAzureResponse(
-            new AzureCreateResponseOptions()
-                .setAgentReference(
-                    new AgentReference(agent.getName()).setVersion(agent.getVersion()))
-                .setStructuredInputs(inputValues),
-            ResponseCreateParams.builder()
-                .input("What outdoor gear do you have?"));
-
-        System.out.println("Response: " + response.output());
-
-        // Clean up
-        agentsClient.deleteAgentVersion(agent.getName(), agent.getVersion());
-    }
-}
-```
-
-### Expected output
-
-```console
-Response: Based on the index, the available outdoor boots include ...
-```
-
-### Create an agent with a dynamic Azure AI Search filter
-
-```bash
-curl -X POST "$FOUNDRY_PROJECT_ENDPOINT/agents?api-version=v1" \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $AGENT_TOKEN" \
-  -d '{
-    "name": "aisearch-agent-structured-input",
-    "definition": {
-      "kind": "prompt",
-      "model": "<MODEL_DEPLOYMENT>",
-      "instructions": "You are a helpful assistant. Always provide citations.",
-      "tools": [
+    // Create the agent with a handlebar template inside the filter expression
+    const agent = await project.agents.createVersion("aisearch-agent-structured-input", {
+      kind: "prompt",
+      model: "gpt-5-mini",
+      instructions:
+        "You are a helpful assistant. You must always provide citations for " +
+        "answers using the tool and render them as: `[message_idx:search_idx†source]`.",
+      tools: [
         {
-          "type": "azure_ai_search",
-          "azure_ai_search": {
-            "indexes": [
+          type: "azure_ai_search",
+          azure_ai_search: {
+            indexes: [
               {
-                "project_connection_id": "$AZURE_AI_SEARCH_CONNECTION_ID",
-                "index_name": "$AI_SEARCH_INDEX_NAME",
-                "query_type": "simple",
-                "filter": "search.ismatchscoring('\''{{userFilter}}'\'')"
-              }
-            ]
+                project_connection_id: aiSearchConnection.id,
+                index_name: SEARCH_INDEX_NAME,
+                query_type: "simple",
+                filter: "search.ismatchscoring('{{userFilter}}')",
+              },
+            ],
+          },
+        },
+      ],
+      structured_inputs: {
+        userFilter: { description: "The user's search filter", required: true },
+      },
+    });
+    console.log(`Agent created (id: ${agent.id}, name: ${agent.name}, version: ${agent.version})`);
+
+    // Supply the actual filter value at runtime
+    const response = await openai.responses.create(
+      {
+        input: "What outdoor gear do you have?",
+        tool_choice: "required",
+      },
+      {
+        body: {
+          agent_reference: { name: agent.name, type: "agent_reference" },
+          structured_inputs: { userFilter: "boots" },
+        },
+      },
+    );
+    console.log(response.output_text);
+
+    // Clean up
+    await project.agents.deleteVersion(agent.name, agent.version);
+  }
+
+  main().catch(console.error);
+  ```
+
+  ### Expected output
+
+  ```console
+  Agent created (id: <agent-id>, name: aisearch-agent-structured-input, version: 1)
+  Based on the index, the available outdoor boots include ...
+  ```
+
+  </Tab>
+  <Tab title="Java">
+
+  ```java
+  import com.azure.ai.agents.AgentsClient;
+  import com.azure.ai.agents.AgentsClientBuilder;
+  import com.azure.ai.agents.AgentsServiceVersion;
+  import com.azure.ai.agents.ResponsesClient;
+  import com.azure.ai.agents.models.AISearchIndexResource;
+  import com.azure.ai.agents.models.AgentReference;
+  import com.azure.ai.agents.models.AgentVersionDetails;
+  import com.azure.ai.agents.models.AzureAISearchQueryType;
+  import com.azure.ai.agents.models.AzureAISearchTool;
+  import com.azure.ai.agents.models.AzureAISearchToolResource;
+  import com.azure.ai.agents.models.AzureCreateResponseOptions;
+  import com.azure.ai.agents.models.PromptAgentDefinition;
+  import com.azure.ai.agents.models.StructuredInputDefinition;
+  import com.azure.core.util.BinaryData;
+  import com.azure.identity.DefaultAzureCredentialBuilder;
+  import com.openai.models.responses.Response;
+  import com.openai.models.responses.ResponseCreateParams;
+
+  import java.util.Arrays;
+  import java.util.LinkedHashMap;
+  import java.util.Map;
+
+  public class AzureAISearchStructuredInputExample {
+      public static void main(String[] args) {
+          // Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+          String projectEndpoint = "your_project_endpoint";
+          String searchConnectionId = "your-search-connection-id";
+          String searchIndexName = "my-search-index";
+
+          AgentsClientBuilder builder = new AgentsClientBuilder()
+              .credential(new DefaultAzureCredentialBuilder().build())
+              .endpoint(projectEndpoint)
+              .serviceVersion(AgentsServiceVersion.getLatest());
+
+          AgentsClient agentsClient = builder.buildAgentsClient();
+          ResponsesClient responsesClient = builder.buildResponsesClient();
+
+          // Create the AI Search tool with a handlebar template inside the filter expression
+          AzureAISearchTool tool = new AzureAISearchTool(
+              new AzureAISearchToolResource(Arrays.asList(
+                  new AISearchIndexResource()
+                      .setProjectConnectionId(searchConnectionId)
+                      .setIndexName(searchIndexName)
+                      .setQueryType(AzureAISearchQueryType.SIMPLE)
+                      .setFilter("search.ismatchscoring('{{userFilter}}')")
+              ))
+          );
+
+          Map<String, StructuredInputDefinition> inputDefs = new LinkedHashMap<>();
+          inputDefs.put("userFilter",
+              new StructuredInputDefinition()
+                  .setDescription("The user's search filter")
+                  .setRequired(true));
+
+          AgentVersionDetails agent = agentsClient.createAgentVersion(
+              "aisearch-agent-structured-input",
+              new PromptAgentDefinition("gpt-5-mini")
+                  .setInstructions("You are a helpful assistant. Always provide citations.")
+                  .setTools(Arrays.asList(tool))
+                  .setStructuredInputs(inputDefs));
+
+          // Supply the actual filter value at runtime
+          Map<String, BinaryData> inputValues = new LinkedHashMap<>();
+          inputValues.put("userFilter", BinaryData.fromObject("boots"));
+
+          Response response = responsesClient.createAzureResponse(
+              new AzureCreateResponseOptions()
+                  .setAgentReference(
+                      new AgentReference(agent.getName()).setVersion(agent.getVersion()))
+                  .setStructuredInputs(inputValues),
+              ResponseCreateParams.builder()
+                  .input("What outdoor gear do you have?"));
+
+          System.out.println("Response: " + response.output());
+
+          // Clean up
+          agentsClient.deleteAgentVersion(agent.getName(), agent.getVersion());
+      }
+  }
+  ```
+
+  ### Expected output
+
+  ```console
+  Response: Based on the index, the available outdoor boots include ...
+  ```
+
+  </Tab>
+  <Tab title="REST">
+
+  ### Create an agent with a dynamic Azure AI Search filter
+
+  ```bash
+  curl -X POST "$FOUNDRY_PROJECT_ENDPOINT/agents?api-version=v1" \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer $AGENT_TOKEN" \
+    -d '{
+      "name": "aisearch-agent-structured-input",
+      "definition": {
+        "kind": "prompt",
+        "model": "<MODEL_DEPLOYMENT>",
+        "instructions": "You are a helpful assistant. Always provide citations.",
+        "tools": [
+          {
+            "type": "azure_ai_search",
+            "azure_ai_search": {
+              "indexes": [
+                {
+                  "project_connection_id": "$AZURE_AI_SEARCH_CONNECTION_ID",
+                  "index_name": "$AI_SEARCH_INDEX_NAME",
+                  "query_type": "simple",
+                  "filter": "search.ismatchscoring('\''{{userFilter}}'\'')"
+                }
+              ]
+            }
           }
+        ],
+        "structured_inputs": {
+          "userFilter": {
+            "description": "The user's search filter",
+            "required": true,
+            "schema": {"type": "string"}
+          }
+        }
+      }
+    }'
+  ```
+
+  ### Create a response with the filter value
+
+  ```bash
+  curl -X POST "$FOUNDRY_PROJECT_ENDPOINT/openai/v1/responses" \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer $AGENT_TOKEN" \
+    -d '{
+      "agent_reference": {
+        "type": "agent_reference",
+        "name": "aisearch-agent-structured-input"
+      },
+      "input": [
+        {
+          "type": "message",
+          "role": "user",
+          "content": "What outdoor gear do you have?"
         }
       ],
       "structured_inputs": {
-        "userFilter": {
-          "description": "The user's search filter",
-          "required": true,
-          "schema": {"type": "string"}
-        }
-      }
-    }
-  }'
-```
+        "userFilter": "boots"
+      },
+      "tool_choice": "required"
+    }'
+  ```
 
-### Create a response with the filter value
+  The `{{userFilter}}` template inside the `filter` expression is replaced with `boots` at runtime. The `'\''` sequence in the create-agent body is the standard Bash escape for a literal single quote inside a single-quoted string. If your shell handles quoting differently, supply the JSON body from a file instead.
 
-```bash
-curl -X POST "$FOUNDRY_PROJECT_ENDPOINT/openai/v1/responses" \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $AGENT_TOKEN" \
-  -d '{
-    "agent_reference": {
-      "type": "agent_reference",
-      "name": "aisearch-agent-structured-input"
-    },
-    "input": [
-      {
-        "type": "message",
-        "role": "user",
-        "content": "What outdoor gear do you have?"
-      }
-    ],
-    "structured_inputs": {
-      "userFilter": "boots"
-    },
-    "tool_choice": "required"
-  }'
-```
-
-The `{{userFilter}}` template inside the `filter` expression is replaced with `boots` at runtime. The `'\''` sequence in the create-agent body is the standard Bash escape for a literal single quote inside a single-quoted string. If your shell handles quoting differently, supply the JSON body from a file instead.
+  </Tab>
+</Tabs>
 
 ## Use structured inputs with MCP servers
 
