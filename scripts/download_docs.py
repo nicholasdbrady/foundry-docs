@@ -9,6 +9,8 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
+from argparse import ArgumentParser, Namespace
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
@@ -20,16 +22,22 @@ RAW_DIR = Path("raw_docs")  # raw downloaded files before conversion
 MAX_WORKERS = 10
 
 
-def download_file(source_path: str, dest_path: Path) -> bool:
+def download_file(source_path: str, dest_path: Path, *, force: bool = False) -> bool:
     """Download a file from GitHub raw content."""
-    if dest_path.exists():
+    if dest_path.exists() and not force:
         return True
 
     url = f"{RAW_BASE}/{source_path}"
     dest_path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = Path(tempfile.NamedTemporaryFile(
+        delete=False,
+        dir=dest_path.parent,
+        prefix=f".{dest_path.name}.",
+        suffix=".download",
+    ).name)
 
     try:
-        base_cmd = ["curl", "-sL", "-o", str(dest_path), "-w", "%{http_code}"]
+        base_cmd = ["curl", "-sL", "-o", str(temp_path), "-w", "%{http_code}"]
         cmd = [*base_cmd, url]
         gh_token = os.environ.get("GH_TOKEN")
         if gh_token:
@@ -46,21 +54,29 @@ def download_file(source_path: str, dest_path: Path) -> bool:
             )
             http_code = result.stdout.strip()
         if http_code == "200":
+            temp_path.replace(dest_path)
             return True
         else:
-            dest_path.unlink(missing_ok=True)
+            temp_path.unlink(missing_ok=True)
             return False
     except Exception as e:
+        temp_path.unlink(missing_ok=True)
         print(f"  ERROR downloading {source_path}: {e}", file=sys.stderr)
         return False
 
 
-def download_gh_api(source_path: str, dest_path: Path) -> bool:
+def download_gh_api(source_path: str, dest_path: Path, *, force: bool = False) -> bool:
     """Download using gh CLI (handles auth better for edge cases)."""
-    if dest_path.exists():
+    if dest_path.exists() and not force:
         return True
 
     dest_path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = Path(tempfile.NamedTemporaryFile(
+        delete=False,
+        dir=dest_path.parent,
+        prefix=f".{dest_path.name}.",
+        suffix=".download",
+    ).name)
     try:
         result = subprocess.run(
             ["gh", "api", f"/repos/{REPO_OWNER}/{REPO_NAME}/contents/{source_path}",
@@ -68,14 +84,28 @@ def download_gh_api(source_path: str, dest_path: Path) -> bool:
             capture_output=True, timeout=30
         )
         if result.returncode == 0:
-            dest_path.write_bytes(result.stdout)
+            temp_path.write_bytes(result.stdout)
+            temp_path.replace(dest_path)
             return True
+        temp_path.unlink(missing_ok=True)
         return False
     except Exception:
+        temp_path.unlink(missing_ok=True)
         return False
+
+
+def parse_args() -> Namespace:
+    parser = ArgumentParser(description="Download Foundry docs from the upstream GitHub repository.")
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Re-download files even when they already exist in raw_docs/.",
+    )
+    return parser.parse_args()
 
 
 def main():
+    args = parse_args()
     manifest = json.load(open("manifest.json"))
 
     # Collect all files to download
@@ -112,6 +142,7 @@ def main():
     print(f"  Docs: {len([f for f in files_to_download if f[2] == 'doc'])}", file=sys.stderr)
     print(f"  Includes: {len([f for f in files_to_download if f[2] == 'include'])}", file=sys.stderr)
     print(f"  Images: {len([f for f in files_to_download if f[2] == 'image'])}", file=sys.stderr)
+    print(f"  Force refresh: {'yes' if args.force else 'no'}", file=sys.stderr)
 
     # Download in parallel
     success = 0
@@ -121,7 +152,7 @@ def main():
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
         futures = {}
         for source, dest, ftype in files_to_download:
-            future = executor.submit(download_file, source, dest)
+            future = executor.submit(download_file, source, dest, force=args.force)
             futures[future] = (source, dest, ftype)
 
         for i, future in enumerate(as_completed(futures)):
@@ -131,7 +162,7 @@ def main():
                     success += 1
                 else:
                     # Retry with gh API
-                    if download_gh_api(source, dest):
+                    if download_gh_api(source, dest, force=args.force):
                         success += 1
                     else:
                         failed += 1
