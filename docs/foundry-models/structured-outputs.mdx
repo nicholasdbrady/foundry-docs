@@ -259,341 +259,341 @@ Structured outputs are not supported with parallel function calls. When using st
 <Tabs>
   <Tab title="C#">
 
-      ## Getting started
+    ## Getting started
 
-      Add the following packages to your project:
+    Add the following packages to your project:
 
-      - **[OpenAI](https://www.nuget.org/packages/OpenAI)**: Standard OpenAI .NET library.
-      - **[Azure.Identity](https://www.nuget.org/packages/Azure.Identity)**: Provides Microsoft Entra ID token authentication support across the Azure SDK libraries.
+    - **[OpenAI](https://www.nuget.org/packages/OpenAI)**: Standard OpenAI .NET library.
+    - **[Azure.Identity](https://www.nuget.org/packages/Azure.Identity)**: Provides Microsoft Entra ID token authentication support across the Azure SDK libraries.
 
-      ```dotnetcli
-      dotnet add package OpenAI
-      dotnet add package Azure.Identity
-      ```
+    ```dotnetcli
+    dotnet add package OpenAI
+    dotnet add package Azure.Identity
+    ```
 
-    </Tab>
-    <Tab title="Microsoft Entra ID">
+  </Tab>
+  <Tab title="Microsoft Entra ID">
 
-      If you're new to using Microsoft Entra ID for authentication see [How to configure Azure OpenAI in Microsoft Foundry Models with Microsoft Entra ID authentication](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/how-to/managed-identity).
+    If you're new to using Microsoft Entra ID for authentication see [How to configure Azure OpenAI in Microsoft Foundry Models with Microsoft Entra ID authentication](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/how-to/managed-identity).
 
-      ```csharp
-      using Azure.Identity;
-      using OpenAI;
-      using OpenAI.Chat;
-      using System.ClientModel.Primitives;
-      using System.Text.Json;
+    ```csharp
+    using Azure.Identity;
+    using OpenAI;
+    using OpenAI.Chat;
+    using System.ClientModel.Primitives;
+    using System.Text.Json;
 
-      #pragma warning disable OPENAI001
+    #pragma warning disable OPENAI001
 
-      BearerTokenPolicy tokenPolicy = new(
-          new DefaultAzureCredential(),
-          "https://ai.azure.com/.default");
+    BearerTokenPolicy tokenPolicy = new(
+        new DefaultAzureCredential(),
+        "https://ai.azure.com/.default");
 
-      ChatClient client = new(
-          model: "gpt-4.1",
-          authenticationPolicy: tokenPolicy,
-          options: new OpenAIClientOptions()
-          {
-              Endpoint = new Uri("https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1")
-          }
-      );
+    ChatClient client = new(
+        model: "gpt-4.1",
+        authenticationPolicy: tokenPolicy,
+        options: new OpenAIClientOptions()
+        {
+            Endpoint = new Uri("https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1")
+        }
+    );
 
-      ChatCompletionOptions options = new()
-      {
-          ResponseFormat = ChatResponseFormat.CreateJsonSchemaFormat(
-              jsonSchemaFormatName: "math_reasoning",
-              jsonSchema: BinaryData.FromBytes("""
-                  {
-                      "type": "object",
-                      "properties": {
-                          "steps": {
-                              "type": "array",
-                              "items": {
-                                  "type": "object",
-                                  "properties": {
-                                      "explanation": { "type": "string" },
-                                      "output": { "type": "string" }
-                                  },
-                                  "required": ["explanation", "output"],
-                                  "additionalProperties": false
-                              }
-                          },
-                          "final_answer": { "type": "string" }
-                      },
-                      "required": ["steps", "final_answer"],
-                      "additionalProperties": false
-                  }
-                  """u8.ToArray()),
-              jsonSchemaIsStrict: true)
-      };
+    ChatCompletionOptions options = new()
+    {
+        ResponseFormat = ChatResponseFormat.CreateJsonSchemaFormat(
+            jsonSchemaFormatName: "math_reasoning",
+            jsonSchema: BinaryData.FromBytes("""
+                {
+                    "type": "object",
+                    "properties": {
+                        "steps": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "explanation": { "type": "string" },
+                                    "output": { "type": "string" }
+                                },
+                                "required": ["explanation", "output"],
+                                "additionalProperties": false
+                            }
+                        },
+                        "final_answer": { "type": "string" }
+                    },
+                    "required": ["steps", "final_answer"],
+                    "additionalProperties": false
+                }
+                """u8.ToArray()),
+            jsonSchemaIsStrict: true)
+    };
 
-      // Create a list of ChatMessage objects
-      ChatCompletion completion = client.CompleteChat(
-          [
-              new UserChatMessage("How can I solve 8x + 7 = -23?")
-          ],
-          options);
+    // Create a list of ChatMessage objects
+    ChatCompletion completion = client.CompleteChat(
+        [
+            new UserChatMessage("How can I solve 8x + 7 = -23?")
+        ],
+        options);
 
-      using JsonDocument structuredJson = JsonDocument.Parse(completion.Content[0].Text);
+    using JsonDocument structuredJson = JsonDocument.Parse(completion.Content[0].Text);
 
-      Console.WriteLine($"Final answer: {structuredJson.RootElement.GetProperty("final_answer")}");
-      Console.WriteLine("Reasoning steps:");
+    Console.WriteLine($"Final answer: {structuredJson.RootElement.GetProperty("final_answer")}");
+    Console.WriteLine("Reasoning steps:");
 
-      foreach (JsonElement stepElement in structuredJson.RootElement.GetProperty("steps").EnumerateArray())
-      {
-          Console.WriteLine($"  - Explanation: {stepElement.GetProperty("explanation")}");
-          Console.WriteLine($"    Output: {stepElement.GetProperty("output")}");
-      }
-      ```
+    foreach (JsonElement stepElement in structuredJson.RootElement.GetProperty("steps").EnumerateArray())
+    {
+        Console.WriteLine($"  - Explanation: {stepElement.GetProperty("explanation")}");
+        Console.WriteLine($"    Output: {stepElement.GetProperty("output")}");
+    }
+    ```
 
-    </Tab>
-    <Tab title="API Key">
+  </Tab>
+  <Tab title="API Key">
 
-      ```csharp
+    ```csharp
 
-      using OpenAI;
-      using OpenAI.Chat;
-      using System.ClientModel;
-      using System.Text.Json;
+    using OpenAI;
+    using OpenAI.Chat;
+    using System.ClientModel;
+    using System.Text.Json;
 
-      string keyFromEnvironment = Environment.GetEnvironmentVariable("AZURE_OPENAI_API_KEY");
+    string keyFromEnvironment = Environment.GetEnvironmentVariable("AZURE_OPENAI_API_KEY");
 
-      ChatClient client = new(
-          model: "gpt-4o-mini",
-          credential: new ApiKeyCredential(keyFromEnvironment),
-          options: new OpenAIClientOptions() { 
-              Endpoint = new Uri("https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1")
-          }
-      );
+    ChatClient client = new(
+        model: "gpt-4o-mini",
+        credential: new ApiKeyCredential(keyFromEnvironment),
+        options: new OpenAIClientOptions() { 
+            Endpoint = new Uri("https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1")
+        }
+    );
 
-      ChatCompletionOptions options = new()
-      {
-          ResponseFormat = ChatResponseFormat.CreateJsonSchemaFormat(
-              jsonSchemaFormatName: "math_reasoning",
-              jsonSchema: BinaryData.FromBytes("""
-                  {
-                      "type": "object",
-                      "properties": {
-                          "steps": {
-                              "type": "array",
-                              "items": {
-                                  "type": "object",
-                                  "properties": {
-                                      "explanation": { "type": "string" },
-                                      "output": { "type": "string" }
-                                  },
-                                  "required": ["explanation", "output"],
-                                  "additionalProperties": false
-                              }
-                          },
-                          "final_answer": { "type": "string" }
-                      },
-                      "required": ["steps", "final_answer"],
-                      "additionalProperties": false
-                  }
-                  """u8.ToArray()),
-              jsonSchemaIsStrict: true)
-      };
+    ChatCompletionOptions options = new()
+    {
+        ResponseFormat = ChatResponseFormat.CreateJsonSchemaFormat(
+            jsonSchemaFormatName: "math_reasoning",
+            jsonSchema: BinaryData.FromBytes("""
+                {
+                    "type": "object",
+                    "properties": {
+                        "steps": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "explanation": { "type": "string" },
+                                    "output": { "type": "string" }
+                                },
+                                "required": ["explanation", "output"],
+                                "additionalProperties": false
+                            }
+                        },
+                        "final_answer": { "type": "string" }
+                    },
+                    "required": ["steps", "final_answer"],
+                    "additionalProperties": false
+                }
+                """u8.ToArray()),
+            jsonSchemaIsStrict: true)
+    };
 
-      // Create a list of ChatMessage objects
-      ChatCompletion completion = client.CompleteChat(
-          [
-              new UserChatMessage("How can I solve 8x + 7 = -23?")
-          ],
-          options);
+    // Create a list of ChatMessage objects
+    ChatCompletion completion = client.CompleteChat(
+        [
+            new UserChatMessage("How can I solve 8x + 7 = -23?")
+        ],
+        options);
 
-      using JsonDocument structuredJson = JsonDocument.Parse(completion.Content[0].Text);
+    using JsonDocument structuredJson = JsonDocument.Parse(completion.Content[0].Text);
 
-      Console.WriteLine($"Final answer: {structuredJson.RootElement.GetProperty("final_answer")}");
-      Console.WriteLine("Reasoning steps:");
+    Console.WriteLine($"Final answer: {structuredJson.RootElement.GetProperty("final_answer")}");
+    Console.WriteLine("Reasoning steps:");
 
-      foreach (JsonElement stepElement in structuredJson.RootElement.GetProperty("steps").EnumerateArray())
-      {
-          Console.WriteLine($"  - Explanation: {stepElement.GetProperty("explanation")}");
-          Console.WriteLine($"    Output: {stepElement.GetProperty("output")}");
-      }
+    foreach (JsonElement stepElement in structuredJson.RootElement.GetProperty("steps").EnumerateArray())
+    {
+        Console.WriteLine($"  - Explanation: {stepElement.GetProperty("explanation")}");
+        Console.WriteLine($"    Output: {stepElement.GetProperty("output")}");
+    }
 
-      ```
+    ```
 
-    </Tab>
-  </Tabs>
+  </Tab>
+</Tabs>
 
   </Tab>
   <Tab title="REST">
 
-  ## Getting started
+## Getting started
 
-  `response_format` is set to `json_schema` with `strict: true` set.
+`response_format` is set to `json_schema` with `strict: true` set.
 
-  ```bash
-  curl -X POST  https://YOUR_RESOURCE_NAME.openai.azure.com/openai/v1/chat/completions \
-    -H "api-key: $AZURE_OPENAI_API_KEY" \
-    -H "Content-Type: application/json" \
-      -d '{
-          "model": "YOUR_MODEL_DEPLOYMENT_NAME",
-          "messages": [
-                  {"role": "system", "content": "Extract the event information."},
-                  {"role": "user", "content": "Alice and Bob are going to a science fair on Friday."}
-              ],
-              "response_format": {
-                  "type": "json_schema",
-                  "json_schema": {
-                      "name": "CalendarEventResponse",
-                      "strict": true,
-                      "schema": {
-                          "type": "object",
-                          "properties": {
-                              "name": {
-                                "type": "string"
-                              },
-                              "date": {
-                                  "type": "string"
-                              },
-                              "participants": {
-                                  "type": "array",
-                                  "items": {
-                                      "type": "string"
-                                  }
-                              }
-                          },
-                          "required": [
-                              "name",
-                              "date",
-                              "participants"
-                          ],
-                          "additionalProperties": false
-                      }
-                  }
-            }
-    }'
-  ```
-
-  Output:
-
-  ```json
-  {
-    "id": "chatcmpl-A1HKsHAe2hH9MEooYslRn9UmEwsag",
-    "object": "chat.completion",
-    "created": 1724868330,
-    "model": "gpt-4o-2024-08-06",
-    "choices": [
-      {
-        "index": 0,
-        "message": {
-          "role": "assistant",
-          "content": "{\n  \"name\": \"Science Fair\",\n  \"date\": \"Friday\",\n  \"participants\": [\"Alice\", \"Bob\"]\n}"
-        },
-        "logprobs": null,
-        "finish_reason": "stop"
-      }
-    ],
-    "usage": {
-      "prompt_tokens": 33,
-      "completion_tokens": 27,
-      "total_tokens": 60
-    },
-    "system_fingerprint": "fp_1c2eaec9fe"
-  }
-
-  ```
-
-  ## Function calling with structured outputs
-
-  ```bash
-  curl -X POST  https://YOUR_RESOURCE_NAME.openai.azure.com/openai/v1/chat/completions \
-    -H "api-key: $AZURE_OPENAI_API_KEY" \
-    -H "Content-Type: application/json" \
+```bash
+curl -X POST  https://YOUR_RESOURCE_NAME.openai.azure.com/openai/v1/chat/completions \
+  -H "api-key: $AZURE_OPENAI_API_KEY" \
+  -H "Content-Type: application/json" \
     -d '{
-    "model": "YOUR_MODEL_DEPLOYMENT_NAME",
-    "messages": [
-      {
-        "role": "system",
-        "content": "You are a helpful assistant. The current date is August 6, 2024. You help users query for the data they are looking for by calling the query function."
-      },
-      {
-        "role": "user",
-        "content": "look up all my orders in may of last year that were fulfilled but not delivered on time"
-      }
-    ],
-    "tools": [
-      {
-        "type": "function",
-        "function": {
-          "name": "query",
-          "description": "Execute a query.",
-          "strict": true,
-          "parameters": {
-            "type": "object",
-            "properties": {
-              "table_name": {
-                "type": "string",
-                "enum": ["orders"]
-              },
-              "columns": {
-                "type": "array",
-                "items": {
-                  "type": "string",
-                  "enum": [
-                    "id",
-                    "status",
-                    "expected_delivery_date",
-                    "delivered_at",
-                    "shipped_at",
-                    "ordered_at",
-                    "canceled_at"
-                  ]
-                }
-              },
-              "conditions": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "column": {
-                      "type": "string"
-                    },
-                    "operator": {
-                      "type": "string",
-                      "enum": ["=", ">", "<", ">=", "<=", "!="]
-                    },
-                    "value": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "number"
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "column_name": {
+        "model": "YOUR_MODEL_DEPLOYMENT_NAME",
+        "messages": [
+                {"role": "system", "content": "Extract the event information."},
+                {"role": "user", "content": "Alice and Bob are going to a science fair on Friday."}
+            ],
+            "response_format": {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "CalendarEventResponse",
+                    "strict": true,
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "name": {
                               "type": "string"
+                            },
+                            "date": {
+                                "type": "string"
+                            },
+                            "participants": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
                             }
-                          },
-                          "required": ["column_name"],
-                          "additionalProperties": false
-                        }
-                      ]
+                        },
+                        "required": [
+                            "name",
+                            "date",
+                            "participants"
+                        ],
+                        "additionalProperties": false
                     }
-                  },
-                  "required": ["column", "operator", "value"],
-                  "additionalProperties": false
                 }
-              },
-              "order_by": {
+          }
+  }'
+```
+
+Output:
+
+```json
+{
+  "id": "chatcmpl-A1HKsHAe2hH9MEooYslRn9UmEwsag",
+  "object": "chat.completion",
+  "created": 1724868330,
+  "model": "gpt-4o-2024-08-06",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\n  \"name\": \"Science Fair\",\n  \"date\": \"Friday\",\n  \"participants\": [\"Alice\", \"Bob\"]\n}"
+      },
+      "logprobs": null,
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 33,
+    "completion_tokens": 27,
+    "total_tokens": 60
+  },
+  "system_fingerprint": "fp_1c2eaec9fe"
+}
+
+```
+
+## Function calling with structured outputs
+
+```bash
+curl -X POST  https://YOUR_RESOURCE_NAME.openai.azure.com/openai/v1/chat/completions \
+  -H "api-key: $AZURE_OPENAI_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+  "model": "YOUR_MODEL_DEPLOYMENT_NAME",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a helpful assistant. The current date is August 6, 2024. You help users query for the data they are looking for by calling the query function."
+    },
+    {
+      "role": "user",
+      "content": "look up all my orders in may of last year that were fulfilled but not delivered on time"
+    }
+  ],
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "query",
+        "description": "Execute a query.",
+        "strict": true,
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "table_name": {
+              "type": "string",
+              "enum": ["orders"]
+            },
+            "columns": {
+              "type": "array",
+              "items": {
                 "type": "string",
-                "enum": ["asc", "desc"]
+                "enum": [
+                  "id",
+                  "status",
+                  "expected_delivery_date",
+                  "delivered_at",
+                  "shipped_at",
+                  "ordered_at",
+                  "canceled_at"
+                ]
               }
             },
-            "required": ["table_name", "columns", "conditions", "order_by"],
-            "additionalProperties": false
-          }
+            "conditions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "column": {
+                    "type": "string"
+                  },
+                  "operator": {
+                    "type": "string",
+                    "enum": ["=", ">", "<", ">=", "<=", "!="]
+                  },
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "column_name": {
+                            "type": "string"
+                          }
+                        },
+                        "required": ["column_name"],
+                        "additionalProperties": false
+                      }
+                    ]
+                  }
+                },
+                "required": ["column", "operator", "value"],
+                "additionalProperties": false
+              }
+            },
+            "order_by": {
+              "type": "string",
+              "enum": ["asc", "desc"]
+            }
+          },
+          "required": ["table_name", "columns", "conditions", "order_by"],
+          "additionalProperties": false
         }
       }
-    ]
-  }'
-  ```
+    }
+  ]
+}'
+```
 
   </Tab>
 </Tabs>

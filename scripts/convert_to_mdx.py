@@ -535,7 +535,7 @@ def convert_zone_pivots(content: str) -> str:
                 result.append(f'  <Tab title="{title}">')
                 result.append("")  # blank line so MDX parses markdown inside JSX
                 for line in zone_lines:
-                    result.append(f"  {line}" if line.strip() else "")
+                    result.append(line)
                 result.append("")  # blank line before closing tag
                 result.append("  </Tab>")
             result.append("</Tabs>")

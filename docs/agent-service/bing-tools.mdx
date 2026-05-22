@@ -128,904 +128,904 @@ See [best practices](/agent-service/tool-best-practice) for information on optim
 <Tabs>
   <Tab title="Python">
 
-  The following examples demonstrate how to create an agent with Grounding with Bing Search tools, and how to use the agent to respond to user queries.
+The following examples demonstrate how to create an agent with Grounding with Bing Search tools, and how to use the agent to respond to user queries.
 
-  #### Grounding with Bing Search
+#### Grounding with Bing Search
 
-  ```python
-  from azure.identity import DefaultAzureCredential
-  from azure.ai.projects import AIProjectClient
-  from azure.ai.projects.models import (
-      PromptAgentDefinition,
-      BingGroundingTool,
-      BingGroundingSearchToolParameters,
-      BingGroundingSearchConfiguration,
-  )
+```python
+from azure.identity import DefaultAzureCredential
+from azure.ai.projects import AIProjectClient
+from azure.ai.projects.models import (
+    PromptAgentDefinition,
+    BingGroundingTool,
+    BingGroundingSearchToolParameters,
+    BingGroundingSearchConfiguration,
+)
 
-  # Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-  PROJECT_ENDPOINT = "your_project_endpoint"
-  BING_CONNECTION_NAME = "my-bing-connection"
+# Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+PROJECT_ENDPOINT = "your_project_endpoint"
+BING_CONNECTION_NAME = "my-bing-connection"
 
-  # Create clients to call Foundry API
-  project = AIProjectClient(
-      endpoint=PROJECT_ENDPOINT,
-      credential=DefaultAzureCredential(),
-  )
-  openai = project.get_openai_client()
+# Create clients to call Foundry API
+project = AIProjectClient(
+    endpoint=PROJECT_ENDPOINT,
+    credential=DefaultAzureCredential(),
+)
+openai = project.get_openai_client()
 
-  # Get connection ID from connection name
-  bing_connection = project.connections.get(BING_CONNECTION_NAME)
+# Get connection ID from connection name
+bing_connection = project.connections.get(BING_CONNECTION_NAME)
 
-  agent = project.agents.create_version(
-      agent_name="MyAgent",
-      definition=PromptAgentDefinition(
-          model="gpt-4.1-mini",
-          instructions="You are a helpful assistant.",
-          tools=[
-              BingGroundingTool(
-                  bing_grounding=BingGroundingSearchToolParameters(
-                      search_configurations=[
-                          BingGroundingSearchConfiguration(
-                              project_connection_id=bing_connection.id
-                          )
-                      ]
-                  )
-              )
-          ],
-      ),
-      description="You are a helpful agent.",
-  )
-  print(f"Agent created (id: {agent.id}, name: {agent.name}, version: {agent.version})")
+agent = project.agents.create_version(
+    agent_name="MyAgent",
+    definition=PromptAgentDefinition(
+        model="gpt-4.1-mini",
+        instructions="You are a helpful assistant.",
+        tools=[
+            BingGroundingTool(
+                bing_grounding=BingGroundingSearchToolParameters(
+                    search_configurations=[
+                        BingGroundingSearchConfiguration(
+                            project_connection_id=bing_connection.id
+                        )
+                    ]
+                )
+            )
+        ],
+    ),
+    description="You are a helpful agent.",
+)
+print(f"Agent created (id: {agent.id}, name: {agent.name}, version: {agent.version})")
 
-  stream_response = openai.responses.create(
-      stream=True,
-      tool_choice="required",
-      input="What is today's date and weather in Seattle?",
-      extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
-  )
+stream_response = openai.responses.create(
+    stream=True,
+    tool_choice="required",
+    input="What is today's date and weather in Seattle?",
+    extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
+)
 
-  for event in stream_response:
-      if event.type == "response.created":
-          print(f"Follow-up response created with ID: {event.response.id}")
-      elif event.type == "response.output_text.delta":
-          print(f"Delta: {event.delta}")
-      elif event.type == "response.text.done":
-          print(f"\nFollow-up response done!")
-      elif event.type == "response.output_item.done":
-          if event.item.type == "message":
-              item = event.item
-              if item.content[-1].type == "output_text":
-                  text_content = item.content[-1]
-                  for annotation in text_content.annotations:
-                      if annotation.type == "url_citation":
-                          print(f"URL Citation: {annotation.url}")
-      elif event.type == "response.completed":
-          print(f"\nFollow-up completed!")
-          print(f"Full response: {event.response.output_text}")
-  ```
+for event in stream_response:
+    if event.type == "response.created":
+        print(f"Follow-up response created with ID: {event.response.id}")
+    elif event.type == "response.output_text.delta":
+        print(f"Delta: {event.delta}")
+    elif event.type == "response.text.done":
+        print(f"\nFollow-up response done!")
+    elif event.type == "response.output_item.done":
+        if event.item.type == "message":
+            item = event.item
+            if item.content[-1].type == "output_text":
+                text_content = item.content[-1]
+                for annotation in text_content.annotations:
+                    if annotation.type == "url_citation":
+                        print(f"URL Citation: {annotation.url}")
+    elif event.type == "response.completed":
+        print(f"\nFollow-up completed!")
+        print(f"Full response: {event.response.output_text}")
+```
 
-  ### What this code does
+### What this code does
 
-  This example creates an agent with grounding by using the Bing Search tool that can retrieve real-time information from the web. When you run the code:
+This example creates an agent with grounding by using the Bing Search tool that can retrieve real-time information from the web. When you run the code:
 
-  1. It creates an `AIProjectClient` and authenticates by using your Azure credentials.
-  1. Creates an agent with the Bing grounding tool configured by using your Bing connection.
-  1. Sends a query asking about current date and weather in Seattle.
-  1. The agent uses the Bing grounding tool to search the web and streams the response.
-  1. Extracts and displays URL citations from the search results.
+1. It creates an `AIProjectClient` and authenticates by using your Azure credentials.
+1. Creates an agent with the Bing grounding tool configured by using your Bing connection.
+1. Sends a query asking about current date and weather in Seattle.
+1. The agent uses the Bing grounding tool to search the web and streams the response.
+1. Extracts and displays URL citations from the search results.
 
-  ### Required inputs
+### Required inputs
 
-  - Update the `PROJECT_ENDPOINT` and `BING_CONNECTION_NAME` constants in the code with your values.
-  - Azure credentials configured for `DefaultAzureCredential`.
+- Update the `PROJECT_ENDPOINT` and `BING_CONNECTION_NAME` constants in the code with your values.
+- Azure credentials configured for `DefaultAzureCredential`.
 
-  ### Expected output
+### Expected output
 
-  ```console
-  Agent created (id: asst_abc123, name: MyAgent, version: 1)
-  Follow-up response created with ID: resp_xyz789
-  Delta: Today
-  Delta: 's date
-  Delta:  is December 12, 2025...
-  Follow-up response done!
-  URL Citation: https://www.weather.gov/seattle/
-  Follow-up completed!
-  Full response: Today's date is December 12, 2025, and the weather in Seattle is...
-  ```
+```console
+Agent created (id: asst_abc123, name: MyAgent, version: 1)
+Follow-up response created with ID: resp_xyz789
+Delta: Today
+Delta: 's date
+Delta:  is December 12, 2025...
+Follow-up response done!
+URL Citation: https://www.weather.gov/seattle/
+Follow-up completed!
+Full response: Today's date is December 12, 2025, and the weather in Seattle is...
+```
 
-  ### Grounding with Bing Custom Search (preview)
+### Grounding with Bing Custom Search (preview)
 
-  ```python
-  from azure.identity import DefaultAzureCredential
-  from azure.ai.projects import AIProjectClient
-  from azure.ai.projects.models import (
-      PromptAgentDefinition,
-      BingCustomSearchPreviewTool,
-      BingCustomSearchToolParameters,
-      BingCustomSearchConfiguration,
-  )
+```python
+from azure.identity import DefaultAzureCredential
+from azure.ai.projects import AIProjectClient
+from azure.ai.projects.models import (
+    PromptAgentDefinition,
+    BingCustomSearchPreviewTool,
+    BingCustomSearchToolParameters,
+    BingCustomSearchConfiguration,
+)
 
-  # Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-  PROJECT_ENDPOINT = "your_project_endpoint"
-  CUSTOM_SEARCH_CONNECTION_NAME = "my-custom-search-connection"
-  CUSTOM_SEARCH_INSTANCE_NAME = "my-custom-search-instance"
+# Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+PROJECT_ENDPOINT = "your_project_endpoint"
+CUSTOM_SEARCH_CONNECTION_NAME = "my-custom-search-connection"
+CUSTOM_SEARCH_INSTANCE_NAME = "my-custom-search-instance"
 
-  # Create clients to call Foundry API
-  project = AIProjectClient(
-      endpoint=PROJECT_ENDPOINT,
-      credential=DefaultAzureCredential(),
-  )
-  openai = project.get_openai_client()
+# Create clients to call Foundry API
+project = AIProjectClient(
+    endpoint=PROJECT_ENDPOINT,
+    credential=DefaultAzureCredential(),
+)
+openai = project.get_openai_client()
 
-  # Get connection ID from connection name
-  bing_custom_connection = project.connections.get(CUSTOM_SEARCH_CONNECTION_NAME)
+# Get connection ID from connection name
+bing_custom_connection = project.connections.get(CUSTOM_SEARCH_CONNECTION_NAME)
 
-  bing_custom_search_tool = BingCustomSearchPreviewTool(
-      bing_custom_search_preview=BingCustomSearchToolParameters(
-          search_configurations=[
-              BingCustomSearchConfiguration(
-                  project_connection_id=bing_custom_connection.id,
-                  instance_name=CUSTOM_SEARCH_INSTANCE_NAME,
-              )
-          ]
-      )
-  )
+bing_custom_search_tool = BingCustomSearchPreviewTool(
+    bing_custom_search_preview=BingCustomSearchToolParameters(
+        search_configurations=[
+            BingCustomSearchConfiguration(
+                project_connection_id=bing_custom_connection.id,
+                instance_name=CUSTOM_SEARCH_INSTANCE_NAME,
+            )
+        ]
+    )
+)
 
-  agent = project.agents.create_version(
-      agent_name="MyAgent",
-      definition=PromptAgentDefinition(
-          model="gpt-4.1-mini",
-          instructions="""You are a helpful agent that can use Bing Custom Search tools to assist users. 
-          Use the available Bing Custom Search tools to answer questions and perform tasks.""",
-          tools=[bing_custom_search_tool],
-      ),
-  )
-  print(f"Agent created (id: {agent.id}, name: {agent.name}, version: {agent.version})")
+agent = project.agents.create_version(
+    agent_name="MyAgent",
+    definition=PromptAgentDefinition(
+        model="gpt-4.1-mini",
+        instructions="""You are a helpful agent that can use Bing Custom Search tools to assist users. 
+        Use the available Bing Custom Search tools to answer questions and perform tasks.""",
+        tools=[bing_custom_search_tool],
+    ),
+)
+print(f"Agent created (id: {agent.id}, name: {agent.name}, version: {agent.version})")
 
-  user_input = input(
-      "Enter your question for the Bing Custom Search agent " "(e.g., 'Tell me more about foundry agent service'): \n"
-  )
+user_input = input(
+    "Enter your question for the Bing Custom Search agent " "(e.g., 'Tell me more about foundry agent service'): \n"
+)
 
-  # Send initial request that will trigger the Bing Custom Search tool
-  stream_response = openai.responses.create(
-      stream=True,
-      input=user_input,
-      extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
-  )
+# Send initial request that will trigger the Bing Custom Search tool
+stream_response = openai.responses.create(
+    stream=True,
+    input=user_input,
+    extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
+)
 
-  for event in stream_response:
-      if event.type == "response.created":
-          print(f"Follow-up response created with ID: {event.response.id}")
-      elif event.type == "response.output_text.delta":
-          print(f"Delta: {event.delta}")
-      elif event.type == "response.text.done":
-          print(f"\nFollow-up response done!")
-      elif event.type == "response.output_item.done":
-          if event.item.type == "message":
-              item = event.item
-              if item.content[-1].type == "output_text":
-                  text_content = item.content[-1]
-                  for annotation in text_content.annotations:
-                      if annotation.type == "url_citation":
-                          print(
-                              f"URL Citation: {annotation.url}, "
-                              f"Start index: {annotation.start_index}, "
-                              f"End index: {annotation.end_index}"
-                          )
-      elif event.type == "response.completed":
-          print(f"\nFollow-up completed!")
-          print(f"Full response: {event.response.output_text}")
-  ```
+for event in stream_response:
+    if event.type == "response.created":
+        print(f"Follow-up response created with ID: {event.response.id}")
+    elif event.type == "response.output_text.delta":
+        print(f"Delta: {event.delta}")
+    elif event.type == "response.text.done":
+        print(f"\nFollow-up response done!")
+    elif event.type == "response.output_item.done":
+        if event.item.type == "message":
+            item = event.item
+            if item.content[-1].type == "output_text":
+                text_content = item.content[-1]
+                for annotation in text_content.annotations:
+                    if annotation.type == "url_citation":
+                        print(
+                            f"URL Citation: {annotation.url}, "
+                            f"Start index: {annotation.start_index}, "
+                            f"End index: {annotation.end_index}"
+                        )
+    elif event.type == "response.completed":
+        print(f"\nFollow-up completed!")
+        print(f"Full response: {event.response.output_text}")
+```
 
-  **What this code does**
+**What this code does**
 
-  This example creates an agent with Grounding with Bing Custom Search tool that searches within a configurable set of public web domains. When you run the code:
+This example creates an agent with Grounding with Bing Custom Search tool that searches within a configurable set of public web domains. When you run the code:
 
-  1. It creates an `AIProjectClient` and authenticates by using your Azure credentials.
-  1. Creates an agent with the Bing Custom Search tool configured by using your custom search instance.
-  1. Prompts for user input asking about specific topics within your configured domains.
-  1. The agent uses the Bing Custom Search tool to search only your specified domains and streams the response.
-  1. Extracts and displays URL citations with start and end positions from the custom search results.
+1. It creates an `AIProjectClient` and authenticates by using your Azure credentials.
+1. Creates an agent with the Bing Custom Search tool configured by using your custom search instance.
+1. Prompts for user input asking about specific topics within your configured domains.
+1. The agent uses the Bing Custom Search tool to search only your specified domains and streams the response.
+1. Extracts and displays URL citations with start and end positions from the custom search results.
 
-  **Required inputs**
+**Required inputs**
 
-  - Update the `PROJECT_ENDPOINT`, `CUSTOM_SEARCH_CONNECTION_NAME`, and `CUSTOM_SEARCH_INSTANCE_NAME` constants in the code with your values.
-  - Azure credentials configured for `DefaultAzureCredential`.
-  - User input at runtime.
+- Update the `PROJECT_ENDPOINT`, `CUSTOM_SEARCH_CONNECTION_NAME`, and `CUSTOM_SEARCH_INSTANCE_NAME` constants in the code with your values.
+- Azure credentials configured for `DefaultAzureCredential`.
+- User input at runtime.
 
-  **Expected output**
+**Expected output**
 
-  ```console
-  Agent created (id: asst_abc123, name: MyAgent, version: 1)
-  Enter your question for the Bing Custom Search agent (e.g., 'Tell me more about foundry agent service'):
-  Tell me more about foundry agent service
-  Follow-up response created with ID: resp_xyz789
-  Delta: Microsoft
-  Delta:  Foundry
-  Delta:  Agent Service...
-  Follow-up response done!
-  URL Citation: https://learn.microsoft.com/azure/ai-foundry/agents, Start index: 45, End index: 120
-  Follow-up completed!
-  Full response: Microsoft Foundry Agent Service enables you to build...
-  ```
+```console
+Agent created (id: asst_abc123, name: MyAgent, version: 1)
+Enter your question for the Bing Custom Search agent (e.g., 'Tell me more about foundry agent service'):
+Tell me more about foundry agent service
+Follow-up response created with ID: resp_xyz789
+Delta: Microsoft
+Delta:  Foundry
+Delta:  Agent Service...
+Follow-up response done!
+URL Citation: https://learn.microsoft.com/azure/ai-foundry/agents, Start index: 45, End index: 120
+Follow-up completed!
+Full response: Microsoft Foundry Agent Service enables you to build...
+```
 
   </Tab>
   <Tab title="C#">
 
-  The following C# examples demonstrate how to create an agent with Grounding with Bing Search tool, and how to use the agent to respond to user queries. These examples use synchronous calls for simplicity. For asynchronous examples, see the [agent tools C# samples](https://aka.ms/azsdk/Azure.AI.Extensions.OpenAI/net/samples).
+The following C# examples demonstrate how to create an agent with Grounding with Bing Search tool, and how to use the agent to respond to user queries. These examples use synchronous calls for simplicity. For asynchronous examples, see the [agent tools C# samples](https://aka.ms/azsdk/Azure.AI.Extensions.OpenAI/net/samples).
 
-  To enable your Agent to use Bing search API, use `BingGroundingTool`.
+To enable your Agent to use Bing search API, use `BingGroundingTool`.
 
-  #### Grounding with Bing Search
+#### Grounding with Bing Search
 
-  ```csharp
-  // Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-  var projectEndpoint = "your_project_endpoint";
-  var bingConnectionName = "my-bing-connection";
+```csharp
+// Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+var projectEndpoint = "your_project_endpoint";
+var bingConnectionName = "my-bing-connection";
 
-  // Create project client to call Foundry API
-  AIProjectClient projectClient = new(
-      endpoint: new Uri(projectEndpoint),
-      tokenProvider: new DefaultAzureCredential());
+// Create project client to call Foundry API
+AIProjectClient projectClient = new(
+    endpoint: new Uri(projectEndpoint),
+    tokenProvider: new DefaultAzureCredential());
 
-  // Get connection ID from connection name
-  AIProjectConnection bingConnection = projectClient.Connections.GetConnection(connectionName: bingConnectionName);
+// Get connection ID from connection name
+AIProjectConnection bingConnection = projectClient.Connections.GetConnection(connectionName: bingConnectionName);
 
-  // Create the agent version with Bing grounding tool
-  BingGroundingTool bingGroundingAgentTool = new(new BingGroundingSearchToolOptions(
-    searchConfigurations: [new BingGroundingSearchConfiguration(projectConnectionId: bingConnection.Id)]
-      )
-  );
-  DeclarativeAgentDefinition agentDefinition = new(model: "gpt-4.1-mini")
-  {
-      Instructions = "You are a helpful agent.",
-      Tools = { bingGroundingAgentTool, }
-  };
-  AgentVersion agentVersion = projectClient.AgentAdministrationClient.CreateAgentVersion(
-      agentName: "myAgent",
-      options: new(agentDefinition));
+// Create the agent version with Bing grounding tool
+BingGroundingTool bingGroundingAgentTool = new(new BingGroundingSearchToolOptions(
+  searchConfigurations: [new BingGroundingSearchConfiguration(projectConnectionId: bingConnection.Id)]
+    )
+);
+DeclarativeAgentDefinition agentDefinition = new(model: "gpt-4.1-mini")
+{
+    Instructions = "You are a helpful agent.",
+    Tools = { bingGroundingAgentTool, }
+};
+AgentVersion agentVersion = projectClient.AgentAdministrationClient.CreateAgentVersion(
+    agentName: "myAgent",
+    options: new(agentDefinition));
 
-  // Output the agent version info
-  ProjectResponsesClient responseClient = projectClient.ProjectOpenAIClient.GetProjectResponsesClientForAgent(agentVersion.Name);
+// Output the agent version info
+ProjectResponsesClient responseClient = projectClient.ProjectOpenAIClient.GetProjectResponsesClientForAgent(agentVersion.Name);
 
-  ResponseResult response = responseClient.CreateResponse("How does wikipedia explain Euler's Identity?");
+ResponseResult response = responseClient.CreateResponse("How does wikipedia explain Euler's Identity?");
 
-  // Extract and format URL citation annotations
-  string citation = "";
-  foreach (ResponseItem item in response.OutputItems)
-  {
-      if (item is MessageResponseItem messageItem)
-      {
-          foreach (ResponseContentPart content in messageItem.Content)
-          {
-              foreach (ResponseMessageAnnotation annotation in content.OutputTextAnnotations)
-              {
-                  if (annotation is UriCitationMessageAnnotation uriAnnotation)
-                  {
-                      citation = $" [{uriAnnotation.Title}]({uriAnnotation.Uri})";
-                  }
-              }
-          }
-      }
-  }
+// Extract and format URL citation annotations
+string citation = "";
+foreach (ResponseItem item in response.OutputItems)
+{
+    if (item is MessageResponseItem messageItem)
+    {
+        foreach (ResponseContentPart content in messageItem.Content)
+        {
+            foreach (ResponseMessageAnnotation annotation in content.OutputTextAnnotations)
+            {
+                if (annotation is UriCitationMessageAnnotation uriAnnotation)
+                {
+                    citation = $" [{uriAnnotation.Title}]({uriAnnotation.Uri})";
+                }
+            }
+        }
+    }
+}
 
-  // Validate and print the response
-  Assert.That(response.Status, Is.EqualTo(ResponseStatus.Completed));
-  Console.WriteLine($"{response.GetOutputText()}{citation}");
+// Validate and print the response
+Assert.That(response.Status, Is.EqualTo(ResponseStatus.Completed));
+Console.WriteLine($"{response.GetOutputText()}{citation}");
 
-  // Clean up resources by deleting the agent version
-  projectClient.AgentAdministrationClient.DeleteAgentVersion(agentName: agentVersion.Name, agentVersion: agentVersion.Version);
-  ```
+// Clean up resources by deleting the agent version
+projectClient.AgentAdministrationClient.DeleteAgentVersion(agentName: agentVersion.Name, agentVersion: agentVersion.Version);
+```
 
-  ### What this code does
+### What this code does
 
-  This example creates an agent that uses the Grounding with Bing Search tool and demonstrates synchronous response handling. When you run the code:
+This example creates an agent that uses the Grounding with Bing Search tool and demonstrates synchronous response handling. When you run the code:
 
-  1. It creates an AIProjectClient by using your project endpoint.
-  1. Retrieves the Bing connection configuration from your project.
-  1. Creates an agent with the Bing grounding tool configured.
-  1. Sends a query asking how Wikipedia explains Euler's Identity.
-  1. The agent uses the Bing grounding tool to search and returns formatted results with URL citations.
-  1. Cleans up by deleting the agent version.
+1. It creates an AIProjectClient by using your project endpoint.
+1. Retrieves the Bing connection configuration from your project.
+1. Creates an agent with the Bing grounding tool configured.
+1. Sends a query asking how Wikipedia explains Euler's Identity.
+1. The agent uses the Bing grounding tool to search and returns formatted results with URL citations.
+1. Cleans up by deleting the agent version.
 
-  ### Required inputs
+### Required inputs
 
-  - Update the `projectEndpoint` and `bingConnectionName` constants in the code with your values.
-  - Azure credentials configured for `DefaultAzureCredential`.
+- Update the `projectEndpoint` and `bingConnectionName` constants in the code with your values.
+- Azure credentials configured for `DefaultAzureCredential`.
 
-  ### Expected output
+### Expected output
 
-  ```console
-  Euler's identity is considered one of the most elegant equations in mathematics... [Euler's identity - Wikipedia](https://en.wikipedia.org/wiki/Euler%27s_identity)
-  ```
+```console
+Euler's identity is considered one of the most elegant equations in mathematics... [Euler's identity - Wikipedia](https://en.wikipedia.org/wiki/Euler%27s_identity)
+```
 
-  ## Grounding with Bing in streaming scenarios
+## Grounding with Bing in streaming scenarios
 
-  ```csharp
-  // Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-  var projectEndpoint = "your_project_endpoint";
-  var bingConnectionName = "my-bing-connection";
+```csharp
+// Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+var projectEndpoint = "your_project_endpoint";
+var bingConnectionName = "my-bing-connection";
 
-  // Create project client to call Foundry API
-  AIProjectClient projectClient = new(
-      endpoint: new Uri(projectEndpoint),
-      tokenProvider: new DefaultAzureCredential());
+// Create project client to call Foundry API
+AIProjectClient projectClient = new(
+    endpoint: new Uri(projectEndpoint),
+    tokenProvider: new DefaultAzureCredential());
 
-  // Get connection ID from connection name
-  AIProjectConnection bingConnection = projectClient.Connections.GetConnection(connectionName: bingConnectionName);
+// Get connection ID from connection name
+AIProjectConnection bingConnection = projectClient.Connections.GetConnection(connectionName: bingConnectionName);
 
-  // Create the agent version with Bing grounding tool
-  BingGroundingTool bingGroundingAgentTool = new(new BingGroundingSearchToolOptions(
-    searchConfigurations: [new BingGroundingSearchConfiguration(projectConnectionId: bingConnection.Id)]
-      )
-  );
-  DeclarativeAgentDefinition agentDefinition = new(model: "gpt-4.1-mini")
-  {
-      Instructions = "You are a helpful agent.",
-      Tools = { bingGroundingAgentTool }
-  };
-  AgentVersion agentVersion = projectClient.AgentAdministrationClient.CreateAgentVersion(
-      agentName: "myAgent",
-      options: new(agentDefinition));
+// Create the agent version with Bing grounding tool
+BingGroundingTool bingGroundingAgentTool = new(new BingGroundingSearchToolOptions(
+  searchConfigurations: [new BingGroundingSearchConfiguration(projectConnectionId: bingConnection.Id)]
+    )
+);
+DeclarativeAgentDefinition agentDefinition = new(model: "gpt-4.1-mini")
+{
+    Instructions = "You are a helpful agent.",
+    Tools = { bingGroundingAgentTool }
+};
+AgentVersion agentVersion = projectClient.AgentAdministrationClient.CreateAgentVersion(
+    agentName: "myAgent",
+    options: new(agentDefinition));
 
-  // Stream the response from the agent version
-  ProjectResponsesClient responseClient = projectClient.ProjectOpenAIClient.GetProjectResponsesClientForAgent(agentVersion.Name);
+// Stream the response from the agent version
+ProjectResponsesClient responseClient = projectClient.ProjectOpenAIClient.GetProjectResponsesClientForAgent(agentVersion.Name);
 
-  string annotation = "";
-  string text = "";
+string annotation = "";
+string text = "";
 
-  // Parse the streaming response and output the results
-  foreach (StreamingResponseUpdate streamResponse in responseClient.CreateResponseStreaming("How does wikipedia explain Euler's Identity?"))
-  {
-      if (streamResponse is StreamingResponseCreatedUpdate createUpdate)
-      {
-          Console.WriteLine($"Stream response created with ID: {createUpdate.Response.Id}");
-      }
-      else if (streamResponse is StreamingResponseOutputTextDeltaUpdate textDelta)
-      {
-          Console.WriteLine($"Delta: {textDelta.Delta}");
-      }
-      else if (streamResponse is StreamingResponseOutputTextDoneUpdate textDoneUpdate)
-      {
-          text = textDoneUpdate.Text;
-      }
-      else if (streamResponse is StreamingResponseOutputItemDoneUpdate itemDoneUpdate)
-      {
-          if (annotation.Length == 0)
-          {
-              // Extract and format URL citation annotations
-              if (itemDoneUpdate.Item is MessageResponseItem messageItem)
-              {
-                  foreach (ResponseContentPart content in messageItem.Content)
-                  {
-                      foreach (ResponseMessageAnnotation messageAnnotation in content.OutputTextAnnotations)
-                      {
-                          if (messageAnnotation is UriCitationMessageAnnotation uriAnnotation)
-                          {
-                              annotation = $" [{uriAnnotation.Title}]({uriAnnotation.Uri})";
-                          }
-                      }
-                  }
-              }
-          }
-      }
-      else if (streamResponse is StreamingResponseErrorUpdate errorUpdate)
-      {
-          throw new InvalidOperationException($"The stream has failed: {errorUpdate.Message}");
-      }
-  }
-  Console.WriteLine($"{text}{annotation}");
+// Parse the streaming response and output the results
+foreach (StreamingResponseUpdate streamResponse in responseClient.CreateResponseStreaming("How does wikipedia explain Euler's Identity?"))
+{
+    if (streamResponse is StreamingResponseCreatedUpdate createUpdate)
+    {
+        Console.WriteLine($"Stream response created with ID: {createUpdate.Response.Id}");
+    }
+    else if (streamResponse is StreamingResponseOutputTextDeltaUpdate textDelta)
+    {
+        Console.WriteLine($"Delta: {textDelta.Delta}");
+    }
+    else if (streamResponse is StreamingResponseOutputTextDoneUpdate textDoneUpdate)
+    {
+        text = textDoneUpdate.Text;
+    }
+    else if (streamResponse is StreamingResponseOutputItemDoneUpdate itemDoneUpdate)
+    {
+        if (annotation.Length == 0)
+        {
+            // Extract and format URL citation annotations
+            if (itemDoneUpdate.Item is MessageResponseItem messageItem)
+            {
+                foreach (ResponseContentPart content in messageItem.Content)
+                {
+                    foreach (ResponseMessageAnnotation messageAnnotation in content.OutputTextAnnotations)
+                    {
+                        if (messageAnnotation is UriCitationMessageAnnotation uriAnnotation)
+                        {
+                            annotation = $" [{uriAnnotation.Title}]({uriAnnotation.Uri})";
+                        }
+                    }
+                }
+            }
+        }
+    }
+    else if (streamResponse is StreamingResponseErrorUpdate errorUpdate)
+    {
+        throw new InvalidOperationException($"The stream has failed: {errorUpdate.Message}");
+    }
+}
+Console.WriteLine($"{text}{annotation}");
 
-  // Clean up resources by deleting the agent version
-  projectClient.AgentAdministrationClient.DeleteAgentVersion(agentName: agentVersion.Name, agentVersion: agentVersion.Version);
-  ```
+// Clean up resources by deleting the agent version
+projectClient.AgentAdministrationClient.DeleteAgentVersion(agentName: agentVersion.Name, agentVersion: agentVersion.Version);
+```
 
-  ### What this code does
+### What this code does
 
-  This example creates an agent with grounding by using the Bing Search tool and demonstrates streaming response handling. When you run the code:
+This example creates an agent with grounding by using the Bing Search tool and demonstrates streaming response handling. When you run the code:
 
-  1. It creates an AIProjectClient by using your project endpoint.
-  1. Retrieves the Bing connection configuration from your project.
-  1. Creates an agent with the Bing grounding tool configured.
-  1. Sends a query asking how Wikipedia explains Euler's Identity.
-  1. The agent uses the Bing grounding tool and streams the response in real-time.
-  1. Processes streaming events including delta text updates and citation extraction.
-  1. Cleans up by deleting the agent version.
+1. It creates an AIProjectClient by using your project endpoint.
+1. Retrieves the Bing connection configuration from your project.
+1. Creates an agent with the Bing grounding tool configured.
+1. Sends a query asking how Wikipedia explains Euler's Identity.
+1. The agent uses the Bing grounding tool and streams the response in real-time.
+1. Processes streaming events including delta text updates and citation extraction.
+1. Cleans up by deleting the agent version.
 
-  ### Required inputs
+### Required inputs
 
-  - Update the `projectEndpoint` and `bingConnectionName` constants in the code with your values.
-  - Azure credentials configured for `DefaultAzureCredential`.
+- Update the `projectEndpoint` and `bingConnectionName` constants in the code with your values.
+- Azure credentials configured for `DefaultAzureCredential`.
 
-  ### Expected output
+### Expected output
 
-  ```console
-  Stream response created with ID: resp_xyz789
-  Delta: Euler
-  Delta: 's
-  Delta:  Identity
-  Delta:  is one of the most...
-  Euler's Identity is one of the most elegant equations in mathematics... [Euler's identity - Wikipedia](https://en.wikipedia.org/wiki/Euler%27s_identity)
-  ```
+```console
+Stream response created with ID: resp_xyz789
+Delta: Euler
+Delta: 's
+Delta:  Identity
+Delta:  is one of the most...
+Euler's Identity is one of the most elegant equations in mathematics... [Euler's identity - Wikipedia](https://en.wikipedia.org/wiki/Euler%27s_identity)
+```
 
   </Tab>
   <Tab title="REST">
 
-  The following REST API examples demonstrate how to use Grounding with Bing Search and Grounding with Bing Custom Search (preview) tools to respond to user queries.
+The following REST API examples demonstrate how to use Grounding with Bing Search and Grounding with Bing Custom Search (preview) tools to respond to user queries.
 
-  ### Grounding with Bing Search
+### Grounding with Bing Search
 
-  ### Authentication setup
+### Authentication setup
 
-  Before running REST API calls, configure authentication:
+Before running REST API calls, configure authentication:
 
-  1. Set environment variables:
-     - `FOUNDRY_PROJECT_ENDPOINT`: Your Foundry project endpoint URL.
-     - `FOUNDRY_MODEL_DEPLOYMENT_NAME`: Your deployed model name.
-     - `BING_PROJECT_CONNECTION_ID`: Your Grounding with Bing Search project connection ID.
-  1. Obtain a bearer token:
-     ```bash
-     export AGENT_TOKEN=$(az account get-access-token --scope "https://ai.azure.com/.default" --query accessToken -o tsv)
-     ```
+1. Set environment variables:
+   - `FOUNDRY_PROJECT_ENDPOINT`: Your Foundry project endpoint URL.
+   - `FOUNDRY_MODEL_DEPLOYMENT_NAME`: Your deployed model name.
+   - `BING_PROJECT_CONNECTION_ID`: Your Grounding with Bing Search project connection ID.
+1. Obtain a bearer token:
+   ```bash
+   export AGENT_TOKEN=$(az account get-access-token --scope "https://ai.azure.com/.default" --query accessToken -o tsv)
+   ```
 
-     ```bash
-     curl --request POST \
-       --url "$FOUNDRY_PROJECT_ENDPOINT/openai/v1/responses" \
-       -H "Authorization: Bearer $AGENT_TOKEN" \
-       -H "Content-Type: application/json" \
-       -d '{
-       "model": "'$FOUNDRY_MODEL_DEPLOYMENT_NAME'",
-       "input": "How does Wikipedia explain Euler\u0027s identity?",
-       "tool_choice": "required",
-       "tools": [
-         {
-           "type": "bing_grounding",
-           "bing_grounding": {
-             "search_configurations": [
-               {
-                 "project_connection_id": "'$BING_PROJECT_CONNECTION_ID'",
-                 "count": 7,
-                 "market": "en-US",
-                 "set_lang": "en",
-                 "freshness": "7d"
-               }
-             ]
-           }
+   ```bash
+   curl --request POST \
+     --url "$FOUNDRY_PROJECT_ENDPOINT/openai/v1/responses" \
+     -H "Authorization: Bearer $AGENT_TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{
+     "model": "'$FOUNDRY_MODEL_DEPLOYMENT_NAME'",
+     "input": "How does Wikipedia explain Euler\u0027s identity?",
+     "tool_choice": "required",
+     "tools": [
+       {
+         "type": "bing_grounding",
+         "bing_grounding": {
+           "search_configurations": [
+             {
+               "project_connection_id": "'$BING_PROJECT_CONNECTION_ID'",
+               "count": 7,
+               "market": "en-US",
+               "set_lang": "en",
+               "freshness": "7d"
+             }
+           ]
          }
-       ]
-     }'
-     ```
+       }
+     ]
+   }'
+   ```
 
-  ### What this code does
+### What this code does
 
-  This REST API request creates a response using Grounding with Bing Search. The request:
+This REST API request creates a response using Grounding with Bing Search. The request:
 
-  1. Sends a POST request to the Foundry responses endpoint.
-  1. Includes the model deployment and user input in the request body.
-  1. Configures the Bing grounding tool with search parameters (count, market, language, freshness).
-  1. Returns a response with web search results and citations.
+1. Sends a POST request to the Foundry responses endpoint.
+1. Includes the model deployment and user input in the request body.
+1. Configures the Bing grounding tool with search parameters (count, market, language, freshness).
+1. Returns a response with web search results and citations.
 
-  ### Required inputs
+### Required inputs
 
-  - Environment variables: `FOUNDRY_PROJECT_ENDPOINT`, `AGENT_TOKEN`, `FOUNDRY_MODEL_DEPLOYMENT_NAME`, `BING_PROJECT_CONNECTION_ID`.
-  - Valid bearer token with appropriate permissions.
+- Environment variables: `FOUNDRY_PROJECT_ENDPOINT`, `AGENT_TOKEN`, `FOUNDRY_MODEL_DEPLOYMENT_NAME`, `BING_PROJECT_CONNECTION_ID`.
+- Valid bearer token with appropriate permissions.
 
-  ### Expected output
+### Expected output
 
-  JSON response with:
-  - `id`: Response identifier
-  - `output_text`: Generated text with grounded information
-  - `citations`: Array of URL citations used to generate the response
+JSON response with:
+- `id`: Response identifier
+- `output_text`: Generated text with grounded information
+- `citations`: Array of URL citations used to generate the response
 
-  ### Grounding with Bing Custom Search (preview)
+### Grounding with Bing Custom Search (preview)
 
-  ```bash
-  curl --request POST \
-    --url "$FOUNDRY_PROJECT_ENDPOINT/openai/v1/responses" \
-    -H "Authorization: Bearer $AGENT_TOKEN" \
-    -H "Content-Type: application/json" \
-    -d '{
-    "model": "'$FOUNDRY_MODEL_DEPLOYMENT_NAME'",
-    "input": "How does Wikipedia explain Euler\u0027s identity?",
-    "tool_choice": "required",
-    "tools": [
-      {
-        "type": "bing_custom_search_preview",
-        "bing_custom_search_preview": {
-          "search_configurations": [
-            {
-              "project_connection_id": "'$BING_CUSTOM_SEARCH_PROJECT_CONNECTION_ID'",
-              "instance_name": "'$BING_CUSTOM_SEARCH_INSTANCE_NAME'",
-              "count": 7,
-              "market": "en-US",
-              "set_lang": "en",
-              "freshness": "7d"
-            }
-          ]
-        }
+```bash
+curl --request POST \
+  --url "$FOUNDRY_PROJECT_ENDPOINT/openai/v1/responses" \
+  -H "Authorization: Bearer $AGENT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+  "model": "'$FOUNDRY_MODEL_DEPLOYMENT_NAME'",
+  "input": "How does Wikipedia explain Euler\u0027s identity?",
+  "tool_choice": "required",
+  "tools": [
+    {
+      "type": "bing_custom_search_preview",
+      "bing_custom_search_preview": {
+        "search_configurations": [
+          {
+            "project_connection_id": "'$BING_CUSTOM_SEARCH_PROJECT_CONNECTION_ID'",
+            "instance_name": "'$BING_CUSTOM_SEARCH_INSTANCE_NAME'",
+            "count": 7,
+            "market": "en-US",
+            "set_lang": "en",
+            "freshness": "7d"
+          }
+        ]
       }
-    ]
-  }'
-  ```
+    }
+  ]
+}'
+```
 
-  ### What this code does
+### What this code does
 
-  This REST API request creates a response using Grounding with Bing Custom Search. The request:
+This REST API request creates a response using Grounding with Bing Custom Search. The request:
 
-  1. Sends a POST request to the Foundry responses endpoint.
-  1. Includes the model deployment and user input in the request body.
-  1. Configures the Bing Custom Search tool with your instance name and search parameters.
-  1. Returns a response with custom search results limited to your configured domains.
+1. Sends a POST request to the Foundry responses endpoint.
+1. Includes the model deployment and user input in the request body.
+1. Configures the Bing Custom Search tool with your instance name and search parameters.
+1. Returns a response with custom search results limited to your configured domains.
 
-  ### Required inputs
+### Required inputs
 
-  - Environment variables: `FOUNDRY_PROJECT_ENDPOINT`, `AGENT_TOKEN`, `FOUNDRY_MODEL_DEPLOYMENT_NAME`, `BING_CUSTOM_SEARCH_PROJECT_CONNECTION_ID`, `BING_CUSTOM_SEARCH_INSTANCE_NAME`
-  - Valid bearer token with appropriate permissions.
-  - Bing Custom Search instance already configured with target domains
+- Environment variables: `FOUNDRY_PROJECT_ENDPOINT`, `AGENT_TOKEN`, `FOUNDRY_MODEL_DEPLOYMENT_NAME`, `BING_CUSTOM_SEARCH_PROJECT_CONNECTION_ID`, `BING_CUSTOM_SEARCH_INSTANCE_NAME`
+- Valid bearer token with appropriate permissions.
+- Bing Custom Search instance already configured with target domains
 
-  ### Expected output
+### Expected output
 
-  JSON response with:
-  - `id`: Response identifier
-  - `output_text`: Generated text with information from your custom domain set
-  - `citations`: Array of URL citations from your configured domains
+JSON response with:
+- `id`: Response identifier
+- `output_text`: Generated text with information from your custom domain set
+- `citations`: Array of URL citations from your configured domains
 
   </Tab>
   <Tab title="TypeScript">
 
-  The following TypeScript examples demonstrate how to create an agent with Grounding with Bing Search and Grounding with Bing Custom Search (preview) tools, and how to use the agent to respond to user queries. For JavaScript examples, see the [agent tools JavaScript samples](https://github.com/Azure/azure-sdk-for-js/tree/main/sdk/ai/ai-projects/samples/v2-beta/javascript/agents/tools) in the Azure SDK for JavaScript repository on GitHub.
+The following TypeScript examples demonstrate how to create an agent with Grounding with Bing Search and Grounding with Bing Custom Search (preview) tools, and how to use the agent to respond to user queries. For JavaScript examples, see the [agent tools JavaScript samples](https://github.com/Azure/azure-sdk-for-js/tree/main/sdk/ai/ai-projects/samples/v2-beta/javascript/agents/tools) in the Azure SDK for JavaScript repository on GitHub.
 
-  #### Grounding with Bing Search
+#### Grounding with Bing Search
 
-  ```typescript
-  import { DefaultAzureCredential } from "@azure/identity";
-  import { AIProjectClient } from "@azure/ai-projects";
+```typescript
+import { DefaultAzureCredential } from "@azure/identity";
+import { AIProjectClient } from "@azure/ai-projects";
 
-  // Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-  const PROJECT_ENDPOINT = "your_project_endpoint";
-  const BING_CONNECTION_NAME = "my-bing-connection";
+// Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+const PROJECT_ENDPOINT = "your_project_endpoint";
+const BING_CONNECTION_NAME = "my-bing-connection";
 
-  export async function main(): Promise<void> {
-    // Create clients to call Foundry API
-    const project = new AIProjectClient(PROJECT_ENDPOINT, new DefaultAzureCredential());
-    const openai = project.getOpenAIClient();
+export async function main(): Promise<void> {
+  // Create clients to call Foundry API
+  const project = new AIProjectClient(PROJECT_ENDPOINT, new DefaultAzureCredential());
+  const openai = project.getOpenAIClient();
 
-    // Get connection ID from connection name
-    const bingConnection = await project.connections.get(BING_CONNECTION_NAME);
+  // Get connection ID from connection name
+  const bingConnection = await project.connections.get(BING_CONNECTION_NAME);
 
-    const agent = await project.agents.createVersion("MyBingGroundingAgent", {
-      kind: "prompt",
-      model: "gpt-4.1-mini",
-      instructions: "You are a helpful assistant.",
-      tools: [
-        {
-          type: "bing_grounding",
-          bing_grounding: {
-            search_configurations: [
-              {
-                project_connection_id: bingConnection.id,
-              },
-            ],
-          },
-        },
-      ],
-    });
-    console.log(`Agent created (id: ${agent.id}, name: ${agent.name}, version: ${agent.version})`);
-
-    // Send request that requires current information from the web
-    const streamResponse = await openai.responses.create(
+  const agent = await project.agents.createVersion("MyBingGroundingAgent", {
+    kind: "prompt",
+    model: "gpt-4.1-mini",
+    instructions: "You are a helpful assistant.",
+    tools: [
       {
-        input: "What is today's date and weather in Seattle?",
-        stream: true,
-      },
-      {
-        body: {
-          agent: { name: agent.name, type: "agent_reference" },
-          tool_choice: "required",
+        type: "bing_grounding",
+        bing_grounding: {
+          search_configurations: [
+            {
+              project_connection_id: bingConnection.id,
+            },
+          ],
         },
       },
-    );
+    ],
+  });
+  console.log(`Agent created (id: ${agent.id}, name: ${agent.name}, version: ${agent.version})`);
 
-    // Process the streaming response
-    for await (const event of streamResponse) {
-      if (event.type === "response.created") {
-        console.log(`Follow-up response created with ID: ${event.response.id}`);
-      } else if (event.type === "response.output_text.delta") {
-        process.stdout.write(event.delta);
-      } else if (event.type === "response.output_text.done") {
-        console.log("\n\nFollow-up response done!");
-      } else if (event.type === "response.output_item.done") {
-        if (event.item.type === "message") {
-          const item = event.item;
-          if (item.content && item.content.length > 0) {
-            const lastContent = item.content[item.content.length - 1];
-            if (lastContent.type === "output_text" && lastContent.annotations) {
-              for (const annotation of lastContent.annotations) {
-                if (annotation.type === "url_citation") {
-                  console.log(
-                    `URL Citation: ${annotation.url}, Start index: ${annotation.start_index}, End index: ${annotation.end_index}`,
-                  );
-                }
+  // Send request that requires current information from the web
+  const streamResponse = await openai.responses.create(
+    {
+      input: "What is today's date and weather in Seattle?",
+      stream: true,
+    },
+    {
+      body: {
+        agent: { name: agent.name, type: "agent_reference" },
+        tool_choice: "required",
+      },
+    },
+  );
+
+  // Process the streaming response
+  for await (const event of streamResponse) {
+    if (event.type === "response.created") {
+      console.log(`Follow-up response created with ID: ${event.response.id}`);
+    } else if (event.type === "response.output_text.delta") {
+      process.stdout.write(event.delta);
+    } else if (event.type === "response.output_text.done") {
+      console.log("\n\nFollow-up response done!");
+    } else if (event.type === "response.output_item.done") {
+      if (event.item.type === "message") {
+        const item = event.item;
+        if (item.content && item.content.length > 0) {
+          const lastContent = item.content[item.content.length - 1];
+          if (lastContent.type === "output_text" && lastContent.annotations) {
+            for (const annotation of lastContent.annotations) {
+              if (annotation.type === "url_citation") {
+                console.log(
+                  `URL Citation: ${annotation.url}, Start index: ${annotation.start_index}, End index: ${annotation.end_index}`,
+                );
               }
             }
           }
         }
-      } else if (event.type === "response.completed") {
-        console.log("\nFollow-up completed!");
       }
+    } else if (event.type === "response.completed") {
+      console.log("\nFollow-up completed!");
     }
-
-    // Clean up resources by deleting the agent version
-    // This prevents accumulation of unused resources in your project
-    console.log("\nCleaning up resources...");
-    await project.agents.deleteVersion(agent.name, agent.version);
-    console.log("Agent deleted");
-
-    console.log("\nBing grounding agent sample completed!");
   }
 
-  main().catch((err) => {
-    console.error("The sample encountered an error:", err);
-  });
-  ```
+  // Clean up resources by deleting the agent version
+  // This prevents accumulation of unused resources in your project
+  console.log("\nCleaning up resources...");
+  await project.agents.deleteVersion(agent.name, agent.version);
+  console.log("Agent deleted");
 
-  **What this code does**
+  console.log("\nBing grounding agent sample completed!");
+}
 
-  This example creates an agent with grounding by using the Bing Search tool that can retrieve real-time information from the web. When you run the code:
+main().catch((err) => {
+  console.error("The sample encountered an error:", err);
+});
+```
 
-  1. It creates an `AIProjectClient` and authenticates by using your Azure credentials.
-  1. Creates an agent with the Bing grounding tool configured by using your Bing connection.
-  1. Sends a query asking about current date and weather in Seattle with tool choice set to "required".
-  1. The agent uses the Bing grounding tool to search the web and streams the response.
-  1. Processes streaming events and extracts URL citations with their positions in the text.
-  1. Cleans up by deleting the agent version.
+**What this code does**
 
-  **Required inputs**
+This example creates an agent with grounding by using the Bing Search tool that can retrieve real-time information from the web. When you run the code:
 
-  - Update the `PROJECT_ENDPOINT` and `BING_CONNECTION_NAME` constants in the code with your values.
-  - Azure credentials configured for `DefaultAzureCredential`.
+1. It creates an `AIProjectClient` and authenticates by using your Azure credentials.
+1. Creates an agent with the Bing grounding tool configured by using your Bing connection.
+1. Sends a query asking about current date and weather in Seattle with tool choice set to "required".
+1. The agent uses the Bing grounding tool to search the web and streams the response.
+1. Processes streaming events and extracts URL citations with their positions in the text.
+1. Cleans up by deleting the agent version.
 
-  **Expected output**
+**Required inputs**
 
-  ```console
-  Agent created (id: asst_abc123, name: MyBingGroundingAgent, version: 1)
-  Follow-up response created with ID: resp_xyz789
-  Today's date is December 12, 2025, and the weather in Seattle...
+- Update the `PROJECT_ENDPOINT` and `BING_CONNECTION_NAME` constants in the code with your values.
+- Azure credentials configured for `DefaultAzureCredential`.
 
-  Follow-up response done!
-  URL Citation: https://www.weather.gov/seattle/, Start index: 45, End index: 120
+**Expected output**
 
-  Follow-up completed!
+```console
+Agent created (id: asst_abc123, name: MyBingGroundingAgent, version: 1)
+Follow-up response created with ID: resp_xyz789
+Today's date is December 12, 2025, and the weather in Seattle...
 
-  Cleaning up resources...
-  Agent deleted
+Follow-up response done!
+URL Citation: https://www.weather.gov/seattle/, Start index: 45, End index: 120
 
-  Bing grounding agent sample completed!
-  ```
+Follow-up completed!
 
-  ### Grounding with Bing Custom Search (preview)
+Cleaning up resources...
+Agent deleted
 
-  ```typescript
-  import { DefaultAzureCredential } from "@azure/identity";
-  import { AIProjectClient } from "@azure/ai-projects";
-  import * as readline from "readline";
+Bing grounding agent sample completed!
+```
 
-  // Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-  const PROJECT_ENDPOINT = "your_project_endpoint";
-  const CUSTOM_SEARCH_CONNECTION_NAME = "my-custom-search-connection";
-  const CUSTOM_SEARCH_INSTANCE_NAME = "my-custom-search-instance";
+### Grounding with Bing Custom Search (preview)
 
-  export async function main(): Promise<void> {
-    // Create clients to call Foundry API
-    const project = new AIProjectClient(PROJECT_ENDPOINT, new DefaultAzureCredential());
-    const openai = project.getOpenAIClient();
+```typescript
+import { DefaultAzureCredential } from "@azure/identity";
+import { AIProjectClient } from "@azure/ai-projects";
+import * as readline from "readline";
 
-    // Get connection ID from connection name
-    const bingCustomConnection = await project.connections.get(CUSTOM_SEARCH_CONNECTION_NAME);
+// Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+const PROJECT_ENDPOINT = "your_project_endpoint";
+const CUSTOM_SEARCH_CONNECTION_NAME = "my-custom-search-connection";
+const CUSTOM_SEARCH_INSTANCE_NAME = "my-custom-search-instance";
 
-    const agent = await project.agents.createVersion("MyAgent", {
-      kind: "prompt",
-      model: "gpt-4.1-mini",
-      instructions:
-        "You are a helpful agent that can use Bing Custom Search tools to assist users. Use the available Bing Custom Search tools to answer questions and perform tasks.",
-      tools: [
-        {
-          type: "bing_custom_search_preview",
-          bing_custom_search_preview: {
-            search_configurations: [
-              {
-                project_connection_id: bingCustomConnection.id,
-                instance_name: CUSTOM_SEARCH_INSTANCE_NAME,
-              },
-            ],
-          },
-        },
-      ],
-    });
-    console.log(`Agent created (id: ${agent.id}, name: ${agent.name}, version: ${agent.version})`);
+export async function main(): Promise<void> {
+  // Create clients to call Foundry API
+  const project = new AIProjectClient(PROJECT_ENDPOINT, new DefaultAzureCredential());
+  const openai = project.getOpenAIClient();
 
-    // Prompt user for input
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout,
-    });
+  // Get connection ID from connection name
+  const bingCustomConnection = await project.connections.get(CUSTOM_SEARCH_CONNECTION_NAME);
 
-    const userInput = await new Promise<string>((resolve) => {
-      rl.question(
-        "Enter your question for the Bing Custom Search agent (e.g., 'Tell me more about foundry agent service'): \n",
-        (answer) => {
-          rl.close();
-          resolve(answer);
-        },
-      );
-    });
-
-    // Send initial request that will trigger the Bing Custom Search tool
-    const streamResponse = await openai.responses.create(
+  const agent = await project.agents.createVersion("MyAgent", {
+    kind: "prompt",
+    model: "gpt-4.1-mini",
+    instructions:
+      "You are a helpful agent that can use Bing Custom Search tools to assist users. Use the available Bing Custom Search tools to answer questions and perform tasks.",
+    tools: [
       {
-        input: userInput,
-        stream: true,
+        type: "bing_custom_search_preview",
+        bing_custom_search_preview: {
+          search_configurations: [
+            {
+              project_connection_id: bingCustomConnection.id,
+              instance_name: CUSTOM_SEARCH_INSTANCE_NAME,
+            },
+          ],
+        },
       },
-      {
-        body: {
-          agent: { name: agent.name, type: "agent_reference" },
-        },
+    ],
+  });
+  console.log(`Agent created (id: ${agent.id}, name: ${agent.name}, version: ${agent.version})`);
+
+  // Prompt user for input
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  const userInput = await new Promise<string>((resolve) => {
+    rl.question(
+      "Enter your question for the Bing Custom Search agent (e.g., 'Tell me more about foundry agent service'): \n",
+      (answer) => {
+        rl.close();
+        resolve(answer);
       },
     );
+  });
 
-    // Process the streaming response
-    for await (const event of streamResponse) {
-      if (event.type === "response.created") {
-        console.log(`Follow-up response created with ID: ${event.response.id}`);
-      } else if (event.type === "response.output_text.delta") {
-        process.stdout.write(event.delta);
-      } else if (event.type === "response.output_text.done") {
-        console.log("\n\nFollow-up response done!");
-      } else if (event.type === "response.output_item.done") {
-        if (event.item.type === "message") {
-          const item = event.item;
-          if (item.content && item.content.length > 0) {
-            const lastContent = item.content[item.content.length - 1];
-            if (lastContent.type === "output_text" && lastContent.annotations) {
-              for (const annotation of lastContent.annotations) {
-                if (annotation.type === "url_citation") {
-                  console.log(
-                    `URL Citation: ${annotation.url}, Start index: ${annotation.start_index}, End index: ${annotation.end_index}`,
-                  );
-                }
+  // Send initial request that will trigger the Bing Custom Search tool
+  const streamResponse = await openai.responses.create(
+    {
+      input: userInput,
+      stream: true,
+    },
+    {
+      body: {
+        agent: { name: agent.name, type: "agent_reference" },
+      },
+    },
+  );
+
+  // Process the streaming response
+  for await (const event of streamResponse) {
+    if (event.type === "response.created") {
+      console.log(`Follow-up response created with ID: ${event.response.id}`);
+    } else if (event.type === "response.output_text.delta") {
+      process.stdout.write(event.delta);
+    } else if (event.type === "response.output_text.done") {
+      console.log("\n\nFollow-up response done!");
+    } else if (event.type === "response.output_item.done") {
+      if (event.item.type === "message") {
+        const item = event.item;
+        if (item.content && item.content.length > 0) {
+          const lastContent = item.content[item.content.length - 1];
+          if (lastContent.type === "output_text" && lastContent.annotations) {
+            for (const annotation of lastContent.annotations) {
+              if (annotation.type === "url_citation") {
+                console.log(
+                  `URL Citation: ${annotation.url}, Start index: ${annotation.start_index}, End index: ${annotation.end_index}`,
+                );
               }
             }
           }
         }
-      } else if (event.type === "response.completed") {
-        console.log("\nFollow-up completed!");
       }
+    } else if (event.type === "response.completed") {
+      console.log("\nFollow-up completed!");
     }
-
-    // Clean up resources by deleting the agent version
-    // This prevents accumulation of unused resources in your project
-    console.log("\nCleaning up resources...");
-    await project.agents.deleteVersion(agent.name, agent.version);
-    console.log("Agent deleted");
-
-    console.log("\nBing Custom Search agent sample completed!");
   }
 
-  main().catch((err) => {
-    console.error("The sample encountered an error:", err);
-  });
-  ```
+  // Clean up resources by deleting the agent version
+  // This prevents accumulation of unused resources in your project
+  console.log("\nCleaning up resources...");
+  await project.agents.deleteVersion(agent.name, agent.version);
+  console.log("Agent deleted");
 
-  **What this code does**
+  console.log("\nBing Custom Search agent sample completed!");
+}
 
-  This example creates an agent with Grounding with Bing Custom Search tool that searches within your configured domains. When you run the code:
+main().catch((err) => {
+  console.error("The sample encountered an error:", err);
+});
+```
 
-  1. It creates an `AIProjectClient` and authenticates by using your Azure credentials.
-  1. Creates an agent with the Bing Custom Search tool configured by using your custom search instance.
-  1. Prompts for user input at runtime through the command line.
-  1. The agent uses the Bing Custom Search tool to search only your specified domains and streams the response.
-  1. Processes streaming events and extracts URL citations with their positions in the text.
-  1. Cleans up by deleting the agent version.
+**What this code does**
 
-  **Required inputs**
+This example creates an agent with Grounding with Bing Custom Search tool that searches within your configured domains. When you run the code:
 
-  - Update the `PROJECT_ENDPOINT`, `CUSTOM_SEARCH_CONNECTION_NAME`, and `CUSTOM_SEARCH_INSTANCE_NAME` constants in the code with your values.
-  - Azure credentials configured for `DefaultAzureCredential`.
-  - User input provided at runtime via console.
+1. It creates an `AIProjectClient` and authenticates by using your Azure credentials.
+1. Creates an agent with the Bing Custom Search tool configured by using your custom search instance.
+1. Prompts for user input at runtime through the command line.
+1. The agent uses the Bing Custom Search tool to search only your specified domains and streams the response.
+1. Processes streaming events and extracts URL citations with their positions in the text.
+1. Cleans up by deleting the agent version.
 
-  **Expected output**
+**Required inputs**
 
-  ```console
-  Agent created (id: asst_abc123, name: MyAgent, version: 1)
-  Enter your question for the Bing Custom Search agent (e.g., 'Tell me more about foundry agent service'):
-  Tell me more about foundry agent service
-  Follow-up response created with ID: resp_xyz789
-  Microsoft Foundry Agent Service enables you to build...
+- Update the `PROJECT_ENDPOINT`, `CUSTOM_SEARCH_CONNECTION_NAME`, and `CUSTOM_SEARCH_INSTANCE_NAME` constants in the code with your values.
+- Azure credentials configured for `DefaultAzureCredential`.
+- User input provided at runtime via console.
 
-  Follow-up response done!
-  URL Citation: https://learn.microsoft.com/azure/ai-foundry/agents, Start index: 0, End index: 89
+**Expected output**
 
-  Follow-up completed!
+```console
+Agent created (id: asst_abc123, name: MyAgent, version: 1)
+Enter your question for the Bing Custom Search agent (e.g., 'Tell me more about foundry agent service'):
+Tell me more about foundry agent service
+Follow-up response created with ID: resp_xyz789
+Microsoft Foundry Agent Service enables you to build...
 
-  Cleaning up resources...
-  Agent deleted
+Follow-up response done!
+URL Citation: https://learn.microsoft.com/azure/ai-foundry/agents, Start index: 0, End index: 89
 
-  Bing Custom Search agent sample completed!
-  ```
+Follow-up completed!
+
+Cleaning up resources...
+Agent deleted
+
+Bing Custom Search agent sample completed!
+```
 
   </Tab>
   <Tab title="Java">
 
-  ## Use Bing grounding in a Java agent
+## Use Bing grounding in a Java agent
 
-  Add the dependency to your `pom.xml`:
+Add the dependency to your `pom.xml`:
 
-  ```xml
-  <dependency>
-      <groupId>com.azure</groupId>
-      <artifactId>azure-ai-agents</artifactId>
-      <version>2.0.0</version>
-  </dependency>
-  ```
+```xml
+<dependency>
+    <groupId>com.azure</groupId>
+    <artifactId>azure-ai-agents</artifactId>
+    <version>2.0.0</version>
+</dependency>
+```
 
-  ### Create an agent with Bing grounding
+### Create an agent with Bing grounding
 
-  ```java
-  import com.azure.ai.agents.AgentsClient;
-  import com.azure.ai.agents.AgentsClientBuilder;
-  import com.azure.ai.agents.ResponsesClient;
-  import com.azure.ai.agents.models.*;
-  import com.azure.identity.DefaultAzureCredentialBuilder;
-  import com.openai.models.responses.Response;
-  import com.openai.models.responses.ResponseCreateParams;
+```java
+import com.azure.ai.agents.AgentsClient;
+import com.azure.ai.agents.AgentsClientBuilder;
+import com.azure.ai.agents.ResponsesClient;
+import com.azure.ai.agents.models.*;
+import com.azure.identity.DefaultAzureCredentialBuilder;
+import com.openai.models.responses.Response;
+import com.openai.models.responses.ResponseCreateParams;
 
-  import java.util.Arrays;
-  import java.util.Collections;
+import java.util.Arrays;
+import java.util.Collections;
 
-  public class BingGroundingExample {
-      public static void main(String[] args) {
-          // Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-          String projectEndpoint = "your_project_endpoint";
-          String bingConnectionId = "my-bing-connection-id";
+public class BingGroundingExample {
+    public static void main(String[] args) {
+        // Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+        String projectEndpoint = "your_project_endpoint";
+        String bingConnectionId = "my-bing-connection-id";
 
-          AgentsClientBuilder builder = new AgentsClientBuilder()
-              .credential(new DefaultAzureCredentialBuilder().build())
-              .endpoint(projectEndpoint);
+        AgentsClientBuilder builder = new AgentsClientBuilder()
+            .credential(new DefaultAzureCredentialBuilder().build())
+            .endpoint(projectEndpoint);
 
-          AgentsClient agentsClient = builder.buildAgentsClient();
-          ResponsesClient responsesClient = builder.buildResponsesClient();
+        AgentsClient agentsClient = builder.buildAgentsClient();
+        ResponsesClient responsesClient = builder.buildResponsesClient();
 
-          // Create Bing grounding tool with connection configuration
-          BingGroundingTool bingTool = new BingGroundingTool(
-              new BingGroundingSearchToolParameters(Arrays.asList(
-                  new BingGroundingSearchConfiguration(bingConnectionId)
-              ))
-          );
+        // Create Bing grounding tool with connection configuration
+        BingGroundingTool bingTool = new BingGroundingTool(
+            new BingGroundingSearchToolParameters(Arrays.asList(
+                new BingGroundingSearchConfiguration(bingConnectionId)
+            ))
+        );
 
-          // Create agent with Bing grounding tool
-          PromptAgentDefinition agentDefinition = new PromptAgentDefinition("gpt-4.1-mini")
-              .setInstructions("You are a helpful assistant. Use Bing to find up-to-date information.")
-              .setTools(Collections.singletonList(bingTool));
+        // Create agent with Bing grounding tool
+        PromptAgentDefinition agentDefinition = new PromptAgentDefinition("gpt-4.1-mini")
+            .setInstructions("You are a helpful assistant. Use Bing to find up-to-date information.")
+            .setTools(Collections.singletonList(bingTool));
 
-          AgentVersionDetails agent = agentsClient.createAgentVersion("bing-grounding-agent", agentDefinition);
-          System.out.printf("Agent created: %s (version %s)%n", agent.getName(), agent.getVersion());
+        AgentVersionDetails agent = agentsClient.createAgentVersion("bing-grounding-agent", agentDefinition);
+        System.out.printf("Agent created: %s (version %s)%n", agent.getName(), agent.getVersion());
 
-          // Create a response
-          AgentReference agentReference = new AgentReference(agent.getName())
-              .setVersion(agent.getVersion());
+        // Create a response
+        AgentReference agentReference = new AgentReference(agent.getName())
+            .setVersion(agent.getVersion());
 
-          Response response = responsesClient.createAzureResponse(
-              new AzureCreateResponseOptions().setAgentReference(agentReference),
-              ResponseCreateParams.builder()
-                  .input("What are the latest developments in AI?"));
+        Response response = responsesClient.createAzureResponse(
+            new AzureCreateResponseOptions().setAgentReference(agentReference),
+            ResponseCreateParams.builder()
+                .input("What are the latest developments in AI?"));
 
-          System.out.println("Response: " + response.output());
+        System.out.println("Response: " + response.output());
 
-          // Clean up
-          agentsClient.deleteAgentVersion(agent.getName(), agent.getVersion());
-      }
-  }
-  ```
+        // Clean up
+        agentsClient.deleteAgentVersion(agent.getName(), agent.getVersion());
+    }
+}
+```
 
   </Tab>
 </Tabs>

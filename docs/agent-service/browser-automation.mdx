@@ -113,458 +113,458 @@ After you run a sample, verify the tool was called by using tracing in Microsoft
 <Tabs>
   <Tab title="Python">
 
-  ## Use BrowserAutomationAgentTool with agents example
+## Use BrowserAutomationAgentTool with agents example
 
-  The following Python example demonstrates how to create an AI agent with browser automation capabilities by using the `BrowserAutomationAgentTool` and synchronous Azure AI Projects client. The agent can navigate to websites, interact with web elements, and perform tasks such as searching for stock prices.
+The following Python example demonstrates how to create an AI agent with browser automation capabilities by using the `BrowserAutomationAgentTool` and synchronous Azure AI Projects client. The agent can navigate to websites, interact with web elements, and perform tasks such as searching for stock prices.
 
-  ```python
-  import json
-  from azure.identity import DefaultAzureCredential
-  from azure.ai.projects import AIProjectClient
-  from azure.ai.projects.models import (
-      PromptAgentDefinition,
-      BrowserAutomationPreviewTool,
-      BrowserAutomationToolParameters,
-      BrowserAutomationToolConnectionParameters,
-  )
+```python
+import json
+from azure.identity import DefaultAzureCredential
+from azure.ai.projects import AIProjectClient
+from azure.ai.projects.models import (
+    PromptAgentDefinition,
+    BrowserAutomationPreviewTool,
+    BrowserAutomationToolParameters,
+    BrowserAutomationToolConnectionParameters,
+)
 
-  # Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-  PROJECT_ENDPOINT = "your_project_endpoint"
-  BROWSER_CONNECTION_ID = "your-browser-automation-connection-id"
+# Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+PROJECT_ENDPOINT = "your_project_endpoint"
+BROWSER_CONNECTION_ID = "your-browser-automation-connection-id"
 
-  # Create clients to call Foundry API
-  project = AIProjectClient(
-      endpoint=PROJECT_ENDPOINT,
-      credential=DefaultAzureCredential(),
-  )
-  openai = project.get_openai_client()
+# Create clients to call Foundry API
+project = AIProjectClient(
+    endpoint=PROJECT_ENDPOINT,
+    credential=DefaultAzureCredential(),
+)
+openai = project.get_openai_client()
 
-  tool = BrowserAutomationPreviewTool(
-      browser_automation_preview=BrowserAutomationToolParameters(
-          connection=BrowserAutomationToolConnectionParameters(
-              project_connection_id=BROWSER_CONNECTION_ID,
-          )
-      )
-  )
+tool = BrowserAutomationPreviewTool(
+    browser_automation_preview=BrowserAutomationToolParameters(
+        connection=BrowserAutomationToolConnectionParameters(
+            project_connection_id=BROWSER_CONNECTION_ID,
+        )
+    )
+)
 
-  agent = project.agents.create_version(
-      agent_name="MyAgent",
-      definition=PromptAgentDefinition(
-          model="gpt-4.1-mini",
-          instructions="""You are an Agent helping with browser automation tasks. 
-          You can answer questions, provide information, and assist with various tasks 
-          related to web browsing using the Browser Automation tool available to you.""",
-          tools=[tool],
-      ),
-  )
-  print(f"Agent created (id: {agent.id}, name: {agent.name}, version: {agent.version})")
+agent = project.agents.create_version(
+    agent_name="MyAgent",
+    definition=PromptAgentDefinition(
+        model="gpt-4.1-mini",
+        instructions="""You are an Agent helping with browser automation tasks. 
+        You can answer questions, provide information, and assist with various tasks 
+        related to web browsing using the Browser Automation tool available to you.""",
+        tools=[tool],
+    ),
+)
+print(f"Agent created (id: {agent.id}, name: {agent.name}, version: {agent.version})")
 
-  stream_response = openai.responses.create(
-      stream=True,
-      tool_choice="required",
-      input="""
-          Your goal is to report the percent of Microsoft year-to-date stock price change.
-          To do that, go to the website finance.yahoo.com.
-          At the top of the page, you will find a search bar.
-          Enter the value 'MSFT', to get information about the Microsoft stock price.
-          At the top of the resulting page you will see a default chart of Microsoft stock price.
-          Click on 'YTD' at the top of that chart, and report the percent value that shows up just below it.""",
-      extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
-  )
+stream_response = openai.responses.create(
+    stream=True,
+    tool_choice="required",
+    input="""
+        Your goal is to report the percent of Microsoft year-to-date stock price change.
+        To do that, go to the website finance.yahoo.com.
+        At the top of the page, you will find a search bar.
+        Enter the value 'MSFT', to get information about the Microsoft stock price.
+        At the top of the resulting page you will see a default chart of Microsoft stock price.
+        Click on 'YTD' at the top of that chart, and report the percent value that shows up just below it.""",
+    extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
+)
 
-  for event in stream_response:
-      if event.type == "response.created":
-          print(f"Follow-up response created with ID: {event.response.id}")
-      elif event.type == "response.output_text.delta":
-          print(f"Delta: {event.delta}")
-      elif event.type == "response.text.done":
-          print(f"\nFollow-up response done!")
-      elif event.type == "response.output_item.done":
-          item = event.item
-          if item.type == "browser_automation_preview_call":
-              arguments_str = getattr(item, "arguments", "{}")
+for event in stream_response:
+    if event.type == "response.created":
+        print(f"Follow-up response created with ID: {event.response.id}")
+    elif event.type == "response.output_text.delta":
+        print(f"Delta: {event.delta}")
+    elif event.type == "response.text.done":
+        print(f"\nFollow-up response done!")
+    elif event.type == "response.output_item.done":
+        item = event.item
+        if item.type == "browser_automation_preview_call":
+            arguments_str = getattr(item, "arguments", "{}")
 
-              # Parse the arguments string into a dictionary
-              arguments = json.loads(arguments_str)
-              query = arguments.get("query")
+            # Parse the arguments string into a dictionary
+            arguments = json.loads(arguments_str)
+            query = arguments.get("query")
 
-              print(f"Call ID: {getattr(item, 'call_id')}")
-              print(f"Query arguments: {query}")
-      elif event.type == "response.completed":
-          print(f"\nFollow-up completed!")
-          print(f"Full response: {event.response.output_text}")
+            print(f"Call ID: {getattr(item, 'call_id')}")
+            print(f"Query arguments: {query}")
+    elif event.type == "response.completed":
+        print(f"\nFollow-up completed!")
+        print(f"Full response: {event.response.output_text}")
 
-  print("\nCleaning up...")
-  project.agents.delete_version(agent_name=agent.name, agent_version=agent.version)
-  print("Agent deleted")
-  ```
+print("\nCleaning up...")
+project.agents.delete_version(agent_name=agent.name, agent_version=agent.version)
+print("Agent deleted")
+```
 
-  ### What this code does
+### What this code does
 
-  This example creates an agent version with the Browser Automation tool enabled, then sends a prompt that requires the agent to use the tool. It also processes streaming events so you can observe progress and tool calls.
+This example creates an agent version with the Browser Automation tool enabled, then sends a prompt that requires the agent to use the tool. It also processes streaming events so you can observe progress and tool calls.
 
-  ### Required inputs
+### Required inputs
 
-  - A Foundry project endpoint and a browser automation connection ID. See [Configuration](#configuration) for details.
+- A Foundry project endpoint and a browser automation connection ID. See [Configuration](#configuration) for details.
 
-  ### Expected output
+### Expected output
 
-  When you create the agent, you see output similar to:
+When you create the agent, you see output similar to:
 
-  ```console
-  Agent created (id: ..., name: ..., version: ...)
-  ```
+```console
+Agent created (id: ..., name: ..., version: ...)
+```
 
-  During streaming, you might also see deltas and tool-call details. Output varies based on the website content and model behavior.
+During streaming, you might also see deltas and tool-call details. Output varies based on the website content and model behavior.
 
   </Tab>
   <Tab title="C#">
 
-  ## Use BrowserAutomationPreviewTool with agents example
+## Use BrowserAutomationPreviewTool with agents example
 
-  Before running this sample, complete the setup steps in [Set up Browser Automation](#set-up-browser-automation).
+Before running this sample, complete the setup steps in [Set up Browser Automation](#set-up-browser-automation).
 
-  The following C# example demonstrates how to create an AI agent with Browser Automation capabilities by using the `BrowserAutomationPreviewTool` and synchronous Azure AI Projects client. The agent can navigate to websites, interact with web elements, and perform tasks such as searching for stock prices. The example uses synchronous programming model for simplicity. For an asynchronous version, see the [Sample for use of BrowserAutomationPreviewTool and Agents](https://github.com/Azure/azure-sdk-for-net/blob/main/sdk/ai/Azure.AI.Extensions.OpenAI/samples/Sample23_BrowserAutomationTool.md) sample in the Azure SDK for .NET repository on GitHub.
+The following C# example demonstrates how to create an AI agent with Browser Automation capabilities by using the `BrowserAutomationPreviewTool` and synchronous Azure AI Projects client. The agent can navigate to websites, interact with web elements, and perform tasks such as searching for stock prices. The example uses synchronous programming model for simplicity. For an asynchronous version, see the [Sample for use of BrowserAutomationPreviewTool and Agents](https://github.com/Azure/azure-sdk-for-net/blob/main/sdk/ai/Azure.AI.Extensions.OpenAI/samples/Sample23_BrowserAutomationTool.md) sample in the Azure SDK for .NET repository on GitHub.
 
-  ```csharp
-  using System;
-  using Azure.AI.Projects;
-  using Azure.AI.Extensions.OpenAI;
-  using Azure.Identity;
+```csharp
+using System;
+using Azure.AI.Projects;
+using Azure.AI.Extensions.OpenAI;
+using Azure.Identity;
 
-  // Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-  var projectEndpoint = "your_project_endpoint";
-  var browserConnectionId = "your-browser-automation-connection-id";
+// Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+var projectEndpoint = "your_project_endpoint";
+var browserConnectionId = "your-browser-automation-connection-id";
 
-  // Note that Browser automation operations can take longer than usual
-  // and require the request timeout to be at least 5 minutes.
-  AIProjectClientOptions options = new()
-  {
-      NetworkTimeout = TimeSpan.FromMinutes(5)
-  };
-  AIProjectClient projectClient = new(endpoint: new Uri(projectEndpoint), tokenProvider: new DefaultAzureCredential(), options: options);
+// Note that Browser automation operations can take longer than usual
+// and require the request timeout to be at least 5 minutes.
+AIProjectClientOptions options = new()
+{
+    NetworkTimeout = TimeSpan.FromMinutes(5)
+};
+AIProjectClient projectClient = new(endpoint: new Uri(projectEndpoint), tokenProvider: new DefaultAzureCredential(), options: options);
 
-  // Create the Browser Automation tool using the Playwright connection.
-  BrowserAutomationPreviewTool playwrightTool = new(
-      new BrowserAutomationToolParameters(
-      new BrowserAutomationToolConnectionParameters(browserConnectionId)
-      ));
+// Create the Browser Automation tool using the Playwright connection.
+BrowserAutomationPreviewTool playwrightTool = new(
+    new BrowserAutomationToolParameters(
+    new BrowserAutomationToolConnectionParameters(browserConnectionId)
+    ));
 
-  // Create the Agent version with the Browser Automation tool.
-  DeclarativeAgentDefinition agentDefinition = new(model: "gpt-4.1-mini")
-  {
-      Instructions = "You are an Agent helping with browser automation tasks.\n" +
-      "You can answer questions, provide information, and assist with various tasks\n" +
-      "related to web browsing using the Browser Automation tool available to you.",
-      Tools = { playwrightTool }
-  };
-  AgentVersion agentVersion = projectClient.AgentAdministrationClient.CreateAgentVersion(
-      agentName: "myAgent",
-      options: new(agentDefinition));
+// Create the Agent version with the Browser Automation tool.
+DeclarativeAgentDefinition agentDefinition = new(model: "gpt-4.1-mini")
+{
+    Instructions = "You are an Agent helping with browser automation tasks.\n" +
+    "You can answer questions, provide information, and assist with various tasks\n" +
+    "related to web browsing using the Browser Automation tool available to you.",
+    Tools = { playwrightTool }
+};
+AgentVersion agentVersion = projectClient.AgentAdministrationClient.CreateAgentVersion(
+    agentName: "myAgent",
+    options: new(agentDefinition));
 
-  // Create the response stream. Also set ToolChoice = ResponseToolChoice.CreateRequiredChoice()
-  // on the ResponseCreationOptions to ensure the agent uses the Browser Automation tool.
-  ProjectResponsesClient responseClient = projectClient.ProjectOpenAIClient.GetProjectResponsesClientForAgent(agentVersion.Name);
-  CreateResponseOptions responseOptions = new()
-  {
-      ToolChoice = ResponseToolChoice.CreateRequiredChoice(),
-      StreamingEnabled = true,
-      InputItems =
-      {
-          ResponseItem.CreateUserMessageItem("Your goal is to report the percent of Microsoft year-to-date stock price change.\n" +
-              "To do that, go to the website finance.yahoo.com.\n" +
-              "At the top of the page, you will find a search bar.\n" +
-              "Enter the value 'MSFT', to get information about the Microsoft stock price.\n" +
-              "At the top of the resulting page you will see a default chart of Microsoft stock price.\n" +
-              "Click on 'YTD' at the top of that chart, and report the percent value that shows up just below it.")
-      }
-  };
-  foreach (StreamingResponseUpdate update in responseClient.CreateResponseStreaming(options: responseOptions))
-  {
-      if (update is StreamingResponseCreatedUpdate createUpdate)
-      {
-          Console.WriteLine($"Stream response created with ID: {createUpdate.Response.Id}");
-      }
-      else if (update is StreamingResponseOutputTextDeltaUpdate textDelta)
-      {
-          Console.WriteLine($"Delta: {textDelta.Delta}");
-      }
-      else if (update is StreamingResponseOutputTextDoneUpdate textDoneUpdate)
-      {
-          Console.WriteLine($"Response done with full message: {textDoneUpdate.Text}");
-      }
-      else if (update is StreamingResponseErrorUpdate errorUpdate)
-      {
-          throw new InvalidOperationException($"The stream has failed with the error: {errorUpdate.Message}");
-      }
-  }
+// Create the response stream. Also set ToolChoice = ResponseToolChoice.CreateRequiredChoice()
+// on the ResponseCreationOptions to ensure the agent uses the Browser Automation tool.
+ProjectResponsesClient responseClient = projectClient.ProjectOpenAIClient.GetProjectResponsesClientForAgent(agentVersion.Name);
+CreateResponseOptions responseOptions = new()
+{
+    ToolChoice = ResponseToolChoice.CreateRequiredChoice(),
+    StreamingEnabled = true,
+    InputItems =
+    {
+        ResponseItem.CreateUserMessageItem("Your goal is to report the percent of Microsoft year-to-date stock price change.\n" +
+            "To do that, go to the website finance.yahoo.com.\n" +
+            "At the top of the page, you will find a search bar.\n" +
+            "Enter the value 'MSFT', to get information about the Microsoft stock price.\n" +
+            "At the top of the resulting page you will see a default chart of Microsoft stock price.\n" +
+            "Click on 'YTD' at the top of that chart, and report the percent value that shows up just below it.")
+    }
+};
+foreach (StreamingResponseUpdate update in responseClient.CreateResponseStreaming(options: responseOptions))
+{
+    if (update is StreamingResponseCreatedUpdate createUpdate)
+    {
+        Console.WriteLine($"Stream response created with ID: {createUpdate.Response.Id}");
+    }
+    else if (update is StreamingResponseOutputTextDeltaUpdate textDelta)
+    {
+        Console.WriteLine($"Delta: {textDelta.Delta}");
+    }
+    else if (update is StreamingResponseOutputTextDoneUpdate textDoneUpdate)
+    {
+        Console.WriteLine($"Response done with full message: {textDoneUpdate.Text}");
+    }
+    else if (update is StreamingResponseErrorUpdate errorUpdate)
+    {
+        throw new InvalidOperationException($"The stream has failed with the error: {errorUpdate.Message}");
+    }
+}
 
-  // Delete the Agent version to clean up resources.
-  projectClient.AgentAdministrationClient.DeleteAgentVersion(agentName: agentVersion.Name, agentVersion: agentVersion.Version);
-  ```
+// Delete the Agent version to clean up resources.
+projectClient.AgentAdministrationClient.DeleteAgentVersion(agentName: agentVersion.Name, agentVersion: agentVersion.Version);
+```
 
-  ### What this code does
+### What this code does
 
-  This example creates an agent version with the Browser Automation tool enabled, sends a prompt that requires tool usage, and prints streaming updates as the agent works through the browser steps.
+This example creates an agent version with the Browser Automation tool enabled, sends a prompt that requires tool usage, and prints streaming updates as the agent works through the browser steps.
 
-  ### Required inputs
+### Required inputs
 
-  - A Foundry project endpoint and a browser automation connection ID. See [Configuration](#configuration) for details.
-  - A Playwright connection created in your Foundry project.
+- A Foundry project endpoint and a browser automation connection ID. See [Configuration](#configuration) for details.
+- A Playwright connection created in your Foundry project.
 
-  ### Expected output
+### Expected output
 
-  You see streaming progress messages, such as text deltas, and a completed response. The output varies based on the website content and model behavior.
+You see streaming progress messages, such as text deltas, and a completed response. The output varies based on the website content and model behavior.
 
   </Tab>
   <Tab title="REST">
 
-  Get an access token:
+Get an access token:
 
-  ```bash
-  export AGENT_TOKEN=$(az account get-access-token --scope "https://ai.azure.com/.default" --query accessToken -o tsv)
-  ```
+```bash
+export AGENT_TOKEN=$(az account get-access-token --scope "https://ai.azure.com/.default" --query accessToken -o tsv)
+```
 
-  The following cURL sample demonstrates how to create an agent with Browser Automation tool and perform web browsing tasks using REST API.
+The following cURL sample demonstrates how to create an agent with Browser Automation tool and perform web browsing tasks using REST API.
 
-  ```bash
-  curl --request POST \
-    --url "${FOUNDRY_PROJECT_ENDPOINT}/openai/v1/responses" \
-    --header "Authorization: Bearer ${AGENT_TOKEN}" \
-    --header "Content-Type: application/json" \
-    --header "User-Agent: insomnia/11.6.1" \
-    --data @- <<JSON
-  {
-    "model": "${FOUNDRY_MODEL_DEPLOYMENT_NAME}",
-    "input": [
-      {
-        "role": "user",
-        "content": [
-          {
-            "type": "input_text",
-            "text": "Your goal is to report the percent of Microsoft year-to-date stock price change."
-          },
-          {
-            "type": "input_text",
-            "text": "Go to finance.yahoo.com, search for MSFT, select YTD on the chart, and report the percent value shown."
-          }
-        ]
-      }
-    ],
-    "tools": [
-      {
-        "type": "browser_automation_preview",
-        "browser_automation_preview": {
-          "connection": {
-            "project_connection_id": "${BROWSER_AUTOMATION_PROJECT_CONNECTION_ID}"
-          }
+```bash
+curl --request POST \
+  --url "${FOUNDRY_PROJECT_ENDPOINT}/openai/v1/responses" \
+  --header "Authorization: Bearer ${AGENT_TOKEN}" \
+  --header "Content-Type: application/json" \
+  --header "User-Agent: insomnia/11.6.1" \
+  --data @- <<JSON
+{
+  "model": "${FOUNDRY_MODEL_DEPLOYMENT_NAME}",
+  "input": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "Your goal is to report the percent of Microsoft year-to-date stock price change."
+        },
+        {
+          "type": "input_text",
+          "text": "Go to finance.yahoo.com, search for MSFT, select YTD on the chart, and report the percent value shown."
+        }
+      ]
+    }
+  ],
+  "tools": [
+    {
+      "type": "browser_automation_preview",
+      "browser_automation_preview": {
+        "connection": {
+          "project_connection_id": "${BROWSER_AUTOMATION_PROJECT_CONNECTION_ID}"
         }
       }
-    ]
-  }
-  JSON
-  ```
+    }
+  ]
+}
+JSON
+```
 
   </Tab>
   <Tab title="TypeScript">
 
-  ## Use Browser Automation tool with agents example
+## Use Browser Automation tool with agents example
 
-  The following TypeScript sample demonstrates how to create an agent with Browser Automation tool, perform web browsing tasks, and process streaming responses with browser automation events. For a JavaScript version of this sample, see the [JavaScript sample for Browser Automation tool](https://github.com/Azure/azure-sdk-for-js/blob/main/sdk/ai/ai-projects/samples/v2-beta/javascript/agents/tools/agentBrowserAutomation.js) in the Azure SDK for JavaScript repository on GitHub.
+The following TypeScript sample demonstrates how to create an agent with Browser Automation tool, perform web browsing tasks, and process streaming responses with browser automation events. For a JavaScript version of this sample, see the [JavaScript sample for Browser Automation tool](https://github.com/Azure/azure-sdk-for-js/blob/main/sdk/ai/ai-projects/samples/v2-beta/javascript/agents/tools/agentBrowserAutomation.js) in the Azure SDK for JavaScript repository on GitHub.
 
-  ```typescript
-  import { DefaultAzureCredential } from "@azure/identity";
-  import { AIProjectClient } from "@azure/ai-projects";
+```typescript
+import { DefaultAzureCredential } from "@azure/identity";
+import { AIProjectClient } from "@azure/ai-projects";
 
-  // Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-  const PROJECT_ENDPOINT = "your_project_endpoint";
-  const BROWSER_CONNECTION_ID = "your-browser-automation-connection-id";
+// Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+const PROJECT_ENDPOINT = "your_project_endpoint";
+const BROWSER_CONNECTION_ID = "your-browser-automation-connection-id";
 
-  const handleBrowserCall = (item: any) => {
-    // TODO: support browser_automation_preview_call schema
-    const callId = item.call_id;
-    const argumentsStr = item.arguments;
+const handleBrowserCall = (item: any) => {
+  // TODO: support browser_automation_preview_call schema
+  const callId = item.call_id;
+  const argumentsStr = item.arguments;
 
-    // Parse the arguments string into a dictionary
-    let query = null;
-    if (argumentsStr && typeof argumentsStr === "string") {
-      try {
-        const argumentsObj = JSON.parse(argumentsStr);
-        query = argumentsObj.query;
-      } catch (e) {
-        console.error("Failed to parse arguments:", e);
-      }
+  // Parse the arguments string into a dictionary
+  let query = null;
+  if (argumentsStr && typeof argumentsStr === "string") {
+    try {
+      const argumentsObj = JSON.parse(argumentsStr);
+      query = argumentsObj.query;
+    } catch (e) {
+      console.error("Failed to parse arguments:", e);
     }
-
-    console.log(`Call ID: ${callId ?? "None"}`);
-    console.log(`Query arguments: ${query ?? "None"}`);
-  };
-
-  export async function main(): Promise<void> {
-    // Create clients to call Foundry API
-    const project = new AIProjectClient(PROJECT_ENDPOINT, new DefaultAzureCredential());
-    const openai = project.getOpenAIClient();
-
-    console.log("Creating agent with Browser Automation tool...");
-
-    const agent = await project.agents.createVersion("MyAgent", {
-      kind: "prompt",
-      model: "gpt-4.1-mini",
-      instructions: `You are an Agent helping with browser automation tasks. 
-              You can answer questions, provide information, and assist with various tasks 
-              related to web browsing using the Browser Automation tool available to you.`,
-      // Define Browser Automation tool
-      tools: [
-        {
-          type: "browser_automation_preview",
-          browser_automation_preview: {
-            connection: {
-              project_connection_id: BROWSER_CONNECTION_ID,
-            },
-          },
-        },
-      ],
-    });
-    console.log(`Agent created (id: ${agent.id}, name: ${agent.name}, version: ${agent.version})`);
-
-    console.log("\nSending browser automation request with streaming...");
-    const streamResponse = await openai.responses.create(
-      {
-        input: `Your goal is to report the percent of Microsoft year-to-date stock price change.
-              To do that, go to the website finance.yahoo.com.
-              At the top of the page, you will find a search bar.
-              Enter the value 'MSFT', to get information about the Microsoft stock price.
-              At the top of the resulting page you will see a default chart of Microsoft stock price.
-              Click on 'YTD' at the top of that chart, and report the percent value that shows up just below it.`,
-        stream: true,
-      },
-      {
-        body: {
-          agent: { name: agent.name, type: "agent_reference" },
-          tool_choice: "required",
-        },
-      },
-    );
-
-    // Process the streaming response
-    for await (const event of streamResponse) {
-      if (event.type === "response.created") {
-        console.log(`Follow-up response created with ID: ${event.response.id}`);
-      } else if (event.type === "response.output_text.delta") {
-        process.stdout.write(event.delta);
-      } else if (event.type === "response.output_text.done") {
-        console.log("\n\nFollow-up response done!");
-      } else if (
-        event.type === "response.output_item.done" ||
-        event.type === "response.output_item.added"
-      ) {
-        const item = event.item as any;
-        if (item.type === "browser_automation_preview_call") {
-          handleBrowserCall(item);
-        }
-      } else if (event.type === "response.completed") {
-        console.log("\nFollow-up completed!");
-      }
-    }
-
-    // Clean up resources by deleting the agent version
-    // This prevents accumulation of unused resources in your project
-    console.log("\nCleaning up resources...");
-    await project.agents.deleteVersion(agent.name, agent.version);
-    console.log("Agent deleted");
-
-    console.log("\nBrowser Automation sample completed!");
   }
 
-  main().catch((err) => {
-    console.error("The sample encountered an error:", err);
+  console.log(`Call ID: ${callId ?? "None"}`);
+  console.log(`Query arguments: ${query ?? "None"}`);
+};
+
+export async function main(): Promise<void> {
+  // Create clients to call Foundry API
+  const project = new AIProjectClient(PROJECT_ENDPOINT, new DefaultAzureCredential());
+  const openai = project.getOpenAIClient();
+
+  console.log("Creating agent with Browser Automation tool...");
+
+  const agent = await project.agents.createVersion("MyAgent", {
+    kind: "prompt",
+    model: "gpt-4.1-mini",
+    instructions: `You are an Agent helping with browser automation tasks. 
+            You can answer questions, provide information, and assist with various tasks 
+            related to web browsing using the Browser Automation tool available to you.`,
+    // Define Browser Automation tool
+    tools: [
+      {
+        type: "browser_automation_preview",
+        browser_automation_preview: {
+          connection: {
+            project_connection_id: BROWSER_CONNECTION_ID,
+          },
+        },
+      },
+    ],
   });
-  ```
+  console.log(`Agent created (id: ${agent.id}, name: ${agent.name}, version: ${agent.version})`);
 
-  ### What this code does
+  console.log("\nSending browser automation request with streaming...");
+  const streamResponse = await openai.responses.create(
+    {
+      input: `Your goal is to report the percent of Microsoft year-to-date stock price change.
+            To do that, go to the website finance.yahoo.com.
+            At the top of the page, you will find a search bar.
+            Enter the value 'MSFT', to get information about the Microsoft stock price.
+            At the top of the resulting page you will see a default chart of Microsoft stock price.
+            Click on 'YTD' at the top of that chart, and report the percent value that shows up just below it.`,
+      stream: true,
+    },
+    {
+      body: {
+        agent: { name: agent.name, type: "agent_reference" },
+        tool_choice: "required",
+      },
+    },
+  );
 
-  This example creates an agent version with the Browser Automation tool enabled, sends a prompt that requires tool usage, and processes streaming events, including browser automation call events, as they arrive.
+  // Process the streaming response
+  for await (const event of streamResponse) {
+    if (event.type === "response.created") {
+      console.log(`Follow-up response created with ID: ${event.response.id}`);
+    } else if (event.type === "response.output_text.delta") {
+      process.stdout.write(event.delta);
+    } else if (event.type === "response.output_text.done") {
+      console.log("\n\nFollow-up response done!");
+    } else if (
+      event.type === "response.output_item.done" ||
+      event.type === "response.output_item.added"
+    ) {
+      const item = event.item as any;
+      if (item.type === "browser_automation_preview_call") {
+        handleBrowserCall(item);
+      }
+    } else if (event.type === "response.completed") {
+      console.log("\nFollow-up completed!");
+    }
+  }
 
-  ### Required inputs
+  // Clean up resources by deleting the agent version
+  // This prevents accumulation of unused resources in your project
+  console.log("\nCleaning up resources...");
+  await project.agents.deleteVersion(agent.name, agent.version);
+  console.log("Agent deleted");
 
-  - A Foundry project endpoint and a browser automation connection ID. See [Configuration](#configuration) for details.
+  console.log("\nBrowser Automation sample completed!");
+}
 
-  ### Expected output
+main().catch((err) => {
+  console.error("The sample encountered an error:", err);
+});
+```
 
-  You see an "Agent created ..." message, streaming text output, and optionally, browser call details when the tool is invoked. The output varies based on the website content and model behavior.
+### What this code does
+
+This example creates an agent version with the Browser Automation tool enabled, sends a prompt that requires tool usage, and processes streaming events, including browser automation call events, as they arrive.
+
+### Required inputs
+
+- A Foundry project endpoint and a browser automation connection ID. See [Configuration](#configuration) for details.
+
+### Expected output
+
+You see an "Agent created ..." message, streaming text output, and optionally, browser call details when the tool is invoked. The output varies based on the website content and model behavior.
 
   </Tab>
   <Tab title="Java">
 
-  ## Use browser automation in a Java agent
+## Use browser automation in a Java agent
 
-  Add the dependency to your `pom.xml`:
+Add the dependency to your `pom.xml`:
 
-  ```xml
-  <dependency>
-      <groupId>com.azure</groupId>
-      <artifactId>azure-ai-agents</artifactId>
-      <version>2.0.0</version>
-  </dependency>
-  ```
+```xml
+<dependency>
+    <groupId>com.azure</groupId>
+    <artifactId>azure-ai-agents</artifactId>
+    <version>2.0.0</version>
+</dependency>
+```
 
-  ### Create an agent with browser automation
+### Create an agent with browser automation
 
-  ```java
-  import com.azure.ai.agents.AgentsClient;
-  import com.azure.ai.agents.AgentsClientBuilder;
-  import com.azure.ai.agents.ResponsesClient;
-  import com.azure.ai.agents.models.*;
-  import com.azure.identity.DefaultAzureCredentialBuilder;
-  import com.openai.models.responses.Response;
-  import com.openai.models.responses.ResponseCreateParams;
+```java
+import com.azure.ai.agents.AgentsClient;
+import com.azure.ai.agents.AgentsClientBuilder;
+import com.azure.ai.agents.ResponsesClient;
+import com.azure.ai.agents.models.*;
+import com.azure.identity.DefaultAzureCredentialBuilder;
+import com.openai.models.responses.Response;
+import com.openai.models.responses.ResponseCreateParams;
 
-  import java.util.Collections;
+import java.util.Collections;
 
-  public class BrowserAutomationExample {
-      public static void main(String[] args) {
-          // Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-          String projectEndpoint = "your_project_endpoint";
-          String browserConnectionId = "your-browser-automation-connection-id";
+public class BrowserAutomationExample {
+    public static void main(String[] args) {
+        // Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+        String projectEndpoint = "your_project_endpoint";
+        String browserConnectionId = "your-browser-automation-connection-id";
 
-          AgentsClientBuilder builder = new AgentsClientBuilder()
-              .credential(new DefaultAzureCredentialBuilder().build())
-              .endpoint(projectEndpoint);
+        AgentsClientBuilder builder = new AgentsClientBuilder()
+            .credential(new DefaultAzureCredentialBuilder().build())
+            .endpoint(projectEndpoint);
 
-          AgentsClient agentsClient = builder.buildAgentsClient();
-          ResponsesClient responsesClient = builder.buildResponsesClient();
+        AgentsClient agentsClient = builder.buildAgentsClient();
+        ResponsesClient responsesClient = builder.buildResponsesClient();
 
-          // Create browser automation tool with connection configuration
-          BrowserAutomationPreviewTool browserTool = new BrowserAutomationPreviewTool(
-              new BrowserAutomationToolParameters(
-                  new BrowserAutomationToolConnectionParameters(browserConnectionId)
-              )
-          );
+        // Create browser automation tool with connection configuration
+        BrowserAutomationPreviewTool browserTool = new BrowserAutomationPreviewTool(
+            new BrowserAutomationToolParameters(
+                new BrowserAutomationToolConnectionParameters(browserConnectionId)
+            )
+        );
 
-          // Create agent with browser automation tool
-          PromptAgentDefinition agentDefinition = new PromptAgentDefinition("gpt-4.1-mini")
-              .setInstructions("You are a helpful assistant that can interact with web pages.")
-              .setTools(Collections.singletonList(browserTool));
+        // Create agent with browser automation tool
+        PromptAgentDefinition agentDefinition = new PromptAgentDefinition("gpt-4.1-mini")
+            .setInstructions("You are a helpful assistant that can interact with web pages.")
+            .setTools(Collections.singletonList(browserTool));
 
-          AgentVersionDetails agent = agentsClient.createAgentVersion("browser-agent", agentDefinition);
-          System.out.printf("Agent created: %s (version %s)%n", agent.getName(), agent.getVersion());
+        AgentVersionDetails agent = agentsClient.createAgentVersion("browser-agent", agentDefinition);
+        System.out.printf("Agent created: %s (version %s)%n", agent.getName(), agent.getVersion());
 
-          // Create a response
-          AgentReference agentReference = new AgentReference(agent.getName())
-              .setVersion(agent.getVersion());
+        // Create a response
+        AgentReference agentReference = new AgentReference(agent.getName())
+            .setVersion(agent.getVersion());
 
-          Response response = responsesClient.createAzureResponse(
-              new AzureCreateResponseOptions().setAgentReference(agentReference),
-              ResponseCreateParams.builder()
-                  .input("Navigate to microsoft.com and summarize the main content"));
+        Response response = responsesClient.createAzureResponse(
+            new AzureCreateResponseOptions().setAgentReference(agentReference),
+            ResponseCreateParams.builder()
+                .input("Navigate to microsoft.com and summarize the main content"));
 
-          System.out.println("Response: " + response.output());
+        System.out.println("Response: " + response.output());
 
-          // Clean up
-          agentsClient.deleteAgentVersion(agent.getName(), agent.getVersion());
-      }
-  }
-  ```
+        // Clean up
+        agentsClient.deleteAgentVersion(agent.getName(), agent.getVersion());
+    }
+}
+```
 
   </Tab>
 </Tabs>

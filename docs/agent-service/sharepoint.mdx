@@ -75,456 +75,456 @@ If you need to create a SharePoint connection for your project, see [Add a new c
 <Tabs>
   <Tab title="Python">
 
-  The following sample demonstrates how to create an agent that uses the SharePoint tool to ground responses with content from a SharePoint site.
+The following sample demonstrates how to create an agent that uses the SharePoint tool to ground responses with content from a SharePoint site.
 
-  ```python
-  from azure.identity import DefaultAzureCredential
-  from azure.ai.projects import AIProjectClient
-  from azure.ai.projects.models import (
-      PromptAgentDefinition,
-      SharepointPreviewTool,
-      SharepointGroundingToolParameters,
-      ToolProjectConnection,
-  )
+```python
+from azure.identity import DefaultAzureCredential
+from azure.ai.projects import AIProjectClient
+from azure.ai.projects.models import (
+    PromptAgentDefinition,
+    SharepointPreviewTool,
+    SharepointGroundingToolParameters,
+    ToolProjectConnection,
+)
 
-  # Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-  PROJECT_ENDPOINT = "your_project_endpoint"
-  SHAREPOINT_CONNECTION_NAME = "my-sharepoint-connection"
+# Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+PROJECT_ENDPOINT = "your_project_endpoint"
+SHAREPOINT_CONNECTION_NAME = "my-sharepoint-connection"
 
-  # Create clients to call Foundry API
-  project = AIProjectClient(
-      endpoint=PROJECT_ENDPOINT,
-      credential=DefaultAzureCredential(),
-  )
-  openai = project.get_openai_client()
+# Create clients to call Foundry API
+project = AIProjectClient(
+    endpoint=PROJECT_ENDPOINT,
+    credential=DefaultAzureCredential(),
+)
+openai = project.get_openai_client()
 
-  # Get connection ID from connection name
-  sharepoint_connection = project.connections.get(
-      SHAREPOINT_CONNECTION_NAME,
-  )
+# Get connection ID from connection name
+sharepoint_connection = project.connections.get(
+    SHAREPOINT_CONNECTION_NAME,
+)
 
-  # Configure SharePoint tool with the project connection
-  sharepoint_tool= SharepointPreviewTool(
-      sharepoint_grounding_preview=SharepointGroundingToolParameters(
-          project_connections=[
-              ToolProjectConnection(project_connection_id=sharepoint_connection.id)
-          ]
-      )
-  )
+# Configure SharePoint tool with the project connection
+sharepoint_tool= SharepointPreviewTool(
+    sharepoint_grounding_preview=SharepointGroundingToolParameters(
+        project_connections=[
+            ToolProjectConnection(project_connection_id=sharepoint_connection.id)
+        ]
+    )
+)
 
-  agent = project.agents.create_version(
-      agent_name="MyAgent",
-      definition=PromptAgentDefinition(
-          model="gpt-4.1-mini",
-          instructions="""You are a helpful agent that can use SharePoint tools to assist users. 
-          Use the available SharePoint tools to answer questions and perform tasks.""",
-          tools=[sharepoint_tool],
-      ),
-  )
-  print(f"Agent created (id: {agent.id}, name: {agent.name}, version: {agent.version})")
+agent = project.agents.create_version(
+    agent_name="MyAgent",
+    definition=PromptAgentDefinition(
+        model="gpt-4.1-mini",
+        instructions="""You are a helpful agent that can use SharePoint tools to assist users. 
+        Use the available SharePoint tools to answer questions and perform tasks.""",
+        tools=[sharepoint_tool],
+    ),
+)
+print(f"Agent created (id: {agent.id}, name: {agent.name}, version: {agent.version})")
 
-  # Send initial request that will trigger the SharePoint tool
-  stream_response = openai.responses.create(
-      stream=True,
-      tool_choice="required",
-      input="Please summarize the last meeting notes stored in SharePoint.",
-      extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
-  )
+# Send initial request that will trigger the SharePoint tool
+stream_response = openai.responses.create(
+    stream=True,
+    tool_choice="required",
+    input="Please summarize the last meeting notes stored in SharePoint.",
+    extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
+)
 
-  for event in stream_response:
-      if event.type == "response.created":
-          print(f"Follow-up response created with ID: {event.response.id}")
-      elif event.type == "response.output_text.delta":
-          print(f"Delta: {event.delta}")
-      elif event.type == "response.text.done":
-          print(f"\nFollow-up response done!")
-      elif event.type == "response.output_item.done":
-          if event.item.type == "message":
-              item = event.item
-              if item.content[-1].type == "output_text":
-                  text_content = item.content[-1]
-                  for annotation in text_content.annotations:
-                      if annotation.type == "url_citation":
-                          print(
-                              f"URL Citation: {annotation.url}, "
-                              f"Start index: {annotation.start_index}, "
-                              f"End index: {annotation.end_index}"
-                          )
-      elif event.type == "response.completed":
-          print(f"\nFollow-up completed!")
-          print(f"Full response: {event.response.output_text}")
-  ```
+for event in stream_response:
+    if event.type == "response.created":
+        print(f"Follow-up response created with ID: {event.response.id}")
+    elif event.type == "response.output_text.delta":
+        print(f"Delta: {event.delta}")
+    elif event.type == "response.text.done":
+        print(f"\nFollow-up response done!")
+    elif event.type == "response.output_item.done":
+        if event.item.type == "message":
+            item = event.item
+            if item.content[-1].type == "output_text":
+                text_content = item.content[-1]
+                for annotation in text_content.annotations:
+                    if annotation.type == "url_citation":
+                        print(
+                            f"URL Citation: {annotation.url}, "
+                            f"Start index: {annotation.start_index}, "
+                            f"End index: {annotation.end_index}"
+                        )
+    elif event.type == "response.completed":
+        print(f"\nFollow-up completed!")
+        print(f"Full response: {event.response.output_text}")
+```
 
-  ### Expected output
+### Expected output
 
-  When you run this code, you see output similar to:
+When you run this code, you see output similar to:
 
-  ```text
-  Agent created (id: asst_abc123, name: MyAgent, version: 1)
+```text
+Agent created (id: asst_abc123, name: MyAgent, version: 1)
 
-  Sending request to SharePoint agent with streaming...
-  Follow-up response created with ID: resp_xyz789
-  Delta: Based
-  Delta:  on
-  Delta:  the
-  Delta:  meeting
-  Delta:  notes
-  ...
-  URL Citation: https://contoso.sharepoint.com/sites/policies/Documents/meeting-notes.docx, Start index: 0, End index: 245
+Sending request to SharePoint agent with streaming...
+Follow-up response created with ID: resp_xyz789
+Delta: Based
+Delta:  on
+Delta:  the
+Delta:  meeting
+Delta:  notes
+...
+URL Citation: https://contoso.sharepoint.com/sites/policies/Documents/meeting-notes.docx, Start index: 0, End index: 245
 
-  Follow-up response done!
+Follow-up response done!
 
-  Follow-up completed!
-  Full response: Based on the meeting notes from your SharePoint site, the last meeting covered the following topics: project timeline updates, budget review, and next quarter planning.
-  ```
+Follow-up completed!
+Full response: Based on the meeting notes from your SharePoint site, the last meeting covered the following topics: project timeline updates, budget review, and next quarter planning.
+```
 
   </Tab>
   <Tab title="C#">
 
-  The following sample demonstrates how to create an agent that uses the SharePoint tool to ground responses with content from a SharePoint site. This example uses synchronous methods for simplicity. For an asynchronous version, refer to the [SharePoint agent sample documentation](https://github.com/Azure/azure-sdk-for-net/blob/main/sdk/ai/Azure.AI.Extensions.OpenAI/samples/Sample24_Sharepoint.md) on the Azure SDK for .NET GitHub repository.
+The following sample demonstrates how to create an agent that uses the SharePoint tool to ground responses with content from a SharePoint site. This example uses synchronous methods for simplicity. For an asynchronous version, refer to the [SharePoint agent sample documentation](https://github.com/Azure/azure-sdk-for-net/blob/main/sdk/ai/Azure.AI.Extensions.OpenAI/samples/Sample24_Sharepoint.md) on the Azure SDK for .NET GitHub repository.
 
-  To enable your Agent to access SharePoint, use `SharepointPreviewTool`.
+To enable your Agent to access SharePoint, use `SharepointPreviewTool`.
 
-  ```csharp
-  using System;
-  using Azure.AI.Projects;
-  using Azure.AI.Extensions.OpenAI;
-  using Azure.Identity;
+```csharp
+using System;
+using Azure.AI.Projects;
+using Azure.AI.Extensions.OpenAI;
+using Azure.Identity;
 
-  // Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-  var projectEndpoint = "your_project_endpoint";
-  var sharepointConnectionName = "my-sharepoint-connection";
+// Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+var projectEndpoint = "your_project_endpoint";
+var sharepointConnectionName = "my-sharepoint-connection";
 
-  // Create project client to call Foundry API
-  AIProjectClient projectClient = new(endpoint: new Uri(projectEndpoint), tokenProvider: new DefaultAzureCredential());
+// Create project client to call Foundry API
+AIProjectClient projectClient = new(endpoint: new Uri(projectEndpoint), tokenProvider: new DefaultAzureCredential());
 
-  // Get connection ID from connection name
-  AIProjectConnection sharepointConnection = projectClient.Connections.GetConnection(connectionName: sharepointConnectionName);
+// Get connection ID from connection name
+AIProjectConnection sharepointConnection = projectClient.Connections.GetConnection(connectionName: sharepointConnectionName);
 
-  // Use the SharePoint connection ID to initialize the SharePointGroundingToolOptions,
-  // which will be used to create SharepointPreviewTool. Use this tool to create an Agent.
-  SharePointGroundingToolOptions sharepointToolOption = new()
-  {
-      ProjectConnections = { new ToolProjectConnection(projectConnectionId: sharepointConnection.Id) }
-  };
-  DeclarativeAgentDefinition agentDefinition = new(model: "gpt-4.1-mini")
-  {
-      Instructions = "You are a helpful assistant.",
-      Tools = { new SharepointPreviewTool(sharepointToolOption), }
-  };
-  AgentVersion agentVersion = projectClient.AgentAdministrationClient.CreateAgentVersion(
-      agentName: "myAgent",
-      options: new(agentDefinition));
+// Use the SharePoint connection ID to initialize the SharePointGroundingToolOptions,
+// which will be used to create SharepointPreviewTool. Use this tool to create an Agent.
+SharePointGroundingToolOptions sharepointToolOption = new()
+{
+    ProjectConnections = { new ToolProjectConnection(projectConnectionId: sharepointConnection.Id) }
+};
+DeclarativeAgentDefinition agentDefinition = new(model: "gpt-4.1-mini")
+{
+    Instructions = "You are a helpful assistant.",
+    Tools = { new SharepointPreviewTool(sharepointToolOption), }
+};
+AgentVersion agentVersion = projectClient.AgentAdministrationClient.CreateAgentVersion(
+    agentName: "myAgent",
+    options: new(agentDefinition));
 
-  // Create the response and make sure we are always using tool.
-  ProjectResponsesClient responseClient = projectClient.ProjectOpenAIClient.GetProjectResponsesClientForAgent(agentVersion.Name);
-  CreateResponseOptions responseOptions = new()
-  {
-      ToolChoice = ResponseToolChoice.CreateRequiredChoice(),
-      InputItems = { ResponseItem.CreateUserMessageItem("What is Contoso whistleblower policy") }
-  };
-  ResponseResult response = responseClient.CreateResponse(options: responseOptions);
+// Create the response and make sure we are always using tool.
+ProjectResponsesClient responseClient = projectClient.ProjectOpenAIClient.GetProjectResponsesClientForAgent(agentVersion.Name);
+CreateResponseOptions responseOptions = new()
+{
+    ToolChoice = ResponseToolChoice.CreateRequiredChoice(),
+    InputItems = { ResponseItem.CreateUserMessageItem("What is Contoso whistleblower policy") }
+};
+ResponseResult response = responseClient.CreateResponse(options: responseOptions);
 
-  // SharePoint tool can create the reference to the page, grounding the data.
-  // Create the GetFormattedAnnotation method to get the URI annotation.
-  string annotation = "";
-  foreach (ResponseItem item in response.OutputItems)
-  {
-      if (item is MessageResponseItem messageItem)
-      {
-          foreach (ResponseContentPart content in messageItem.Content)
-          {
-              foreach (ResponseMessageAnnotation messageAnnotation in content.OutputTextAnnotations)
-              {
-                  if (messageAnnotation is UriCitationMessageAnnotation uriAnnotation)
-                  {
-                      annotation = $" [{uriAnnotation.Title}]({uriAnnotation.Uri})";
-                  }
-              }
-          }
-      }
-  }
+// SharePoint tool can create the reference to the page, grounding the data.
+// Create the GetFormattedAnnotation method to get the URI annotation.
+string annotation = "";
+foreach (ResponseItem item in response.OutputItems)
+{
+    if (item is MessageResponseItem messageItem)
+    {
+        foreach (ResponseContentPart content in messageItem.Content)
+        {
+            foreach (ResponseMessageAnnotation messageAnnotation in content.OutputTextAnnotations)
+            {
+                if (messageAnnotation is UriCitationMessageAnnotation uriAnnotation)
+                {
+                    annotation = $" [{uriAnnotation.Title}]({uriAnnotation.Uri})";
+                }
+            }
+        }
+    }
+}
 
-  // Print the Agent output and add the annotation at the end.
-  Console.WriteLine($"Response status: {response.Status}");
-  Console.WriteLine($"{response.GetOutputText()}{annotation}");
+// Print the Agent output and add the annotation at the end.
+Console.WriteLine($"Response status: {response.Status}");
+Console.WriteLine($"{response.GetOutputText()}{annotation}");
 
-  // After the sample is completed, delete the Agent we have created.
-  projectClient.AgentAdministrationClient.DeleteAgentVersion(agentName: agentVersion.Name, agentVersion: agentVersion.Version);
-  ```
+// After the sample is completed, delete the Agent we have created.
+projectClient.AgentAdministrationClient.DeleteAgentVersion(agentName: agentVersion.Name, agentVersion: agentVersion.Version);
+```
 
-  ### Expected output
+### Expected output
 
-  When you run this code, you see output similar to:
+When you run this code, you see output similar to:
 
-  ```text
-  The Contoso whistleblower policy outlines procedures for reporting unethical behavior confidentially. Employees can submit concerns through the ethics hotline or online portal. [Whistleblower Policy](https://contoso.sharepoint.com/sites/policies/Documents/whistleblower-policy.pdf)
-  ```
+```text
+The Contoso whistleblower policy outlines procedures for reporting unethical behavior confidentially. Employees can submit concerns through the ethics hotline or online portal. [Whistleblower Policy](https://contoso.sharepoint.com/sites/policies/Documents/whistleblower-policy.pdf)
+```
 
-  The output includes the agent's response grounded in SharePoint content, with a citation link to the source document.
+The output includes the agent's response grounded in SharePoint content, with a citation link to the source document.
 
   </Tab>
   <Tab title="REST">
 
-  ## Sample for use of an Agent with SharePoint
+## Sample for use of an Agent with SharePoint
 
-  Get an access token:
+Get an access token:
 
-  ```bash
-  export AGENT_TOKEN=$(az account get-access-token --scope "https://ai.azure.com/.default" --query accessToken -o tsv)
-  ```
+```bash
+export AGENT_TOKEN=$(az account get-access-token --scope "https://ai.azure.com/.default" --query accessToken -o tsv)
+```
 
-  The following sample demonstrates how to create an Agent that uses the SharePoint tool to ground responses with content from a SharePoint site.
+The following sample demonstrates how to create an Agent that uses the SharePoint tool to ground responses with content from a SharePoint site.
 
-  ```bash
-  curl --request POST \
-    --url "$FOUNDRY_PROJECT_ENDPOINT/openai/v1/responses" \
-    -H "Authorization: Bearer $AGENT_TOKEN" \
-    -H "Content-Type: application/json" \
-    -d '{
-    "model": "'$FOUNDRY_MODEL_DEPLOYMENT_NAME'",
-    "input": "Please summarize the last meeting notes stored in SharePoint.",
-    "tool_choice": "required",
-    "tools": [
-      {
-        "type": "sharepoint_grounding_preview",
-        "sharepoint_grounding_preview": {
-          "project_connections": [
-            {
-              "project_connection_id": "'$SHAREPOINT_PROJECT_CONNECTION_ID'"
-            }
-          ]
-        }
-      }
-    ]
-  }'
-  ```
-
-  ### Expected output
-
-  The API returns a JSON response with the agent's answer and citation information:
-
-  ```json
-  {
-    "id": "resp_abc123xyz",
-    "object": "response",
-    "created_at": 1702345678,
-    "status": "completed",
-    "output_text": "Based on the meeting notes from your SharePoint site, the last meeting covered project timeline updates, budget review, and next quarter planning.",
-    "output_items": [
-      {
-        "type": "message",
-        "content": [
+```bash
+curl --request POST \
+  --url "$FOUNDRY_PROJECT_ENDPOINT/openai/v1/responses" \
+  -H "Authorization: Bearer $AGENT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+  "model": "'$FOUNDRY_MODEL_DEPLOYMENT_NAME'",
+  "input": "Please summarize the last meeting notes stored in SharePoint.",
+  "tool_choice": "required",
+  "tools": [
+    {
+      "type": "sharepoint_grounding_preview",
+      "sharepoint_grounding_preview": {
+        "project_connections": [
           {
-            "type": "output_text",
-            "text": "Based on the meeting notes...",
-            "annotations": [
-              {
-                "type": "url_citation",
-                "url": "https://contoso.sharepoint.com/sites/policies/Documents/meeting-notes.docx",
-                "start_index": 0,
-                "end_index": 245
-              }
-            ]
+            "project_connection_id": "'$SHAREPOINT_PROJECT_CONNECTION_ID'"
           }
         ]
       }
-    ]
-  }
-  ```
+    }
+  ]
+}'
+```
+
+### Expected output
+
+The API returns a JSON response with the agent's answer and citation information:
+
+```json
+{
+  "id": "resp_abc123xyz",
+  "object": "response",
+  "created_at": 1702345678,
+  "status": "completed",
+  "output_text": "Based on the meeting notes from your SharePoint site, the last meeting covered project timeline updates, budget review, and next quarter planning.",
+  "output_items": [
+    {
+      "type": "message",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "Based on the meeting notes...",
+          "annotations": [
+            {
+              "type": "url_citation",
+              "url": "https://contoso.sharepoint.com/sites/policies/Documents/meeting-notes.docx",
+              "start_index": 0,
+              "end_index": 245
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
 
   </Tab>
   <Tab title="TypeScript">
 
-  This sample demonstrates how to create an AI agent with SharePoint capabilities. The agent can search SharePoint content and provide responses with relevant information from SharePoint sites. For a JavaScript version, refer to the [SharePoint agent sample documentation](https://github.com/Azure/azure-sdk-for-js/blob/main/sdk/ai/ai-projects/samples/v2-beta/javascript/agents/tools/agentSharepoint.js) in the Azure SDK for JavaScript GitHub repository.
+This sample demonstrates how to create an AI agent with SharePoint capabilities. The agent can search SharePoint content and provide responses with relevant information from SharePoint sites. For a JavaScript version, refer to the [SharePoint agent sample documentation](https://github.com/Azure/azure-sdk-for-js/blob/main/sdk/ai/ai-projects/samples/v2-beta/javascript/agents/tools/agentSharepoint.js) in the Azure SDK for JavaScript GitHub repository.
 
-  ```typescript
-  import { DefaultAzureCredential } from "@azure/identity";
-  import { AIProjectClient } from "@azure/ai-projects";
+```typescript
+import { DefaultAzureCredential } from "@azure/identity";
+import { AIProjectClient } from "@azure/ai-projects";
 
-  // Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-  const PROJECT_ENDPOINT = "your_project_endpoint";
-  const SHAREPOINT_CONNECTION_NAME = "my-sharepoint-connection";
+// Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+const PROJECT_ENDPOINT = "your_project_endpoint";
+const SHAREPOINT_CONNECTION_NAME = "my-sharepoint-connection";
 
-  export async function main(): Promise<void> {
-    // Create clients to call Foundry API
-    const project = new AIProjectClient(PROJECT_ENDPOINT, new DefaultAzureCredential());
-    const openai = project.getOpenAIClient();
+export async function main(): Promise<void> {
+  // Create clients to call Foundry API
+  const project = new AIProjectClient(PROJECT_ENDPOINT, new DefaultAzureCredential());
+  const openai = project.getOpenAIClient();
 
-    // Get connection ID from connection name
-    const sharepointConnection = await project.connections.get(SHAREPOINT_CONNECTION_NAME);
+  // Get connection ID from connection name
+  const sharepointConnection = await project.connections.get(SHAREPOINT_CONNECTION_NAME);
 
-    // Create agent with SharePoint tool
-    const agent = await project.agents.createVersion("MyAgent", {
-      kind: "prompt",
-      model: "gpt-4.1-mini",
-      instructions:
-        "You are a helpful agent that can use SharePoint tools to assist users. Use the available SharePoint tools to answer questions and perform tasks.",
-      // Define SharePoint tool that searches SharePoint content
-      tools: [
-        {
-          type: "sharepoint_grounding_preview",
-          sharepoint_grounding_preview: {
-            project_connections: [
-              {
-                project_connection_id: sharepointConnection.id,
-              },
-            ],
-          },
-        },
-      ],
-    });
-    console.log(`Agent created (id: ${agent.id}, name: ${agent.name}, version: ${agent.version})`);
-
-    // Send initial request that will trigger the SharePoint tool
-    const streamResponse = await openai.responses.create(
+  // Create agent with SharePoint tool
+  const agent = await project.agents.createVersion("MyAgent", {
+    kind: "prompt",
+    model: "gpt-4.1-mini",
+    instructions:
+      "You are a helpful agent that can use SharePoint tools to assist users. Use the available SharePoint tools to answer questions and perform tasks.",
+    // Define SharePoint tool that searches SharePoint content
+    tools: [
       {
-        input: "Please summarize the last meeting notes stored in SharePoint.",
-        stream: true,
-      },
-      {
-        body: {
-          agent: { name: agent.name, type: "agent_reference" },
-          tool_choice: "required",
+        type: "sharepoint_grounding_preview",
+        sharepoint_grounding_preview: {
+          project_connections: [
+            {
+              project_connection_id: sharepointConnection.id,
+            },
+          ],
         },
       },
-    );
+    ],
+  });
+  console.log(`Agent created (id: ${agent.id}, name: ${agent.name}, version: ${agent.version})`);
 
-    // Process the streaming response
-    for await (const event of streamResponse) {
-      if (event.type === "response.created") {
-        console.log(`Follow-up response created with ID: ${event.response.id}`);
-      } else if (event.type === "response.output_text.delta") {
-        process.stdout.write(event.delta);
-      } else if (event.type === "response.output_text.done") {
-        console.log("\n\nFollow-up response done!");
-      } else if (event.type === "response.output_item.done") {
-        if (event.item.type === "message") {
-          const item = event.item;
-          if (item.content && item.content.length > 0) {
-            const lastContent = item.content[item.content.length - 1];
-            if (lastContent.type === "output_text" && lastContent.annotations) {
-              for (const annotation of lastContent.annotations) {
-                if (annotation.type === "url_citation") {
-                  console.log(
-                    `URL Citation: ${annotation.url}, Start index: ${annotation.start_index}, End index: ${annotation.end_index}`,
-                  );
-                }
+  // Send initial request that will trigger the SharePoint tool
+  const streamResponse = await openai.responses.create(
+    {
+      input: "Please summarize the last meeting notes stored in SharePoint.",
+      stream: true,
+    },
+    {
+      body: {
+        agent: { name: agent.name, type: "agent_reference" },
+        tool_choice: "required",
+      },
+    },
+  );
+
+  // Process the streaming response
+  for await (const event of streamResponse) {
+    if (event.type === "response.created") {
+      console.log(`Follow-up response created with ID: ${event.response.id}`);
+    } else if (event.type === "response.output_text.delta") {
+      process.stdout.write(event.delta);
+    } else if (event.type === "response.output_text.done") {
+      console.log("\n\nFollow-up response done!");
+    } else if (event.type === "response.output_item.done") {
+      if (event.item.type === "message") {
+        const item = event.item;
+        if (item.content && item.content.length > 0) {
+          const lastContent = item.content[item.content.length - 1];
+          if (lastContent.type === "output_text" && lastContent.annotations) {
+            for (const annotation of lastContent.annotations) {
+              if (annotation.type === "url_citation") {
+                console.log(
+                  `URL Citation: ${annotation.url}, Start index: ${annotation.start_index}, End index: ${annotation.end_index}`,
+                );
               }
             }
           }
         }
-      } else if (event.type === "response.completed") {
-        console.log("\nFollow-up completed!");
       }
+    } else if (event.type === "response.completed") {
+      console.log("\nFollow-up completed!");
     }
-
-    // Clean up resources
-    await project.agents.deleteVersion(agent.name, agent.version);
   }
 
-  main().catch((err) => {
-    console.error("The sample encountered an error:", err);
-  });
-  ```
+  // Clean up resources
+  await project.agents.deleteVersion(agent.name, agent.version);
+}
 
-  ### Expected output
+main().catch((err) => {
+  console.error("The sample encountered an error:", err);
+});
+```
 
-  When you run this code, you see output similar to:
+### Expected output
 
-  ```text
-  Creating agent with SharePoint tool...
-  Agent created (id: asst_abc123, name: MyAgent, version: 1)
+When you run this code, you see output similar to:
 
-  Sending request to SharePoint agent with streaming...
-  Follow-up response created with ID: resp_xyz789
-  Based on the meeting notes from your SharePoint site, the last meeting covered the following topics: project timeline updates, budget review, and next quarter planning.
+```text
+Creating agent with SharePoint tool...
+Agent created (id: asst_abc123, name: MyAgent, version: 1)
 
-  Follow-up response done!
-  URL Citation: https://contoso.sharepoint.com/sites/policies/Documents/meeting-notes.docx, Start index: 0, End index: 245
+Sending request to SharePoint agent with streaming...
+Follow-up response created with ID: resp_xyz789
+Based on the meeting notes from your SharePoint site, the last meeting covered the following topics: project timeline updates, budget review, and next quarter planning.
 
-  Follow-up completed!
+Follow-up response done!
+URL Citation: https://contoso.sharepoint.com/sites/policies/Documents/meeting-notes.docx, Start index: 0, End index: 245
 
-  Cleaning up resources...
-  Agent deleted
+Follow-up completed!
 
-  SharePoint agent sample completed!
-  ```
+Cleaning up resources...
+Agent deleted
+
+SharePoint agent sample completed!
+```
 
   </Tab>
   <Tab title="Java">
 
-  ## Use SharePoint grounding in a Java agent
+## Use SharePoint grounding in a Java agent
 
-  Add the dependency to your `pom.xml`:
+Add the dependency to your `pom.xml`:
 
-  ```xml
-  <dependency>
-      <groupId>com.azure</groupId>
-      <artifactId>azure-ai-agents</artifactId>
-      <version>2.0.0</version>
-  </dependency>
-  ```
+```xml
+<dependency>
+    <groupId>com.azure</groupId>
+    <artifactId>azure-ai-agents</artifactId>
+    <version>2.0.0</version>
+</dependency>
+```
 
-  ### Create an agent with SharePoint grounding
+### Create an agent with SharePoint grounding
 
-  ```java
-  import com.azure.ai.agents.AgentsClient;
-  import com.azure.ai.agents.AgentsClientBuilder;
-  import com.azure.ai.agents.ResponsesClient;
-  import com.azure.ai.agents.models.*;
-  import com.azure.identity.DefaultAzureCredentialBuilder;
-  import com.openai.models.responses.Response;
-  import com.openai.models.responses.ResponseCreateParams;
+```java
+import com.azure.ai.agents.AgentsClient;
+import com.azure.ai.agents.AgentsClientBuilder;
+import com.azure.ai.agents.ResponsesClient;
+import com.azure.ai.agents.models.*;
+import com.azure.identity.DefaultAzureCredentialBuilder;
+import com.openai.models.responses.Response;
+import com.openai.models.responses.ResponseCreateParams;
 
-  import java.util.Arrays;
-  import java.util.Collections;
+import java.util.Arrays;
+import java.util.Collections;
 
-  public class SharePointGroundingExample {
-      public static void main(String[] args) {
-          // Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-          String projectEndpoint = "your_project_endpoint";
-          String sharepointConnectionId = "your_sharepoint_connection_id";
+public class SharePointGroundingExample {
+    public static void main(String[] args) {
+        // Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+        String projectEndpoint = "your_project_endpoint";
+        String sharepointConnectionId = "your_sharepoint_connection_id";
 
-          AgentsClientBuilder builder = new AgentsClientBuilder()
-              .credential(new DefaultAzureCredentialBuilder().build())
-              .endpoint(projectEndpoint);
+        AgentsClientBuilder builder = new AgentsClientBuilder()
+            .credential(new DefaultAzureCredentialBuilder().build())
+            .endpoint(projectEndpoint);
 
-          AgentsClient agentsClient = builder.buildAgentsClient();
-          ResponsesClient responsesClient = builder.buildResponsesClient();
+        AgentsClient agentsClient = builder.buildAgentsClient();
+        ResponsesClient responsesClient = builder.buildResponsesClient();
 
-          // Create SharePoint grounding tool with connection configuration
-          SharepointPreviewTool sharepointTool = new SharepointPreviewTool(
-              new SharepointGroundingToolParameters()
-                  .setProjectConnections(Arrays.asList(
-                      new ToolProjectConnection(sharepointConnectionId)
-                  ))
-          );
+        // Create SharePoint grounding tool with connection configuration
+        SharepointPreviewTool sharepointTool = new SharepointPreviewTool(
+            new SharepointGroundingToolParameters()
+                .setProjectConnections(Arrays.asList(
+                    new ToolProjectConnection(sharepointConnectionId)
+                ))
+        );
 
-          // Create agent with SharePoint tool
-          PromptAgentDefinition agentDefinition = new PromptAgentDefinition("gpt-4.1-mini")
-              .setInstructions("You are a helpful assistant that can search through SharePoint documents.")
-              .setTools(Collections.singletonList(sharepointTool));
+        // Create agent with SharePoint tool
+        PromptAgentDefinition agentDefinition = new PromptAgentDefinition("gpt-4.1-mini")
+            .setInstructions("You are a helpful assistant that can search through SharePoint documents.")
+            .setTools(Collections.singletonList(sharepointTool));
 
-          AgentVersionDetails agent = agentsClient.createAgentVersion("sharepoint-agent", agentDefinition);
-          System.out.printf("Agent created: %s (version %s)%n", agent.getName(), agent.getVersion());
+        AgentVersionDetails agent = agentsClient.createAgentVersion("sharepoint-agent", agentDefinition);
+        System.out.printf("Agent created: %s (version %s)%n", agent.getName(), agent.getVersion());
 
-          // Create a response
-          AgentReference agentReference = new AgentReference(agent.getName())
-              .setVersion(agent.getVersion());
+        // Create a response
+        AgentReference agentReference = new AgentReference(agent.getName())
+            .setVersion(agent.getVersion());
 
-          Response response = responsesClient.createAzureResponse(
-              new AzureCreateResponseOptions().setAgentReference(agentReference),
-              ResponseCreateParams.builder()
-                  .input("Find the latest project documentation in SharePoint"));
+        Response response = responsesClient.createAzureResponse(
+            new AzureCreateResponseOptions().setAgentReference(agentReference),
+            ResponseCreateParams.builder()
+                .input("Find the latest project documentation in SharePoint"));
 
-          System.out.println("Response: " + response.output());
+        System.out.println("Response: " + response.output());
 
-          // Clean up
-          agentsClient.deleteAgentVersion(agent.getName(), agent.getVersion());
-      }
-  }
-  ```
+        // Clean up
+        agentsClient.deleteAgentVersion(agent.getName(), agent.getVersion());
+    }
+}
+```
 
   </Tab>
 </Tabs>

@@ -59,58 +59,58 @@ To configure role-based access:
 <Tabs>
   <Tab title="Python">
 
-  Install the required packages:
+Install the required packages:
 
-  ```bash
-  pip install "azure-ai-projects>=2.0.0" azure-identity
-  ```
+```bash
+pip install "azure-ai-projects>=2.0.0" azure-identity
+```
 
   </Tab>
   <Tab title="C#">
 
-  Install the required packages:
+Install the required packages:
 
-  ```bash
-  dotnet add package Azure.AI.Projects
-  dotnet add package Azure.AI.Projects.Agents
-  dotnet add package Azure.AI.Extensions.OpenAI
-  dotnet add package Azure.Identity
-  ```
+```bash
+dotnet add package Azure.AI.Projects
+dotnet add package Azure.AI.Projects.Agents
+dotnet add package Azure.AI.Extensions.OpenAI
+dotnet add package Azure.Identity
+```
 
   </Tab>
   <Tab title="TypeScript">
 
-  Install the required packages:
+Install the required packages:
 
-  ```bash
-  npm install @azure/ai-projects@2 @azure/identity
-  ```
+```bash
+npm install @azure/ai-projects@2 @azure/identity
+```
 
   </Tab>
   <Tab title="Python,Csharp,Typescript">
 
-  Set environment variables for your project endpoint and model deployment names:
+Set environment variables for your project endpoint and model deployment names:
 
-  ```bash
-  export FOUNDRY_PROJECT_ENDPOINT="https://{your-ai-services-account}.services.ai.azure.com/api/projects/{project-name}"
-  export MEMORY_STORE_CHAT_MODEL_DEPLOYMENT_NAME="<chat-model-deployment-name>"
-  export MEMORY_STORE_EMBEDDING_MODEL_DEPLOYMENT_NAME="<embedding-model-deployment-name>"
-  ```
+```bash
+export FOUNDRY_PROJECT_ENDPOINT="https://{your-ai-services-account}.services.ai.azure.com/api/projects/{project-name}"
+export MEMORY_STORE_CHAT_MODEL_DEPLOYMENT_NAME="<chat-model-deployment-name>"
+export MEMORY_STORE_EMBEDDING_MODEL_DEPLOYMENT_NAME="<embedding-model-deployment-name>"
+```
 
   </Tab>
   <Tab title="REST">
 
-  Set environment variables for your project endpoint, model deployments, API version, and access token:
+Set environment variables for your project endpoint, model deployments, API version, and access token:
 
-  ```bash
-  FOUNDRY_PROJECT_ENDPOINT="https://{your-ai-services-account}.services.ai.azure.com/api/projects/{project-name}"
-  MEMORY_STORE_CHAT_MODEL_DEPLOYMENT_NAME="<chat-model-deployment-name>" # For example, gpt-5.2
-  MEMORY_STORE_EMBEDDING_MODEL_DEPLOYMENT_NAME="<embedding-model-deployment-name>" # For example, text-embedding-3-small
-  API_VERSION="2025-11-15-preview"
+```bash
+FOUNDRY_PROJECT_ENDPOINT="https://{your-ai-services-account}.services.ai.azure.com/api/projects/{project-name}"
+MEMORY_STORE_CHAT_MODEL_DEPLOYMENT_NAME="<chat-model-deployment-name>" # For example, gpt-5.2
+MEMORY_STORE_EMBEDDING_MODEL_DEPLOYMENT_NAME="<embedding-model-deployment-name>" # For example, text-embedding-3-small
+API_VERSION="2025-11-15-preview"
 
-  # Get a short-lived access token using Azure CLI
-  ACCESS_TOKEN="$(az account get-access-token --resource https://ai.azure.com/ --query accessToken -o tsv)"
-  ```
+# Get a short-lived access token using Azure CLI
+ACCESS_TOKEN="$(az account get-access-token --resource https://ai.azure.com/ --query accessToken -o tsv)"
+```
 
   </Tab>
 </Tabs>
@@ -141,159 +141,159 @@ Create a dedicated memory store for each agent to establish clear boundaries for
 
 <CodeGroup>
 ```python Python
-  import os
-  from azure.ai.projects import AIProjectClient
-  from azure.ai.projects.models import MemoryStoreDefaultDefinition, MemoryStoreDefaultOptions
-  from azure.identity import DefaultAzureCredential
+import os
+from azure.ai.projects import AIProjectClient
+from azure.ai.projects.models import MemoryStoreDefaultDefinition, MemoryStoreDefaultOptions
+from azure.identity import DefaultAzureCredential
 
-  project_client = AIProjectClient(
-      endpoint=os.environ["FOUNDRY_PROJECT_ENDPOINT"],
-      credential=DefaultAzureCredential(),
-  )
+project_client = AIProjectClient(
+    endpoint=os.environ["FOUNDRY_PROJECT_ENDPOINT"],
+    credential=DefaultAzureCredential(),
+)
 
-  memory_store_name = "my_memory_store"
+memory_store_name = "my_memory_store"
 
-  # Specify memory store options
-  options = MemoryStoreDefaultOptions(
-      chat_summary_enabled=True,
-      user_profile_enabled=True,
-      user_profile_details="Avoid irrelevant or sensitive data, such as age, financials, precise location, and credentials"
-  )
+# Specify memory store options
+options = MemoryStoreDefaultOptions(
+    chat_summary_enabled=True,
+    user_profile_enabled=True,
+    user_profile_details="Avoid irrelevant or sensitive data, such as age, financials, precise location, and credentials"
+)
 
-  # Create memory store
-  chat_model = os.environ["MEMORY_STORE_CHAT_MODEL_DEPLOYMENT_NAME"]
-  embedding_model = os.environ["MEMORY_STORE_EMBEDDING_MODEL_DEPLOYMENT_NAME"]
+# Create memory store
+chat_model = os.environ["MEMORY_STORE_CHAT_MODEL_DEPLOYMENT_NAME"]
+embedding_model = os.environ["MEMORY_STORE_EMBEDDING_MODEL_DEPLOYMENT_NAME"]
 
-  definition = MemoryStoreDefaultDefinition(
-      chat_model=chat_model,
-      embedding_model=embedding_model,
-      options=options
-  )
+definition = MemoryStoreDefaultDefinition(
+    chat_model=chat_model,
+    embedding_model=embedding_model,
+    options=options
+)
 
-  memory_store = project_client.beta.memory_stores.create(
-      name=memory_store_name,
-      definition=definition,
-      description="Memory store for customer support agent",
-  )
+memory_store = project_client.beta.memory_stores.create(
+    name=memory_store_name,
+    definition=definition,
+    description="Memory store for customer support agent",
+)
 
-  print(f"Created memory store: {memory_store.name}")
-  ```
+print(f"Created memory store: {memory_store.name}")
+```
 
 ```csharp C#
-  using System;
-  using Azure.AI.Projects;
-  using Azure.AI.Projects.Memory;
-  using Azure.Identity;
+using System;
+using Azure.AI.Projects;
+using Azure.AI.Projects.Memory;
+using Azure.Identity;
 
-  #pragma warning disable AAIP001
+#pragma warning disable AAIP001
 
-  var projectEndpoint = Environment.GetEnvironmentVariable(
-      "FOUNDRY_PROJECT_ENDPOINT");
-  var chatModel = Environment.GetEnvironmentVariable(
-      "MEMORY_STORE_CHAT_MODEL_DEPLOYMENT_NAME");
-  var embeddingModel = Environment.GetEnvironmentVariable(
-      "MEMORY_STORE_EMBEDDING_MODEL_DEPLOYMENT_NAME");
+var projectEndpoint = Environment.GetEnvironmentVariable(
+    "FOUNDRY_PROJECT_ENDPOINT");
+var chatModel = Environment.GetEnvironmentVariable(
+    "MEMORY_STORE_CHAT_MODEL_DEPLOYMENT_NAME");
+var embeddingModel = Environment.GetEnvironmentVariable(
+    "MEMORY_STORE_EMBEDDING_MODEL_DEPLOYMENT_NAME");
 
-  AIProjectClient projectClient = new(
-      new Uri(projectEndpoint),
-      new DefaultAzureCredential());
+AIProjectClient projectClient = new(
+    new Uri(projectEndpoint),
+    new DefaultAzureCredential());
 
-  var memoryStoreName = "my_memory_store";
+var memoryStoreName = "my_memory_store";
 
-  // Specify memory store options
-  MemoryStoreDefaultDefinition memoryStoreDefinition = new(
-      chatModel: chatModel,
-      embeddingModel: embeddingModel
-  );
-  memoryStoreDefinition.Options = new(
-      isUserProfileEnabled: true,
-      isChatSummaryEnabled: true);
-  memoryStoreDefinition.Options.UserProfileDetails =
-      "Avoid irrelevant or sensitive data, such as age, "
-      + "financials, precise location, and credentials";
+// Specify memory store options
+MemoryStoreDefaultDefinition memoryStoreDefinition = new(
+    chatModel: chatModel,
+    embeddingModel: embeddingModel
+);
+memoryStoreDefinition.Options = new(
+    isUserProfileEnabled: true,
+    isChatSummaryEnabled: true);
+memoryStoreDefinition.Options.UserProfileDetails =
+    "Avoid irrelevant or sensitive data, such as age, "
+    + "financials, precise location, and credentials";
 
-  // Create memory store
-  MemoryStore memoryStore = projectClient.MemoryStores.CreateMemoryStore(
-      name: memoryStoreName,
-      definition: memoryStoreDefinition,
-      description: "Memory store for customer support agent"
-  );
+// Create memory store
+MemoryStore memoryStore = projectClient.MemoryStores.CreateMemoryStore(
+    name: memoryStoreName,
+    definition: memoryStoreDefinition,
+    description: "Memory store for customer support agent"
+);
 
-  Console.WriteLine($"Created memory store: {memoryStore.Name}");
-  ```
+Console.WriteLine($"Created memory store: {memoryStore.Name}");
+```
 
 ```typescript TypeScript
-  import { DefaultAzureCredential } from "@azure/identity";
-  import type {
-    MemoryStoreDefaultDefinition,
-    MemoryStoreDefaultOptions,
-  } from "@azure/ai-projects";
-  import { AIProjectClient } from "@azure/ai-projects";
+import { DefaultAzureCredential } from "@azure/identity";
+import type {
+  MemoryStoreDefaultDefinition,
+  MemoryStoreDefaultOptions,
+} from "@azure/ai-projects";
+import { AIProjectClient } from "@azure/ai-projects";
 
-  const projectEndpoint =
-    process.env["FOUNDRY_PROJECT_ENDPOINT"] ||
-    "<project endpoint>";
-  const chatModelDeployment =
-    process.env["MEMORY_STORE_CHAT_MODEL_DEPLOYMENT_NAME"] ||
-    "<chat model deployment name>";
-  const embeddingModelDeployment =
-    process.env["MEMORY_STORE_EMBEDDING_MODEL_DEPLOYMENT_NAME"] ||
-    "<embedding model deployment name>";
+const projectEndpoint =
+  process.env["FOUNDRY_PROJECT_ENDPOINT"] ||
+  "<project endpoint>";
+const chatModelDeployment =
+  process.env["MEMORY_STORE_CHAT_MODEL_DEPLOYMENT_NAME"] ||
+  "<chat model deployment name>";
+const embeddingModelDeployment =
+  process.env["MEMORY_STORE_EMBEDDING_MODEL_DEPLOYMENT_NAME"] ||
+  "<embedding model deployment name>";
 
-  const memoryStoreName = "my_memory_store";
+const memoryStoreName = "my_memory_store";
 
-  const project = new AIProjectClient(
-    projectEndpoint,
-    new DefaultAzureCredential(),
-  );
+const project = new AIProjectClient(
+  projectEndpoint,
+  new DefaultAzureCredential(),
+);
 
-  const memoryOptions: MemoryStoreDefaultOptions = {
-    user_profile_enabled: true,
-    chat_summary_enabled: true,
-    user_profile_details:
-      "Avoid irrelevant or sensitive data, such as age, " +
-      "financials, precise location, and credentials",
-  };
+const memoryOptions: MemoryStoreDefaultOptions = {
+  user_profile_enabled: true,
+  chat_summary_enabled: true,
+  user_profile_details:
+    "Avoid irrelevant or sensitive data, such as age, " +
+    "financials, precise location, and credentials",
+};
 
-  const definition: MemoryStoreDefaultDefinition = {
-    kind: "default",
-    chat_model: chatModelDeployment,
-    embedding_model: embeddingModelDeployment,
-    options: memoryOptions,
-  };
+const definition: MemoryStoreDefaultDefinition = {
+  kind: "default",
+  chat_model: chatModelDeployment,
+  embedding_model: embeddingModelDeployment,
+  options: memoryOptions,
+};
 
-  const memoryStore = await project.beta.memoryStores.create(
-    memoryStoreName,
-    definition,
-    {
-      description: "Memory store for customer support agent",
-    },
-  );
+const memoryStore = await project.beta.memoryStores.create(
+  memoryStoreName,
+  definition,
+  {
+    description: "Memory store for customer support agent",
+  },
+);
 
-  console.log(
-    `Created memory store: ${memoryStore.name} (${memoryStore.id})`,
-  );
-  ```
+console.log(
+  `Created memory store: ${memoryStore.name} (${memoryStore.id})`,
+);
+```
 
 ```bash REST
-  curl -X POST "${FOUNDRY_PROJECT_ENDPOINT}/memory_stores?api-version=${API_VERSION}" \
-    -H "Authorization: Bearer ${ACCESS_TOKEN}" \
-    -H "Content-Type: application/json" \
-    -d '{
-      "name": "my_memory_store",
-      "description": "Memory store for customer support agent",
-      "definition": {
-        "kind": "default",
-        "chat_model": "'"${MEMORY_STORE_CHAT_MODEL_DEPLOYMENT_NAME}"'",
-        "embedding_model": "'"${MEMORY_STORE_EMBEDDING_MODEL_DEPLOYMENT_NAME}"'",
-        "options": {
-          "chat_summary_enabled": true,
-          "user_profile_enabled": true,
-          "user_profile_details": "Avoid irrelevant or sensitive data, such as age, financials, precise location, and credentials"
-        }
+curl -X POST "${FOUNDRY_PROJECT_ENDPOINT}/memory_stores?api-version=${API_VERSION}" \
+  -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "my_memory_store",
+    "description": "Memory store for customer support agent",
+    "definition": {
+      "kind": "default",
+      "chat_model": "'"${MEMORY_STORE_CHAT_MODEL_DEPLOYMENT_NAME}"'",
+      "embedding_model": "'"${MEMORY_STORE_EMBEDDING_MODEL_DEPLOYMENT_NAME}"'",
+      "options": {
+        "chat_summary_enabled": true,
+        "user_profile_enabled": true,
+        "user_profile_details": "Avoid irrelevant or sensitive data, such as age, financials, precise location, and credentials"
       }
-    }'
-  ```
+    }
+  }'
+```
 </CodeGroup>
 
 <Tip>
@@ -317,46 +317,46 @@ Update memory store properties, such as `description` or `metadata`, to better m
 
 <CodeGroup>
 ```python Python
-  # Update memory store properties
-  updated_store = project_client.beta.memory_stores.update(
-      name=memory_store_name,
-      description="Updated description"
-  )
+# Update memory store properties
+updated_store = project_client.beta.memory_stores.update(
+    name=memory_store_name,
+    description="Updated description"
+)
 
-  print(f"Updated: {updated_store.description}")
-  ```
+print(f"Updated: {updated_store.description}")
+```
 
 ```csharp C#
-  // Update memory store properties
-  MemoryStore updatedStore = projectClient.MemoryStores.UpdateMemoryStore(
-      name: memoryStoreName,
-      description: "Updated description"
-  );
+// Update memory store properties
+MemoryStore updatedStore = projectClient.MemoryStores.UpdateMemoryStore(
+    name: memoryStoreName,
+    description: "Updated description"
+);
 
-  Console.WriteLine($"Updated: {updatedStore.Description}");
-  ```
+Console.WriteLine($"Updated: {updatedStore.Description}");
+```
 
 ```typescript TypeScript
-  const updatedStore = await project.beta.memoryStores.update(
-    memoryStoreName,
-    {
-      description: "Updated description",
-    },
-  );
+const updatedStore = await project.beta.memoryStores.update(
+  memoryStoreName,
+  {
+    description: "Updated description",
+  },
+);
 
-  console.log(`Updated: ${updatedStore.description}`);
-  ```
+console.log(`Updated: ${updatedStore.description}`);
+```
 
 ```bash REST
-  MEMORY_STORE_NAME="my_memory_store"
+MEMORY_STORE_NAME="my_memory_store"
 
-  curl -X POST "${FOUNDRY_PROJECT_ENDPOINT}/memory_stores/${MEMORY_STORE_NAME}?api-version=${API_VERSION}" \
-    -H "Authorization: Bearer ${ACCESS_TOKEN}" \
-    -H "Content-Type: application/json" \
-    -d '{
-      "description": "Updated description"
-    }'
-  ```
+curl -X POST "${FOUNDRY_PROJECT_ENDPOINT}/memory_stores/${MEMORY_STORE_NAME}?api-version=${API_VERSION}" \
+  -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "description": "Updated description"
+  }'
+```
 </CodeGroup>
 
 ## List memory stores
@@ -365,36 +365,36 @@ Retrieve a list of memory stores in your project to manage and monitor your memo
 
 <CodeGroup>
 ```python Python
-  # List all memory stores
-  stores_list = list(project_client.beta.memory_stores.list())
+# List all memory stores
+stores_list = list(project_client.beta.memory_stores.list())
 
-  print(f"Found {len(stores_list)} memory stores")
-  for store in stores_list:
-      print(f"- {store.name} ({store.description})")
-  ```
+print(f"Found {len(stores_list)} memory stores")
+for store in stores_list:
+    print(f"- {store.name} ({store.description})")
+```
 
 ```csharp C#
-  // List all memory stores
-  foreach (MemoryStore store in projectClient.MemoryStores.GetMemoryStores())
-  {
-      Console.WriteLine(
-          $"Memory store: {store.Name} ({store.Description})");
-  }
-  ```
+// List all memory stores
+foreach (MemoryStore store in projectClient.MemoryStores.GetMemoryStores())
+{
+    Console.WriteLine(
+        $"Memory store: {store.Name} ({store.Description})");
+}
+```
 
 ```typescript TypeScript
-  const storeList = project.beta.memoryStores.list();
+const storeList = project.beta.memoryStores.list();
 
-  console.log("Listing all memory stores...");
-  for await (const store of storeList) {
-    console.log(`  - Memory Store: ${store.name} (${store.id})`);
-  }
-  ```
+console.log("Listing all memory stores...");
+for await (const store of storeList) {
+  console.log(`  - Memory Store: ${store.name} (${store.id})`);
+}
+```
 
 ```bash REST
-  curl -X GET "${FOUNDRY_PROJECT_ENDPOINT}/memory_stores?api-version=${API_VERSION}" \
-    -H "Authorization: Bearer ${ACCESS_TOKEN}"
-  ```
+curl -X GET "${FOUNDRY_PROJECT_ENDPOINT}/memory_stores?api-version=${API_VERSION}" \
+  -H "Authorization: Bearer ${ACCESS_TOKEN}"
+```
 </CodeGroup>
 
 ## Use memories via an agent tool
@@ -409,120 +409,120 @@ To scope memories to an individual end user, set `scope` to `"{{$userId}}"` in t
 
 <CodeGroup>
 ```python Python
-  from azure.ai.projects.models import MemorySearchPreviewTool, PromptAgentDefinition
+from azure.ai.projects.models import MemorySearchPreviewTool, PromptAgentDefinition
 
-  # Set scope to associate the memories with
-  scope = "user_123"
+# Set scope to associate the memories with
+scope = "user_123"
 
-  openai_client = project_client.get_openai_client()
+openai_client = project_client.get_openai_client()
 
-  # Create memory search tool
-  tool = MemorySearchPreviewTool(
-      memory_store_name=memory_store_name,
-      scope=scope,
-      update_delay=1, # Wait 1 second of inactivity before updating memories
-      # In a real application, set this to a higher value like 300 (5 minutes, default)
-  )
+# Create memory search tool
+tool = MemorySearchPreviewTool(
+    memory_store_name=memory_store_name,
+    scope=scope,
+    update_delay=1, # Wait 1 second of inactivity before updating memories
+    # In a real application, set this to a higher value like 300 (5 minutes, default)
+)
 
-  # Create a prompt agent with memory search tool
-  agent = project_client.agents.create_version(
-      agent_name="MyAgent",
-      definition=PromptAgentDefinition(
-          model=os.environ["MEMORY_STORE_CHAT_MODEL_DEPLOYMENT_NAME"],
-          instructions="You are a helpful assistant that answers general questions",
-          tools=[tool],
-      )
-  )
+# Create a prompt agent with memory search tool
+agent = project_client.agents.create_version(
+    agent_name="MyAgent",
+    definition=PromptAgentDefinition(
+        model=os.environ["MEMORY_STORE_CHAT_MODEL_DEPLOYMENT_NAME"],
+        instructions="You are a helpful assistant that answers general questions",
+        tools=[tool],
+    )
+)
 
-  print(f"Agent created (id: {agent.id}, name: {agent.name}, version: {agent.version})")
-  ```
+print(f"Agent created (id: {agent.id}, name: {agent.name}, version: {agent.version})")
+```
 
 ```csharp C#
-  using Azure.AI.Projects.Agents;
-  using Azure.AI.Extensions.OpenAI;
-  using OpenAI.Responses;
+using Azure.AI.Projects.Agents;
+using Azure.AI.Extensions.OpenAI;
+using OpenAI.Responses;
 
-  #pragma warning disable OPENAI001
+#pragma warning disable OPENAI001
 
-  // Set scope to associate the memories with
-  string scope = "user_123";
+// Set scope to associate the memories with
+string scope = "user_123";
 
-  // Create a prompt agent with memory search tool
-  DeclarativeAgentDefinition agentDefinition = new(model: chatModel)
-  {
-      Instructions = "You are a helpful assistant that answers "
-          + "general questions",
-  };
-  agentDefinition.Tools.Add(new MemorySearchPreviewTool(
-      memoryStoreName: memoryStore.Name,
-      scope: scope)
-  {
-      UpdateDelayInSecs = 1, // Wait 1 second of inactivity before updating memories
-      // In a real application, set this to a higher value
-      // like 300 (5 minutes, default)
-  });
+// Create a prompt agent with memory search tool
+DeclarativeAgentDefinition agentDefinition = new(model: chatModel)
+{
+    Instructions = "You are a helpful assistant that answers "
+        + "general questions",
+};
+agentDefinition.Tools.Add(new MemorySearchPreviewTool(
+    memoryStoreName: memoryStore.Name,
+    scope: scope)
+{
+    UpdateDelayInSecs = 1, // Wait 1 second of inactivity before updating memories
+    // In a real application, set this to a higher value
+    // like 300 (5 minutes, default)
+});
 
-  ProjectsAgentVersion agent =
-      projectClient.AgentAdministrationClient.CreateAgentVersion(
-          agentName: "MyAgent",
-          options: new(agentDefinition));
+ProjectsAgentVersion agent =
+    projectClient.AgentAdministrationClient.CreateAgentVersion(
+        agentName: "MyAgent",
+        options: new(agentDefinition));
 
-  Console.WriteLine(
-      $"Agent created (id: {agent.Id}, name: {agent.Name}, "
-      + $"version: {agent.Version})");
-  ```
+Console.WriteLine(
+    $"Agent created (id: {agent.Id}, name: {agent.Name}, "
+    + $"version: {agent.Version})");
+```
 
 ```typescript TypeScript
-  // Set scope to associate the memories with
-  const scope = "user_123";
+// Set scope to associate the memories with
+const scope = "user_123";
 
-  const agent = await project.agents.createVersion(
-    "memory-search-agent",
-    {
-      kind: "prompt",
-      model: chatModelDeployment,
-      instructions:
-        "You are a helpful assistant that retrieves relevant " +
-        "information from the user's memory store to answer their questions.",
-      tools: [
-        {
-          type: "memory_search_preview",
-          memory_store_name: memoryStoreName,
-          scope: scope,
-          update_delay: 1,
-        },
-      ],
-    },
-  );
+const agent = await project.agents.createVersion(
+  "memory-search-agent",
+  {
+    kind: "prompt",
+    model: chatModelDeployment,
+    instructions:
+      "You are a helpful assistant that retrieves relevant " +
+      "information from the user's memory store to answer their questions.",
+    tools: [
+      {
+        type: "memory_search_preview",
+        memory_store_name: memoryStoreName,
+        scope: scope,
+        update_delay: 1,
+      },
+    ],
+  },
+);
 
-  console.log(
-    `Created agent with memory search tool, agent ID: ${agent.id}, ` +
-      `name: ${agent.name}, version: ${agent.version}`,
-  );
-  ```
+console.log(
+  `Created agent with memory search tool, agent ID: ${agent.id}, ` +
+    `name: ${agent.name}, version: ${agent.version}`,
+);
+```
 
 ```bash REST
-  # The agents API uses api-version=v1, which differs from the memory store API version
-  curl -X POST "${FOUNDRY_PROJECT_ENDPOINT}/agents?api-version=v1" \
-    -H "Authorization: Bearer ${ACCESS_TOKEN}" \
-    -H "Content-Type: application/json" \
-    -d '{
-      "name": "MyAgent",
-      "definition": {
-          "kind": "prompt",
-          "model": "gpt-5.2",
-          "instructions": "You are a helpful assistant that answers general questions",
-          "tools": [
-              {
-                "type": "memory_search_preview",
-                "memory_store_name": "my_memory_store",
-                "scope": "user_123",
-                "update_delay": 1
-              }
-          ]
-      }
-  }'
-  ```
+# The agents API uses api-version=v1, which differs from the memory store API version
+curl -X POST "${FOUNDRY_PROJECT_ENDPOINT}/agents?api-version=v1" \
+  -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "MyAgent",
+    "definition": {
+        "kind": "prompt",
+        "model": "gpt-5.2",
+        "instructions": "You are a helpful assistant that answers general questions",
+        "tools": [
+            {
+              "type": "memory_search_preview",
+              "memory_store_name": "my_memory_store",
+              "scope": "user_123",
+              "update_delay": 1
+            }
+        ]
+    }
+}'
+```
 </CodeGroup>
 
 ### Create a conversation
@@ -533,151 +533,151 @@ After each agent response, the service internally calls `update_memories`. Howev
 
 <CodeGroup>
 ```python Python
-  import time
+import time
 
-  # Create a conversation with the agent with memory tool enabled
-  conversation = openai_client.conversations.create()
-  print(f"Created conversation (id: {conversation.id})")
+# Create a conversation with the agent with memory tool enabled
+conversation = openai_client.conversations.create()
+print(f"Created conversation (id: {conversation.id})")
 
-  # Create an agent response to initial user message
-  response = openai_client.responses.create(
-      input="I prefer dark roast coffee",
-      conversation=conversation.id,
-      extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
-      # To scope memories to an end user, uncomment:
-      # extra_headers={"x-memory-user-id": "<user-id>"},
-  )
+# Create an agent response to initial user message
+response = openai_client.responses.create(
+    input="I prefer dark roast coffee",
+    conversation=conversation.id,
+    extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
+    # To scope memories to an end user, uncomment:
+    # extra_headers={"x-memory-user-id": "<user-id>"},
+)
 
-  print(f"Response output: {response.output_text}")
+print(f"Response output: {response.output_text}")
 
-  # After an inactivity in the conversation, memories will be extracted from the conversation and stored
-  print("Waiting for memories to be stored...")
-  time.sleep(65)
+# After an inactivity in the conversation, memories will be extracted from the conversation and stored
+print("Waiting for memories to be stored...")
+time.sleep(65)
 
-  # Create a new conversation
-  new_conversation = openai_client.conversations.create()
-  print(f"Created new conversation (id: {new_conversation.id})")
+# Create a new conversation
+new_conversation = openai_client.conversations.create()
+print(f"Created new conversation (id: {new_conversation.id})")
 
-  # Create an agent response with stored memories
-  new_response = openai_client.responses.create(
-      input="Please order my usual coffee",
-      conversation=new_conversation.id,
-      extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
-  )
+# Create an agent response with stored memories
+new_response = openai_client.responses.create(
+    input="Please order my usual coffee",
+    conversation=new_conversation.id,
+    extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
+)
 
-  print(f"Response output: {new_response.output_text}")
-  ```
+print(f"Response output: {new_response.output_text}")
+```
 
 ```csharp C#
-  using System.Threading;
+using System.Threading;
 
-  #pragma warning disable OPENAI001
+#pragma warning disable OPENAI001
 
-  // Get a response client scoped to the agent
-  ProjectResponsesClient responseClient =
-      projectClient.ProjectOpenAIClient
-          .GetProjectResponsesClientForAgent(agent.Name);
+// Get a response client scoped to the agent
+ProjectResponsesClient responseClient =
+    projectClient.ProjectOpenAIClient
+        .GetProjectResponsesClientForAgent(agent.Name);
 
-  // Create an agent response to initial user message
-  ResponseItem request = ResponseItem.CreateUserMessageItem(
-      "I prefer dark roast coffee");
-  ResponseResult response = responseClient.CreateResponse([request]);
-  // To scope memories to an end user, uncomment:
-  // var options = new CreateResponseOptions();
-  // options.InputItems.Add(request);
-  // var requestOptions = new RequestOptions();
-  // requestOptions.AddHeader("x-memory-user-id", "<user-id>");
-  // ClientResult result = responseClient.CreateResponse(
-  //     BinaryContent.Create(options), requestOptions);
-  // ResponseResult response = ModelReaderWriter.Read<ResponseResult>(
-  //     result.GetRawResponse().Content);
+// Create an agent response to initial user message
+ResponseItem request = ResponseItem.CreateUserMessageItem(
+    "I prefer dark roast coffee");
+ResponseResult response = responseClient.CreateResponse([request]);
+// To scope memories to an end user, uncomment:
+// var options = new CreateResponseOptions();
+// options.InputItems.Add(request);
+// var requestOptions = new RequestOptions();
+// requestOptions.AddHeader("x-memory-user-id", "<user-id>");
+// ClientResult result = responseClient.CreateResponse(
+//     BinaryContent.Create(options), requestOptions);
+// ResponseResult response = ModelReaderWriter.Read<ResponseResult>(
+//     result.GetRawResponse().Content);
 
-  Console.WriteLine($"Response output: {response.GetOutputText()}");
+Console.WriteLine($"Response output: {response.GetOutputText()}");
 
-  // After inactivity, memories are extracted and stored
-  Console.WriteLine("Waiting for memories to be stored...");
-  Thread.Sleep(65_000);
+// After inactivity, memories are extracted and stored
+Console.WriteLine("Waiting for memories to be stored...");
+Thread.Sleep(65_000);
 
-  // Create a new response to demonstrate cross-session recall
-  ResponseItem newRequest = ResponseItem.CreateUserMessageItem(
-      "Please order my usual coffee");
-  ResponseResult newResponse = responseClient.CreateResponse(
-      [newRequest]);
+// Create a new response to demonstrate cross-session recall
+ResponseItem newRequest = ResponseItem.CreateUserMessageItem(
+    "Please order my usual coffee");
+ResponseResult newResponse = responseClient.CreateResponse(
+    [newRequest]);
 
-  Console.WriteLine(
-      $"Response output: {newResponse.GetOutputText()}");
-  ```
+Console.WriteLine(
+    $"Response output: {newResponse.GetOutputText()}");
+```
 
 ```typescript TypeScript
-  import { setTimeout } from "timers/promises";
+import { setTimeout } from "timers/promises";
 
-  const openaiClient = project.getOpenAIClient();
+const openaiClient = project.getOpenAIClient();
 
-  // Create a conversation with the agent with memory tool enabled
-  const conversation = await openaiClient.conversations.create();
-  console.log(`Created conversation (id: ${conversation.id})`);
+// Create a conversation with the agent with memory tool enabled
+const conversation = await openaiClient.conversations.create();
+console.log(`Created conversation (id: ${conversation.id})`);
 
-  // Create an agent response to initial user message
-  const response = await openaiClient.responses.create(
-    {
-      conversation: conversation.id,
-      input: "I prefer dark roast coffee",
+// Create an agent response to initial user message
+const response = await openaiClient.responses.create(
+  {
+    conversation: conversation.id,
+    input: "I prefer dark roast coffee",
+  },
+  {
+    body: {
+      agent: { name: agent.name, type: "agent_reference" },
     },
-    {
-      body: {
-        agent: { name: agent.name, type: "agent_reference" },
-      },
-      // To scope memories to an end user, uncomment:
-      // headers: { "x-memory-user-id": "<user-id>" },
+    // To scope memories to an end user, uncomment:
+    // headers: { "x-memory-user-id": "<user-id>" },
+  },
+);
+
+console.log(`Response output: ${response.output_text}`);
+
+// After inactivity, memories are extracted and stored
+console.log("Waiting for memories to be stored...");
+await setTimeout(65_000);
+
+// Create a new conversation to demonstrate cross-session recall
+const newConversation = await openaiClient.conversations.create();
+console.log(`Created new conversation (id: ${newConversation.id})`);
+
+// Create an agent response with stored memories
+const newResponse = await openaiClient.responses.create(
+  {
+    conversation: newConversation.id,
+    input: "Please order my usual coffee",
+  },
+  {
+    body: {
+      agent: { name: agent.name, type: "agent_reference" },
     },
-  );
+  },
+);
 
-  console.log(`Response output: ${response.output_text}`);
-
-  // After inactivity, memories are extracted and stored
-  console.log("Waiting for memories to be stored...");
-  await setTimeout(65_000);
-
-  // Create a new conversation to demonstrate cross-session recall
-  const newConversation = await openaiClient.conversations.create();
-  console.log(`Created new conversation (id: ${newConversation.id})`);
-
-  // Create an agent response with stored memories
-  const newResponse = await openaiClient.responses.create(
-    {
-      conversation: newConversation.id,
-      input: "Please order my usual coffee",
-    },
-    {
-      body: {
-        agent: { name: agent.name, type: "agent_reference" },
-      },
-    },
-  );
-
-  console.log(`Response output: ${newResponse.output_text}`);
-  ```
+console.log(`Response output: ${newResponse.output_text}`);
+```
 
 ```bash REST
-  curl -X POST "${FOUNDRY_PROJECT_ENDPOINT}/openai/v1/conversations" \
-      -H "Authorization: Bearer ${ACCESS_TOKEN}" \
-      -H "Content-Type: application/json" \
-      -d '{}'
+curl -X POST "${FOUNDRY_PROJECT_ENDPOINT}/openai/v1/conversations" \
+    -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+    -H "Content-Type: application/json" \
+    -d '{}'
 
-  # Copy the "id" field from the previous response
-  # To scope memories to an end user, add -H "x-memory-user-id: <user-id>" to the following request
-  curl -X POST "${FOUNDRY_PROJECT_ENDPOINT}/openai/v1/responses" \
-      -H "Authorization: Bearer ${ACCESS_TOKEN}" \
-      -H "Content-Type: application/json" \
-      -d '{
-        "input": "I prefer dark roast coffee",
-        "conversation": "{conversation-id}",
-        "agent_reference": {
-          "type": "agent_reference",
-          "name": "MyAgent"
-        }
-      }'
-  ```
+# Copy the "id" field from the previous response
+# To scope memories to an end user, add -H "x-memory-user-id: <user-id>" to the following request
+curl -X POST "${FOUNDRY_PROJECT_ENDPOINT}/openai/v1/responses" \
+    -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "input": "I prefer dark roast coffee",
+      "conversation": "{conversation-id}",
+      "agent_reference": {
+        "type": "agent_reference",
+        "name": "MyAgent"
+      }
+    }'
+```
 </CodeGroup>
 
 ## Use memories via APIs
@@ -694,210 +694,210 @@ You can update a memory store with content from multiple conversation turns, or 
 
 <CodeGroup>
 ```python Python
-  # Set scope to associate the memories with
-  scope = "user_123"
+# Set scope to associate the memories with
+scope = "user_123"
 
-  user_message = {
-    "role": "user",
-    "content": "I prefer dark roast coffee and usually drink it in the morning",
-     "type": "message"
-  }
+user_message = {
+  "role": "user",
+  "content": "I prefer dark roast coffee and usually drink it in the morning",
+   "type": "message"
+}
 
-  update_poller = project_client.beta.memory_stores.begin_update_memories(
-      name=memory_store_name,
-      scope=scope,
-      items=[user_message], # Pass conversation items that you want to add to memory
-      update_delay=0, # Trigger update immediately without waiting for inactivity
-  )
+update_poller = project_client.beta.memory_stores.begin_update_memories(
+    name=memory_store_name,
+    scope=scope,
+    items=[user_message], # Pass conversation items that you want to add to memory
+    update_delay=0, # Trigger update immediately without waiting for inactivity
+)
 
-  # Wait for the update operation to complete, but can also fire and forget
-  update_result = update_poller.result()
-  print(f"Updated with {len(update_result.memory_operations)} memory operations")
-  for operation in update_result.memory_operations:
-      print(
-          f"  - Operation: {operation.kind}, Memory ID: {operation.memory_item.memory_id}, Content: {operation.memory_item.content}"
-      )
+# Wait for the update operation to complete, but can also fire and forget
+update_result = update_poller.result()
+print(f"Updated with {len(update_result.memory_operations)} memory operations")
+for operation in update_result.memory_operations:
+    print(
+        f"  - Operation: {operation.kind}, Memory ID: {operation.memory_item.memory_id}, Content: {operation.memory_item.content}"
+    )
 
-  # Extend the previous update with another update and more messages
-  new_message = {
-      "role":"user", 
-      "content":"I also like cappuccinos in the afternoon", 
-      "type":"message"}
+# Extend the previous update with another update and more messages
+new_message = {
+    "role":"user", 
+    "content":"I also like cappuccinos in the afternoon", 
+    "type":"message"}
 
-  new_update_poller = project_client.beta.memory_stores.begin_update_memories(
-      name=memory_store_name,
-      scope=scope,
-      items=[new_message],
-      previous_update_id=update_poller.update_id, # Extend from previous update ID
-      update_delay=0, # Trigger update immediately without waiting for inactivity
-  )
-  new_update_result = new_update_poller.result()
-  for operation in new_update_result.memory_operations:
-      print(
-          f"  - Operation: {operation.kind}, Memory ID: {operation.memory_item.memory_id}, Content: {operation.memory_item.content}"
-      )
-  ```
+new_update_poller = project_client.beta.memory_stores.begin_update_memories(
+    name=memory_store_name,
+    scope=scope,
+    items=[new_message],
+    previous_update_id=update_poller.update_id, # Extend from previous update ID
+    update_delay=0, # Trigger update immediately without waiting for inactivity
+)
+new_update_result = new_update_poller.result()
+for operation in new_update_result.memory_operations:
+    print(
+        f"  - Operation: {operation.kind}, Memory ID: {operation.memory_item.memory_id}, Content: {operation.memory_item.content}"
+    )
+```
 
 ```csharp C#
-  #pragma warning disable OPENAI001
+#pragma warning disable OPENAI001
 
-  // Set scope to associate the memories with
-  string scope = "user_123";
+// Set scope to associate the memories with
+string scope = "user_123";
 
-  MemoryUpdateOptions memoryOptions = new(scope)
-  {
-      UpdateDelay = 0, // Trigger update immediately without waiting for inactivity
-  };
-  memoryOptions.Items.Add(ResponseItem.CreateUserMessageItem(
-      "I prefer dark roast coffee and usually drink it "
-      + "in the morning"));
+MemoryUpdateOptions memoryOptions = new(scope)
+{
+    UpdateDelay = 0, // Trigger update immediately without waiting for inactivity
+};
+memoryOptions.Items.Add(ResponseItem.CreateUserMessageItem(
+    "I prefer dark roast coffee and usually drink it "
+    + "in the morning"));
 
-  // Wait for the update operation to complete
-  MemoryUpdateResult updateResult =
-      projectClient.MemoryStores.WaitForMemoriesUpdate(
-          memoryStoreName: memoryStore.Name,
-          options: memoryOptions,
-          pollingInterval: 500);
+// Wait for the update operation to complete
+MemoryUpdateResult updateResult =
+    projectClient.MemoryStores.WaitForMemoriesUpdate(
+        memoryStoreName: memoryStore.Name,
+        options: memoryOptions,
+        pollingInterval: 500);
 
-  if (updateResult.Status == MemoryStoreUpdateStatus.Failed)
-  {
-      throw new InvalidOperationException(
-          updateResult.ErrorDetails);
-  }
-  Console.WriteLine(
-      $"Updated with {updateResult.Details.MemoryOperations.Count} "
-      + "memory operations");
-  foreach (var operation in updateResult.Details.MemoryOperations)
-  {
-      Console.WriteLine(
-          $"  - Operation: {operation.Kind}, "
-          + $"Memory ID: {operation.MemoryItem.MemoryId}, "
-          + $"Content: {operation.MemoryItem.Content}");
-  }
+if (updateResult.Status == MemoryStoreUpdateStatus.Failed)
+{
+    throw new InvalidOperationException(
+        updateResult.ErrorDetails);
+}
+Console.WriteLine(
+    $"Updated with {updateResult.Details.MemoryOperations.Count} "
+    + "memory operations");
+foreach (var operation in updateResult.Details.MemoryOperations)
+{
+    Console.WriteLine(
+        $"  - Operation: {operation.Kind}, "
+        + $"Memory ID: {operation.MemoryItem.MemoryId}, "
+        + $"Content: {operation.MemoryItem.Content}");
+}
 
-  // Extend the previous update with another message
-  MemoryUpdateOptions newMemoryOptions = new(scope)
-  {
-      PreviousUpdateId = updateResult.UpdateId,
-      UpdateDelay = 0, // Trigger update immediately without waiting for inactivity
-  };
-  newMemoryOptions.Items.Add(ResponseItem.CreateUserMessageItem(
-      "I also like cappuccinos in the afternoon"));
+// Extend the previous update with another message
+MemoryUpdateOptions newMemoryOptions = new(scope)
+{
+    PreviousUpdateId = updateResult.UpdateId,
+    UpdateDelay = 0, // Trigger update immediately without waiting for inactivity
+};
+newMemoryOptions.Items.Add(ResponseItem.CreateUserMessageItem(
+    "I also like cappuccinos in the afternoon"));
 
-  MemoryUpdateResult newUpdateResult =
-      projectClient.MemoryStores.WaitForMemoriesUpdate(
-          memoryStoreName: memoryStore.Name,
-          options: newMemoryOptions,
-          pollingInterval: 500);
+MemoryUpdateResult newUpdateResult =
+    projectClient.MemoryStores.WaitForMemoriesUpdate(
+        memoryStoreName: memoryStore.Name,
+        options: newMemoryOptions,
+        pollingInterval: 500);
 
-  if (newUpdateResult.Status == MemoryStoreUpdateStatus.Failed)
-  {
-      throw new InvalidOperationException(
-          newUpdateResult.ErrorDetails);
-  }
-  foreach (var operation in newUpdateResult.Details.MemoryOperations)
-  {
-      Console.WriteLine(
-          $"  - Operation: {operation.Kind}, "
-          + $"Memory ID: {operation.MemoryItem.MemoryId}, "
-          + $"Content: {operation.MemoryItem.Content}");
-  }
-  ```
+if (newUpdateResult.Status == MemoryStoreUpdateStatus.Failed)
+{
+    throw new InvalidOperationException(
+        newUpdateResult.ErrorDetails);
+}
+foreach (var operation in newUpdateResult.Details.MemoryOperations)
+{
+    Console.WriteLine(
+        $"  - Operation: {operation.Kind}, "
+        + $"Memory ID: {operation.MemoryItem.MemoryId}, "
+        + $"Content: {operation.MemoryItem.Content}");
+}
+```
 
 ```typescript TypeScript
-  const scope = "user_123";
+const scope = "user_123";
 
-  const userMessage: Record<string, unknown> = {
-    type: "message",
-    role: "user",
-    content: [
-      {
-        type: "input_text",
-        text: "I prefer dark roast coffee and usually drink it in the morning",
-      },
-    ],
-  };
-
-  console.log("\nSubmitting memory update request...");
-  const updatePoller = project.beta.memoryStores.updateMemories(
-    memoryStoreName,
-    scope,
+const userMessage: Record<string, unknown> = {
+  type: "message",
+  role: "user",
+  content: [
     {
-      items: [userMessage],
-      updateDelayInSecs: 0,
+      type: "input_text",
+      text: "I prefer dark roast coffee and usually drink it in the morning",
     },
-  );
+  ],
+};
 
-  const updateResult = await updatePoller.pollUntilDone();
+console.log("\nSubmitting memory update request...");
+const updatePoller = project.beta.memoryStores.updateMemories(
+  memoryStoreName,
+  scope,
+  {
+    items: [userMessage],
+    updateDelayInSecs: 0,
+  },
+);
+
+const updateResult = await updatePoller.pollUntilDone();
+console.log(
+  `Updated with ${updateResult.memory_operations.length} ` +
+    `memory operation(s)`,
+);
+for (const operation of updateResult.memory_operations) {
   console.log(
-    `Updated with ${updateResult.memory_operations.length} ` +
-      `memory operation(s)`,
+    `  - Operation: ${operation.kind}, ` +
+      `Memory ID: ${operation.memory_item.memory_id}, ` +
+      `Content: ${operation.memory_item.content}`,
   );
-  for (const operation of updateResult.memory_operations) {
-    console.log(
-      `  - Operation: ${operation.kind}, ` +
-        `Memory ID: ${operation.memory_item.memory_id}, ` +
-        `Content: ${operation.memory_item.content}`,
-    );
-  }
+}
 
-  // Extend the previous update with another message
-  const newMessage = {
-    role: "user",
-    content: "I also like cappuccinos in the afternoon",
-    type: "message",
-  };
+// Extend the previous update with another message
+const newMessage = {
+  role: "user",
+  content: "I also like cappuccinos in the afternoon",
+  type: "message",
+};
 
-  const newUpdatePoller = project.beta.memoryStores.updateMemories(
-    memoryStoreName,
-    scope,
-    {
-      items: [newMessage],
-      updateDelayInSecs: 0,
-    },
-  );
+const newUpdatePoller = project.beta.memoryStores.updateMemories(
+  memoryStoreName,
+  scope,
+  {
+    items: [newMessage],
+    updateDelayInSecs: 0,
+  },
+);
 
-  const newUpdateResult = await newUpdatePoller.pollUntilDone();
+const newUpdateResult = await newUpdatePoller.pollUntilDone();
+console.log(
+  `Updated with ${newUpdateResult.memory_operations.length} ` +
+    `memory operation(s)`,
+);
+for (const operation of newUpdateResult.memory_operations) {
   console.log(
-    `Updated with ${newUpdateResult.memory_operations.length} ` +
-      `memory operation(s)`,
+    `  - Operation: ${operation.kind}, ` +
+      `Memory ID: ${operation.memory_item.memory_id}, ` +
+      `Content: ${operation.memory_item.content}`,
   );
-  for (const operation of newUpdateResult.memory_operations) {
-    console.log(
-      `  - Operation: ${operation.kind}, ` +
-        `Memory ID: ${operation.memory_item.memory_id}, ` +
-        `Content: ${operation.memory_item.content}`,
-    );
-  }
-  ```
+}
+```
 
 ```bash REST
-  curl -X POST "${FOUNDRY_PROJECT_ENDPOINT}/memory_stores/my_memory_store:update_memories?api-version=${API_VERSION}" \
-    -H "Authorization: Bearer ${ACCESS_TOKEN}" \
-    -H "Content-Type: application/json" \
-    -d '{
-      "scope": "user_123",
-      "items": [
-        {
-          "type": "message",
-          "role": "user",
-          "content": [
-            {
-              "type": "input_text",
-              "text": "I prefer dark roast coffee and usually drink it in the morning"
-            }
-          ]
-        }
-      ],
-      "update_delay": 0
-    }'
+curl -X POST "${FOUNDRY_PROJECT_ENDPOINT}/memory_stores/my_memory_store:update_memories?api-version=${API_VERSION}" \
+  -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "scope": "user_123",
+    "items": [
+      {
+        "type": "message",
+        "role": "user",
+        "content": [
+          {
+            "type": "input_text",
+            "text": "I prefer dark roast coffee and usually drink it in the morning"
+          }
+        ]
+      }
+    ],
+    "update_delay": 0
+  }'
 
-  # Get add memory status by polling the update_id
-  # Use the "update_id" from previous response
-  UPDATE_ID=<your_update_id>
-  curl -X GET "${FOUNDRY_PROJECT_ENDPOINT}/memory_stores/my_memory_store/updates/${UPDATE_ID}?api-version=${API_VERSION}" \
-    -H "Authorization: Bearer ${ACCESS_TOKEN}"
-  ```
+# Get add memory status by polling the update_id
+# Use the "update_id" from previous response
+UPDATE_ID=<your_update_id>
+curl -X GET "${FOUNDRY_PROJECT_ENDPOINT}/memory_stores/my_memory_store/updates/${UPDATE_ID}?api-version=${API_VERSION}" \
+  -H "Authorization: Bearer ${ACCESS_TOKEN}"
+```
 </CodeGroup>
 
 ### Search for memories in a memory store
@@ -906,102 +906,102 @@ Search memories to retrieve relevant context for agent interactions. Specify the
 
 <CodeGroup>
 ```python Python
-  from azure.ai.projects.models import MemorySearchOptions
+from azure.ai.projects.models import MemorySearchOptions
 
-  # Search memories by a query
-  query_message = {"role": "user", "content": "What are my coffee preferences?", "type": "message"}
+# Search memories by a query
+query_message = {"role": "user", "content": "What are my coffee preferences?", "type": "message"}
 
-  search_response = project_client.beta.memory_stores.search_memories(
-      name=memory_store_name,
-      scope=scope,
-      items=[query_message],
-      options=MemorySearchOptions(max_memories=5)
-  )
-  print(f"Found {len(search_response.memories)} memories")
-  for memory in search_response.memories:
-      print(f"  - Memory ID: {memory.memory_item.memory_id}, Content: {memory.memory_item.content}")
-  ```
+search_response = project_client.beta.memory_stores.search_memories(
+    name=memory_store_name,
+    scope=scope,
+    items=[query_message],
+    options=MemorySearchOptions(max_memories=5)
+)
+print(f"Found {len(search_response.memories)} memories")
+for memory in search_response.memories:
+    print(f"  - Memory ID: {memory.memory_item.memory_id}, Content: {memory.memory_item.content}")
+```
 
 ```csharp C#
-  #pragma warning disable OPENAI001
+#pragma warning disable OPENAI001
 
-  // Search memories by a query
-  MemorySearchOptions searchOptions = new(scope)
-  {
-      Items =
-      {
-          ResponseItem.CreateUserMessageItem(
-              "What are my coffee preferences?")
-      },
-      ResultOptions = new() { MaxMemories = 5 },
-  };
+// Search memories by a query
+MemorySearchOptions searchOptions = new(scope)
+{
+    Items =
+    {
+        ResponseItem.CreateUserMessageItem(
+            "What are my coffee preferences?")
+    },
+    ResultOptions = new() { MaxMemories = 5 },
+};
 
-  MemoryStoreSearchResponse searchResponse =
-      projectClient.MemoryStores.SearchMemories(
-          memoryStoreName: memoryStore.Name,
-          options: searchOptions);
+MemoryStoreSearchResponse searchResponse =
+    projectClient.MemoryStores.SearchMemories(
+        memoryStoreName: memoryStore.Name,
+        options: searchOptions);
 
-  Console.WriteLine(
-      $"Found {searchResponse.Memories.Count} memories");
-  foreach (MemorySearchItem item in searchResponse.Memories)
-  {
-      Console.WriteLine(
-          $"  - Content: {item.MemoryItem.Content}");
-  }
-  ```
+Console.WriteLine(
+    $"Found {searchResponse.Memories.Count} memories");
+foreach (MemorySearchItem item in searchResponse.Memories)
+{
+    Console.WriteLine(
+        $"  - Content: {item.MemoryItem.Content}");
+}
+```
 
 ```typescript TypeScript
-  const queryMessage: Record<string, unknown> = {
-    type: "message",
-    role: "user",
-    content: [
-      { type: "input_text", text: "What are my coffee preferences?" },
-    ],
-  };
+const queryMessage: Record<string, unknown> = {
+  type: "message",
+  role: "user",
+  content: [
+    { type: "input_text", text: "What are my coffee preferences?" },
+  ],
+};
 
-  console.log("\nSearching memories for stored preferences...");
-  const searchResponse =
-    await project.beta.memoryStores.searchMemories(
-      memoryStoreName,
-      scope,
-      {
-        items: [queryMessage],
-        options: { max_memories: 5 },
-      },
-    );
+console.log("\nSearching memories for stored preferences...");
+const searchResponse =
+  await project.beta.memoryStores.searchMemories(
+    memoryStoreName,
+    scope,
+    {
+      items: [queryMessage],
+      options: { max_memories: 5 },
+    },
+  );
 
-  console.log(`Found ${searchResponse.memories.length} memory item(s)`);
-  for (const memory of searchResponse.memories) {
-    console.log(
-      `  - Memory ID: ${memory.memory_item.memory_id}, ` +
-        `Content: ${memory.memory_item.content}`,
-    );
-  }
-  ```
+console.log(`Found ${searchResponse.memories.length} memory item(s)`);
+for (const memory of searchResponse.memories) {
+  console.log(
+    `  - Memory ID: ${memory.memory_item.memory_id}, ` +
+      `Content: ${memory.memory_item.content}`,
+  );
+}
+```
 
 ```bash REST
-  curl -X POST "${FOUNDRY_PROJECT_ENDPOINT}/memory_stores/my_memory_store:search_memories?api-version=${API_VERSION}" \
-    -H "Authorization: Bearer ${ACCESS_TOKEN}" \
-    -H "Content-Type: application/json" \
-    -d '{
-      "scope": "user_123",
-      "items": [
-        {
-          "type": "message",
-          "role": "user",
-          "content": [
-            {
-              "type": "input_text",
-              "text": "What are my coffee preferences?"
-            }
-          ]
-        }
-      ],
-      "options": {
-        "max_memories": 5
+curl -X POST "${FOUNDRY_PROJECT_ENDPOINT}/memory_stores/my_memory_store:search_memories?api-version=${API_VERSION}" \
+  -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "scope": "user_123",
+    "items": [
+      {
+        "type": "message",
+        "role": "user",
+        "content": [
+          {
+            "type": "input_text",
+            "text": "What are my coffee preferences?"
+          }
+        ]
       }
-    }'
-  ```
+    ],
+    "options": {
+      "max_memories": 5
+    }
+  }'
+```
 </CodeGroup>
 
 ### Retrieve static or contextual memories
@@ -1030,40 +1030,40 @@ Remove all memories associated with a particular user or group scope while prese
 
 <CodeGroup>
 ```python Python
-  # Delete memories for a specific scope
-  project_client.beta.memory_stores.delete_scope(
-      name=memory_store_name,
-      scope="user_123"
-  )
+# Delete memories for a specific scope
+project_client.beta.memory_stores.delete_scope(
+    name=memory_store_name,
+    scope="user_123"
+)
 
-  print(f"Deleted memories for scope: user_123")
-  ```
+print(f"Deleted memories for scope: user_123")
+```
 
 ```csharp C#
-  // Delete memories for a specific scope
-  MemoryStoreDeleteScopeResponse deleteScopeResponse =
-      projectClient.MemoryStores.DeleteScope(
-          name: memoryStore.Name,
-          scope: "user_123");
+// Delete memories for a specific scope
+MemoryStoreDeleteScopeResponse deleteScopeResponse =
+    projectClient.MemoryStores.DeleteScope(
+        name: memoryStore.Name,
+        scope: "user_123");
 
-  Console.WriteLine(
-      $"Deleted scope: {deleteScopeResponse.Name}, "
-      + $"success: {deleteScopeResponse.IsDeleted}");
-  ```
+Console.WriteLine(
+    $"Deleted scope: {deleteScopeResponse.Name}, "
+    + $"success: {deleteScopeResponse.IsDeleted}");
+```
 
 ```typescript TypeScript
-  console.log("\nDeleting memories for scope...");
-  await project.beta.memoryStores.deleteScope(memoryStoreName, scope);
-  ```
+console.log("\nDeleting memories for scope...");
+await project.beta.memoryStores.deleteScope(memoryStoreName, scope);
+```
 
 ```bash REST
-  curl -X POST "${FOUNDRY_PROJECT_ENDPOINT}/memory_stores/my_memory_store:delete_scope?api-version=${API_VERSION}" \
-    -H "Authorization: Bearer ${ACCESS_TOKEN}" \
-    -H "Content-Type: application/json" \
-    -d '{
-      "scope": "user_123"
-    }'
-  ```
+curl -X POST "${FOUNDRY_PROJECT_ENDPOINT}/memory_stores/my_memory_store:delete_scope?api-version=${API_VERSION}" \
+  -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "scope": "user_123"
+  }'
+```
 </CodeGroup>
 
 ### Delete a memory store
@@ -1072,31 +1072,31 @@ Remove the entire memory store and all associated memories across all scopes. Th
 
 <CodeGroup>
 ```python Python
-  # Delete the entire memory store
-  delete_response = project_client.beta.memory_stores.delete(memory_store_name)
-  print(f"Deleted memory store: {delete_response.deleted}")
-  ```
+# Delete the entire memory store
+delete_response = project_client.beta.memory_stores.delete(memory_store_name)
+print(f"Deleted memory store: {delete_response.deleted}")
+```
 
 ```csharp C#
-  // Delete the entire memory store
-  DeleteMemoryStoreResponse deleteResponse =
-      projectClient.MemoryStores.DeleteMemoryStore(
-          name: memoryStore.Name);
+// Delete the entire memory store
+DeleteMemoryStoreResponse deleteResponse =
+    projectClient.MemoryStores.DeleteMemoryStore(
+        name: memoryStore.Name);
 
-  Console.WriteLine(
-      $"Deleted memory store: {deleteResponse.Name}, "
-      + $"success: {deleteResponse.IsDeleted}");
-  ```
+Console.WriteLine(
+    $"Deleted memory store: {deleteResponse.Name}, "
+    + $"success: {deleteResponse.IsDeleted}");
+```
 
 ```typescript TypeScript
-  console.log("Deleting memory store...");
-  await project.beta.memoryStores.delete(memoryStoreName);
-  ```
+console.log("Deleting memory store...");
+await project.beta.memoryStores.delete(memoryStoreName);
+```
 
 ```bash REST
-  curl -X DELETE "${FOUNDRY_PROJECT_ENDPOINT}/memory_stores/my_memory_store?api-version=${API_VERSION}" \
-    -H "Authorization: Bearer ${ACCESS_TOKEN}"
-  ```
+curl -X DELETE "${FOUNDRY_PROJECT_ENDPOINT}/memory_stores/my_memory_store?api-version=${API_VERSION}" \
+  -H "Authorization: Bearer ${ACCESS_TOKEN}"
+```
 </CodeGroup>
 
 ## Best practices
@@ -1127,38 +1127,38 @@ Remove the entire memory store and all associated memories across all scopes. Th
 <Tabs>
   <Tab title="Python">
 
-  - [Azure AI Projects client library for Python: Memory samples](https://github.com/Azure/azure-sdk-for-python/tree/main/sdk/ai/azure-ai-projects/samples/memories)
-  - [Memory store REST API reference](../../reference/foundry-project-rest-preview)
-  - [Memory in Foundry Agent Service](/agent-service/what-is-memory)
-  - [Foundry Agent Service quotas and limits](/agent-service/limits-quotas-regions)
-  - [Build an agent with Microsoft Foundry](/get-started/get-started-code)
+- [Azure AI Projects client library for Python: Memory samples](https://github.com/Azure/azure-sdk-for-python/tree/main/sdk/ai/azure-ai-projects/samples/memories)
+- [Memory store REST API reference](../../reference/foundry-project-rest-preview)
+- [Memory in Foundry Agent Service](/agent-service/what-is-memory)
+- [Foundry Agent Service quotas and limits](/agent-service/limits-quotas-regions)
+- [Build an agent with Microsoft Foundry](/get-started/get-started-code)
 
   </Tab>
   <Tab title="C#">
 
-  - [Azure AI Extensions for OpenAI: Memory search tool sample](https://github.com/Azure/azure-sdk-for-net/blob/main/sdk/ai/Azure.AI.Extensions.OpenAI/samples/Sample5_MemorySearchTool.md)
-  - [Azure AI Projects client library for .NET: Memory store sample](https://github.com/Azure/azure-sdk-for-net/blob/main/sdk/ai/Azure.AI.Projects/samples/Sample20_MemoryStore.md)
-  - [Memory store REST API reference](../../reference/foundry-project-rest-preview)
-  - [Memory in Foundry Agent Service](/agent-service/what-is-memory)
-  - [Foundry Agent Service quotas and limits](/agent-service/limits-quotas-regions)
-  - [Build an agent with Microsoft Foundry](/get-started/get-started-code)
+- [Azure AI Extensions for OpenAI: Memory search tool sample](https://github.com/Azure/azure-sdk-for-net/blob/main/sdk/ai/Azure.AI.Extensions.OpenAI/samples/Sample5_MemorySearchTool.md)
+- [Azure AI Projects client library for .NET: Memory store sample](https://github.com/Azure/azure-sdk-for-net/blob/main/sdk/ai/Azure.AI.Projects/samples/Sample20_MemoryStore.md)
+- [Memory store REST API reference](../../reference/foundry-project-rest-preview)
+- [Memory in Foundry Agent Service](/agent-service/what-is-memory)
+- [Foundry Agent Service quotas and limits](/agent-service/limits-quotas-regions)
+- [Build an agent with Microsoft Foundry](/get-started/get-started-code)
 
   </Tab>
   <Tab title="TypeScript">
 
-  - [Azure AI Projects client library for JavaScript: Memory samples](https://github.com/Azure/azure-sdk-for-js/tree/main/sdk/ai/ai-projects/samples/v2/javascript/memories)
-  - [Memory store REST API reference](../../reference/foundry-project-rest-preview)
-  - [Memory in Foundry Agent Service](/agent-service/what-is-memory)
-  - [Foundry Agent Service quotas and limits](/agent-service/limits-quotas-regions)
-  - [Build an agent with Microsoft Foundry](/get-started/get-started-code)
+- [Azure AI Projects client library for JavaScript: Memory samples](https://github.com/Azure/azure-sdk-for-js/tree/main/sdk/ai/ai-projects/samples/v2/javascript/memories)
+- [Memory store REST API reference](../../reference/foundry-project-rest-preview)
+- [Memory in Foundry Agent Service](/agent-service/what-is-memory)
+- [Foundry Agent Service quotas and limits](/agent-service/limits-quotas-regions)
+- [Build an agent with Microsoft Foundry](/get-started/get-started-code)
 
   </Tab>
   <Tab title="REST">
 
-  - [Memory store REST API reference](../../reference/foundry-project-rest-preview)
-  - [Memory in Foundry Agent Service](/agent-service/what-is-memory)
-  - [Foundry Agent Service quotas and limits](/agent-service/limits-quotas-regions)
-  - [Build an agent with Microsoft Foundry](/get-started/get-started-code)
+- [Memory store REST API reference](../../reference/foundry-project-rest-preview)
+- [Memory in Foundry Agent Service](/agent-service/what-is-memory)
+- [Foundry Agent Service quotas and limits](/agent-service/limits-quotas-regions)
+- [Build an agent with Microsoft Foundry](/get-started/get-started-code)
 
   </Tab>
 </Tabs>
