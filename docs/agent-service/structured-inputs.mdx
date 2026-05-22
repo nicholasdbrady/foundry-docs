@@ -57,7 +57,7 @@ The simplest use of structured inputs is to parameterize agent instructions. Def
 The following examples create an agent whose instructions include user-specific details and then supply those values when creating a response.
 
 <Tabs>
-  <Tab title="Python">
+<Tab title="Python">
 
 ```python
 from azure.ai.projects import AIProjectClient
@@ -115,8 +115,8 @@ Hello Alice Smith! I can confirm your details: your name is Alice Smith and your
 
 The agent replaces the `{{userName}}` and `{{userRole}}` placeholders in the instructions with "Alice Smith" and "Senior Developer" before processing the request.
 
-  </Tab>
-  <Tab title="C#">
+</Tab>
+<Tab title="C#">
 
 ```csharp
 using System;
@@ -183,8 +183,8 @@ Hello Alice Smith! I can confirm your details: your name is Alice Smith and your
 
 The `StructuredInputs` dictionary on the agent definition maps template names to their schemas. At runtime, use the `Patch.Set` method on `CreateResponseOptions` to supply the actual values via the `$.structured_inputs` JSON path.
 
-  </Tab>
-  <Tab title="TypeScript">
+</Tab>
+<Tab title="TypeScript">
 
 ```typescript
 import { DefaultAzureCredential } from "@azure/identity";
@@ -245,8 +245,8 @@ Hello Alice Smith! I can confirm your details: your name is Alice Smith and your
 
 The agent definition uses `structured_inputs` to declare the template schemas. At runtime, pass the actual values in the `body` parameter alongside the `agent_reference`.
 
-  </Tab>
-  <Tab title="Java">
+</Tab>
+<Tab title="Java">
 
 Add the dependency to your `pom.xml`:
 
@@ -334,8 +334,8 @@ Response: Hello Alice Smith! I can confirm your details: your name is Alice Smit
 
 The Java SDK uses `StructuredInputDefinition` for the agent schema and `Map<String, BinaryData>` for the runtime values passed through `AzureCreateResponseOptions`.
 
-  </Tab>
-  <Tab title="REST">
+</Tab>
+<Tab title="REST">
 
 ### Create an agent with structured inputs
 
@@ -392,7 +392,7 @@ curl -X POST "$FOUNDRY_PROJECT_ENDPOINT/openai/v1/responses" \
 
 The agent definition's `structured_inputs` object declares the schemas with descriptions and default values. The response request's `structured_inputs` provides the actual runtime values that replace the `{{userName}}` and `{{userRole}}` templates.
 
-  </Tab>
+</Tab>
 </Tabs>
 
 ## Use structured inputs with Code Interpreter
@@ -400,7 +400,7 @@ The agent definition's `structured_inputs` object declares the schemas with desc
 By using structured inputs, you can dynamically configure which files and containers the Code Interpreter tool uses at runtime. Define handlebar templates in the tool's `file_ids` or `container` properties, and then supply actual IDs when creating a response.
 
 <Tabs>
-  <Tab title="Python">
+<Tab title="Python">
 
 ```python
 from io import BytesIO
@@ -469,8 +469,8 @@ The sum of x in numbers.csv is 6.
 
 The `{{analysis_file_id}}` placeholder in the tool's `file_ids` array is replaced by the actual file ID at runtime. By using this approach, you can reuse the same agent definition with different files for each request.
 
-  </Tab>
-  <Tab title="C#">
+</Tab>
+<Tab title="C#">
 
 ```csharp
 using System;
@@ -536,8 +536,8 @@ projectClient.AgentAdministrationClient.DeleteAgentVersion(
 The sum of x in numbers.csv is 6.
 ```
 
-  </Tab>
-  <Tab title="TypeScript">
+</Tab>
+<Tab title="TypeScript">
 
 ```typescript
 import { DefaultAzureCredential } from "@azure/identity";
@@ -605,8 +605,8 @@ File uploaded (id: <file-id>)
 The sum of x in numbers.csv is 6.
 ```
 
-  </Tab>
-  <Tab title="Java">
+</Tab>
+<Tab title="Java">
 
 ```java
 import com.azure.ai.agents.AgentsClient;
@@ -681,8 +681,8 @@ public class CodeInterpreterStructuredInputExample {
 Response: The sum of x in numbers.csv is 6.
 ```
 
-  </Tab>
-  <Tab title="REST">
+</Tab>
+<Tab title="REST">
 
 ### Create an agent with dynamic Code Interpreter files
 
@@ -743,7 +743,7 @@ curl -X POST "$FOUNDRY_PROJECT_ENDPOINT/openai/v1/responses" \
 
 The `{{analysis_file_id}}` template in `file_ids` is replaced with the actual file ID at runtime. You can define multiple file ID placeholders and leave unused ones empty. Empty values are automatically removed from the array.
 
-  </Tab>
+</Tab>
 </Tabs>
 
 ## Use structured inputs with File Search
@@ -751,7 +751,7 @@ The `{{analysis_file_id}}` template in `file_ids` is replaced with the actual fi
 By using structured inputs, you can dynamically configure which vector stores the File Search tool queries at runtime. Define template placeholders in the `vector_store_ids` array, and then supply actual vector store IDs when creating a response.
 
 <Tabs>
-  <Tab title="Python">
+<Tab title="Python">
 
 ```python
 from azure.ai.projects import AIProjectClient
@@ -817,8 +817,8 @@ Based on the product information, Contoso offers several product lines including
 
 The `{{vector_store_id}}` placeholder is replaced with the actual vector store ID at runtime. You can define multiple vector store placeholders to enable tiered or context-specific knowledge bases.
 
-  </Tab>
-  <Tab title="C#">
+</Tab>
+<Tab title="C#">
 
 ```csharp
 using System;
@@ -879,8 +879,8 @@ projectClient.AgentAdministrationClient.DeleteAgentVersion(
 Based on the product information, Contoso offers several product lines including...
 ```
 
-  </Tab>
-  <Tab title="TypeScript">
+</Tab>
+<Tab title="TypeScript">
 
 ```typescript
 import { DefaultAzureCredential } from "@azure/identity";
@@ -946,8 +946,8 @@ Vector store created (id: <vector-store-id>)
 Based on the product information, Contoso offers several product lines including...
 ```
 
-  </Tab>
-  <Tab title="Java">
+</Tab>
+<Tab title="Java">
 
 ```java
 import com.azure.ai.agents.AgentsClient;
@@ -1027,8 +1027,8 @@ public class FileSearchStructuredInputExample {
 Response: Based on the product information, Contoso offers several product lines including...
 ```
 
-  </Tab>
-  <Tab title="REST">
+</Tab>
+<Tab title="REST">
 
 ### Create an agent with dynamic file search vector stores
 
@@ -1088,7 +1088,7 @@ curl -X POST "$FOUNDRY_PROJECT_ENDPOINT/openai/v1/responses" \
 
 This example combines a static vector store (`vs_base_kb`) with a dynamic one (`{{tier_specific_kb}}`). The template placeholder is replaced at runtime, and the process automatically removes any empty string values in the array.
 
-  </Tab>
+</Tab>
 </Tabs>
 
 ## Use structured inputs with Azure AI Search
@@ -1096,7 +1096,7 @@ This example combines a static vector store (`vs_base_kb`) with a dynamic one (`
 By using structured inputs, you can dynamically configure the [Azure AI Search](/agent-service/ai-search) tool's index `filter` at runtime. Define a handlebar template inside the OData filter expression, and then supply the actual filter value when creating a response. This pattern lets a single agent definition serve users whose queries must be scoped to different subsets of an index without creating a separate agent version per filter value.
 
 <Tabs>
-  <Tab title="Python">
+<Tab title="Python">
 
 ```python
 import os
@@ -1179,8 +1179,8 @@ Agent response: Based on the index, the available outdoor boots include ...
 
 The `{{userFilter}}` placeholder inside the `filter` expression is replaced with the runtime value `boots` before the search runs. You can supply different filter values for each request to scope results without creating a new agent version.
 
-  </Tab>
-  <Tab title="C#">
+</Tab>
+<Tab title="C#">
 
 ```csharp
 using System;
@@ -1258,8 +1258,8 @@ Based on the index, the available outdoor boots include ...
 
 The `Filter` property on `AzureAISearchToolIndex` accepts handlebar templates that resolve at runtime. Use `Patch.Set` on `CreateResponseOptions` to supply the filter value via the `$.structured_inputs` JSON path.
 
-  </Tab>
-  <Tab title="TypeScript">
+</Tab>
+<Tab title="TypeScript">
 
 ```typescript
 import { DefaultAzureCredential } from "@azure/identity";
@@ -1334,8 +1334,8 @@ Agent created (id: <agent-id>, name: aisearch-agent-structured-input, version: 1
 Based on the index, the available outdoor boots include ...
 ```
 
-  </Tab>
-  <Tab title="Java">
+</Tab>
+<Tab title="Java">
 
 ```java
 import com.azure.ai.agents.AgentsClient;
@@ -1425,8 +1425,8 @@ public class AzureAISearchStructuredInputExample {
 Response: Based on the index, the available outdoor boots include ...
 ```
 
-  </Tab>
-  <Tab title="REST">
+</Tab>
+<Tab title="REST">
 
 ### Create an agent with a dynamic Azure AI Search filter
 
@@ -1493,7 +1493,7 @@ curl -X POST "$FOUNDRY_PROJECT_ENDPOINT/openai/v1/responses" \
 
 The `{{userFilter}}` template inside the `filter` expression is replaced with `boots` at runtime. The `'\''` sequence in the create-agent body is the standard Bash escape for a literal single quote inside a single-quoted string. If your shell handles quoting differently, supply the JSON body from a file instead.
 
-  </Tab>
+</Tab>
 </Tabs>
 
 ## Use structured inputs with MCP servers

@@ -33,6 +33,9 @@ Use this table to learn the differences between the different image generation m
 
 ## Quickstart
 
+<Tabs>
+<Tab title="REST API">
+
 Use this guide to get started calling the Azure OpenAI in Microsoft Foundry Models image generation REST APIs by using Python.
 
 ### Prerequisites
@@ -64,22 +67,32 @@ Go to your resource in the Azure portal. On the navigation pane, select **Keys a
 
 Create and assign persistent environment variables for your key and endpoint.
 
-<CodeGroup>
-```cmd Command Line
+<Tabs>
+  <Tab title="Command Line">
+
+    ```cmd
     setx AZURE_OPENAI_API_KEY "REPLACE_WITH_YOUR_KEY_VALUE_HERE" 
     setx AZURE_OPENAI_ENDPOINT "REPLACE_WITH_YOUR_ENDPOINT_HERE" 
     ```
 
-```powershell PowerShell
+  </Tab>
+  <Tab title="PowerShell">
+
+    ```powershell
     [System.Environment]::SetEnvironmentVariable('AZURE_OPENAI_API_KEY', 'REPLACE_WITH_YOUR_KEY_VALUE_HERE', 'User')
     [System.Environment]::SetEnvironmentVariable('AZURE_OPENAI_ENDPOINT', 'REPLACE_WITH_YOUR_ENDPOINT_HERE', 'User')
     ```
 
-```bash Bash
+  </Tab>
+  <Tab title="Bash">
+
+    ```bash
     export AZURE_OPENAI_API_KEY="REPLACE_WITH_YOUR_KEY_VALUE_HERE"
     export AZURE_OPENAI_ENDPOINT="REPLACE_WITH_YOUR_ENDPOINT_HERE"
     ```
-</CodeGroup>
+
+  </Tab>
+</Tabs>
 
 ### Create a new Python application
 
@@ -176,139 +189,128 @@ Remember to remove the key from your code when you're done, and never post your 
     Wait a few moments to get the response.
 
 {/*
-
-    tbd
+tbd
 */}
 
-    ### Output
+### Output
 
-    The output from a successful image generation API call looks like the following example. The `b64_json` field contains the base64-encoded output image data.
+The output from a successful image generation API call looks like the following example. The `b64_json` field contains the base64-encoded output image data.
 
-    ```json
-    { 
-        "created": 1698116662, 
-        "data": [ 
-            { 
-                "b64_json": "<base64 image data>"
-            }
-        ]
-    } 
-    ```
-
-    A successful response includes:
-    - A `created` timestamp (Unix epoch time)
-    - A `data` array with at least one image object- Either a `b64_json` (base64-encoded image data) value for each generated image
-
-    #### Common errors
-
-    | Error | Cause | Resolution |
-    |-------|-------|------------|
-    | `DeploymentNotFound` | The deployment name doesn't exist or is misspelled | Verify the deployment name in the Azure portal or Foundry portal |
-    | `401 Unauthorized` | Invalid or missing API key | Check that your `AZURE_OPENAI_API_KEY` environment variable is set correctly |
-    | `429 Too Many Requests` | Rate limit exceeded | Implement retry logic with exponential backoff |
-    | `content_policy_violation` | Prompt or generated output blocked by content filter | Modify the prompt to comply with the content policy |
-    | `InvalidPayload` | Missing required parameters or invalid values | Check that `prompt`, `size`, and `n` are correctly specified |
-
-    The Image APIs come with a content moderation filter. If the service recognizes your prompt as harmful content, it doesn't generate an image. For more information, see [Content filtering](https://learn.microsoft.com/en-us/azure/foundry-classic/foundry-models/concepts/content-filter). For examples of error responses, see the [Image generation how-to guide](/foundry-models/dall-e).
-
-    The system returns an operation status of `Failed` and the `error.code` value in the message is set to `contentFilter`. Here's an example:
-
-    ```json
-    {
-        "created": 1698435368,
-        "error":
-        {
-            "code": "contentFilter",
-            "message": "Your task failed as a result of our safety system."
+```json
+{ 
+    "created": 1698116662, 
+    "data": [ 
+        { 
+            "b64_json": "<base64 image data>"
         }
-    }
-    ```
+    ]
+} 
+```
 
-    It's also possible that the generated image itself is filtered. In this case, the error message is set to `Generated image was filtered as a result of our safety system.`. Here's an example:
+A successful response includes:
+- A `created` timestamp (Unix epoch time)
+- A `data` array with at least one image object- Either a `b64_json` (base64-encoded image data) value for each generated image
 
-    ```json
+#### Common errors
+
+| Error | Cause | Resolution |
+|-------|-------|------------|
+| `DeploymentNotFound` | The deployment name doesn't exist or is misspelled | Verify the deployment name in the Azure portal or Foundry portal |
+| `401 Unauthorized` | Invalid or missing API key | Check that your `AZURE_OPENAI_API_KEY` environment variable is set correctly |
+| `429 Too Many Requests` | Rate limit exceeded | Implement retry logic with exponential backoff |
+| `content_policy_violation` | Prompt or generated output blocked by content filter | Modify the prompt to comply with the content policy |
+| `InvalidPayload` | Missing required parameters or invalid values | Check that `prompt`, `size`, and `n` are correctly specified |
+
+The Image APIs come with a content moderation filter. If the service recognizes your prompt as harmful content, it doesn't generate an image. For more information, see [Content filtering](https://learn.microsoft.com/en-us/azure/foundry-classic/foundry-models/concepts/content-filter). For examples of error responses, see the [Image generation how-to guide](/foundry-models/dall-e).
+
+The system returns an operation status of `Failed` and the `error.code` value in the message is set to `contentFilter`. Here's an example:
+
+```json
+{
+    "created": 1698435368,
+    "error":
     {
-        "created": 1698435368,
-        "error":
-        {
-            "code": "contentFilter",
-            "message": "Generated image was filtered as a result of our safety system."
-        }
+        "code": "contentFilter",
+        "message": "Your task failed as a result of our safety system."
     }
-    ```
+}
+```
 
-    ### Clean up resources
+It's also possible that the generated image itself is filtered. In this case, the error message is set to `Generated image was filtered as a result of our safety system.`. Here's an example:
 
-    If you want to clean up and remove an Azure OpenAI resource, you can delete the resource or resource group. Deleting the resource group also deletes any other resources associated with it.
+```json
+{
+    "created": 1698435368,
+    "error":
+    {
+        "code": "contentFilter",
+        "message": "Generated image was filtered as a result of our safety system."
+    }
+}
+```
 
-    - [Azure portal](/setup/multi-service-resource)
-    - [Azure CLI](/setup/multi-service-resource)
+### Clean up resources
 
-<Tabs>
-  <Tab title="Python">
+If you want to clean up and remove an Azure OpenAI resource, you can delete the resource or resource group. Deleting the resource group also deletes any other resources associated with it.
 
-    Use this guide to get started generating images with the Azure OpenAI SDK for Python.
+- [Azure portal](/setup/multi-service-resource)
+- [Azure CLI](/setup/multi-service-resource)
 
-    [Library source code](https://github.com/openai/openai-python/tree/main/src/openai) | [Package](https://github.com/openai/openai-python) | [Samples](https://github.com/openai/openai-python/tree/main/examples)
+</Tab>
+<Tab title="Python">
 
-    ### Prerequisites
+Use this guide to get started generating images with the Azure OpenAI SDK for Python.
 
-    - An Azure subscription. [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
-    - <a href="https://www.python.org/" target="_blank">Python 3.8 or later version</a>.
-    - An Azure OpenAI resource created in a compatible region. See [Region availability](https://learn.microsoft.com/azure/ai-foundry/openai/concepts/models#model-summary-table-and-region-availability).
-        - Access the Azure OpenAI resource endpoint and keys in the Azure portal.
-    - A deployed image generation model:
-        - **GPT-image-1 series**: Deploy a `gpt-image-1`-series model. Requires [limited access registration](https://aka.ms/oai/access).
+[Library source code](https://github.com/openai/openai-python/tree/main/src/openai) | [Package](https://github.com/openai/openai-python) | [Samples](https://github.com/openai/openai-python/tree/main/examples)
 
-    For more information, see [Create a resource and deploy a model with Azure OpenAI](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/how-to/create-resource).
+### Prerequisites
 
-    ### Setup
+- An Azure subscription. [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
+- <a href="https://www.python.org/" target="_blank">Python 3.8 or later version</a>.
+- An Azure OpenAI resource created in a compatible region. See [Region availability](https://learn.microsoft.com/azure/ai-foundry/openai/concepts/models#model-summary-table-and-region-availability).
+    - Access the Azure OpenAI resource endpoint and keys in the Azure portal.
+- A deployed image generation model:
+    - **GPT-image-1 series**: Deploy a `gpt-image-1`-series model. Requires [limited access registration](https://aka.ms/oai/access).
 
-    #### Retrieve key and endpoint
+For more information, see [Create a resource and deploy a model with Azure OpenAI](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/how-to/create-resource).
 
-    To successfully call the Azure OpenAI APIs, you need the following information about your Azure OpenAI resource:
+### Setup
 
-    | Variable | Name | Value |
-    |---|---|---|
-    | **Endpoint** | `api_base` | The endpoint value is located under **Keys and Endpoint** for your resource in the Azure portal. You can also find the endpoint via the **Deployments** page in Microsoft Foundry portal. An example endpoint is: `https://docs-test-001.openai.azure.com/`. |
-    | **Key** | `api_key` | The key value is also located under **Keys and Endpoint** for your resource in the Azure portal. Azure generates two keys for your resource. You can use either value. |
+#### Retrieve key and endpoint
 
-    Go to your resource in the Azure portal. On the navigation pane, select **Keys and Endpoint** under **Resource Management**. Copy the **Endpoint** value and an access key value. You can use either the **KEY 1** or **KEY 2** value. Always having two keys allows you to securely rotate and regenerate keys without causing a service disruption.
+To successfully call the Azure OpenAI APIs, you need the following information about your Azure OpenAI resource:
+
+| Variable | Name | Value |
+|---|---|---|
+| **Endpoint** | `api_base` | The endpoint value is located under **Keys and Endpoint** for your resource in the Azure portal. You can also find the endpoint via the **Deployments** page in Microsoft Foundry portal. An example endpoint is: `https://docs-test-001.openai.azure.com/`. |
+| **Key** | `api_key` | The key value is also located under **Keys and Endpoint** for your resource in the Azure portal. Azure generates two keys for your resource. You can use either value. |
+
+Go to your resource in the Azure portal. On the navigation pane, select **Keys and Endpoint** under **Resource Management**. Copy the **Endpoint** value and an access key value. You can use either the **KEY 1** or **KEY 2** value. Always having two keys allows you to securely rotate and regenerate keys without causing a service disruption.
 
 <Frame>
-<img src="/images/endpoint.png" alt="Screenshot that shows the Keys and Endpoint page for an Azure OpenAI resource in the Azure portal." />
+  <img src="/images/endpoint.png" alt="Screenshot that shows the Keys and Endpoint page for an Azure OpenAI resource in the Azure portal." />
 </Frame>
 
-    ### Environment variables
+### Environment variables
 
-    Create and assign persistent environment variables for your key and endpoint.
+Create and assign persistent environment variables for your key and endpoint.
 
-  </Tab>
-  <Tab title="Command Line">
-
-    ```cmd
+<CodeGroup>
+```cmd Command Line
     setx AZURE_OPENAI_API_KEY "REPLACE_WITH_YOUR_KEY_VALUE_HERE" 
     setx AZURE_OPENAI_ENDPOINT "REPLACE_WITH_YOUR_ENDPOINT_HERE" 
     ```
 
-  </Tab>
-  <Tab title="PowerShell">
-
-    ```powershell
+```powershell PowerShell
     [System.Environment]::SetEnvironmentVariable('AZURE_OPENAI_API_KEY', 'REPLACE_WITH_YOUR_KEY_VALUE_HERE', 'User')
     [System.Environment]::SetEnvironmentVariable('AZURE_OPENAI_ENDPOINT', 'REPLACE_WITH_YOUR_ENDPOINT_HERE', 'User')
     ```
 
-  </Tab>
-  <Tab title="Bash">
-
-    ```bash
+```bash Bash
     export AZURE_OPENAI_API_KEY="REPLACE_WITH_YOUR_KEY_VALUE_HERE"
     export AZURE_OPENAI_ENDPOINT="REPLACE_WITH_YOUR_ENDPOINT_HERE"
     ```
-
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 ### Install the Python SDK
 
@@ -419,8 +421,8 @@ If you want to clean up and remove an Azure OpenAI resource, you can delete the 
 - [Azure portal](/setup/multi-service-resource)
 - [Azure CLI](/setup/multi-service-resource)
 
-  </Tab>
-  <Tab title="C#">
+</Tab>
+<Tab title="C#">
 
 Use this guide to get started generating images with the Azure OpenAI SDK for C#.
 
@@ -572,8 +574,8 @@ If you want to clean up and remove an Azure OpenAI resource, you can delete the 
 - [Azure portal](/setup/multi-service-resource)
 - [Azure CLI](/setup/multi-service-resource)
 
-  </Tab>
-  <Tab title="Java">
+</Tab>
+<Tab title="Java">
 
 Use this guide to get started generating images with the Azure OpenAI SDK for Java.
 
@@ -867,8 +869,8 @@ If you want to clean up and remove an Azure OpenAI resource, you can delete the 
 - [Azure portal](/setup/multi-service-resource)
 - [Azure CLI](/setup/multi-service-resource)
 
-  </Tab>
-  <Tab title="JavaScript">
+</Tab>
+<Tab title="JavaScript">
 
 Use this guide to get started generating images with the Azure OpenAI SDK for JavaScript.
 
@@ -1114,8 +1116,8 @@ If you want to clean up and remove an Azure OpenAI resource, you can delete the 
 - [Azure portal](/setup/multi-service-resource)
 - [Azure CLI](/setup/multi-service-resource)
 
-  </Tab>
-  <Tab title="TypeScript">
+</Tab>
+<Tab title="TypeScript">
 
 Use this guide to get started generating images with the Azure OpenAI SDK for JavaScript.
 
@@ -1407,8 +1409,8 @@ If you want to clean up and remove an Azure OpenAI resource, you can delete the 
 - [Azure portal](/setup/multi-service-resource)
 - [Azure CLI](/setup/multi-service-resource)
 
-  </Tab>
-  <Tab title="Go">
+</Tab>
+<Tab title="Go">
 
 Use this guide to get started generating images with the Azure OpenAI SDK for Go.
 
@@ -1691,8 +1693,8 @@ If you want to clean up and remove an Azure OpenAI resource, you can delete the 
 - [Azure portal](/setup/multi-service-resource)
 - [Azure CLI](/setup/multi-service-resource)
 
-  </Tab>
-  <Tab title="PowerShell">
+</Tab>
+<Tab title="PowerShell">
 
 Use this guide to get started calling the Azure OpenAI in Microsoft Foundry Models image generation APIs with PowerShell.
 
@@ -1832,8 +1834,8 @@ If you want to clean up and remove an Azure OpenAI resource, you can delete the 
 - [Azure portal](/setup/multi-service-resource)
 - [Azure PowerShell](/setup/multi-service-resource)
 
-  </Tab>
-  <Tab title="Portal">
+</Tab>
+<Tab title="Portal">
 
 Use this guide to get started generating images with Azure OpenAI in your browser with Microsoft Foundry.
 
@@ -1869,7 +1871,7 @@ If you want to clean up and remove an Azure OpenAI resource, you can delete the 
 - [Azure portal](/setup/multi-service-resource)
 - [Azure CLI](/setup/multi-service-resource)
 
-  </Tab>
+</Tab>
 </Tabs>
 
 ## Quotas and limits

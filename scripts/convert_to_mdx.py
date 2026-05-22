@@ -274,7 +274,8 @@ def convert_columns(content: str) -> str:
         cards = []
         for col in columns:
             # Blank lines around markdown content inside JSX components
-            cards.append(f"  <Card>\n\n    {col}\n\n  </Card>")
+            # Don't indent content — MDX misparses indented markdown inside JSX
+            cards.append(f"<Card>\n\n{col}\n\n</Card>")
         return f'<Columns cols={{{n}}}>\n' + "\n".join(cards) + "\n</Columns>\n"
 
     content = re.sub(
@@ -404,6 +405,27 @@ def convert_tabs(content: str) -> str:
     in_tabs = False
     current_tab_content = []
     current_tab_title = ""
+    tab_count = 0
+
+    def _close_tab_group():
+        """Emit the current tab and close the <Tabs> group."""
+        nonlocal in_tabs, current_tab_content, current_tab_title, tab_count
+        if tab_count == 1:
+            # Single tab: output content without Tabs wrapper (no useful toggle)
+            # Remove the <Tabs> we already appended
+            while result and result[-1] == "<Tabs>":
+                result.pop()
+                break
+            result.extend(current_tab_content)
+        else:
+            result.append(f'  <Tab title="{current_tab_title}">')
+            result.extend(f"    {line}" if line.strip() else "" for line in current_tab_content)
+            result.append("  </Tab>")
+            result.append("</Tabs>")
+        in_tabs = False
+        current_tab_content = []
+        current_tab_title = ""
+        tab_count = 0
 
     while i < len(lines):
         line = lines[i]
@@ -417,11 +439,13 @@ def convert_tabs(content: str) -> str:
             if not in_tabs:
                 # Start new tabs group
                 in_tabs = True
+                tab_count = 1
                 result.append("<Tabs>")
                 current_tab_title = tab_title
                 current_tab_content = []
             else:
                 # Close previous tab, start new one
+                tab_count += 1
                 result.append(f'  <Tab title="{current_tab_title}">')
                 result.extend(f"    {line}" if line.strip() else "" for line in current_tab_content)
                 result.append("  </Tab>")
@@ -432,14 +456,15 @@ def convert_tabs(content: str) -> str:
 
         # Tab separator ---
         if in_tabs and line.strip() == "---":
-            # Close the last tab and the tabs group
-            result.append(f'  <Tab title="{current_tab_title}">')
-            result.extend(f"    {line}" if line.strip() else "" for line in current_tab_content)
-            result.append("  </Tab>")
-            result.append("</Tabs>")
-            in_tabs = False
-            current_tab_content = []
-            current_tab_title = ""
+            _close_tab_group()
+            i += 1
+            continue
+
+        # Stop tab accumulation at JSX component boundaries (e.g. zone pivot
+        # <Tab>/<Tabs> tags) to prevent spanning across unrelated components.
+        if in_tabs and re.match(r'\s*</?(?:Tab|Tabs)\b', line):
+            _close_tab_group()
+            result.append(line)
             i += 1
             continue
 
@@ -452,10 +477,7 @@ def convert_tabs(content: str) -> str:
 
     # Handle unclosed tabs
     if in_tabs:
-        result.append(f'  <Tab title="{current_tab_title}">')
-        result.extend(f"    {line}" if line.strip() else "" for line in current_tab_content)
-        result.append("  </Tab>")
-        result.append("</Tabs>")
+        _close_tab_group()
 
     return "\n".join(result)
 
@@ -532,12 +554,12 @@ def convert_zone_pivots(content: str) -> str:
             result.append("<Tabs>")
             for pivot_name, zone_lines in zone_groups:
                 title = PIVOT_TITLES.get(pivot_name, pivot_name.replace("-", " ").title())
-                result.append(f'  <Tab title="{title}">')
+                result.append(f'<Tab title="{title}">')
                 result.append("")  # blank line so MDX parses markdown inside JSX
                 for line in zone_lines:
                     result.append(line)
                 result.append("")  # blank line before closing tag
-                result.append("  </Tab>")
+                result.append("</Tab>")
             result.append("</Tabs>")
         zone_groups.clear()
 
@@ -1269,17 +1291,17 @@ def convert_doc(doc: dict) -> str | None:
     body = convert_checklists(body)
     body = convert_selectors(body)
 
-    # Step 5: Convert tabs
+    # Step 5: Convert zone pivots (before tabs, so tab groups don't span across zone boundaries)
+    body = convert_zone_pivots(body)
+
+    # Step 6: Convert tabs
     body = convert_tabs(body)
 
-    # Step 6: Convert images
+    # Step 7: Convert images
     body = convert_images(body)
 
-    # Step 6b: Rewrite markdown/HTML image paths to /images/filename
+    # Step 7b: Rewrite markdown/HTML image paths to /images/filename
     body = rewrite_image_paths(body)
-
-    # Step 7: Convert zone pivots
-    body = convert_zone_pivots(body)
 
     # Step 8: Convert columns (after zone pivots strip markers)
     body = convert_columns(body)

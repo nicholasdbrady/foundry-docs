@@ -5,6 +5,9 @@ description: "Learn how to improve your model responses with structured outputs"
 
 Structured outputs make a model follow a [JSON Schema](https://json-schema.org/overview/what-is-jsonschema) definition that you provide as part of your inference API call. This approach contrasts with the older [JSON mode](/foundry-models/json-mode) feature, which guaranteed valid JSON but couldn't ensure strict adherence to the supplied schema. Use structured outputs for function calling, extracting structured data, and building complex multi-step workflows.
 
+<Tabs>
+<Tab title="Python">
+
 ## Getting started
 
 <Tabs>
@@ -186,10 +189,8 @@ Structured outputs are not supported with parallel function calls. When using st
 
 </Note>
 
-<Tabs>
-  <Tab title="Python (Microsoft Entra ID)">
-
-    ```python
+<CodeGroup>
+```python Python (Microsoft Entra ID)
     import openai
     from pydantic import BaseModel
     from openai import OpenAI
@@ -223,10 +224,7 @@ Structured outputs are not supported with parallel function calls. When using st
     print(response.model_dump_json(indent=2))
     ```
 
-  </Tab>
-  <Tab title="Python (key-based auth)">
-
-    ```python
+```python Python (key-based auth)
     import os
     from pydantic import BaseModel
     import openai
@@ -255,23 +253,23 @@ Structured outputs are not supported with parallel function calls. When using st
     print(response.choices[0].message.tool_calls[0].function)
     print(response.model_dump_json(indent=2))
     ```
+</CodeGroup>
+</Tab>
+<Tab title="C#">
+
+## Getting started
+
+Add the following packages to your project:
+
+- **[OpenAI](https://www.nuget.org/packages/OpenAI)**: Standard OpenAI .NET library.
+- **[Azure.Identity](https://www.nuget.org/packages/Azure.Identity)**: Provides Microsoft Entra ID token authentication support across the Azure SDK libraries.
+
+```dotnetcli
+dotnet add package OpenAI
+dotnet add package Azure.Identity
+```
 
 <Tabs>
-  <Tab title="C#">
-
-    ## Getting started
-
-    Add the following packages to your project:
-
-    - **[OpenAI](https://www.nuget.org/packages/OpenAI)**: Standard OpenAI .NET library.
-    - **[Azure.Identity](https://www.nuget.org/packages/Azure.Identity)**: Provides Microsoft Entra ID token authentication support across the Azure SDK libraries.
-
-    ```dotnetcli
-    dotnet add package OpenAI
-    dotnet add package Azure.Identity
-    ```
-
-  </Tab>
   <Tab title="Microsoft Entra ID">
 
     If you're new to using Microsoft Entra ID for authentication see [How to configure Azure OpenAI in Microsoft Foundry Models with Microsoft Entra ID authentication](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/how-to/managed-identity).
@@ -418,8 +416,8 @@ Structured outputs are not supported with parallel function calls. When using st
   </Tab>
 </Tabs>
 
-  </Tab>
-  <Tab title="REST">
+</Tab>
+<Tab title="REST">
 
 ## Getting started
 
@@ -595,7 +593,7 @@ curl -X POST  https://YOUR_RESOURCE_NAME.openai.azure.com/openai/v1/chat/complet
 }'
 ```
 
-  </Tab>
+</Tab>
 </Tabs>
 
 ## JSON Schema support and limitations
