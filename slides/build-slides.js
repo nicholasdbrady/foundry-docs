@@ -39,21 +39,25 @@ const C = {
 
 // ── LIVE DATA — computed from repo ────────────────────────────────────────
 const DATA = {
-  mdxDocs:           274,
-  agenticWorkflows:  26,
-  totalWorkflows:    31,
+  mdxDocs:           280,
+  agenticWorkflows:  23,
+  totalWorkflows:    33,
   slashCommands:     7,
-  workflowChains:    4,
-  scheduleWorkflows: 12,
-  pushWorkflows:     1,
-  prWorkflows:       3,
-  issueWorkflows:    25,
-  dispatchWorkflows: 22,
+  workflowChains:    9,
+  scheduleWorkflows: 16,
+  pushWorkflows:     6,
+  prWorkflows:       25,
+  issueWorkflows:    26,
+  dispatchWorkflows: 27,
   sdkRepos:          4,
-  docSections:       16,
+  docSections:       15,
+  mergedAgenticPRs:  9,
+  mergedPRsTotal:    11,
+  vnextExclusiveFiles: 14,
+  canonicalDocs:     485,
   sections: [
-    { name: "Models",            count: 72 },
-    { name: "Agents",            count: 57 },
+    { name: "Models",            count: 73 },
+    { name: "Agents",            count: 60 },
     { name: "Observability",     count: 24 },
     { name: "Setup",             count: 20 },
     { name: "Security",          count: 20 },
@@ -62,13 +66,36 @@ const DATA = {
     { name: "Dev Experience",    count: 11 },
     { name: "Manage",            count: 9  },
     { name: "Responsible AI",    count: 8  },
-    { name: "Operate",           count: 7  },
+    { name: "Operate",           count: 8  },
     { name: "Best Practices",    count: 5  },
-    { name: "Get Started",       count: 4  },
+    { name: "Get Started",       count: 6  },
     { name: "Overview",          count: 3  },
     { name: "Reference",         count: 1  },
-    { name: "Glossary",          count: 1  },
   ],
+  // Eval harness — Issue #388, run 2026-05-31, 200 evaluations
+  eval: {
+    runDate:    "2026-05-31",
+    totalEvals: 200,
+    servers: [
+      { name: "FastMCP docs/ (Control C)",    score: 0.965, rank: "🥇", isVnext: false },
+      { name: "MS Learn (Control A)",         score: 0.955, rank: "🥈", isVnext: false },
+      { name: "FastMCP docs-vnext/ (Treat.)", score: 0.949, rank: "🥉", isVnext: true  },
+      { name: "Mintlify MCP (Control B)",     score: 0.939, rank: "",   isVnext: false },
+    ],
+    hyps: [
+      { id: "H1", badge: "❌ REJECTED",  detail: "docs-vnext (0.949) vs docs/ (0.965), δ=−0.016",    badgeColor: "C04040" },
+      { id: "H2", badge: "⚠️ MARGINAL",  detail: "docs-vnext (0.949) vs Mintlify (0.939), δ=+0.010", badgeColor: "C9A800" },
+      { id: "H3", badge: "❌ REJECTED",  detail: "docs-vnext (0.949) vs MS Learn (0.955), δ=−0.006", badgeColor: "C04040" },
+      { id: "H4", badge: "✅ SUPPORTED", detail: "Rankings consistent across both models",            badgeColor: "2A8A4A" },
+    ],
+    cats: [
+      { name: "agent-development",     vnext: 0.973, docs: 0.973, lead: false },
+      { name: "getting-started",       vnext: 0.913, docs: 1.000, lead: false },
+      { name: "infrastructure-security", vnext: 0.973, docs: 0.973, lead: false },
+      { name: "observability-eval",    vnext: 0.940, docs: 0.925, lead: true  },
+      { name: "sdk-api",               vnext: 0.947, docs: 0.947, lead: false },
+    ],
+  },
 };
 
 // ── Icon helper ───────────────────────────────────────────────────────────
@@ -652,7 +679,386 @@ async function buildPresentation() {
   }
 
   // ══════════════════════════════════════════════════════════════════════
-  // SLIDE 8 — Evaluation Harness Results (Dark)
+  // SLIDE 8 — docs-vnext History & Impact (Light)
+  // ══════════════════════════════════════════════════════════════════════
+  {
+    const s = pres.addSlide();
+    s.background = { color: C.lightBg };
+
+    // Left accent bar
+    s.addShape(pres.shapes.RECTANGLE, {
+      x: 0, y: 0, w: 0.18, h: 5.625,
+      fill: { color: C.primary },
+      line: { color: C.primary, width: 0 },
+    });
+
+    s.addText("docs-vnext History & Impact", {
+      x: 0.38, y: 0.22, w: 9.2, h: 0.58,
+      fontSize: 34, fontFace: "Trebuchet MS", bold: true,
+      color: C.textDark, margin: 0,
+    });
+
+    // ── Top-line stats (3 big numbers) ──────────────────────────────────
+    const stats = [
+      { val: `${DATA.mergedPRsTotal}`,          label: "Merged PRs",            sub: `${DATA.mergedAgenticPRs} agentic · 2 human`,  color: C.primary },
+      { val: `${DATA.vnextExclusiveFiles}`,       label: "New Files (agents)",    sub: "not present in canonical docs/",              color: C.secondary },
+      { val: `${DATA.mdxDocs}`,                  label: "docs-vnext Pages",       sub: `vs ${DATA.canonicalDocs} in upstream docs/`,  color: C.accent },
+    ];
+    for (let i = 0; i < stats.length; i++) {
+      const sx = 0.38 + i * 3.2;
+      const st = stats[i];
+      s.addShape(pres.shapes.ROUNDED_RECTANGLE, {
+        x: sx, y: 0.92, w: 3.0, h: 1.0,
+        fill: { color: "FFFFFF" }, line: { color: st.color, width: 1.5 },
+        rectRadius: 0.08,
+      });
+      s.addText(st.val, {
+        x: sx + 0.12, y: 0.96, w: 2.76, h: 0.52,
+        fontSize: 42, fontFace: "Trebuchet MS", bold: true,
+        color: st.color, align: "center", margin: 0,
+      });
+      s.addText(st.label, {
+        x: sx + 0.12, y: 1.5, w: 2.76, h: 0.22,
+        fontSize: 11, fontFace: "Trebuchet MS", bold: true,
+        color: C.textDark, align: "center", margin: 0,
+      });
+      s.addText(st.sub, {
+        x: sx + 0.12, y: 1.72, w: 2.76, h: 0.16,
+        fontSize: 9, fontFace: "Calibri",
+        color: C.textMuted, align: "center", margin: 0,
+      });
+    }
+
+    // ── Timeline milestones ───────────────────────────────────────────────
+    s.addText("Key Milestones", {
+      x: 0.38, y: 2.08, w: 5.8, h: 0.3,
+      fontSize: 12.5, fontFace: "Trebuchet MS", bold: true,
+      color: C.primary, margin: 0,
+    });
+
+    const milestones = [
+      { date: "Mar 1",  pr: "#23", desc: "Unbloat: cloud-evaluation.mdx — −7% words, −34.5% bullets" },
+      { date: "Mar 2",  pr: "#28", desc: "Glossary created from zero — 35 terms, 16 sections" },
+      { date: "Mar ~",  pr: "#46", desc: "Navigation reflow to product-pillar structure" },
+      { date: "Mar–Apr",pr: "#95–96", desc: "Noob-tester fixes & continued unbloat passes" },
+      { date: "May 28", pr: "#378", desc: "19 missing docs-vnext files added from upstream sync" },
+    ];
+
+    for (let i = 0; i < milestones.length; i++) {
+      const my = 2.45 + i * 0.54;
+      const m = milestones[i];
+
+      // Timeline dot
+      s.addShape(pres.shapes.OVAL, {
+        x: 0.38, y: my + 0.05, w: 0.3, h: 0.3,
+        fill: { color: i === 0 ? C.secondary : C.lightTeal },
+        line: { color: C.primary, width: 1 },
+      });
+      // Connector line (except last)
+      if (i < milestones.length - 1) {
+        s.addShape(pres.shapes.RECTANGLE, {
+          x: 0.51, y: my + 0.35, w: 0.04, h: 0.54,
+          fill: { color: C.lightTeal },
+          line: { color: C.lightTeal, width: 0 },
+        });
+      }
+
+      s.addText(`${m.date}  ${m.pr}`, {
+        x: 0.8, y: my + 0.04, w: 1.6, h: 0.28,
+        fontSize: 9.5, fontFace: "Consolas", bold: true,
+        color: C.primary, margin: 0,
+      });
+      s.addText(m.desc, {
+        x: 2.45, y: my + 0.04, w: 7.1, h: 0.28,
+        fontSize: 11, fontFace: "Calibri",
+        color: C.textDark, margin: 0,
+      });
+    }
+
+    // ── Right insight box ─────────────────────────────────────────────────
+    s.addShape(pres.shapes.ROUNDED_RECTANGLE, {
+      x: 6.55, y: 2.08, w: 3.05, h: 2.76,
+      fill: { color: C.primary, transparency: 88 },
+      line: { color: C.primary, width: 1 },
+      rectRadius: 0.1,
+    });
+    s.addText("82% of merged docs-vnext PRs\nauthored by github-actions[bot]\n\nAgents handle:\n• Content quality (unbloat)\n• Coverage gaps (sync fills)\n• Glossary maintenance\n• Noob-test fixes\n• Navigation rewrites", {
+      x: 6.7, y: 2.2, w: 2.75, h: 2.52,
+      fontSize: 10.5, fontFace: "Calibri",
+      color: C.textDark, valign: "top", margin: 0,
+    });
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // SLIDE 9 — Deep Dive: Agentic Chain in Action (Dark)
+  // ══════════════════════════════════════════════════════════════════════
+  {
+    const s = pres.addSlide();
+    s.background = { color: C.darkBg };
+
+    // Decorative arc shape
+    s.addShape(pres.shapes.OVAL, {
+      x: 7.0, y: -1.5, w: 5.5, h: 5.5,
+      fill: { color: C.primary, transparency: 82 },
+      line: { color: C.primary, transparency: 82, width: 0 },
+    });
+
+    s.addShape(pres.shapes.RECTANGLE, {
+      x: 0, y: 0, w: 0.18, h: 5.625,
+      fill: { color: C.accent },
+      line: { color: C.accent, width: 0 },
+    });
+
+    s.addText("Deep Dive: Agentic Chain in Action", {
+      x: 0.38, y: 0.22, w: 9.2, h: 0.58,
+      fontSize: 32, fontFace: "Trebuchet MS", bold: true,
+      color: C.white, margin: 0,
+    });
+
+    // ── Chain 1: Upstream Sync ────────────────────────────────────────────
+    s.addText("CHAIN 1 — Upstream Sync Pipeline", {
+      x: 0.38, y: 0.9, w: 9.2, h: 0.28,
+      fontSize: 11.5, fontFace: "Trebuchet MS", bold: true,
+      color: C.accent, margin: 0,
+    });
+
+    const chain1 = [
+      { label: "Upstream Monitor",  desc: "Detects commit in\nMicrosoftDocs/azure-ai-docs-pr", icon: FaEye   },
+      { label: "Creates Issue",      desc: "Logs upstream change\nwith diff summary",              icon: FaBell  },
+      { label: "sync-and-convert",  desc: "Fetches + converts\nMarkdown → MDX",                   icon: FaSync  },
+      { label: "Post-Sync Updater", desc: "Analyzes changes,\ncreates docs-vnext PR",              icon: FaRobot },
+    ];
+
+    for (let i = 0; i < chain1.length; i++) {
+      const cx = 0.38 + i * 2.38;
+      const c = chain1[i];
+      const ic = await iconPng(c.icon, "#" + C.accent, 96);
+
+      s.addShape(pres.shapes.ROUNDED_RECTANGLE, {
+        x: cx, y: 1.26, w: 2.1, h: 1.18,
+        fill: { color: "022C33" },
+        line: { color: C.primary, width: 1 },
+        rectRadius: 0.07,
+      });
+      s.addImage({ data: ic, x: cx + 0.08, y: 1.32, w: 0.38, h: 0.38 });
+      s.addText(c.label, {
+        x: cx + 0.5, y: 1.32, w: 1.52, h: 0.36,
+        fontSize: 9.5, fontFace: "Trebuchet MS", bold: true,
+        color: C.white, margin: 0,
+      });
+      s.addText(c.desc, {
+        x: cx + 0.08, y: 1.72, w: 1.92, h: 0.64,
+        fontSize: 9, fontFace: "Calibri",
+        color: C.lightTeal, margin: 0,
+      });
+
+      // Arrow between boxes
+      if (i < chain1.length - 1) {
+        s.addText("→", {
+          x: cx + 2.14, y: 1.74, w: 0.24, h: 0.3,
+          fontSize: 14, fontFace: "Calibri", bold: true,
+          color: C.accent, align: "center", margin: 0,
+        });
+      }
+    }
+
+    // ── Chain 2: SDK Release Alert ────────────────────────────────────────
+    s.addText("CHAIN 2 — SDK Release Detection", {
+      x: 0.38, y: 2.65, w: 9.2, h: 0.28,
+      fontSize: 11.5, fontFace: "Trebuchet MS", bold: true,
+      color: C.accent, margin: 0,
+    });
+
+    const chain2 = [
+      { label: "SDK Monitor",       desc: "Polls 4 SDK repos\nevery 12 hours",                icon: FaTag     },
+      { label: "Detects Release",   desc: "Java azure-ai-projects\n2.0.0-beta.2 found",       icon: FaBolt    },
+      { label: "Creates Issue #53", desc: "Breaking changes +\ndocs impact assessment",       icon: FaFileAlt },
+      { label: "label-ops trigger", desc: "sdk-update label\nfires docs fix agent",           icon: FaCog     },
+    ];
+
+    for (let i = 0; i < chain2.length; i++) {
+      const cx = 0.38 + i * 2.38;
+      const c = chain2[i];
+      const ic = await iconPng(c.icon, "#" + C.secondary, 96);
+
+      s.addShape(pres.shapes.ROUNDED_RECTANGLE, {
+        x: cx, y: 3.0, w: 2.1, h: 1.18,
+        fill: { color: "022C33" },
+        line: { color: C.secondary, width: 1 },
+        rectRadius: 0.07,
+      });
+      s.addImage({ data: ic, x: cx + 0.08, y: 3.06, w: 0.38, h: 0.38 });
+      s.addText(c.label, {
+        x: cx + 0.5, y: 3.06, w: 1.52, h: 0.36,
+        fontSize: 9.5, fontFace: "Trebuchet MS", bold: true,
+        color: C.white, margin: 0,
+      });
+      s.addText(c.desc, {
+        x: cx + 0.08, y: 3.46, w: 1.92, h: 0.64,
+        fontSize: 9, fontFace: "Calibri",
+        color: C.lightTeal, margin: 0,
+      });
+
+      if (i < chain2.length - 1) {
+        s.addText("→", {
+          x: cx + 2.14, y: 3.48, w: 0.24, h: 0.3,
+          fontSize: 14, fontFace: "Calibri", bold: true,
+          color: C.secondary, align: "center", margin: 0,
+        });
+      }
+    }
+
+    // Footer
+    s.addShape(pres.shapes.RECTANGLE, {
+      x: 0, y: 5.15, w: 10, h: 0.475,
+      fill: { color: C.primary, transparency: 75 },
+      line: { color: C.primary, transparency: 75, width: 0 },
+    });
+    s.addText("Fully event-driven — no human intervention required from signal to PR", {
+      x: 0.4, y: 5.2, w: 9.2, h: 0.35,
+      fontSize: 11.5, fontFace: "Calibri", italic: true,
+      color: C.lightTeal, align: "center", margin: 0,
+    });
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // SLIDE 10 — Deep Dive: Content Improvements (Light)
+  // ══════════════════════════════════════════════════════════════════════
+  {
+    const s = pres.addSlide();
+    s.background = { color: C.lightBg };
+
+    s.addShape(pres.shapes.RECTANGLE, {
+      x: 0, y: 0, w: 0.18, h: 5.625,
+      fill: { color: C.secondary },
+      line: { color: C.secondary, width: 0 },
+    });
+
+    s.addText("Deep Dive: Content Improvements", {
+      x: 0.38, y: 0.18, w: 9.2, h: 0.58,
+      fontSize: 32, fontFace: "Trebuchet MS", bold: true,
+      color: C.textDark, margin: 0,
+    });
+
+    // ── Example A: Glossary Creation ──────────────────────────────────────
+    s.addShape(pres.shapes.ROUNDED_RECTANGLE, {
+      x: 0.38, y: 0.88, w: 4.52, h: 2.28,
+      fill: { color: "FFFFFF" },
+      line: { color: C.secondary, width: 1.5 },
+      rectRadius: 0.08,
+    });
+
+    s.addText("(A) Glossary Creation from Zero", {
+      x: 0.55, y: 0.96, w: 4.2, h: 0.3,
+      fontSize: 12.5, fontFace: "Trebuchet MS", bold: true,
+      color: C.secondary, margin: 0,
+    });
+    s.addText("PR #28 · Merged Mar 2, 2026 · Glossary Maintainer", {
+      x: 0.55, y: 1.27, w: 4.2, h: 0.22,
+      fontSize: 9.5, fontFace: "Calibri", italic: true,
+      color: C.textMuted, margin: 0,
+    });
+    s.addText(
+      "Agent scanned recent commits, inferred terminology, and created\ndocs-vnext/glossary.mdx with 35 terms across 16 alphabetical sections\nin a single workflow run — starting from no existing glossary.\n\nTerms span: Core Foundry, MCP Ecosystem, Search & Retrieval,\nAgent Tools, Evaluation, Developer Tooling, Documentation.",
+      {
+        x: 0.55, y: 1.52, w: 4.18, h: 1.5,
+        fontSize: 10, fontFace: "Calibri",
+        color: C.textDark, margin: 0,
+      }
+    );
+
+    // ── Example B: Unbloat ────────────────────────────────────────────────
+    s.addShape(pres.shapes.ROUNDED_RECTANGLE, {
+      x: 5.1, y: 0.88, w: 4.52, h: 2.28,
+      fill: { color: "FFFFFF" },
+      line: { color: C.primary, width: 1.5 },
+      rectRadius: 0.08,
+    });
+
+    s.addText("(B) Unbloat: cloud-evaluation.mdx", {
+      x: 5.27, y: 0.96, w: 4.18, h: 0.3,
+      fontSize: 12.5, fontFace: "Trebuchet MS", bold: true,
+      color: C.primary, margin: 0,
+    });
+    s.addText("PR #23 · Merged Mar 2, 2026 · Documentation Unbloat", {
+      x: 5.27, y: 1.27, w: 4.18, h: 0.22,
+      fontSize: 9.5, fontFace: "Calibri", italic: true,
+      color: C.textMuted, margin: 0,
+    });
+    s.addText(
+      "Agent removed duplicate paragraphs, 4 identical 'Before you begin'\ncallouts, trivial tips, and redundant sentences; converted verbose\nbullet lists to prose and tables.\n\nResult: 913 → 884 lines (−3%), 3,412 → 3,180 words (−7%),\nbullet points: 29 → 19 (−34.5% ✅)",
+      {
+        x: 5.27, y: 1.52, w: 4.18, h: 1.5,
+        fontSize: 10, fontFace: "Calibri",
+        color: C.textDark, margin: 0,
+      }
+    );
+
+    // ── Metrics comparison bar ────────────────────────────────────────────
+    s.addText("Improvement Metrics — PR #23 (Unbloat)", {
+      x: 0.38, y: 3.26, w: 5.8, h: 0.3,
+      fontSize: 11.5, fontFace: "Trebuchet MS", bold: true,
+      color: C.textDark, margin: 0,
+    });
+
+    const improvements = [
+      { label: "Words",         before: 3412, after: 3180, pct: "−7%",   barBefore: 4.5, barAfter: 4.2 },
+      { label: "Bullet Points", before: 29,   after: 19,   pct: "−34.5%", barBefore: 4.5, barAfter: 2.9 },
+    ];
+    for (let i = 0; i < improvements.length; i++) {
+      const iy = 3.64 + i * 0.76;
+      const im = improvements[i];
+
+      s.addText(`${im.label}  ${im.before} → ${im.after}  (${im.pct})`, {
+        x: 0.38, y: iy, w: 4.5, h: 0.25,
+        fontSize: 10.5, fontFace: "Calibri",
+        color: C.textDark, margin: 0,
+      });
+      // Before bar (grey)
+      s.addShape(pres.shapes.RECTANGLE, {
+        x: 0.38, y: iy + 0.28, w: im.barBefore, h: 0.24,
+        fill: { color: C.lightTeal },
+        line: { color: C.lightTeal, width: 0 },
+      });
+      // After bar (teal)
+      s.addShape(pres.shapes.RECTANGLE, {
+        x: 0.38, y: iy + 0.28, w: im.barAfter, h: 0.24,
+        fill: { color: C.secondary },
+        line: { color: C.secondary, width: 0 },
+      });
+    }
+
+    // ── Right: PR #28 stat box ────────────────────────────────────────────
+    s.addShape(pres.shapes.ROUNDED_RECTANGLE, {
+      x: 5.1, y: 3.26, w: 4.52, h: 2.0,
+      fill: { color: C.secondary, transparency: 90 },
+      line: { color: C.secondary, width: 1 },
+      rectRadius: 0.1,
+    });
+    s.addText("PR #28 at a glance", {
+      x: 5.27, y: 3.38, w: 4.18, h: 0.28,
+      fontSize: 11, fontFace: "Trebuchet MS", bold: true,
+      color: C.textDark, margin: 0,
+    });
+
+    const glanceItems = [
+      "📄  2 files changed (glossary.mdx + docs.json)",
+      "➕  194 additions",
+      "🏷️  Labels: documentation · docs-vnext · glossary",
+      "🤖  Author: github-actions[bot]",
+      "✅  Merged by: nicholasdbrady",
+    ];
+    for (let i = 0; i < glanceItems.length; i++) {
+      s.addText(glanceItems[i], {
+        x: 5.27, y: 3.72 + i * 0.3, w: 4.18, h: 0.27,
+        fontSize: 10, fontFace: "Calibri",
+        color: C.textDark, margin: 0,
+      });
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // SLIDE 11 — Evaluation Harness Results (Dark)
   // ══════════════════════════════════════════════════════════════════════
   {
     const s = pres.addSlide();
@@ -671,7 +1077,7 @@ async function buildPresentation() {
       color: C.white, margin: 0,
     });
 
-    s.addText("300 evaluations · 4 servers · 3 frontier models · 2026-03-05", {
+    s.addText(`${DATA.eval.totalEvals} evaluations · 4 servers · 1 frontier model · ${DATA.eval.runDate}`, {
       x: 0.4, y: 0.98, w: 9.2, h: 0.28,
       fontSize: 11.5, fontFace: "Calibri",
       color: C.textMuted, margin: 0,
@@ -685,66 +1091,43 @@ async function buildPresentation() {
 
     const tableData = [
       [
-        { text: "Server",               options: { bold: true, color: "FFFFFF", fill: hdrFill, align: "left" } },
-        { text: "claude-opus-4.6",      options: { bold: true, color: "FFFFFF", fill: hdrFill, align: "center" } },
-        { text: "gemini-3-pro",         options: { bold: true, color: "FFFFFF", fill: hdrFill, align: "center" } },
-        { text: "gpt-5.3-codex",        options: { bold: true, color: "FFFFFF", fill: hdrFill, align: "center" } },
-        { text: "Avg",                  options: { bold: true, color: "FFFFFF", fill: hdrFill, align: "center" } },
+        { text: "Server",             options: { bold: true, color: "FFFFFF", fill: hdrFill, align: "left" } },
+        { text: "claude-sonnet-4.6",  options: { bold: true, color: "FFFFFF", fill: hdrFill, align: "center" } },
+        { text: "Avg",                options: { bold: true, color: "FFFFFF", fill: hdrFill, align: "center" } },
       ],
-      [
-        { text: "MS Learn 🥇",          options: { color: "1A2E30", fill: bodyFill } },
-        { text: "0.933",                options: { color: "1A2E30", fill: bodyFill, align: "center" } },
-        { text: "0.882",                options: { color: "1A2E30", fill: bodyFill, align: "center" } },
-        { text: "0.906",                options: { color: "1A2E30", fill: bodyFill, align: "center" } },
-        { text: "0.908",                options: { bold: true, color: "1A2E30", fill: bodyFill, align: "center" } },
-      ],
-      [
-        { text: "Mintlify MCP 🥈",      options: { color: "1A2E30", fill: bodyFill } },
-        { text: "0.949",                options: { color: "1A2E30", fill: bodyFill, align: "center" } },
-        { text: "0.868",                options: { color: "1A2E30", fill: bodyFill, align: "center" } },
-        { text: "0.905",                options: { color: "1A2E30", fill: bodyFill, align: "center" } },
-        { text: "0.908",                options: { bold: true, color: "1A2E30", fill: bodyFill, align: "center" } },
-      ],
-      [
-        { text: "docs-vnext/ 🥉",       options: { bold: true, color: C.accent, fill: vnextFill } },
-        { text: "0.927",                options: { bold: true, color: C.accent, fill: vnextFill, align: "center" } },
-        { text: "0.879",                options: { bold: true, color: C.accent, fill: vnextFill, align: "center" } },
-        { text: "0.912",                options: { bold: true, color: C.accent, fill: vnextFill, align: "center" } },
-        { text: "0.906",                options: { bold: true, color: C.accent, fill: vnextFill, align: "center" } },
-      ],
-      [
-        { text: "docs/ (baseline)",     options: { color: "5A8087", fill: baseFill } },
-        { text: "0.924",                options: { color: "5A8087", fill: baseFill, align: "center" } },
-        { text: "0.860",                options: { color: "5A8087", fill: baseFill, align: "center" } },
-        { text: "0.931",                options: { color: "5A8087", fill: baseFill, align: "center" } },
-        { text: "0.904",                options: { color: "5A8087", fill: baseFill, align: "center" } },
-      ],
+      ...DATA.eval.servers.map(sv => [
+        { text: `${sv.name} ${sv.rank}`,
+          options: sv.isVnext
+            ? { bold: true, color: C.accent, fill: vnextFill }
+            : { color: "1A2E30", fill: bodyFill } },
+        { text: String(sv.score),
+          options: sv.isVnext
+            ? { bold: true, color: C.accent, fill: vnextFill, align: "center" }
+            : { color: "1A2E30", fill: bodyFill, align: "center" } },
+        { text: String(sv.score),
+          options: sv.isVnext
+            ? { bold: true, color: C.accent, fill: vnextFill, align: "center" }
+            : { bold: true, color: "1A2E30", fill: bodyFill, align: "center" } },
+      ]),
     ];
 
     s.addTable(tableData, {
-      x: 0.35, y: 1.3, w: 5.65, h: 1.9,
+      x: 0.35, y: 1.3, w: 5.65, h: 1.72,
       fontSize: 11, fontFace: "Calibri",
       border: { type: "solid", pt: 0.5, color: "028090" },
-      colW: [1.8, 0.97, 0.97, 0.97, 0.94],
+      colW: [3.74, 1.0, 0.91],
     });
 
     // ── Hypothesis results ────────────────────────────────────────────────
     s.addText("Hypothesis Testing", {
-      x: 0.35, y: 3.3, w: 5.65, h: 0.34,
+      x: 0.35, y: 3.12, w: 5.65, h: 0.34,
       fontSize: 12.5, fontFace: "Trebuchet MS", bold: true,
       color: C.accent, margin: 0,
     });
 
-    const hyps = [
-      { id: "H1", badge: "⚠️ MARGINAL", detail: "docs-vnext (0.906) vs docs/ (0.904), δ=+0.002",  badgeColor: "C9A800" },
-      { id: "H2", badge: "❌ REJECTED",  detail: "vs Mintlify MCP (0.908), δ=−0.002",              badgeColor: "C04040" },
-      { id: "H3", badge: "❌ REJECTED",  detail: "vs MS Learn (0.908), δ=−0.002",                  badgeColor: "C04040" },
-      { id: "H4", badge: "⚠️ MIXED",     detail: "Rankings vary: gpt-5.3 ranks docs-vnext 2nd",   badgeColor: "C9A800" },
-    ];
-
-    for (let i = 0; i < hyps.length; i++) {
-      const h = hyps[i];
-      const hy = 3.72 + i * 0.43;
+    for (let i = 0; i < DATA.eval.hyps.length; i++) {
+      const h = DATA.eval.hyps[i];
+      const hy = 3.54 + i * 0.43;
 
       s.addShape(pres.shapes.RECTANGLE, {
         x: 0.35, y: hy, w: 5.65, h: 0.35,
@@ -775,18 +1158,9 @@ async function buildPresentation() {
       color: C.accent, margin: 0,
     });
 
-    const cats = [
-      { name: "agent-development",   vnext: 0.971, docs: 0.962, lead: true  },
-      { name: "getting-started",     vnext: 0.887, docs: 0.867, lead: true  },
-      { name: "infra-security",      vnext: 0.927, docs: 0.918, lead: true  },
-      { name: "observability",       vnext: 0.802, docs: 0.829, lead: false },
-      { name: "sdk-api",             vnext: 0.947, docs: 0.947, lead: false },
-    ];
-
     const barMaxW = 3.1;
-    const barScale = 0.75; // scale scores (0.75–1.0) visually
-    for (let i = 0; i < cats.length; i++) {
-      const c = cats[i];
+    for (let i = 0; i < DATA.eval.cats.length; i++) {
+      const c = DATA.eval.cats[i];
       const cy = 1.72 + i * 0.72;
       const barW = barMaxW * ((c.vnext - 0.75) / 0.25);
 
@@ -824,7 +1198,7 @@ async function buildPresentation() {
       line: { color: C.primary, transparency: 70, width: 0 },
     });
     s.addText(
-      "docs-vnext leads in agent-development (0.971) and getting-started (0.887) — areas benefiting most from Mintlify MDX enhancements",
+      "docs-vnext leads in observability-evaluation (0.940 vs 0.925) — area most improved by Mintlify MDX structure and agentic unbloat",
       {
         x: 0.4, y: 5.24, w: 9.2, h: 0.35,
         fontSize: 10.5, fontFace: "Calibri", italic: true,
@@ -834,7 +1208,7 @@ async function buildPresentation() {
   }
 
   // ══════════════════════════════════════════════════════════════════════
-  // SLIDE 9 — Community Integration (Light)
+  // SLIDE 12 — Community Integration (Light)
   // ══════════════════════════════════════════════════════════════════════
   {
     const s = pres.addSlide();
@@ -920,7 +1294,7 @@ async function buildPresentation() {
   }
 
   // ══════════════════════════════════════════════════════════════════════
-  // SLIDE 10 — SDK Monitoring (Dark)
+  // SLIDE 13 — SDK Monitoring (Dark)
   // ══════════════════════════════════════════════════════════════════════
   {
     const s = pres.addSlide();
@@ -1009,7 +1383,7 @@ async function buildPresentation() {
   }
 
   // ══════════════════════════════════════════════════════════════════════
-  // SLIDE 11 — Key Metrics (Light)
+  // SLIDE 14 — Key Metrics (Light)
   // ══════════════════════════════════════════════════════════════════════
   {
     const s = pres.addSlide();
@@ -1028,12 +1402,12 @@ async function buildPresentation() {
     });
 
     const metrics = [
-      { val: `${DATA.mdxDocs}`,           label: "MDX Pages",            sub: "in docs-vnext/",            icon: FaFileAlt },
-      { val: `${DATA.agenticWorkflows}`,  label: "Agentic Workflows",    sub: ".md definitions",           icon: FaRobot },
-      { val: `${DATA.docSections}`,       label: "Doc Sections",         sub: "topic areas covered",       icon: FaList },
-      { val: `${DATA.slashCommands}`,     label: "Slash Commands",       sub: "/audit /unbloat /sdk-check…", icon: FaBolt },
-      { val: `${DATA.sdkRepos}`,          label: "SDK Repos Tracked",    sub: "Python · JS · .NET · Java", icon: FaCode },
-      { val: `${DATA.scheduleWorkflows}`, label: "Scheduled Jobs",       sub: "daily/weekly cron",         icon: FaTachometerAlt },
+      { val: `${DATA.mdxDocs}`,            label: "MDX Pages",             sub: "in docs-vnext/",              icon: FaFileAlt },
+      { val: `${DATA.agenticWorkflows}`,   label: "Agentic Workflows",     sub: ".md definitions",             icon: FaRobot },
+      { val: `${DATA.docSections}`,        label: "Doc Sections",          sub: "topic areas covered",         icon: FaList },
+      { val: `${DATA.slashCommands}`,      label: "Slash Commands",        sub: "/audit /unbloat /sdk-check…", icon: FaBolt },
+      { val: `${DATA.mergedPRsTotal}`,     label: "Merged Agentic PRs",    sub: `${DATA.mergedAgenticPRs} by github-actions[bot]`, icon: FaCodeBranch },
+      { val: `${DATA.scheduleWorkflows}`,  label: "Scheduled Jobs",        sub: "daily/weekly cron",           icon: FaTachometerAlt },
     ];
 
     const mW = 2.9, mH = 2.15;
@@ -1077,7 +1451,7 @@ async function buildPresentation() {
   }
 
   // ══════════════════════════════════════════════════════════════════════
-  // SLIDE 12 — What's Next (Dark)
+  // SLIDE 15 — What's Next (Dark)
   // ══════════════════════════════════════════════════════════════════════
   {
     const s = pres.addSlide();
