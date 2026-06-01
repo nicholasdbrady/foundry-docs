@@ -13,13 +13,14 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 from scrape_model_catalog import CatalogModel, _preserve_existing_regions, filter_deprecated
 
 
-def _make_model(id: str, publisher: str = "OpenAI", regions: dict | None = None) -> CatalogModel:
+def _make_model(id: str, publisher: str = "OpenAI", regions: dict | None = None, lifecycle: str = "generally-available") -> CatalogModel:
     return CatalogModel(
         id=id,
         displayName=id,
         publisher=publisher,
         latestVersion="1.0",
         regions=regions or {},
+        lifecycleStatus=lifecycle,
     )
 
 
@@ -67,6 +68,24 @@ class TestFilterDeprecated:
             _make_model("davinci-002"),
         ]
         config = {"deprecated": {"models": ["gpt-35-turbo", "gpt-4-32k", "davinci-002"]}}
+        result = filter_deprecated(models, config)
+        assert [m.id for m in result] == ["gpt-4o"]
+
+    def test_filters_by_api_lifecycle_status(self):
+        models = [
+            _make_model("old-model", lifecycle="deprecated"),
+            _make_model("gpt-4o"),
+        ]
+        result = filter_deprecated(models, {})
+        assert [m.id for m in result] == ["gpt-4o"]
+
+    def test_both_config_and_api_lifecycle(self):
+        models = [
+            _make_model("config-dep"),
+            _make_model("api-dep", lifecycle="deprecated"),
+            _make_model("gpt-4o"),
+        ]
+        config = {"deprecated": {"models": ["config-dep"]}}
         result = filter_deprecated(models, config)
         assert [m.id for m in result] == ["gpt-4o"]
 
