@@ -7,6 +7,9 @@ Key terms and concepts used throughout the Microsoft Foundry documentation.
 
 ## A
 
+### A2A (Agent2Agent)
+An open protocol for cross-agent communication that allows Foundry agents to discover and call other agents as tools. A Foundry agent can expose an A2A endpoint so external agents can invoke it, or connect to a remote A2A endpoint to delegate work to another agent. Based on the Agent2Agent (A2A) specification.
+
 ### Agent
 An AI-powered entity that can perform tasks autonomously using tools, models, and instructions. In Microsoft Foundry, agents are created via the Azure AI Projects SDK and can use built-in tools like Code Interpreter, File Search, and Function Calling.
 
@@ -21,8 +24,14 @@ A cloud search service providing keyword, vector, and semantic search capabiliti
 
 ## C
 
+### Capability Host
+A sub-resource configured at both the Microsoft Foundry account and project scopes that tells Foundry Agent Service where to store and process agent data—including conversation history, file uploads, and vector stores. Creating capability hosts at both scopes enables standard agent setup, where your own Azure resources (Cosmos DB, Storage, AI Search) are used instead of Microsoft-managed defaults.
+
 ### Code Interpreter
 A built-in Foundry agent tool that lets agents write and execute Python code in a sandboxed environment. Useful for data analysis, mathematical calculations, chart generation, and file processing tasks.
+
+### Computer Use
+A built-in Foundry agent tool that enables agents to interpret screenshots and automate UI actions such as clicking, typing, and navigating applications. Useful for browser automation and desktop interaction scenarios.
 
 ### Conversation
 A durable object in Foundry Agent Service that persists interaction state across turns and sessions. Conversations store items (messages, tool calls, tool outputs) and have unique identifiers that can be reused across sessions. Replaces the thread concept from the Assistants API.
@@ -54,15 +63,31 @@ A capability that allows agents and language models to invoke user-defined funct
 ### Grounding Data
 Content retrieved from an external data source and provided to a language model as additional context. Grounding data reduces hallucination by anchoring model responses to your data rather than the model's parametric knowledge alone.
 
+### Guardrail
+A named collection of controls applied to models and agents in Microsoft Foundry that define which risks to detect, which intervention points to scan, and what response action to take when a risk is detected. Guardrails can be applied to one or more model deployments and agents within a project. When an agent has an assigned guardrail, it fully overrides the guardrail of the underlying model deployment.
+
 ## H
+
+### Hosted Agent
+A containerized agent deployed to and managed by Foundry Agent Service's managed runtime (preview). The platform handles scaling, session management, identity, and protocol endpoints, while the agent logic runs in a container image you provide. Hosted agents expose either the Responses protocol (`/responses`) or the Invocations protocol (`/invocations`) for callers.
 
 ### Hybrid Search
 A retrieval strategy that combines keyword (BM25) search and vector (semantic) search to improve recall. Results from both methods are merged and optionally reranked using a semantic ranker for higher relevance. Supported in Azure AI Search and used in Foundry Agent Service file search.
+
+## I
+
+### Intervention Point
+A stage in the model or agent processing pipeline where a guardrail control scans content for risks. Four intervention points are supported: **user input** (the prompt sent to the model or agent), **tool call** (the action and data an agent proposes to send to a tool), **tool response** (the content returned from a tool to the agent), and **output** (the final completion returned to the user). Tool call and tool response intervention points apply only to agents and are in preview.
 
 ## K
 
 ### Knowledge Base (Foundry IQ)
 A top-level Foundry IQ resource that orchestrates agentic retrieval over one or more knowledge sources. A knowledge base defines which data sources to query, the retrieval reasoning effort level, and access control behavior. Multiple agents can share the same knowledge base.
+
+## L
+
+### LangGraph
+An open-source framework from LangChain for building stateful, graph-based AI agents. Agents are defined as nodes and edges in a compiled graph, with support for interrupts, checkpointers, and multi-turn state. Microsoft Foundry supports deploying LangGraph agents as hosted agents using the `langchain_azure_ai.agents.hosting` package.
 
 ## M
 
@@ -71,6 +96,9 @@ An open protocol that enables AI agents to connect to external data sources and 
 
 ### Microsoft Entra ID
 Microsoft's cloud identity and access management service, formerly Azure Active Directory. Used in Foundry for keyless authentication (instead of API keys) and as the identity provider for role-based access control (RBAC) assignments.
+
+### Model Router
+A feature in Microsoft Foundry Models that automatically selects the best model deployment for a given request, optimizing for cost, quality, and latency. When a request is sent to the model router endpoint, it analyzes the prompt, scores candidate models, and routes to the most appropriate one without requiring the caller to specify a model name explicitly.
 
 ## O
 
@@ -90,6 +118,16 @@ The output of a single agent invocation in Foundry Agent Service. A response inc
 
 ### Responses API
 The API surface for generating agent outputs in Foundry Agent Service. The Responses API accepts a conversation (or previous response output) and returns a new response with the agent's result. It supersedes the older Assistants API runs endpoint.
+
+## S
+
+### Standard Agent Setup
+A Foundry Agent Service configuration pattern where your own Azure resources (Azure Cosmos DB for thread storage, Azure Storage for file uploads, and Azure AI Search for vector stores) are used instead of Microsoft-managed defaults. Standard agent setup is enabled by creating capability hosts at both the account and project scopes, providing data sovereignty and compliance control.
+
+## T
+
+### Toolbox
+A managed endpoint in Microsoft Foundry (preview) that aggregates multiple tools—including MCP servers, web search, Azure AI Search, file search, and code interpreter—into a single intent-based interface for hosted agents. Toolbox simplifies tool configuration by providing a unified endpoint that agents can query without managing individual tool connections.
 
 ## V
 
