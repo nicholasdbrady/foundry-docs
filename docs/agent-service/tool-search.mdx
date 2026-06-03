@@ -25,6 +25,7 @@ Use tool search when:
 - An active [Microsoft Foundry project](/setup/create-projects).
 - An existing or new toolbox with at least one tool. See [Curate intent-based toolbox in Foundry](/agent-service/toolbox).
 - **RBAC**: Grant the **Foundry User** role on the Foundry project to each relevant identity (developer, agent managed identity, and end users in OAuth flows).
+- **Foundry Toolkit**: Install [Visual Studio Code](https://code.visualstudio.com/) and [Foundry Toolkit for Visual Studio Code](https://code.visualstudio.com/docs/intelligentapps/overview#_install-and-setup).
 
 ## How tool search works
 
@@ -54,47 +55,61 @@ The `toolbox_search_preview` entry is a configuration directive that activates t
 
 Add `{"type": "toolbox_search_preview"}` to your toolbox version's tools list. All other tools in the toolbox are available through tool search — they aren't exposed in the initial tool list the model sees.
 
-<ZonePivot group="python__rest-api" options={[{"id": "python", "title": "Python"}, {"id": "rest-api", "title": "REST API"}]} defaultValue="python" />
+<ZonePivot group="dotnet__javascript__python__rest-api__vscode" options={[{"id": "vscode", "title": "VS Code"}, {"id": "python", "title": "Python"}, {"id": "rest-api", "title": "REST API"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} defaultValue="vscode" />
 
-<ZoneContent group="python__rest-api" value="python" options={[{"id": "python", "title": "Python"}, {"id": "rest-api", "title": "REST API"}]} values={["python", "rest-api"]} defaultValue="python">
+<ZoneContent group="dotnet__javascript__python__rest-api__vscode" value="vscode" options={[{"id": "vscode", "title": "VS Code"}, {"id": "python", "title": "Python"}, {"id": "rest-api", "title": "REST API"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["vscode", "python", "rest-api", "dotnet", "javascript"]} defaultValue="vscode">
+
+Use Foundry Toolkit for Visual Studio Code to enable tool search when you create or edit a toolbox. The **Tool search** checkbox adds the `toolbox_search_preview` configuration entry to the toolbox version.
+
+1. Select **Foundry Toolkit** in the Activity Bar.
+1. Under **My Resources**, expand **Your project name** > **Tools**.
+1. Select the **+ Add Toolbox** icon.
+1. On the **Build a Custom Toolbox** tab, enter the toolbox name and description, and add the tools you want.
+1. Select **Tool search**.
+1. Select **Publish**.
+
+<Frame>
+  <img src="/images/toolbox-vscode-tool-search.png" alt="Screenshot of Foundry Toolkit in Visual Studio Code showing the Build a Custom Toolbox view with the Tool search checkbox selected." />
+</Frame>
+
+Publishing a new toolbox creates its first version. That version becomes the default version automatically. For the full toolbox creation workflow, see [Curate intent-based toolbox in Foundry](/agent-service/toolbox#step-1-create-a-toolbox-version).
+
+</ZoneContent>
+<ZoneContent group="dotnet__javascript__python__rest-api__vscode" value="python" options={[{"id": "vscode", "title": "VS Code"}, {"id": "python", "title": "Python"}, {"id": "rest-api", "title": "REST API"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["vscode", "python", "rest-api", "dotnet", "javascript"]} defaultValue="vscode">
 
 ```python
 import os
 from azure.identity import DefaultAzureCredential
 from azure.ai.projects import AIProjectClient
+from azure.ai.projects.models import MCPTool, ToolboxSearchPreviewTool
 
 client = AIProjectClient(
     endpoint=os.environ["FOUNDRY_PROJECT_ENDPOINT"],
     credential=DefaultAzureCredential(),
 )
 
-# {"type": "toolbox_search_preview"} enables tool search — other tools are discovered on demand via tool_search
+# ToolboxSearchPreviewTool() enables tool search — other tools in the toolbox are discovered on
+# demand through tool_search instead of being listed up front. Add as many MCP servers as you need;
+# tool search keeps the agent's initial tool surface small regardless of toolbox size.
+inner_mcp_tool = MCPTool(
+    server_label="github",
+    server_url="https://api.githubcopilot.com/mcp",
+    require_approval="never",
+    project_connection_id="github-mcp-conn",
+)
+
 toolbox_version = client.beta.toolboxes.create_version(
     name="my-toolbox",
     description="Large toolbox with tool search enabled",
-    tools=[
-        {"type": "toolbox_search_preview"},
-        {
-            "type": "mcp",
-            "server_label": "github",
-            "server_url": "https://api.githubcopilot.com/mcp",
-            "require_approval": "never",
-            "project_connection_id": "github-mcp-conn",
-        },
-        {
-            "type": "mcp",
-            "server_label": "calendar",
-            "server_url": "https://your-calendar-mcp.example.com",
-            "require_approval": "never",
-            "description": "Read and write calendar events",
-        },
-    ],
+    tools=[inner_mcp_tool, ToolboxSearchPreviewTool()],
 )
 print(f"Created toolbox `{toolbox_version.name}` (version {toolbox_version.version})")
 ```
 
+To pin critical tools or add search keywords for specific tools, use `tool_configs` on the individual tool entry. See [Fine-tune tool discovery](#fine-tune-tool-discovery).
+
 </ZoneContent>
-<ZoneContent group="python__rest-api" value="rest-api" options={[{"id": "python", "title": "Python"}, {"id": "rest-api", "title": "REST API"}]} values={["python", "rest-api"]} defaultValue="python">
+<ZoneContent group="dotnet__javascript__python__rest-api__vscode" value="rest-api" options={[{"id": "vscode", "title": "VS Code"}, {"id": "python", "title": "Python"}, {"id": "rest-api", "title": "REST API"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["vscode", "python", "rest-api", "dotnet", "javascript"]} defaultValue="vscode">
 
 ```http
 POST {project_endpoint}/toolboxes/my-toolbox/versions?api-version=v1
@@ -108,17 +123,21 @@ Content-Type: application/json
       "type": "toolbox_search_preview"
     },
     {
+      "type": "work_iq_preview",
+      "project_connection_id": "{workiq-connection-id}",
+      "tool_configs": {
+        "calendar_events": {
+          "pin": true,
+          "additional_search_text": "meetings appointments schedule calendar invites"
+        }
+      }
+    },
+    {
       "type": "mcp",
       "server_label": "github",
       "server_url": "https://api.githubcopilot.com/mcp",
       "require_approval": "never",
       "project_connection_id": "github-mcp-conn"
-    },
-    {
-      "type": "mcp",
-      "server_label": "calendar",
-      "server_url": "https://your-calendar-mcp.example.com",
-      "require_approval": "never"
     }
   ]
 }
@@ -131,12 +150,78 @@ Use token scope `https://ai.azure.com/.default` when getting the bearer token.
 </Note>
 
 </ZoneContent>
+<ZoneContent group="dotnet__javascript__python__rest-api__vscode" value="dotnet" options={[{"id": "vscode", "title": "VS Code"}, {"id": "python", "title": "Python"}, {"id": "rest-api", "title": "REST API"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["vscode", "python", "rest-api", "dotnet", "javascript"]} defaultValue="vscode">
+
+```csharp
+using Azure.AI.Projects;
+using Azure.AI.Projects.Agents;
+using Azure.Identity;
+
+var projectEndpoint = Environment.GetEnvironmentVariable("FOUNDRY_PROJECT_ENDPOINT");
+DefaultAzureCredential credential = new();
+AIProjectClient projectClient = new(endpoint: new Uri(projectEndpoint), tokenProvider: credential);
+AgentToolboxes toolboxClient = projectClient.AgentAdministrationClient.GetAgentToolboxes();
+
+// ToolboxSearchPreviewTool enables tool search — other tools are discovered on demand via tool_search
+ProjectsAgentTool mcpTool = ProjectsAgentTool.AsProjectTool(ResponseTool.CreateMcpTool(
+    serverLabel: "github",
+    serverUri: new Uri("https://api.githubcopilot.com/mcp"),
+    toolCallApprovalPolicy: new McpToolCallApprovalPolicy(GlobalMcpToolCallApprovalPolicy.NeverRequireApproval)));
+ToolboxSearchPreviewTool searchTool = new()
+{
+    Name = "ToolBoxSearch",
+    Description = "Search for tools by capability"
+};
+
+ToolboxVersion toolboxVersion = toolboxClient.CreateToolboxVersion(
+    name: "my-toolbox",
+    tools: [mcpTool, searchTool],
+    description: "Large toolbox with tool search enabled");
+Console.WriteLine($"Created toolbox `{toolboxVersion.Name}` (version {toolboxVersion.Version})");
+```
+
+</ZoneContent>
+<ZoneContent group="dotnet__javascript__python__rest-api__vscode" value="javascript" options={[{"id": "vscode", "title": "VS Code"}, {"id": "python", "title": "Python"}, {"id": "rest-api", "title": "REST API"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["vscode", "python", "rest-api", "dotnet", "javascript"]} defaultValue="vscode">
+
+```javascript
+import { DefaultAzureCredential } from "@azure/identity";
+import { AIProjectClient } from "@azure/ai-projects";
+
+const projectEndpoint = process.env["FOUNDRY_PROJECT_ENDPOINT"];
+const project = new AIProjectClient(projectEndpoint, new DefaultAzureCredential());
+
+// { type: "toolbox_search_preview" } enables tool search — other tools in the toolbox are
+// discovered on demand through tool_search instead of being listed up front. Add as many MCP
+// servers as you need; tool search keeps the agent's initial tool surface small regardless of size.
+const toolboxVersion = await project.beta.toolboxes.createVersion(
+  "my-toolbox",
+  [
+    {
+      type: "mcp",
+      server_label: "github",
+      server_url: "https://api.githubcopilot.com/mcp",
+      require_approval: "never",
+      project_connection_id: "github-mcp-conn",
+    },
+    { type: "toolbox_search_preview" },
+  ],
+  { description: "Large toolbox with tool search enabled" },
+);
+console.log(`Created toolbox \`${toolboxVersion.name}\` (version ${toolboxVersion.version})`);
+```
+
+</ZoneContent>
 
 ## Verify tool search is active
 
 Use the version-specific endpoint to confirm that `tool_search` appears in `tools/list` and that no other toolbox tools are exposed in the initial listing.
 
-<ZoneContent group="python__rest-api" value="python" options={[{"id": "python", "title": "Python"}, {"id": "rest-api", "title": "REST API"}]} values={["python", "rest-api"]} defaultValue="python">
+<ZoneContent group="dotnet__javascript__python__rest-api__vscode" value="vscode" options={[{"id": "vscode", "title": "VS Code"}, {"id": "python", "title": "Python"}, {"id": "rest-api", "title": "REST API"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["vscode", "python", "rest-api", "dotnet", "javascript"]} defaultValue="vscode">
+
+Foundry Toolkit creates and publishes the toolbox. To verify the MCP endpoint response for a specific toolbox version, select the Python, .NET, JavaScript, or REST API tab in this section.
+
+</ZoneContent>
+<ZoneContent group="dotnet__javascript__python__rest-api__vscode" value="python" options={[{"id": "vscode", "title": "VS Code"}, {"id": "python", "title": "Python"}, {"id": "rest-api", "title": "REST API"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["vscode", "python", "rest-api", "dotnet", "javascript"]} defaultValue="vscode">
 
 Install the MCP client SDK if you haven't already:
 
@@ -177,7 +262,7 @@ asyncio.run(verify_toolbox())
 ```
 
 </ZoneContent>
-<ZoneContent group="python__rest-api" value="rest-api" options={[{"id": "python", "title": "Python"}, {"id": "rest-api", "title": "REST API"}]} values={["python", "rest-api"]} defaultValue="python">
+<ZoneContent group="dotnet__javascript__python__rest-api__vscode" value="rest-api" options={[{"id": "vscode", "title": "VS Code"}, {"id": "python", "title": "Python"}, {"id": "rest-api", "title": "REST API"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["vscode", "python", "rest-api", "dotnet", "javascript"]} defaultValue="vscode">
 
 Use the version-specific endpoint (`/versions/{version}/mcp`) to validate before promoting.
 
@@ -217,16 +302,30 @@ Foundry-Features: Toolboxes=V1Preview
 In `result.tools`, `tool_search` should be present and all other toolbox tools should be absent from the initial listing.
 
 </ZoneContent>
+<ZoneContent group="dotnet__javascript__python__rest-api__vscode" value="dotnet" options={[{"id": "vscode", "title": "VS Code"}, {"id": "python", "title": "Python"}, {"id": "rest-api", "title": "REST API"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["vscode", "python", "rest-api", "dotnet", "javascript"]} defaultValue="vscode">
+
+Use any MCP-compatible .NET client. Acquire a token with scope `https://ai.azure.com/.default`, include the `Foundry-Features: Toolboxes=V1Preview` header, and call `tools/list` against the version-specific MCP endpoint. See the **REST API** tab for the request shape.
+
+</ZoneContent>
+<ZoneContent group="dotnet__javascript__python__rest-api__vscode" value="javascript" options={[{"id": "vscode", "title": "VS Code"}, {"id": "python", "title": "Python"}, {"id": "rest-api", "title": "REST API"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["vscode", "python", "rest-api", "dotnet", "javascript"]} defaultValue="vscode">
+
+Use any MCP-compatible JavaScript client (for example, the `@modelcontextprotocol/sdk` package). Acquire a token with scope `https://ai.azure.com/.default`, include the `Foundry-Features: Toolboxes=V1Preview` header, and call `tools/list` against the version-specific MCP endpoint. See the **REST API** tab for the request shape.
+
+</ZoneContent>
 
 ## Fine-tune tool discovery
 
 Tool search works without additional configuration. For predictable usage patterns, you can tune how specific tools are surfaced and indexed.
 
+Foundry Toolkit supports enabling tool search. To configure pinned tools or extra search keywords, select the Python, .NET, JavaScript, or REST API tab in this section.
+
 ### Pin critical tools
 
 Use `pin` to make a specific tool always appear in `tools/list` alongside `tool_search` and `call_tool`. Pinned tools are callable immediately without a search round-trip. To pin every tool in an MCP server or built-in tool entry, use `"*"` as the key.
 
-<ZoneContent group="python__rest-api" value="python" options={[{"id": "python", "title": "Python"}, {"id": "rest-api", "title": "REST API"}]} values={["python", "rest-api"]} defaultValue="python">
+<ZonePivot group="dotnet__javascript__python__rest-api" options={[{"id": "python", "title": "Python"}, {"id": "rest-api", "title": "REST API"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} defaultValue="python" />
+
+<ZoneContent group="dotnet__javascript__python__rest-api" value="python" options={[{"id": "python", "title": "Python"}, {"id": "rest-api", "title": "REST API"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["python", "rest-api", "dotnet", "javascript"]} defaultValue="python">
 
 ```python
 tools=[
@@ -243,7 +342,7 @@ tools=[
 ```
 
 </ZoneContent>
-<ZoneContent group="python__rest-api" value="rest-api" options={[{"id": "python", "title": "Python"}, {"id": "rest-api", "title": "REST API"}]} values={["python", "rest-api"]} defaultValue="python">
+<ZoneContent group="dotnet__javascript__python__rest-api" value="rest-api" options={[{"id": "python", "title": "Python"}, {"id": "rest-api", "title": "REST API"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["python", "rest-api", "dotnet", "javascript"]} defaultValue="python">
 
 ```json
 {
@@ -262,10 +361,20 @@ tools=[
 ```
 
 </ZoneContent>
+<ZoneContent group="dotnet__javascript__python__rest-api" value="dotnet" options={[{"id": "python", "title": "Python"}, {"id": "rest-api", "title": "REST API"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["python", "rest-api", "dotnet", "javascript"]} defaultValue="python">
+
+In the .NET SDK, attach `tool_configs` to the MCP tool entry when constructing the toolbox version. The configuration shape is identical to the JSON shown in the **REST API** tab.
+
+</ZoneContent>
+<ZoneContent group="dotnet__javascript__python__rest-api" value="javascript" options={[{"id": "python", "title": "Python"}, {"id": "rest-api", "title": "REST API"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["python", "rest-api", "dotnet", "javascript"]} defaultValue="python">
+
+In JavaScript, include `tool_configs` on the MCP tool object passed to `project.beta.toolboxes.createVersion`. The configuration shape is identical to the JSON shown in the **REST API** tab.
+
+</ZoneContent>
 
 To pin every tool in an entry, use `"*"` as the key:
 
-<ZoneContent group="python__rest-api" value="python" options={[{"id": "python", "title": "Python"}, {"id": "rest-api", "title": "REST API"}]} values={["python", "rest-api"]} defaultValue="python">
+<ZoneContent group="dotnet__javascript__python__rest-api" value="python" options={[{"id": "python", "title": "Python"}, {"id": "rest-api", "title": "REST API"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["python", "rest-api", "dotnet", "javascript"]} defaultValue="python">
 
 ```python
 {
@@ -279,7 +388,7 @@ To pin every tool in an entry, use `"*"` as the key:
 ```
 
 </ZoneContent>
-<ZoneContent group="python__rest-api" value="rest-api" options={[{"id": "python", "title": "Python"}, {"id": "rest-api", "title": "REST API"}]} values={["python", "rest-api"]} defaultValue="python">
+<ZoneContent group="dotnet__javascript__python__rest-api" value="rest-api" options={[{"id": "python", "title": "Python"}, {"id": "rest-api", "title": "REST API"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["python", "rest-api", "dotnet", "javascript"]} defaultValue="python">
 
 ```json
 {
@@ -293,12 +402,22 @@ To pin every tool in an entry, use `"*"` as the key:
 ```
 
 </ZoneContent>
+<ZoneContent group="dotnet__javascript__python__rest-api" value="dotnet" options={[{"id": "python", "title": "Python"}, {"id": "rest-api", "title": "REST API"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["python", "rest-api", "dotnet", "javascript"]} defaultValue="python">
+
+Use the same `"*"` wildcard key inside `tool_configs` on the .NET MCP tool entry to pin every tool from an MCP server. See the **REST API** tab for the JSON shape.
+
+</ZoneContent>
+<ZoneContent group="dotnet__javascript__python__rest-api" value="javascript" options={[{"id": "python", "title": "Python"}, {"id": "rest-api", "title": "REST API"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["python", "rest-api", "dotnet", "javascript"]} defaultValue="python">
+
+Use the same `"*"` wildcard key inside `tool_configs` on the JavaScript MCP tool object to pin every tool from an MCP server. See the **REST API** tab for the JSON shape.
+
+</ZoneContent>
 
 ### Add search keywords
 
 If a tool's MCP description doesn't match the vocabulary users naturally use, add keywords with `additional_search_text`. The extra text is used only for search ranking—it's never exposed to the model in the tool schema.
 
-<ZoneContent group="python__rest-api" value="python" options={[{"id": "python", "title": "Python"}, {"id": "rest-api", "title": "REST API"}]} values={["python", "rest-api"]} defaultValue="python">
+<ZoneContent group="dotnet__javascript__python__rest-api" value="python" options={[{"id": "python", "title": "Python"}, {"id": "rest-api", "title": "REST API"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["python", "rest-api", "dotnet", "javascript"]} defaultValue="python">
 
 ```python
 {
@@ -318,7 +437,7 @@ If a tool's MCP description doesn't match the vocabulary users naturally use, ad
 ```
 
 </ZoneContent>
-<ZoneContent group="python__rest-api" value="rest-api" options={[{"id": "python", "title": "Python"}, {"id": "rest-api", "title": "REST API"}]} values={["python", "rest-api"]} defaultValue="python">
+<ZoneContent group="dotnet__javascript__python__rest-api" value="rest-api" options={[{"id": "python", "title": "Python"}, {"id": "rest-api", "title": "REST API"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["python", "rest-api", "dotnet", "javascript"]} defaultValue="python">
 
 ```json
 {
@@ -336,6 +455,16 @@ If a tool's MCP description doesn't match the vocabulary users naturally use, ad
   }
 }
 ```
+
+</ZoneContent>
+<ZoneContent group="dotnet__javascript__python__rest-api" value="dotnet" options={[{"id": "python", "title": "Python"}, {"id": "rest-api", "title": "REST API"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["python", "rest-api", "dotnet", "javascript"]} defaultValue="python">
+
+In the .NET SDK, set `additional_search_text` (and optionally `pin`) inside `tool_configs` on the MCP tool entry. The shape matches the JSON shown in the **REST API** tab.
+
+</ZoneContent>
+<ZoneContent group="dotnet__javascript__python__rest-api" value="javascript" options={[{"id": "python", "title": "Python"}, {"id": "rest-api", "title": "REST API"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["python", "rest-api", "dotnet", "javascript"]} defaultValue="python">
+
+In JavaScript, set `additional_search_text` (and optionally `pin`) inside `tool_configs` on the MCP tool object passed to `project.beta.toolboxes.createVersion`. The shape matches the JSON shown in the **REST API** tab.
 
 </ZoneContent>
 
