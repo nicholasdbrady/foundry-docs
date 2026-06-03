@@ -119,199 +119,338 @@ Use the following code sample to create an agent and call the function. The .NET
 
 <ZoneContent group="csharp__java__python__rest__typescript" value="python" options={[{"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "typescript", "title": "TypeScript"}, {"id": "java", "title": "Java"}, {"id": "rest", "title": "REST"}]} values={["python", "csharp", "typescript", "java", "rest"]} defaultValue="python">
 
-The following example shows how to use the GitHub MCP server as a tool for an agent.
+The following example shows how to use the GitHub MCP server as a tool for an agent. Select **Prompt Agents** to use the Azure AI Projects SDK to create a server-side prompt agent, or **Hosted Agents** to use the Agent Framework [`FoundryChatClient`](/agent-service/responses-api) to build an ephemeral, in-process agent.
 
-```python
-import json
-from azure.identity import DefaultAzureCredential
-from azure.ai.projects import AIProjectClient
-from azure.ai.projects.models import PromptAgentDefinition, MCPTool
-from openai.types.responses.response_input_param import McpApprovalResponse, ResponseInputParam
+<Tabs>
+  <Tab title="Prompt Agents">
 
-# Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-PROJECT_ENDPOINT = "your_project_endpoint"
-MCP_CONNECTION_NAME = "my-mcp-connection"
+    ```python
+    import json
+    from azure.identity import DefaultAzureCredential
+    from azure.ai.projects import AIProjectClient
+    from azure.ai.projects.models import PromptAgentDefinition, MCPTool
+    from openai.types.responses.response_input_param import McpApprovalResponse, ResponseInputParam
 
-# Create clients to call Foundry API
-project = AIProjectClient(
-    endpoint=PROJECT_ENDPOINT,
-    credential=DefaultAzureCredential(),
-)
-openai = project.get_openai_client()
+    # Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+    PROJECT_ENDPOINT = "your_project_endpoint"
+    MCP_CONNECTION_NAME = "my-mcp-connection"
 
-# [START tool_declaration]
-tool = MCPTool(
-    server_label="api-specs",
-    server_url="https://api.githubcopilot.com/mcp",
-    require_approval="always",
-    project_connection_id=MCP_CONNECTION_NAME,
-)
-# [END tool_declaration]
+    # Create clients to call Foundry API
+    project = AIProjectClient(
+        endpoint=PROJECT_ENDPOINT,
+        credential=DefaultAzureCredential(),
+    )
+    openai = project.get_openai_client()
 
-# Create a prompt agent with MCP tool capabilities
-agent = project.agents.create_version(
-    agent_name="MyAgent7",
-    definition=PromptAgentDefinition(
-        model="gpt-5-mini",
-        instructions="Use MCP tools as needed",
-        tools=[tool],
-    ),
-)
-print(f"Agent created (id: {agent.id}, name: {agent.name}, version: {agent.version})")
+    # [START tool_declaration]
+    tool = MCPTool(
+        server_label="api-specs",
+        server_url="https://api.githubcopilot.com/mcp",
+        require_approval="always",
+        project_connection_id=MCP_CONNECTION_NAME,
+    )
+    # [END tool_declaration]
 
-# Create a conversation to maintain context across multiple interactions
-conversation = openai.conversations.create()
-print(f"Created conversation (id: {conversation.id})")
+    # Create a prompt agent with MCP tool capabilities
+    agent = project.agents.create_version(
+        agent_name="MyAgent7",
+        definition=PromptAgentDefinition(
+            model="gpt-5-mini",
+            instructions="Use MCP tools as needed",
+            tools=[tool],
+        ),
+    )
+    print(f"Agent created (id: {agent.id}, name: {agent.name}, version: {agent.version})")
 
-# Send initial request that will trigger the MCP tool
-response = openai.responses.create(
-    conversation=conversation.id,
-    input="What is my username in my GitHub profile?",
-    extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
-)
+    # Create a conversation to maintain context across multiple interactions
+    conversation = openai.conversations.create()
+    print(f"Created conversation (id: {conversation.id})")
 
-# Process any MCP approval requests that were generated
-input_list: ResponseInputParam = []
-for item in response.output:
-    if item.type == "mcp_approval_request" and item.id:
-        print("MCP approval requested")
-        print(f"  Server: {item.server_label}")
-        print(f"  Tool: {getattr(item, 'name', '<unknown>')}")
-        print(
-            f"  Arguments: {json.dumps(getattr(item, 'arguments', None), indent=2, default=str)}"
-        )
+    # Send initial request that will trigger the MCP tool
+    response = openai.responses.create(
+        conversation=conversation.id,
+        input="What is my username in my GitHub profile?",
+        extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
+    )
 
-        # Approve only after you review the tool call.
-        # In production, implement your own approval UX and policy.
-        should_approve = (
-            input("Approve this MCP tool call? (y/N): ").strip().lower() == "y"
-        )
-        input_list.append(
-            McpApprovalResponse(
-                type="mcp_approval_response",
-                approve=should_approve,
-                approval_request_id=item.id,
+    # Process any MCP approval requests that were generated
+    input_list: ResponseInputParam = []
+    for item in response.output:
+        if item.type == "mcp_approval_request" and item.id:
+            print("MCP approval requested")
+            print(f"  Server: {item.server_label}")
+            print(f"  Tool: {getattr(item, 'name', '<unknown>')}")
+            print(
+                f"  Arguments: {json.dumps(getattr(item, 'arguments', None), indent=2, default=str)}"
             )
+
+            # Approve only after you review the tool call.
+            # In production, implement your own approval UX and policy.
+            should_approve = (
+                input("Approve this MCP tool call? (y/N): ").strip().lower() == "y"
+            )
+            input_list.append(
+                McpApprovalResponse(
+                    type="mcp_approval_response",
+                    approve=should_approve,
+                    approval_request_id=item.id,
+                )
+            )
+
+    # Send the approval response back to continue the agent's work
+    response = openai.responses.create(
+        input=input_list,
+        previous_response_id=response.id,
+        extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
+    )
+
+    print(f"Response: {response.output_text}")
+
+    # Clean up resources by deleting the agent version
+    project.agents.delete_version(agent_name=agent.name, agent_version=agent.version)
+    print("Agent deleted")
+    ```
+
+    ### Expected output
+
+    The following example shows the expected output when you run the sample:
+
+    ```console
+    Agent created (id: <agent-id>, name: MyAgent7, version: 1)
+    Created conversation (id: <conversation-id>)
+    Response: Your GitHub username is "example-username".
+    Agent deleted
+    ```
+
+  </Tab>
+  <Tab title="Hosted Agents">
+
+    This sample uses [`FoundryChatClient`](/agent-service/responses-api) from the Microsoft Agent Framework and calls `get_mcp_tool()` to register a hosted MCP server with per-tool approval control. Install the package with `pip install agent-framework-foundry aiohttp`, set the `FOUNDRY_PROJECT_ENDPOINT` and `FOUNDRY_MODEL` environment variables, and sign in with `az login`.
+
+    ```python
+    import asyncio
+    from typing import Any
+
+    from agent_framework import Agent, Message
+    from agent_framework.foundry import FoundryChatClient
+    from azure.identity import AzureCliCredential
+
+    async def main() -> None:
+        # Reads FOUNDRY_PROJECT_ENDPOINT and FOUNDRY_MODEL from the environment.
+        client = FoundryChatClient(credential=AzureCliCredential())
+
+        # Register a hosted MCP server. Use approval_mode="always_require" in production
+        # so the user approves each tool call; "never_require" skips approvals.
+        mcp_tool = client.get_mcp_tool(
+            name="Microsoft Learn MCP",
+            url="https://learn.microsoft.com/api/mcp",
+            approval_mode={"never_require_approval": ["microsoft_docs_search"]},
         )
 
-# Send the approval response back to continue the agent's work
-response = openai.responses.create(
-    input=input_list,
-    previous_response_id=response.id,
-    extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
-)
+        async with Agent(
+            client=client,
+            name="DocsAgent",
+            instructions="You are a helpful assistant that uses your MCP tool "
+            "to help with Microsoft documentation questions.",
+            tools=[mcp_tool],
+        ) as agent:
+            query = "What is Microsoft Agent Framework?"
+            result = await agent.run(query)
 
-print(f"Response: {response.output_text}")
+            # Handle any approval prompts raised by the MCP tool.
+            while len(result.user_input_requests) > 0:
+                new_inputs: list[Any] = [query]
+                for user_input_needed in result.user_input_requests:
+                    print(
+                        f"Approval requested for {user_input_needed.function_call.name} "
+                        f"with arguments: {user_input_needed.function_call.arguments}"
+                    )
+                    new_inputs.append(Message(role="assistant", contents=[user_input_needed]))
+                    approve = input("Approve function call? (y/n): ").lower() == "y"
+                    new_inputs.append(
+                        Message(
+                            role="user",
+                            contents=[user_input_needed.to_function_approval_response(approve)],
+                        )
+                    )
+                result = await agent.run(new_inputs)
 
-# Clean up resources by deleting the agent version
-project.agents.delete_version(agent_name=agent.name, agent_version=agent.version)
-print("Agent deleted")
-```
+            print(f"Agent: {result}")
 
-### Expected output
+    if __name__ == "__main__":
+        asyncio.run(main())
+    ```
 
-The following example shows the expected output when you run the sample:
+    ### Expected output
 
-```console
-Agent created (id: <agent-id>, name: MyAgent7, version: 1)
-Created conversation (id: <conversation-id>)
-Response: Your GitHub username is "example-username".
-Agent deleted
-```
+    The agent calls the Microsoft Learn MCP server and returns documentation-grounded text:
+
+    ```console
+    Agent: Microsoft Agent Framework is an open-source framework for building, orchestrating, and deploying AI agents ...
+    ```
+
+    For the full sample, including session-based approval flows and streaming, see [foundry_chat_client_with_hosted_mcp.py](https://github.com/microsoft/agent-framework/blob/main/python/samples/02-agents/providers/foundry/foundry_chat_client_with_hosted_mcp.py). For local (stdio) MCP servers, see [foundry_chat_client_with_local_mcp.py](https://github.com/microsoft/agent-framework/blob/main/python/samples/02-agents/providers/foundry/foundry_chat_client_with_local_mcp.py).
+
+  </Tab>
+</Tabs>
 
 </ZoneContent>
 <ZoneContent group="csharp__java__python__rest__typescript" value="csharp" options={[{"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "typescript", "title": "TypeScript"}, {"id": "java", "title": "Java"}, {"id": "rest", "title": "REST"}]} values={["python", "csharp", "typescript", "java", "rest"]} defaultValue="python">
 
 ## Create an agent with MCP tool
 
-The following example shows how to use the GitHub MCP server as a tool for an agent. The example uses synchronous methods to create an agent. For asynchronous methods, see the [sample code](https://github.com/Azure/azure-sdk-for-net/blob/main/sdk/ai/Azure.AI.Extensions.OpenAI/samples/Sample19_MCP.md) in the Azure SDK for .NET repository on GitHub.
+The following example shows how to use a remote MCP server as a tool for an agent. Select **Prompt Agents** to use the Azure AI Projects SDK to create a server-side prompt agent, or **Hosted Agents** to use the Microsoft Agent Framework to build an ephemeral, in-process agent.
 
-```csharp
-using System;
-using Azure.AI.Projects;
-using Azure.AI.Extensions.OpenAI;
-using Azure.Identity;
+<Tabs>
+  <Tab title="Prompt Agents">
 
-// Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-var projectEndpoint = "your_project_endpoint";
+    The example uses synchronous methods to create an agent. For asynchronous methods, see the [sample code](https://github.com/Azure/azure-sdk-for-net/blob/main/sdk/ai/Azure.AI.Extensions.OpenAI/samples/Sample19_MCP.md) in the Azure SDK for .NET repository on GitHub.
 
-// Create project client to call Foundry API
-AIProjectClient projectClient = new(
-    endpoint: new Uri(projectEndpoint),
-    tokenProvider: new DefaultAzureCredential());
+    ```csharp
+    using System;
+    using Azure.AI.Projects;
+    using Azure.AI.Extensions.OpenAI;
+    using Azure.Identity;
 
-// Create Agent with the `MCPTool`. Note that in this scenario 
-// GlobalMcpToolCallApprovalPolicy.AlwaysRequireApproval is used,
-// which means that any calls to the MCP server must be approved.
-DeclarativeAgentDefinition agentDefinition = new(model: "gpt-5-mini")
-{
-    Instructions = "You are a helpful agent that can use MCP tools to assist users. Use the available MCP tools to answer questions and perform tasks.",
-    Tools = { ResponseTool.CreateMcpTool(
-        serverLabel: "api-specs",
-        serverUri: new Uri("https://gitmcp.io/Azure/azure-rest-api-specs"),
-        toolCallApprovalPolicy: new McpToolCallApprovalPolicy(GlobalMcpToolCallApprovalPolicy.AlwaysRequireApproval
-    )) }
-};
-AgentVersion agentVersion = projectClient.AgentAdministrationClient.CreateAgentVersion(
-    agentName: "myAgent",
-    options: new(agentDefinition));
+    // Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+    var projectEndpoint = "your_project_endpoint";
 
-// If the tool approval is required, the response item is
-// of `McpToolCallApprovalRequestItem` type and contains all
-// the information about tool call. This example checks that
-// the server label is "api-specs" and approves the tool call.
-// All other calls are denied because they should not occur for
-// the current configuration.
-ProjectResponsesClient responseClient = projectClient.ProjectOpenAIClient.GetProjectResponsesClientForAgent(agentVersion.Name);
+    // Create project client to call Foundry API
+    AIProjectClient projectClient = new(
+        endpoint: new Uri(projectEndpoint),
+        tokenProvider: new DefaultAzureCredential());
 
-CreateResponseOptions nextResponseOptions = new([ResponseItem.CreateUserMessageItem("Please summarize the Azure REST API specifications README")]);
-ResponseResult latestResponse = null;
-
-while (nextResponseOptions is not null)
-{
-    latestResponse = responseClient.CreateResponse(nextResponseOptions);
-    nextResponseOptions = null;
-
-    foreach (ResponseItem responseItem in latestResponse.OutputItems)
+    // Create Agent with the `MCPTool`. Note that in this scenario 
+    // GlobalMcpToolCallApprovalPolicy.AlwaysRequireApproval is used,
+    // which means that any calls to the MCP server must be approved.
+    DeclarativeAgentDefinition agentDefinition = new(model: "gpt-5-mini")
     {
-        if (responseItem is McpToolCallApprovalRequestItem mcpToolCall)
+        Instructions = "You are a helpful agent that can use MCP tools to assist users. Use the available MCP tools to answer questions and perform tasks.",
+        Tools = { ResponseTool.CreateMcpTool(
+            serverLabel: "api-specs",
+            serverUri: new Uri("https://gitmcp.io/Azure/azure-rest-api-specs"),
+            toolCallApprovalPolicy: new McpToolCallApprovalPolicy(GlobalMcpToolCallApprovalPolicy.AlwaysRequireApproval
+        )) }
+    };
+    AgentVersion agentVersion = projectClient.AgentAdministrationClient.CreateAgentVersion(
+        agentName: "myAgent",
+        options: new(agentDefinition));
+
+    // If the tool approval is required, the response item is
+    // of `McpToolCallApprovalRequestItem` type and contains all
+    // the information about tool call. This example checks that
+    // the server label is "api-specs" and approves the tool call.
+    // All other calls are denied because they should not occur for
+    // the current configuration.
+    ProjectResponsesClient responseClient = projectClient.ProjectOpenAIClient.GetProjectResponsesClientForAgent(agentVersion.Name);
+
+    CreateResponseOptions nextResponseOptions = new([ResponseItem.CreateUserMessageItem("Please summarize the Azure REST API specifications README")]);
+    ResponseResult latestResponse = null;
+
+    while (nextResponseOptions is not null)
+    {
+        latestResponse = responseClient.CreateResponse(nextResponseOptions);
+        nextResponseOptions = null;
+
+        foreach (ResponseItem responseItem in latestResponse.OutputItems)
         {
-            nextResponseOptions = new CreateResponseOptions()
+            if (responseItem is McpToolCallApprovalRequestItem mcpToolCall)
             {
-                PreviousResponseId = latestResponse.Id,
-            };
-            if (string.Equals(mcpToolCall.ServerLabel, "api-specs"))
-            {
-                Console.WriteLine($"Approval requested for {mcpToolCall.ServerLabel} (tool: {mcpToolCall.ToolName})");
-                Console.Write("Approve this MCP tool call? (y/N): ");
-                bool approved = string.Equals(Console.ReadLine(), "y", StringComparison.OrdinalIgnoreCase);
-                nextResponseOptions.InputItems.Add(ResponseItem.CreateMcpApprovalResponseItem(approvalRequestId: mcpToolCall.Id, approved: approved));
-            }
-            else
-            {
-                Console.WriteLine($"Rejecting unknown call {mcpToolCall.ServerLabel}...");
-                nextResponseOptions.InputItems.Add(ResponseItem.CreateMcpApprovalResponseItem(approvalRequestId: mcpToolCall.Id, approved: false));
+                nextResponseOptions = new CreateResponseOptions()
+                {
+                    PreviousResponseId = latestResponse.Id,
+                };
+                if (string.Equals(mcpToolCall.ServerLabel, "api-specs"))
+                {
+                    Console.WriteLine($"Approval requested for {mcpToolCall.ServerLabel} (tool: {mcpToolCall.ToolName})");
+                    Console.Write("Approve this MCP tool call? (y/N): ");
+                    bool approved = string.Equals(Console.ReadLine(), "y", StringComparison.OrdinalIgnoreCase);
+                    nextResponseOptions.InputItems.Add(ResponseItem.CreateMcpApprovalResponseItem(approvalRequestId: mcpToolCall.Id, approved: approved));
+                }
+                else
+                {
+                    Console.WriteLine($"Rejecting unknown call {mcpToolCall.ServerLabel}...");
+                    nextResponseOptions.InputItems.Add(ResponseItem.CreateMcpApprovalResponseItem(approvalRequestId: mcpToolCall.Id, approved: false));
+                }
             }
         }
     }
-}
 
-// Output the final response from the agent.
-Console.WriteLine(latestResponse.GetOutputText());
+    // Output the final response from the agent.
+    Console.WriteLine(latestResponse.GetOutputText());
 
-// Clean up resources by deleting the agent version.
-projectClient.AgentAdministrationClient.DeleteAgentVersion(agentName: agentVersion.Name, agentVersion: agentVersion.Version);
-```
+    // Clean up resources by deleting the agent version.
+    projectClient.AgentAdministrationClient.DeleteAgentVersion(agentName: agentVersion.Name, agentVersion: agentVersion.Version);
+    ```
 
-### Expected output
+    ### Expected output
 
-The following example shows the expected output when you run the sample:
+    The following example shows the expected output when you run the sample:
 
-```console
-Approval requested for api-specs...
-Response: The Azure REST API specifications repository contains the OpenAPI specifications for Azure services. It is
-organized by service and includes guidelines for contributing new specifications. The repository is intended for use by developers building tools and services that interact with Azure APIs.
-```
+    ```console
+    Approval requested for api-specs...
+    Response: The Azure REST API specifications repository contains the OpenAPI specifications for Azure services. It is
+    organized by service and includes guidelines for contributing new specifications. The repository is intended for use by developers building tools and services that interact with Azure APIs.
+    ```
+
+  </Tab>
+  <Tab title="Hosted Agents">
+
+    This sample uses the Microsoft Agent Framework and calls `AsAIAgent(...)` on `AIProjectClient` together with an MCP client to expose remote MCP tools to the agent. Install the `Microsoft.Agents.AI.Foundry`, `Azure.AI.Projects`, and `ModelContextProtocol` packages, set the `AZURE_AI_PROJECT_ENDPOINT` and `AZURE_AI_MODEL_DEPLOYMENT_NAME` environment variables, and sign in with `az login`.
+
+    ```csharp
+    using Azure.AI.Projects;
+    using Azure.Identity;
+    using Microsoft.Agents.AI;
+    using Microsoft.Extensions.AI;
+    using ModelContextProtocol.Client;
+
+    string endpoint = Environment.GetEnvironmentVariable("AZURE_AI_PROJECT_ENDPOINT")
+        ?? throw new InvalidOperationException("AZURE_AI_PROJECT_ENDPOINT is not set.");
+    string deploymentName = Environment.GetEnvironmentVariable("AZURE_AI_MODEL_DEPLOYMENT_NAME") ?? "gpt-5-mini";
+
+    // Connect to the Microsoft Learn MCP server via Streamable HTTP transport.
+    Console.WriteLine("Connecting to MCP server at https://learn.microsoft.com/api/mcp ...");
+
+    await using McpClient mcpClient = await McpClient.CreateAsync(new HttpClientTransport(new()
+    {
+        Endpoint = new Uri("https://learn.microsoft.com/api/mcp"),
+        Name = "Microsoft Learn MCP",
+    }));
+
+    // Retrieve the list of tools available on the MCP server.
+    IList<McpClientTool> mcpTools = await mcpClient.ListToolsAsync();
+    Console.WriteLine($"MCP tools available: {string.Join(", ", mcpTools.Select(t => t.Name))}");
+
+    List<AITool> agentTools = [.. mcpTools.Cast<AITool>()];
+
+    AIProjectClient aiProjectClient = new(new Uri(endpoint), new DefaultAzureCredential());
+
+    AIAgent agent = aiProjectClient.AsAIAgent(
+        deploymentName,
+        instructions: "You are a helpful assistant that can answer Microsoft documentation questions. Use the Microsoft Learn MCP tool to search documentation.",
+        name: "DocsAgent",
+        tools: agentTools);
+
+    const string Prompt = "How does one create an Azure storage account using the az CLI?";
+    Console.WriteLine($"User: {Prompt}\n");
+    Console.WriteLine($"Agent: {await agent.RunAsync(Prompt)}");
+    ```
+
+    ### Expected output
+
+    The agent queries the Microsoft Learn MCP server for documentation snippets and answers:
+
+    ```console
+    User: How does one create an Azure storage account using the az CLI?
+
+    Agent: To create an Azure storage account using the az CLI, run: `az storage account create --name <name> --resource-group <rg> --location <region> --sku Standard_LRS` ...
+    ```
+
+    For local MCP transports and additional patterns, see [Agent_Step09_UsingMcpClientAsTools](https://github.com/microsoft/agent-framework/tree/main/dotnet/samples/02-agents/AgentsWithFoundry/Agent_Step09_UsingMcpClientAsTools) and [Agent_Step23_LocalMCP](https://github.com/microsoft/agent-framework/tree/main/dotnet/samples/02-agents/AgentsWithFoundry/Agent_Step23_LocalMCP).
+
+  </Tab>
+</Tabs>
 
 ## Create an agent by using the MCP tool with project connection authentication
 

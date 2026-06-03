@@ -106,123 +106,229 @@ The following table shows SDK and setup support.
 
 <ZoneContent group="csharp__java__python__rest__typescript" value="python" options={[{"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "typescript", "title": "TypeScript"}, {"id": "java", "title": "Java"}, {"id": "rest", "title": "REST"}]} values={["python", "csharp", "typescript", "java", "rest"]} defaultValue="python">
 
-```python
-from azure.identity import DefaultAzureCredential
-from azure.ai.projects import AIProjectClient
-from azure.ai.projects.models import (
-    PromptAgentDefinition,
-    MicrosoftFabricPreviewTool,
-    FabricDataAgentToolParameters,
-    ToolProjectConnection,
-)
+Select **Prompt Agents** to use the Azure AI Projects SDK to create a server-side prompt agent, or **Hosted Agents** to use the Agent Framework [`FoundryChatClient`](/agent-service/responses-api) to build an ephemeral, in-process agent.
 
-# Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-PROJECT_ENDPOINT = "your_project_endpoint"
-FABRIC_CONNECTION_NAME = "my-fabric-connection"
+<Tabs>
+  <Tab title="Prompt Agents">
 
-# Create clients to call Foundry API
-project = AIProjectClient(
-    endpoint=PROJECT_ENDPOINT,
-    credential=DefaultAzureCredential(),
-)
-openai = project.get_openai_client()
+    ```python
+    from azure.identity import DefaultAzureCredential
+    from azure.ai.projects import AIProjectClient
+    from azure.ai.projects.models import (
+        PromptAgentDefinition,
+        MicrosoftFabricPreviewTool,
+        FabricDataAgentToolParameters,
+        ToolProjectConnection,
+    )
 
-# Get connection ID from connection name
-fabric_connection = project.connections.get(FABRIC_CONNECTION_NAME)
+    # Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+    PROJECT_ENDPOINT = "your_project_endpoint"
+    FABRIC_CONNECTION_NAME = "my-fabric-connection"
 
-# Create an agent with the Fabric data agent tool
-agent = project.agents.create_version(
-    agent_name="MyAgent",
-    definition=PromptAgentDefinition(
-        model="gpt-4.1-mini",
-        instructions="You are a helpful assistant.",
-        tools=[
-            MicrosoftFabricPreviewTool(
-                fabric_dataagent_preview=FabricDataAgentToolParameters(
-                    project_connections=[
-                        ToolProjectConnection(project_connection_id=fabric_connection.id)
-                    ]
+    # Create clients to call Foundry API
+    project = AIProjectClient(
+        endpoint=PROJECT_ENDPOINT,
+        credential=DefaultAzureCredential(),
+    )
+    openai = project.get_openai_client()
+
+    # Get connection ID from connection name
+    fabric_connection = project.connections.get(FABRIC_CONNECTION_NAME)
+
+    # Create an agent with the Fabric data agent tool
+    agent = project.agents.create_version(
+        agent_name="MyAgent",
+        definition=PromptAgentDefinition(
+            model="gpt-4.1-mini",
+            instructions="You are a helpful assistant.",
+            tools=[
+                MicrosoftFabricPreviewTool(
+                    fabric_dataagent_preview=FabricDataAgentToolParameters(
+                        project_connections=[
+                            ToolProjectConnection(project_connection_id=fabric_connection.id)
+                        ]
+                    )
                 )
-            )
-        ],
-    ),
-)
-print(f"Agent created (id: {agent.id}, name: {agent.name}, version: {agent.version})")
+            ],
+        ),
+    )
+    print(f"Agent created (id: {agent.id}, name: {agent.name}, version: {agent.version})")
 
-user_input = input("Enter your question for Fabric (e.g., 'Tell me about sales records'): \n")
+    user_input = input("Enter your question for Fabric (e.g., 'Tell me about sales records'): \n")
 
-# Send the user query and force the agent to use the Fabric tool
-response = openai.responses.create(
-    tool_choice="required",
-    input=user_input,
-    extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
-)
+    # Send the user query and force the agent to use the Fabric tool
+    response = openai.responses.create(
+        tool_choice="required",
+        input=user_input,
+        extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
+    )
 
-print(f"Response output: {response.output_text}")
+    print(f"Response output: {response.output_text}")
 
-# Clean up resources
-project.agents.delete_version(agent_name=agent.name, agent_version=agent.version)
-print("Agent deleted")
-```
+    # Clean up resources
+    project.agents.delete_version(agent_name=agent.name, agent_version=agent.version)
+    print("Agent deleted")
+    ```
 
-### Expected output
+    ### Expected output
 
-- A line confirming agent creation.
-- A line that starts with `Response output:` followed by the response text.
+    - A line confirming agent creation.
+    - A line that starts with `Response output:` followed by the response text.
 
-For more details, see the [full Python sample for Fabric data agent](https://github.com/Azure/azure-sdk-for-python/blob/main/sdk/ai/azure-ai-agents/samples/agents_tools/sample_agents_fabric.py).
+    For more details, see the [full Python sample for Fabric data agent](https://github.com/Azure/azure-sdk-for-python/blob/main/sdk/ai/azure-ai-agents/samples/agents_tools/sample_agents_fabric.py).
+
+  </Tab>
+  <Tab title="Hosted Agents">
+
+    This sample uses [`FoundryChatClient`](/agent-service/responses-api) from the Microsoft Agent Framework and calls `get_fabric_tool()` to attach a Microsoft Fabric data agent connection. It uses `AIProjectClient` to resolve the connection name to a connection ID. Install the package with `pip install agent-framework-foundry aiohttp`, set the `FOUNDRY_PROJECT_ENDPOINT` and `FOUNDRY_MODEL` environment variables, and sign in with `az login`.
+
+    ```python
+    import asyncio
+    import os
+
+    from agent_framework import Agent
+    from agent_framework.foundry import FoundryChatClient
+    from azure.ai.projects import AIProjectClient
+    from azure.identity import AzureCliCredential
+
+    FABRIC_CONNECTION_NAME = "my-fabric-connection"
+
+    async def main() -> None:
+        credential = AzureCliCredential()
+        project = AIProjectClient(
+            endpoint=os.environ["FOUNDRY_PROJECT_ENDPOINT"],
+            credential=credential,
+        )
+        fabric_connection_id = project.connections.get(FABRIC_CONNECTION_NAME).id
+
+        agent = Agent(
+            client=FoundryChatClient(credential=credential),
+            instructions="You are a helpful assistant. Use Fabric to answer data questions.",
+            tools=[FoundryChatClient.get_fabric_tool(connection_id=fabric_connection_id)],
+        )
+
+        result = await agent.run("Tell me about sales records.")
+        print(f"Agent: {result.text}")
+
+    if __name__ == "__main__":
+        asyncio.run(main())
+    ```
+
+    ### Expected output
+
+    The agent response text is printed to the console, grounded in the Fabric workspace your connection points to:
+
+    ```console
+    Agent: Based on the sales records in the connected Fabric workspace ...
+    ```
+
+    For more about Agent Framework Foundry tool factories, see the [Foundry provider samples](https://github.com/microsoft/agent-framework/tree/main/python/samples/02-agents/providers/foundry).
+
+  </Tab>
+</Tabs>
 
 </ZoneContent>
 <ZoneContent group="csharp__java__python__rest__typescript" value="csharp" options={[{"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "typescript", "title": "TypeScript"}, {"id": "java", "title": "Java"}, {"id": "rest", "title": "REST"}]} values={["python", "csharp", "typescript", "java", "rest"]} defaultValue="python">
 
-To enable your agent to access the Fabric data agent, use `MicrosoftFabricAgentTool`.
+To enable your agent to access the Fabric data agent, use `MicrosoftFabricAgentTool`. Select **Prompt Agents** to use the Azure AI Projects SDK to create a server-side prompt agent, or **Hosted Agents** to use the Microsoft Agent Framework to build an ephemeral, in-process agent.
 
-```csharp
-// Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-var projectEndpoint = "your_project_endpoint";
-var fabricConnectionName = "my-fabric-connection";
+<Tabs>
+  <Tab title="Prompt Agents">
 
-// Create project client to call Foundry API
-AIProjectClient projectClient = new(
-    endpoint: new Uri(projectEndpoint),
-    tokenProvider: new DefaultAzureCredential());
+    ```csharp
+    // Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+    var projectEndpoint = "your_project_endpoint";
+    var fabricConnectionName = "my-fabric-connection";
 
-// Get connection ID from connection name
-AIProjectConnection fabricConnection = projectClient.Connections.GetConnection(connectionName: fabricConnectionName);
+    // Create project client to call Foundry API
+    AIProjectClient projectClient = new(
+        endpoint: new Uri(projectEndpoint),
+        tokenProvider: new DefaultAzureCredential());
 
-FabricDataAgentToolOptions fabricToolOption = new()
-{
-    ProjectConnections = { new ToolProjectConnection(projectConnectionId: fabricConnection.Id) }
-};
-DeclarativeAgentDefinition agentDefinition = new(model: "gpt-4.1-mini")
-{
-    Instructions = "You are a helpful assistant.",
-    Tools = { new MicrosoftFabricPreviewTool(fabricToolOption), }
-};
-AgentVersion agentVersion = projectClient.AgentAdministrationClient.CreateAgentVersion(
-    agentName: "myAgent",
-    options: new(agentDefinition));
+    // Get connection ID from connection name
+    AIProjectConnection fabricConnection = projectClient.Connections.GetConnection(connectionName: fabricConnectionName);
 
-// Create the response and make sure we are always using tool.
-ProjectResponsesClient responseClient = projectClient.ProjectOpenAIClient.GetProjectResponsesClientForAgent(agentVersion.Name);
-CreateResponseOptions responseOptions = new()
-{
-    ToolChoice = ResponseToolChoice.CreateRequiredChoice(),
-    InputItems = { ResponseItem.CreateUserMessageItem("What was the number of public holidays in Norway in 2024?") },
-};
-ResponseResult response = responseClient.CreateResponse(options: responseOptions);
+    FabricDataAgentToolOptions fabricToolOption = new()
+    {
+        ProjectConnections = { new ToolProjectConnection(projectConnectionId: fabricConnection.Id) }
+    };
+    DeclarativeAgentDefinition agentDefinition = new(model: "gpt-4.1-mini")
+    {
+        Instructions = "You are a helpful assistant.",
+        Tools = { new MicrosoftFabricPreviewTool(fabricToolOption), }
+    };
+    AgentVersion agentVersion = projectClient.AgentAdministrationClient.CreateAgentVersion(
+        agentName: "myAgent",
+        options: new(agentDefinition));
 
-// Print the Agent output.
-Assert.That(response.Status, Is.EqualTo(ResponseStatus.Completed));
-Console.WriteLine(response.GetOutputText());
+    // Create the response and make sure we are always using tool.
+    ProjectResponsesClient responseClient = projectClient.ProjectOpenAIClient.GetProjectResponsesClientForAgent(agentVersion.Name);
+    CreateResponseOptions responseOptions = new()
+    {
+        ToolChoice = ResponseToolChoice.CreateRequiredChoice(),
+        InputItems = { ResponseItem.CreateUserMessageItem("What was the number of public holidays in Norway in 2024?") },
+    };
+    ResponseResult response = responseClient.CreateResponse(options: responseOptions);
 
-// Delete the Agent version to clean up resources.
-projectClient.AgentAdministrationClient.DeleteAgentVersion(agentName: agentVersion.Name, agentVersion: agentVersion.Version);
-```
+    // Print the Agent output.
+    Assert.That(response.Status, Is.EqualTo(ResponseStatus.Completed));
+    Console.WriteLine(response.GetOutputText());
 
-### Expected output
+    // Delete the Agent version to clean up resources.
+    projectClient.AgentAdministrationClient.DeleteAgentVersion(agentName: agentVersion.Name, agentVersion: agentVersion.Version);
+    ```
 
-- The response text printed to the console. For the sample question, the response should include the number of public holidays (for example, `62`).
+    ### Expected output
+
+    - The response text printed to the console. For the sample question, the response should include the number of public holidays (for example, `62`).
+
+  </Tab>
+  <Tab title="Hosted Agents">
+
+    This sample uses the Microsoft Agent Framework and calls `AsAIAgent(...)` on `AIProjectClient` together with `FoundryAITool.CreateMicrosoftFabricTool(...)` from `Microsoft.Agents.AI.Foundry`. Install the `Microsoft.Agents.AI.Foundry` and `Azure.AI.Projects` packages, set the `AZURE_AI_PROJECT_ENDPOINT`, `AZURE_AI_MODEL_DEPLOYMENT_NAME`, and `FABRIC_PROJECT_CONNECTION_ID` environment variables, and sign in with `az login`.
+
+    ```csharp
+    using Azure.AI.Projects;
+    using Azure.AI.Projects.Agents;
+    using Azure.Identity;
+    using Microsoft.Agents.AI;
+    using Microsoft.Agents.AI.Foundry;
+
+    string fabricConnectionId = Environment.GetEnvironmentVariable("FABRIC_PROJECT_CONNECTION_ID")
+        ?? throw new InvalidOperationException("FABRIC_PROJECT_CONNECTION_ID is not set.");
+    string endpoint = Environment.GetEnvironmentVariable("AZURE_AI_PROJECT_ENDPOINT")
+        ?? throw new InvalidOperationException("AZURE_AI_PROJECT_ENDPOINT is not set.");
+    string deploymentName = Environment.GetEnvironmentVariable("AZURE_AI_MODEL_DEPLOYMENT_NAME") ?? "gpt-5-mini";
+
+    const string AgentInstructions =
+        "You are a helpful assistant with access to Microsoft Fabric data. Answer questions based on data available through your Fabric connection.";
+
+    var fabricToolOptions = new FabricDataAgentToolOptions();
+    fabricToolOptions.ProjectConnections.Add(new ToolProjectConnection(fabricConnectionId));
+
+    AIProjectClient aiProjectClient = new(new Uri(endpoint), new DefaultAzureCredential());
+
+    AIAgent agent = aiProjectClient.AsAIAgent(deploymentName,
+        instructions: AgentInstructions,
+        name: "FabricAgent",
+        tools: [FoundryAITool.CreateMicrosoftFabricTool(fabricToolOptions)]);
+
+    AgentResponse response = await agent.RunAsync("What data is available in the connected Fabric workspace?");
+    Console.WriteLine($"Response: {response.Text}");
+    ```
+
+    ### Expected output
+
+    The agent response text is printed to the console, grounded in the Fabric workspace your connection points to:
+
+    ```console
+    Response: The connected Fabric workspace contains the following datasets ...
+    ```
+
+    For the full sample, see [Agent_Step20_MicrosoftFabric](https://github.com/microsoft/agent-framework/tree/main/dotnet/samples/02-agents/AgentsWithFoundry/Agent_Step20_MicrosoftFabric).
+
+  </Tab>
+</Tabs>
 
 </ZoneContent>
 <ZoneContent group="csharp__java__python__rest__typescript" value="typescript" options={[{"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "typescript", "title": "TypeScript"}, {"id": "java", "title": "Java"}, {"id": "rest", "title": "REST"}]} values={["python", "csharp", "typescript", "java", "rest"]} defaultValue="python">

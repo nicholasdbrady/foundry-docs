@@ -56,307 +56,423 @@ Function calling follows this pattern:
 
 <ZoneContent group="csharp__java__python__rest__typescript" value="python" options={[{"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "rest", "title": "REST"}, {"id": "typescript", "title": "TypeScript"}, {"id": "java", "title": "Java"}]} values={["python", "csharp", "rest", "typescript", "java"]} defaultValue="python">
 
-Use the following code sample to create an agent, handle a function call, and return tool output back to the agent.
+Use the following code sample to create an agent, handle a function call, and return tool output back to the agent. Select **Prompt Agents** to use the Azure AI Projects SDK to create a server-side prompt agent, or **Hosted Agents** to use the Agent Framework [`FoundryChatClient`](/agent-service/responses-api) to build an ephemeral, in-process agent.
 
-```python
-import json
-from azure.ai.projects import AIProjectClient
-from azure.ai.projects.models import PromptAgentDefinition, Tool, FunctionTool
-from azure.identity import DefaultAzureCredential
-from openai.types.responses.response_input_param import FunctionCallOutput, ResponseInputParam
+<Tabs>
+  <Tab title="Prompt Agents">
 
-def get_horoscope(sign: str) -> str:
-    """Generate a horoscope for the given astrological sign."""
-    return f"{sign}: Next Tuesday you will befriend a baby otter."
+    ```python
+    import json
+    from azure.ai.projects import AIProjectClient
+    from azure.ai.projects.models import PromptAgentDefinition, Tool, FunctionTool
+    from azure.identity import DefaultAzureCredential
+    from openai.types.responses.response_input_param import FunctionCallOutput, ResponseInputParam
 
-# Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-PROJECT_ENDPOINT = "your_project_endpoint"
+    def get_horoscope(sign: str) -> str:
+        """Generate a horoscope for the given astrological sign."""
+        return f"{sign}: Next Tuesday you will befriend a baby otter."
 
-project = AIProjectClient(
-    endpoint=PROJECT_ENDPOINT,
-    credential=DefaultAzureCredential(),
-)
-openai = project.get_openai_client()
+    # Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+    PROJECT_ENDPOINT = "your_project_endpoint"
 
-# Create a conversation for multi-turn interaction
-conversation = openai.conversations.create()
+    project = AIProjectClient(
+        endpoint=PROJECT_ENDPOINT,
+        credential=DefaultAzureCredential(),
+    )
+    openai = project.get_openai_client()
 
-# Define a function tool for the model to use
-func_tool = FunctionTool(
-    name="get_horoscope",
-    parameters={
-        "type": "object",
-        "properties": {
-            "sign": {
-                "type": "string",
-                "description": "An astrological sign like Taurus or Aquarius",
+    # Create a conversation for multi-turn interaction
+    conversation = openai.conversations.create()
+
+    # Define a function tool for the model to use
+    func_tool = FunctionTool(
+        name="get_horoscope",
+        parameters={
+            "type": "object",
+            "properties": {
+                "sign": {
+                    "type": "string",
+                    "description": "An astrological sign like Taurus or Aquarius",
+                },
             },
+            "required": ["sign"],
+            "additionalProperties": False,
         },
-        "required": ["sign"],
-        "additionalProperties": False,
-    },
-    description="Get today's horoscope for an astrological sign.",
-    strict=True,
-)
+        description="Get today's horoscope for an astrological sign.",
+        strict=True,
+    )
 
-tools: list[Tool] = [func_tool]
+    tools: list[Tool] = [func_tool]
 
-agent = project.agents.create_version(
-    agent_name="MyAgent",
-    definition=PromptAgentDefinition(
-        model="gpt-4.1-mini",
-        instructions="You are a helpful assistant that can use function tools.",
-        tools=tools,
-    ),
-)
+    agent = project.agents.create_version(
+        agent_name="MyAgent",
+        definition=PromptAgentDefinition(
+            model="gpt-4.1-mini",
+            instructions="You are a helpful assistant that can use function tools.",
+            tools=tools,
+        ),
+    )
 
-# Prompt the model with tools defined
-response = openai.responses.create(
-    input="What is my horoscope? I am an Aquarius.",
-    conversation=conversation.id,
-    extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
-)
+    # Prompt the model with tools defined
+    response = openai.responses.create(
+        input="What is my horoscope? I am an Aquarius.",
+        conversation=conversation.id,
+        extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
+    )
 
-input_list: ResponseInputParam = []
-# Process function calls
-for item in response.output:
-    if item.type == "function_call":
-        if item.name == "get_horoscope":
-            # Execute the function logic for get_horoscope
-            horoscope = get_horoscope(**json.loads(item.arguments))
+    input_list: ResponseInputParam = []
+    # Process function calls
+    for item in response.output:
+        if item.type == "function_call":
+            if item.name == "get_horoscope":
+                # Execute the function logic for get_horoscope
+                horoscope = get_horoscope(**json.loads(item.arguments))
 
-            # Provide function call results to the model
-            input_list.append(
-                FunctionCallOutput(
-                    type="function_call_output",
-                    call_id=item.call_id,
-                    output=json.dumps({"horoscope": horoscope}),
+                # Provide function call results to the model
+                input_list.append(
+                    FunctionCallOutput(
+                        type="function_call_output",
+                        call_id=item.call_id,
+                        output=json.dumps({"horoscope": horoscope}),
+                    )
                 )
-            )
 
-# Submit function results and get the final response
-response = openai.responses.create(
-    input=input_list,
-    conversation=conversation.id,
-    extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
-)
+    # Submit function results and get the final response
+    response = openai.responses.create(
+        input=input_list,
+        conversation=conversation.id,
+        extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
+    )
 
-print(f"Agent response: {response.output_text}")
+    print(f"Agent response: {response.output_text}")
 
-# Clean up resources
-project.agents.delete_version(agent_name=agent.name, agent_version=agent.version)
-openai.conversations.delete(conversation_id=conversation.id)
-```
+    # Clean up resources
+    project.agents.delete_version(agent_name=agent.name, agent_version=agent.version)
+    openai.conversations.delete(conversation_id=conversation.id)
+    ```
 
-### Expected output
+    ### Expected output
 
-The following example shows the expected output:
+    The following example shows the expected output:
 
-```console
-Agent response: Your horoscope for Aquarius: Next Tuesday you will befriend a baby otter.
-```
+    ```console
+    Agent response: Your horoscope for Aquarius: Next Tuesday you will befriend a baby otter.
+    ```
+
+  </Tab>
+  <Tab title="Hosted Agents">
+
+    This sample uses [`FoundryChatClient`](/agent-service/responses-api) from the Microsoft Agent Framework with the `@tool` decorator. The framework handles tool discovery, the function-call request/response loop, and result formatting for you. Install the package with `pip install agent-framework-foundry aiohttp`, set the `FOUNDRY_PROJECT_ENDPOINT` and `FOUNDRY_MODEL` environment variables, and sign in with `az login`.
+
+    ```python
+    import asyncio
+    from random import randint
+    from typing import Annotated
+
+    from agent_framework import Agent, tool
+    from agent_framework.foundry import FoundryChatClient
+    from azure.identity import AzureCliCredential
+    from pydantic import Field
+
+    # Note: approval_mode="never_require" is used here for brevity.
+    # Use "always_require" in production for human-in-the-loop approvals.
+    @tool(approval_mode="never_require")
+    def get_weather(
+        location: Annotated[str, Field(description="The location to get the weather for.")],
+    ) -> str:
+        """Get the weather for a given location."""
+        conditions = ["sunny", "cloudy", "rainy", "stormy"]
+        return f"The weather in {location} is {conditions[randint(0, 3)]} with a high of {randint(10, 30)}\u00b0C."
+
+    async def main() -> None:
+        # Reads FOUNDRY_PROJECT_ENDPOINT and FOUNDRY_MODEL from the environment.
+        agent = Agent(
+            client=FoundryChatClient(credential=AzureCliCredential()),
+            instructions="You are a helpful assistant that can provide weather information.",
+            tools=[get_weather],
+        )
+
+        result = await agent.run("What's the weather like in Seattle?")
+        print(f"Agent: {result.text}")
+
+    if __name__ == "__main__":
+        asyncio.run(main())
+    ```
+
+    ### Expected output
+
+    The agent invokes `get_weather` automatically and returns the model's natural-language answer:
+
+    ```console
+    Agent: The weather in Seattle is cloudy with a high of 22°C.
+    ```
+
+    You can also pass tools per-call via `agent.run(query, tools=[...])` to give different runs different tool sets. For the full sample including agent-level, run-level, and mixed patterns, see [foundry_chat_client_with_function_tools.py](https://github.com/microsoft/agent-framework/blob/main/python/samples/02-agents/providers/foundry/foundry_chat_client_with_function_tools.py).
+
+  </Tab>
+</Tabs>
 
 </ZoneContent>
 <ZoneContent group="csharp__java__python__rest__typescript" value="csharp" options={[{"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "rest", "title": "REST"}, {"id": "typescript", "title": "TypeScript"}, {"id": "java", "title": "Java"}]} values={["python", "csharp", "rest", "typescript", "java"]} defaultValue="python">
 
 ## Use agents with functions example
 
-In this example, you use local functions with agents. Use the functions to give the Agent specific information in response to a user question. The code in this example is synchronous. For an asynchronous example, see the [sample code](https://github.com/Azure/azure-sdk-for-net/blob/main/sdk/ai/Azure.AI.Extensions.OpenAI/samples/Sample9_Function.md) example in the Azure SDK for .NET repository on GitHub.
+In this example, you use local functions with agents. Use the functions to give the Agent specific information in response to a user question. Select **Prompt Agents** to use the Azure AI Projects SDK to create a server-side prompt agent, or **Hosted Agents** to use the Microsoft Agent Framework to build an ephemeral, in-process agent.
 
-```csharp
-using System;
-using Azure.AI.Projects;
-using Azure.AI.Extensions.OpenAI;
-using Azure.Identity;
+<Tabs>
+  <Tab title="Prompt Agents">
 
-class FunctionCallingDemo
-{
-    // Define three functions:
-    //   1. GetUserFavoriteCity always returns "Seattle, WA".
-    //   2. GetCityNickname handles only "Seattle, WA"
-    //      and throws an exception for other city names.
-    //   3. GetWeatherAtLocation returns the weather in Seattle, WA.
+    The code in this example is synchronous. For an asynchronous example, see the [sample code](https://github.com/Azure/azure-sdk-for-net/blob/main/sdk/ai/Azure.AI.Extensions.OpenAI/samples/Sample9_Function.md) example in the Azure SDK for .NET repository on GitHub.
 
-    /// Example of a function that defines no parameters but
-    /// returns the user's favorite city.
-    private static string GetUserFavoriteCity() => "Seattle, WA";
+    ```csharp
+    using System;
+    using Azure.AI.Projects;
+    using Azure.AI.Extensions.OpenAI;
+    using Azure.Identity;
 
-    /// <summary>
-    /// Example of a function with a single required parameter
-    /// </summary>
-    /// <param name="location">The location to get nickname for.</param>
-    /// <returns>The city nickname.</returns>
-    /// <exception cref="NotImplementedException"></exception>
-    private static string GetCityNickname(string location) => location switch
+    class FunctionCallingDemo
     {
-        "Seattle, WA" => "The Emerald City",
-        _ => throw new NotImplementedException(),
-    };
+        // Define three functions:
+        //   1. GetUserFavoriteCity always returns "Seattle, WA".
+        //   2. GetCityNickname handles only "Seattle, WA"
+        //      and throws an exception for other city names.
+        //   3. GetWeatherAtLocation returns the weather in Seattle, WA.
 
-    /// <summary>
-    /// Example of a function with one required and one optional, enum parameter
-    /// </summary>
-    /// <param name="location">Get weather for location.</param>
-    /// <param name="temperatureUnit">"c" or "f"</param>
-    /// <returns>The weather in selected location.</returns>
-    /// <exception cref="NotImplementedException"></exception>
-    public static string GetWeatherAtLocation(string location, string temperatureUnit = "f") => location switch
-    {
-        "Seattle, WA" => temperatureUnit == "f" ? "70f" : "21c",
-        _ => throw new NotImplementedException()
-    };
+        /// Example of a function that defines no parameters but
+        /// returns the user's favorite city.
+        private static string GetUserFavoriteCity() => "Seattle, WA";
 
-    // For each function, create FunctionTool, which defines the function name, description, and parameters.
-    public static readonly FunctionTool getUserFavoriteCityTool = ResponseTool.CreateFunctionTool(
-        functionName: "getUserFavoriteCity",
-        functionDescription: "Gets the user's favorite city.",
-        functionParameters: BinaryData.FromString("{}"),
-        strictModeEnabled: false
-    );
-
-    public static readonly FunctionTool getCityNicknameTool = ResponseTool.CreateFunctionTool(
-        functionName: "getCityNickname",
-        functionDescription: "Gets the nickname of a city, e.g. 'LA' for 'Los Angeles, CA'.",
-        functionParameters: BinaryData.FromObjectAsJson(
-            new
-            {
-                Type = "object",
-                Properties = new
-                {
-                    Location = new
-                    {
-                        Type = "string",
-                        Description = "The city and state, e.g. San Francisco, CA",
-                    },
-                },
-                Required = new[] { "location" },
-            },
-            new JsonSerializerOptions() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
-        ),
-        strictModeEnabled: false
-    );
-
-    private static readonly FunctionTool getCurrentWeatherAtLocationTool = ResponseTool.CreateFunctionTool(
-        functionName: "getCurrentWeatherAtLocation",
-        functionDescription: "Gets the current weather at a provided location.",
-        functionParameters: BinaryData.FromObjectAsJson(
-             new
-             {
-                 Type = "object",
-                 Properties = new
-                 {
-                     Location = new
-                     {
-                         Type = "string",
-                         Description = "The city and state, e.g. San Francisco, CA",
-                     },
-                     Unit = new
-                     {
-                         Type = "string",
-                         Enum = new[] { "c", "f" },
-                     },
-                 },
-                 Required = new[] { "location" },
-             },
-            new JsonSerializerOptions() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
-        ),
-        strictModeEnabled: false
-    );
-
-    // Create the method GetResolvedToolOutput.
-    // It runs the preceding functions and wraps the output in a ResponseItem object.
-    private static FunctionCallOutputResponseItem GetResolvedToolOutput(FunctionCallResponseItem item)
-    {
-        if (item.FunctionName == getUserFavoriteCityTool.FunctionName)
+        /// <summary>
+        /// Example of a function with a single required parameter
+        /// </summary>
+        /// <param name="location">The location to get nickname for.</param>
+        /// <returns>The city nickname.</returns>
+        /// <exception cref="NotImplementedException"></exception>
+        private static string GetCityNickname(string location) => location switch
         {
-            return ResponseItem.CreateFunctionCallOutputItem(item.CallId, GetUserFavoriteCity());
-        }
-        using JsonDocument argumentsJson = JsonDocument.Parse(item.FunctionArguments);
-        if (item.FunctionName == getCityNicknameTool.FunctionName)
-        {
-            string locationArgument = argumentsJson.RootElement.GetProperty("location").GetString();
-            return ResponseItem.CreateFunctionCallOutputItem(item.CallId, GetCityNickname(locationArgument));
-        }
-        if (item.FunctionName == getCurrentWeatherAtLocationTool.FunctionName)
-        {
-            string locationArgument = argumentsJson.RootElement.GetProperty("location").GetString();
-            if (argumentsJson.RootElement.TryGetProperty("unit", out JsonElement unitElement))
-            {
-                string unitArgument = unitElement.GetString();
-                return ResponseItem.CreateFunctionCallOutputItem(item.CallId, GetWeatherAtLocation(locationArgument, unitArgument));
-            }
-            return ResponseItem.CreateFunctionCallOutputItem(item.CallId, GetWeatherAtLocation(locationArgument));
-        }
-        return null;
-    }
-
-    // Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-    private const string ProjectEndpoint = "your_project_endpoint";
-
-    public static void Main() 
-    {
-        AIProjectClient projectClient = new(endpoint: new Uri(ProjectEndpoint), tokenProvider: new DefaultAzureCredential());
-        // Create an agent version with the defined functions as tools.
-        DeclarativeAgentDefinition agentDefinition = new(model: "gpt-4.1-mini")
-        {
-            Instructions = "You are a weather bot. Use the provided functions to help answer questions. "
-                    + "Customize your responses to the user's preferences as much as possible and use friendly "
-                    + "nicknames for cities whenever possible.",
-            Tools = { getUserFavoriteCityTool, getCityNicknameTool, getCurrentWeatherAtLocationTool }
+            "Seattle, WA" => "The Emerald City",
+            _ => throw new NotImplementedException(),
         };
-        AgentVersion agentVersion = projectClient.AgentAdministrationClient.CreateAgentVersion(
-            agentName: "myAgent",
-            options: new(agentDefinition));
 
-        // If the local function call is required, the response item is of type FunctionCallResponseItem.
-        // It contains the function name needed by the Agent. In this case, use the helper method
-        // GetResolvedToolOutput to get the FunctionCallOutputResponseItem with the function call result.
-        // To provide the right answer, supply all the response items to the CreateResponse call.
-        // At the end, output the function's response.
-        ResponsesClient responseClient = projectClient.ProjectOpenAIClient.GetProjectResponsesClientForAgent(agentVersion.Name);
-
-        ResponseItem request = ResponseItem.CreateUserMessageItem("What's the weather like in my favorite city?");
-        var inputItems = new List<ResponseItem> { request };
-        string previousResponseId = null;
-        bool functionCalled = false;
-        ResponseResult response;
-        do
+        /// <summary>
+        /// Example of a function with one required and one optional, enum parameter
+        /// </summary>
+        /// <param name="location">Get weather for location.</param>
+        /// <param name="temperatureUnit">"c" or "f"</param>
+        /// <returns>The weather in selected location.</returns>
+        /// <exception cref="NotImplementedException"></exception>
+        public static string GetWeatherAtLocation(string location, string temperatureUnit = "f") => location switch
         {
-            response = responseClient.CreateResponse(
-                previousResponseId: previousResponseId,
-                inputItems: inputItems);
-            previousResponseId = response.Id;
-            inputItems.Clear();
-            functionCalled = false;
-            foreach (ResponseItem responseItem in response.OutputItems)
-            {
-                inputItems.Add(responseItem);
-                if (responseItem is FunctionCallResponseItem functionToolCall)
+            "Seattle, WA" => temperatureUnit == "f" ? "70f" : "21c",
+            _ => throw new NotImplementedException()
+        };
+
+        // For each function, create FunctionTool, which defines the function name, description, and parameters.
+        public static readonly FunctionTool getUserFavoriteCityTool = ResponseTool.CreateFunctionTool(
+            functionName: "getUserFavoriteCity",
+            functionDescription: "Gets the user's favorite city.",
+            functionParameters: BinaryData.FromString("{}"),
+            strictModeEnabled: false
+        );
+
+        public static readonly FunctionTool getCityNicknameTool = ResponseTool.CreateFunctionTool(
+            functionName: "getCityNickname",
+            functionDescription: "Gets the nickname of a city, e.g. 'LA' for 'Los Angeles, CA'.",
+            functionParameters: BinaryData.FromObjectAsJson(
+                new
                 {
-                    Console.WriteLine($"Calling {functionToolCall.FunctionName}...");
-                    inputItems.Add(GetResolvedToolOutput(functionToolCall));
-                    functionCalled = true;
-                }
+                    Type = "object",
+                    Properties = new
+                    {
+                        Location = new
+                        {
+                            Type = "string",
+                            Description = "The city and state, e.g. San Francisco, CA",
+                        },
+                    },
+                    Required = new[] { "location" },
+                },
+                new JsonSerializerOptions() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
+            ),
+            strictModeEnabled: false
+        );
+
+        private static readonly FunctionTool getCurrentWeatherAtLocationTool = ResponseTool.CreateFunctionTool(
+            functionName: "getCurrentWeatherAtLocation",
+            functionDescription: "Gets the current weather at a provided location.",
+            functionParameters: BinaryData.FromObjectAsJson(
+                 new
+                 {
+                     Type = "object",
+                     Properties = new
+                     {
+                         Location = new
+                         {
+                             Type = "string",
+                             Description = "The city and state, e.g. San Francisco, CA",
+                         },
+                         Unit = new
+                         {
+                             Type = "string",
+                             Enum = new[] { "c", "f" },
+                         },
+                     },
+                     Required = new[] { "location" },
+                 },
+                new JsonSerializerOptions() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
+            ),
+            strictModeEnabled: false
+        );
+
+        // Create the method GetResolvedToolOutput.
+        // It runs the preceding functions and wraps the output in a ResponseItem object.
+        private static FunctionCallOutputResponseItem GetResolvedToolOutput(FunctionCallResponseItem item)
+        {
+            if (item.FunctionName == getUserFavoriteCityTool.FunctionName)
+            {
+                return ResponseItem.CreateFunctionCallOutputItem(item.CallId, GetUserFavoriteCity());
             }
-        } while (functionCalled);
-        Console.WriteLine(response.GetOutputText());
+            using JsonDocument argumentsJson = JsonDocument.Parse(item.FunctionArguments);
+            if (item.FunctionName == getCityNicknameTool.FunctionName)
+            {
+                string locationArgument = argumentsJson.RootElement.GetProperty("location").GetString();
+                return ResponseItem.CreateFunctionCallOutputItem(item.CallId, GetCityNickname(locationArgument));
+            }
+            if (item.FunctionName == getCurrentWeatherAtLocationTool.FunctionName)
+            {
+                string locationArgument = argumentsJson.RootElement.GetProperty("location").GetString();
+                if (argumentsJson.RootElement.TryGetProperty("unit", out JsonElement unitElement))
+                {
+                    string unitArgument = unitElement.GetString();
+                    return ResponseItem.CreateFunctionCallOutputItem(item.CallId, GetWeatherAtLocation(locationArgument, unitArgument));
+                }
+                return ResponseItem.CreateFunctionCallOutputItem(item.CallId, GetWeatherAtLocation(locationArgument));
+            }
+            return null;
+        }
 
-        // Remove all the resources created in this sample.
-        projectClient.AgentAdministrationClient.DeleteAgentVersion(agentName: agentVersion.Name, agentVersion: agentVersion.Version);
+        // Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+        private const string ProjectEndpoint = "your_project_endpoint";
+
+        public static void Main() 
+        {
+            AIProjectClient projectClient = new(endpoint: new Uri(ProjectEndpoint), tokenProvider: new DefaultAzureCredential());
+            // Create an agent version with the defined functions as tools.
+            DeclarativeAgentDefinition agentDefinition = new(model: "gpt-4.1-mini")
+            {
+                Instructions = "You are a weather bot. Use the provided functions to help answer questions. "
+                        + "Customize your responses to the user's preferences as much as possible and use friendly "
+                        + "nicknames for cities whenever possible.",
+                Tools = { getUserFavoriteCityTool, getCityNicknameTool, getCurrentWeatherAtLocationTool }
+            };
+            AgentVersion agentVersion = projectClient.AgentAdministrationClient.CreateAgentVersion(
+                agentName: "myAgent",
+                options: new(agentDefinition));
+
+            // If the local function call is required, the response item is of type FunctionCallResponseItem.
+            // It contains the function name needed by the Agent. In this case, use the helper method
+            // GetResolvedToolOutput to get the FunctionCallOutputResponseItem with the function call result.
+            // To provide the right answer, supply all the response items to the CreateResponse call.
+            // At the end, output the function's response.
+            ResponsesClient responseClient = projectClient.ProjectOpenAIClient.GetProjectResponsesClientForAgent(agentVersion.Name);
+
+            ResponseItem request = ResponseItem.CreateUserMessageItem("What's the weather like in my favorite city?");
+            var inputItems = new List<ResponseItem> { request };
+            string previousResponseId = null;
+            bool functionCalled = false;
+            ResponseResult response;
+            do
+            {
+                response = responseClient.CreateResponse(
+                    previousResponseId: previousResponseId,
+                    inputItems: inputItems);
+                previousResponseId = response.Id;
+                inputItems.Clear();
+                functionCalled = false;
+                foreach (ResponseItem responseItem in response.OutputItems)
+                {
+                    inputItems.Add(responseItem);
+                    if (responseItem is FunctionCallResponseItem functionToolCall)
+                    {
+                        Console.WriteLine($"Calling {functionToolCall.FunctionName}...");
+                        inputItems.Add(GetResolvedToolOutput(functionToolCall));
+                        functionCalled = true;
+                    }
+                }
+            } while (functionCalled);
+            Console.WriteLine(response.GetOutputText());
+
+            // Remove all the resources created in this sample.
+            projectClient.AgentAdministrationClient.DeleteAgentVersion(agentName: agentVersion.Name, agentVersion: agentVersion.Version);
+        }
     }
-}
-```
+    ```
 
-### Expected output
+    ### Expected output
 
-The following example shows the expected output:
+    The following example shows the expected output:
 
-```console
-Calling getUserFavoriteCity...
-Calling getCityNickname...
-Calling getCurrentWeatherAtLocation...
-Your favorite city, Seattle, WA, is also known as The Emerald City. The current weather there is 70f.
-```
+    ```console
+    Calling getUserFavoriteCity...
+    Calling getCityNickname...
+    Calling getCurrentWeatherAtLocation...
+    Your favorite city, Seattle, WA, is also known as The Emerald City. The current weather there is 70f.
+    ```
+
+  </Tab>
+  <Tab title="Hosted Agents">
+
+    This sample uses the Microsoft Agent Framework and calls `AsAIAgent(...)` on `AIProjectClient` together with `AIFunctionFactory.Create(...)` to expose local C# methods as function tools. Install the `Microsoft.Agents.AI.Foundry` and `Azure.AI.Projects` packages, set the `AZURE_AI_PROJECT_ENDPOINT` and `AZURE_AI_MODEL_DEPLOYMENT_NAME` environment variables, and sign in with `az login`.
+
+    ```csharp
+    using System.ComponentModel;
+    using Azure.AI.Projects;
+    using Azure.Identity;
+    using Microsoft.Agents.AI;
+    using Microsoft.Extensions.AI;
+
+    [Description("Get the weather for a given location.")]
+    static string GetWeather([Description("The location to get the weather for.")] string location)
+        => $"The weather in {location} is cloudy with a high of 15°C.";
+
+    // Define the function tool.
+    AITool tool = AIFunctionFactory.Create(GetWeather);
+
+    string endpoint = Environment.GetEnvironmentVariable("AZURE_AI_PROJECT_ENDPOINT")
+        ?? throw new InvalidOperationException("AZURE_AI_PROJECT_ENDPOINT is not set.");
+    string deploymentName = Environment.GetEnvironmentVariable("AZURE_AI_MODEL_DEPLOYMENT_NAME") ?? "gpt-5-mini";
+
+    AIProjectClient aiProjectClient = new(new Uri(endpoint), new DefaultAzureCredential());
+
+    // Create an AIAgent with function tools.
+    AIAgent agent = aiProjectClient.AsAIAgent(
+        deploymentName,
+        instructions: "You are a helpful assistant that can get weather information.",
+        name: "WeatherAssistant",
+        tools: [tool]);
+
+    // Non-streaming invocation.
+    Console.WriteLine(await agent.RunAsync("What is the weather like in Amsterdam?"));
+
+    // Streaming invocation.
+    await foreach (AgentResponseUpdate update in agent.RunStreamingAsync("What is the weather like in Amsterdam?"))
+    {
+        Console.Write(update);
+    }
+    ```
+
+    ### Expected output
+
+    The Agent Framework runs the local `GetWeather` function automatically and prints the model's natural-language reply:
+
+    ```console
+    The weather in Amsterdam is cloudy with a high of 15°C.
+    ```
+
+    You can also pass tools per call via `agent.RunAsync(query, tools: [...])` to vary the tool set per invocation. For the full sample including approval workflows, see [Agent_Step03_UsingFunctionTools](https://github.com/microsoft/agent-framework/tree/main/dotnet/samples/02-agents/AgentsWithFoundry/Agent_Step03_UsingFunctionTools) and [Agent_Step04_UsingFunctionToolsWithApprovals](https://github.com/microsoft/agent-framework/tree/main/dotnet/samples/02-agents/AgentsWithFoundry/Agent_Step04_UsingFunctionToolsWithApprovals).
+
+  </Tab>
+</Tabs>
 
 </ZoneContent>
 <ZoneContent group="csharp__java__python__rest__typescript" value="rest" options={[{"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "rest", "title": "REST"}, {"id": "typescript", "title": "TypeScript"}, {"id": "java", "title": "Java"}]} values={["python", "csharp", "rest", "typescript", "java"]} defaultValue="python">

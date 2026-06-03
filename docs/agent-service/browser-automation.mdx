@@ -135,107 +135,158 @@ After you run a sample, verify the tool was called by using tracing in Microsoft
 
 ## Use BrowserAutomationAgentTool with agents example
 
-The following Python example demonstrates how to create an AI agent with browser automation capabilities by using the `BrowserAutomationAgentTool` and synchronous Azure AI Projects client. The agent can navigate to websites, interact with web elements, and perform tasks such as searching for stock prices.
+The following Python example demonstrates how to create an AI agent with browser automation capabilities. Select **Prompt Agents** to use the Azure AI Projects SDK to create a server-side prompt agent, or **Hosted Agents** to use the Agent Framework [`FoundryChatClient`](/agent-service/responses-api) to build an ephemeral, in-process agent.
 
-```python
-import json
-from azure.identity import DefaultAzureCredential
-from azure.ai.projects import AIProjectClient
-from azure.ai.projects.models import (
-    PromptAgentDefinition,
-    BrowserAutomationPreviewTool,
-    BrowserAutomationToolParameters,
-    BrowserAutomationToolConnectionParameters,
-)
+<Tabs>
+  <Tab title="Prompt Agents">
 
-# Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-PROJECT_ENDPOINT = "your_project_endpoint"
-BROWSER_CONNECTION_ID = "your-browser-automation-connection-id"
+    ```python
+    import json
+    from azure.identity import DefaultAzureCredential
+    from azure.ai.projects import AIProjectClient
+    from azure.ai.projects.models import (
+        PromptAgentDefinition,
+        BrowserAutomationPreviewTool,
+        BrowserAutomationToolParameters,
+        BrowserAutomationToolConnectionParameters,
+    )
 
-# Create clients to call Foundry API
-project = AIProjectClient(
-    endpoint=PROJECT_ENDPOINT,
-    credential=DefaultAzureCredential(),
-)
-openai = project.get_openai_client()
+    # Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+    PROJECT_ENDPOINT = "your_project_endpoint"
+    BROWSER_CONNECTION_ID = "your-browser-automation-connection-id"
 
-tool = BrowserAutomationPreviewTool(
-    browser_automation_preview=BrowserAutomationToolParameters(
-        connection=BrowserAutomationToolConnectionParameters(
-            project_connection_id=BROWSER_CONNECTION_ID,
+    # Create clients to call Foundry API
+    project = AIProjectClient(
+        endpoint=PROJECT_ENDPOINT,
+        credential=DefaultAzureCredential(),
+    )
+    openai = project.get_openai_client()
+
+    tool = BrowserAutomationPreviewTool(
+        browser_automation_preview=BrowserAutomationToolParameters(
+            connection=BrowserAutomationToolConnectionParameters(
+                project_connection_id=BROWSER_CONNECTION_ID,
+            )
         )
     )
-)
 
-agent = project.agents.create_version(
-    agent_name="MyAgent",
-    definition=PromptAgentDefinition(
-        model="gpt-4.1-mini",
-        instructions="""You are an Agent helping with browser automation tasks. 
-        You can answer questions, provide information, and assist with various tasks 
-        related to web browsing using the Browser Automation tool available to you.""",
-        tools=[tool],
-    ),
-)
-print(f"Agent created (id: {agent.id}, name: {agent.name}, version: {agent.version})")
+    agent = project.agents.create_version(
+        agent_name="MyAgent",
+        definition=PromptAgentDefinition(
+            model="gpt-4.1-mini",
+            instructions="""You are an Agent helping with browser automation tasks. 
+            You can answer questions, provide information, and assist with various tasks 
+            related to web browsing using the Browser Automation tool available to you.""",
+            tools=[tool],
+        ),
+    )
+    print(f"Agent created (id: {agent.id}, name: {agent.name}, version: {agent.version})")
 
-stream_response = openai.responses.create(
-    stream=True,
-    tool_choice="required",
-    input="""
-        Your goal is to report the percent of Microsoft year-to-date stock price change.
-        To do that, go to the website finance.yahoo.com.
-        At the top of the page, you will find a search bar.
-        Enter the value 'MSFT', to get information about the Microsoft stock price.
-        At the top of the resulting page you will see a default chart of Microsoft stock price.
-        Click on 'YTD' at the top of that chart, and report the percent value that shows up just below it.""",
-    extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
-)
+    stream_response = openai.responses.create(
+        stream=True,
+        tool_choice="required",
+        input="""
+            Your goal is to report the percent of Microsoft year-to-date stock price change.
+            To do that, go to the website finance.yahoo.com.
+            At the top of the page, you will find a search bar.
+            Enter the value 'MSFT', to get information about the Microsoft stock price.
+            At the top of the resulting page you will see a default chart of Microsoft stock price.
+            Click on 'YTD' at the top of that chart, and report the percent value that shows up just below it.""",
+        extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
+    )
 
-for event in stream_response:
-    if event.type == "response.created":
-        print(f"Follow-up response created with ID: {event.response.id}")
-    elif event.type == "response.output_text.delta":
-        print(f"Delta: {event.delta}")
-    elif event.type == "response.text.done":
-        print(f"\nFollow-up response done!")
-    elif event.type == "response.output_item.done":
-        item = event.item
-        if item.type == "browser_automation_preview_call":
-            arguments_str = getattr(item, "arguments", "{}")
+    for event in stream_response:
+        if event.type == "response.created":
+            print(f"Follow-up response created with ID: {event.response.id}")
+        elif event.type == "response.output_text.delta":
+            print(f"Delta: {event.delta}")
+        elif event.type == "response.text.done":
+            print(f"\nFollow-up response done!")
+        elif event.type == "response.output_item.done":
+            item = event.item
+            if item.type == "browser_automation_preview_call":
+                arguments_str = getattr(item, "arguments", "{}")
 
-            # Parse the arguments string into a dictionary
-            arguments = json.loads(arguments_str)
-            query = arguments.get("query")
+                # Parse the arguments string into a dictionary
+                arguments = json.loads(arguments_str)
+                query = arguments.get("query")
 
-            print(f"Call ID: {getattr(item, 'call_id')}")
-            print(f"Query arguments: {query}")
-    elif event.type == "response.completed":
-        print(f"\nFollow-up completed!")
-        print(f"Full response: {event.response.output_text}")
+                print(f"Call ID: {getattr(item, 'call_id')}")
+                print(f"Query arguments: {query}")
+        elif event.type == "response.completed":
+            print(f"\nFollow-up completed!")
+            print(f"Full response: {event.response.output_text}")
 
-print("\nCleaning up...")
-project.agents.delete_version(agent_name=agent.name, agent_version=agent.version)
-print("Agent deleted")
-```
+    print("\nCleaning up...")
+    project.agents.delete_version(agent_name=agent.name, agent_version=agent.version)
+    print("Agent deleted")
+    ```
 
-### What this code does
+    ### What this code does
 
-This example creates an agent version with the Browser Automation tool enabled, then sends a prompt that requires the agent to use the tool. It also processes streaming events so you can observe progress and tool calls.
+    This example creates an agent version with the Browser Automation tool enabled, then sends a prompt that requires the agent to use the tool. It also processes streaming events so you can observe progress and tool calls.
 
-### Required inputs
+    ### Required inputs
 
-- A Foundry project endpoint and a browser automation connection ID. See [Configuration](#configuration) for details.
+    - A Foundry project endpoint and a browser automation connection ID. See [Configuration](#configuration) for details.
 
-### Expected output
+    ### Expected output
 
-When you create the agent, you see output similar to:
+    When you create the agent, you see output similar to:
 
-```console
-Agent created (id: ..., name: ..., version: ...)
-```
+    ```console
+    Agent created (id: ..., name: ..., version: ...)
+    ```
 
-During streaming, you might also see deltas and tool-call details. Output varies based on the website content and model behavior.
+    During streaming, you might also see deltas and tool-call details. Output varies based on the website content and model behavior.
+
+  </Tab>
+  <Tab title="Hosted Agents">
+
+    This sample uses [`FoundryChatClient`](/agent-service/responses-api) from the Microsoft Agent Framework and calls `get_browser_automation_tool()` to attach a Playwright connection. Install the package with `pip install agent-framework-foundry aiohttp`, set the `FOUNDRY_PROJECT_ENDPOINT`, `FOUNDRY_MODEL`, and `BROWSER_CONNECTION_ID` environment variables, and sign in with `az login`.
+
+    ```python
+    import asyncio
+    import os
+
+    from agent_framework import Agent
+    from agent_framework.foundry import FoundryChatClient
+    from azure.identity import AzureCliCredential
+
+    BROWSER_CONNECTION_ID = os.environ["BROWSER_CONNECTION_ID"]
+
+    async def main() -> None:
+        agent = Agent(
+            client=FoundryChatClient(credential=AzureCliCredential()),
+            instructions=(
+                "You help with browser automation tasks. Use the Browser Automation tool "
+                "to navigate and read information from websites."
+            ),
+            tools=[FoundryChatClient.get_browser_automation_tool(connection_id=BROWSER_CONNECTION_ID)],
+        )
+
+        result = await agent.run(
+            "Go to finance.yahoo.com, search for MSFT, click 'YTD' on the price chart, "
+            "and report the year-to-date percent change."
+        )
+        print(f"Agent: {result.text}")
+
+    if __name__ == "__main__":
+        asyncio.run(main())
+    ```
+
+    ### Expected output
+
+    The agent navigates the live website through the Playwright connection and reports the YTD value it observes. Output varies based on website content:
+
+    ```console
+    Agent: The year-to-date change for MSFT is approximately +18.4%.
+    ```
+
+    For more about Agent Framework Foundry tool factories, see the [Foundry provider samples](https://github.com/microsoft/agent-framework/tree/main/python/samples/02-agents/providers/foundry).
+
+  </Tab>
+</Tabs>
 
 </ZoneContent>
 <ZoneContent group="csharp__java__python__rest__typescript" value="csharp" options={[{"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "rest", "title": "REST"}, {"id": "typescript", "title": "TypeScript"}, {"id": "java", "title": "Java"}]} values={["python", "csharp", "rest", "typescript", "java"]} defaultValue="python">

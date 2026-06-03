@@ -75,99 +75,172 @@ The following table shows SDK and setup support.
 
 <ZoneContent group="csharp__java__python__rest__typescript" value="python" options={[{"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "rest", "title": "REST"}, {"id": "typescript", "title": "TypeScript"}, {"id": "java", "title": "Java"}]} values={["python", "csharp", "rest", "typescript", "java"]} defaultValue="python">
 
-```python
-from azure.identity import DefaultAzureCredential
-from azure.ai.projects import AIProjectClient
-from azure.ai.projects.models import (
-    AzureAISearchTool,
-    PromptAgentDefinition,
-    AzureAISearchToolResource,
-    AISearchIndexResource,
-    AzureAISearchQueryType,
-)
+Select **Prompt Agents** to use the Azure AI Projects SDK to create a server-side prompt agent, or **Hosted Agents** to use the Agent Framework [`FoundryChatClient`](/agent-service/responses-api) to build an ephemeral, in-process agent.
 
-# Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-PROJECT_ENDPOINT = "your_project_endpoint"
-SEARCH_CONNECTION_NAME = "my-search-connection"
-SEARCH_INDEX_NAME = "my-search-index"
+<Tabs>
+  <Tab title="Prompt Agents">
 
-# Create clients to call Foundry API
-project = AIProjectClient(
-    endpoint=PROJECT_ENDPOINT,
-    credential=DefaultAzureCredential(),
-)
-openai = project.get_openai_client()
+    ```python
+    from azure.identity import DefaultAzureCredential
+    from azure.ai.projects import AIProjectClient
+    from azure.ai.projects.models import (
+        AzureAISearchTool,
+        PromptAgentDefinition,
+        AzureAISearchToolResource,
+        AISearchIndexResource,
+        AzureAISearchQueryType,
+    )
 
-# Resolve the connection ID from the connection name
-azs_connection = project.connections.get(SEARCH_CONNECTION_NAME)
-connection_id = azs_connection.id
+    # Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+    PROJECT_ENDPOINT = "your_project_endpoint"
+    SEARCH_CONNECTION_NAME = "my-search-connection"
+    SEARCH_INDEX_NAME = "my-search-index"
 
-# Create an agent with the Azure AI Search tool
-agent = project.agents.create_version(
-    agent_name="MyAgent",
-    definition=PromptAgentDefinition(
-        model="gpt-4.1-mini",
-        instructions="""You are a helpful assistant. You must always provide citations for
-        answers using the tool and render them as: `[message_idx:search_idx†source]`.""",
-        tools=[
-            AzureAISearchTool(
-                azure_ai_search=AzureAISearchToolResource(
-                    indexes=[
-                        AISearchIndexResource(
-                            project_connection_id=connection_id,
-                            index_name=SEARCH_INDEX_NAME,
-                            query_type=AzureAISearchQueryType.SIMPLE,
-                        ),
-                    ]
+    # Create clients to call Foundry API
+    project = AIProjectClient(
+        endpoint=PROJECT_ENDPOINT,
+        credential=DefaultAzureCredential(),
+    )
+    openai = project.get_openai_client()
+
+    # Resolve the connection ID from the connection name
+    azs_connection = project.connections.get(SEARCH_CONNECTION_NAME)
+    connection_id = azs_connection.id
+
+    # Create an agent with the Azure AI Search tool
+    agent = project.agents.create_version(
+        agent_name="MyAgent",
+        definition=PromptAgentDefinition(
+            model="gpt-4.1-mini",
+            instructions="""You are a helpful assistant. You must always provide citations for
+            answers using the tool and render them as: `[message_idx:search_idx†source]`.""",
+            tools=[
+                AzureAISearchTool(
+                    azure_ai_search=AzureAISearchToolResource(
+                        indexes=[
+                            AISearchIndexResource(
+                                project_connection_id=connection_id,
+                                index_name=SEARCH_INDEX_NAME,
+                                query_type=AzureAISearchQueryType.SIMPLE,
+                            ),
+                        ]
+                    )
                 )
-            )
-        ],
-    ),
-    description="You are a helpful agent.",
-)
-print(f"Agent created (id: {agent.id}, name: {agent.name}, version: {agent.version})")
+            ],
+        ),
+        description="You are a helpful agent.",
+    )
+    print(f"Agent created (id: {agent.id}, name: {agent.name}, version: {agent.version})")
 
-# Prompt user for a question to send to the agent
-user_input = input(
-    """Enter your question for the AI Search agent available in the index
-    (e.g., 'Tell me about the mental health services available from Premera'): \n"""
-)
+    # Prompt user for a question to send to the agent
+    user_input = input(
+        """Enter your question for the AI Search agent available in the index
+        (e.g., 'Tell me about the mental health services available from Premera'): \n"""
+    )
 
-# Stream the response from the agent
-stream_response = openai.responses.create(
-    stream=True,
-    tool_choice="required",
-    input=user_input,
-    extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
-)
+    # Stream the response from the agent
+    stream_response = openai.responses.create(
+        stream=True,
+        tool_choice="required",
+        input=user_input,
+        extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
+    )
 
-# Process the streaming response and print citations
-for event in stream_response:
-    if event.type == "response.output_text.delta":
-        print(event.delta, end="")
-    elif event.type == "response.output_item.done":
-        if event.item.type == "message":
-            item = event.item
-            if item.content[-1].type == "output_text":
-                text_content = item.content[-1]
-                for annotation in text_content.annotations:
-                    if annotation.type == "url_citation":
-                        print(
-                            f"URL Citation: {annotation.url}, "
-                            f"Start index: {annotation.start_index}, "
-                            f"End index: {annotation.end_index}"
-                        )
-    elif event.type == "response.completed":
-        print(f"\nFull response: {event.response.output_text}")
+    # Process the streaming response and print citations
+    for event in stream_response:
+        if event.type == "response.output_text.delta":
+            print(event.delta, end="")
+        elif event.type == "response.output_item.done":
+            if event.item.type == "message":
+                item = event.item
+                if item.content[-1].type == "output_text":
+                    text_content = item.content[-1]
+                    for annotation in text_content.annotations:
+                        if annotation.type == "url_citation":
+                            print(
+                                f"URL Citation: {annotation.url}, "
+                                f"Start index: {annotation.start_index}, "
+                                f"End index: {annotation.end_index}"
+                            )
+        elif event.type == "response.completed":
+            print(f"\nFull response: {event.response.output_text}")
 
-# Clean up resources
-project.agents.delete_version(agent_name=agent.name, agent_version=agent.version)
-print("Agent deleted")
-```
+    # Clean up resources
+    project.agents.delete_version(agent_name=agent.name, agent_version=agent.version)
+    print("Agent deleted")
+    ```
 
-### Expected outcome
+    ### Expected outcome
 
-The agent queries the search index and returns a response with inline citations. Console output shows the agent ID, streaming delta updates as the response generates, URL citations with start and end indices, and the final complete response text. The agent is then successfully deleted.
+    The agent queries the search index and returns a response with inline citations. Console output shows the agent ID, streaming delta updates as the response generates, URL citations with start and end indices, and the final complete response text. The agent is then successfully deleted.
+
+  </Tab>
+  <Tab title="Hosted Agents">
+
+    This sample uses [`FoundryChatClient`](/agent-service/responses-api) from the Microsoft Agent Framework and calls `get_azure_ai_search_tool()` to attach an indexed Azure AI Search resource. Install the package with `pip install agent-framework-foundry aiohttp`, set the `FOUNDRY_PROJECT_ENDPOINT` and `FOUNDRY_MODEL` environment variables, and sign in with `az login`.
+
+    ```python
+    import asyncio
+    import os
+
+    from agent_framework import Agent
+    from agent_framework.foundry import FoundryChatClient
+    from azure.ai.projects import AIProjectClient
+    from azure.identity import AzureCliCredential
+
+    SEARCH_CONNECTION_NAME = "my-search-connection"
+    SEARCH_INDEX_NAME = "my-search-index"
+
+    async def main() -> None:
+        credential = AzureCliCredential()
+
+        # Resolve the project connection ID from the connection name
+        # (same pattern as the Prompt Agents tab).
+        project = AIProjectClient(
+            endpoint=os.environ["FOUNDRY_PROJECT_ENDPOINT"],
+            credential=credential,
+        )
+        connection_id = project.connections.get(SEARCH_CONNECTION_NAME).id
+
+        agent = Agent(
+            # Reads FOUNDRY_PROJECT_ENDPOINT and FOUNDRY_MODEL from the environment.
+            client=FoundryChatClient(credential=credential),
+            instructions=(
+                "You are a helpful assistant. Always cite sources from the search index "
+                "using `[message_idx:search_idx\u2020source]`."
+            ),
+            tools=[
+                FoundryChatClient.get_azure_ai_search_tool(
+                    index_connection_id=connection_id,
+                    index_name=SEARCH_INDEX_NAME,
+                    query_type="simple",
+                    top_k=5,
+                )
+            ],
+        )
+
+        result = await agent.run("Tell me about the mental health services available from Premera.")
+        print(f"Agent: {result.text}")
+
+        # Print URL citation annotations from the response.
+        for message in result.messages:
+            for content in message.contents:
+                for annotation in getattr(content, "annotations", None) or []:
+                    url = getattr(annotation, "url", None)
+                    title = getattr(annotation, "title", None)
+                    if url:
+                        print(f"URL Citation: {title or ''} ({url})")
+
+    if __name__ == "__main__":
+        asyncio.run(main())
+    ```
+
+    ### Expected outcome
+
+    The agent queries the specified Azure AI Search index and returns a response grounded in the indexed content. Console output shows the final response text followed by URL citations parsed from the response annotations. For more about Agent Framework Foundry tool factories, see the [Foundry provider samples](https://github.com/microsoft/agent-framework/tree/main/python/samples/02-agents/providers/foundry).
+
+  </Tab>
+</Tabs>
 
 </ZoneContent>
 <ZoneContent group="csharp__java__python__rest__typescript" value="csharp" options={[{"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "rest", "title": "REST"}, {"id": "typescript", "title": "TypeScript"}, {"id": "java", "title": "Java"}]} values={["python", "csharp", "rest", "typescript", "java"]} defaultValue="python">

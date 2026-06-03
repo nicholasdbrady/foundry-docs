@@ -254,94 +254,186 @@ Agent deleted
 
 ## Sample of using Agents with OpenAPI tool
 
-This example demonstrates how to use services described by an [OpenAPI specification](https://spec.openapis.org/oas/latest.html) by using an agent. It uses the [wttr.in](https://wttr.in/:help) service to get weather and its specification file [weather_openapi.json](https://github.com/Azure/azure-sdk-for-net/blob/main/sdk/ai/Azure.AI.Agents.Persistent/tests/Samples/weather_openapi.json). This example uses synchronous methods of the Azure AI Projects client library. For an example that uses asynchronous methods, see the [sample](https://github.com/Azure/azure-sdk-for-net/blob/main/sdk/ai/Azure.AI.Extensions.OpenAI/samples/Sample21_OpenAPI.md) in the Azure SDK for .NET repository on GitHub.
+This example demonstrates how to use services described by an [OpenAPI specification](https://spec.openapis.org/oas/latest.html) by using an agent. It uses the [wttr.in](https://wttr.in/:help) service to get weather and its specification file [weather_openapi.json](https://github.com/Azure/azure-sdk-for-net/blob/main/sdk/ai/Azure.AI.Agents.Persistent/tests/Samples/weather_openapi.json). Select **Prompt Agents** to use the Azure AI Projects SDK to create a server-side prompt agent, or **Hosted Agents** to use the Microsoft Agent Framework to build an ephemeral, in-process agent.
 
-```csharp
-using System;
-using System.IO;
-using System.Runtime.CompilerServices;
-using Azure.AI.Projects;
-using Azure.AI.Extensions.OpenAI;
-using Azure.Identity;
+<Tabs>
+  <Tab title="Prompt Agents">
 
-class OpenAPIDemo
-{
-    // Utility method to get the OpenAPI specification file from the Assets folder.
-    private static string GetFile([CallerFilePath] string pth = "")
+    This example uses synchronous methods of the Azure AI Projects client library. For an example that uses asynchronous methods, see the [sample](https://github.com/Azure/azure-sdk-for-net/blob/main/sdk/ai/Azure.AI.Extensions.OpenAI/samples/Sample21_OpenAPI.md) in the Azure SDK for .NET repository on GitHub.
+
+    ```csharp
+    using System;
+    using System.IO;
+    using System.Runtime.CompilerServices;
+    using Azure.AI.Projects;
+    using Azure.AI.Extensions.OpenAI;
+    using Azure.Identity;
+
+    class OpenAPIDemo
     {
-        var dirName = Path.GetDirectoryName(pth) ?? "";
-        return Path.Combine(dirName, "Assets", "weather_openapi.json");
-    }
-
-    public static void Main()
-    {
-        // Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-        var projectEndpoint = "your_project_endpoint";
-
-        // Create project client to call Foundry API
-        AIProjectClient projectClient = new(
-            endpoint: new Uri(projectEndpoint),
-            tokenProvider: new DefaultAzureCredential());
-
-        // Create an Agent with `OpenAPIAgentTool` and anonymous authentication.
-        string filePath = GetFile();
-        OpenAPIFunctionDefinition toolDefinition = new(
-            name: "get_weather",
-            spec: BinaryData.FromBytes(File.ReadAllBytes(filePath)),
-            auth: new OpenAPIAnonymousAuthenticationDetails()
-        );
-        toolDefinition.Description = "Retrieve weather information for a location.";
-        OpenAPITool openapiTool = new(toolDefinition);
-
-        // Create the agent definition and the agent version.
-        DeclarativeAgentDefinition agentDefinition = new(model: "gpt-4.1-mini")
+        // Utility method to get the OpenAPI specification file from the Assets folder.
+        private static string GetFile([CallerFilePath] string pth = "")
         {
-            Instructions = "You are a helpful assistant.",
-            Tools = { openapiTool }
-        };
-        AgentVersion agentVersion = projectClient.AgentAdministrationClient.CreateAgentVersion(
-            agentName: "myAgent",
-            options: new(agentDefinition));
+            var dirName = Path.GetDirectoryName(pth) ?? "";
+            return Path.Combine(dirName, "Assets", "weather_openapi.json");
+        }
 
-        // Create a response object and ask the question about the weather in Seattle, WA.
-        ProjectResponsesClient responseClient = projectClient.ProjectOpenAIClient.GetProjectResponsesClientForAgent(agentVersion.Name);
-        ResponseResult response = responseClient.CreateResponse(
-                userInputText: "Use the OpenAPI tool to print out, what is the weather in Seattle, WA today."
+        public static void Main()
+        {
+            // Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+            var projectEndpoint = "your_project_endpoint";
+
+            // Create project client to call Foundry API
+            AIProjectClient projectClient = new(
+                endpoint: new Uri(projectEndpoint),
+                tokenProvider: new DefaultAzureCredential());
+
+            // Create an Agent with `OpenAPIAgentTool` and anonymous authentication.
+            string filePath = GetFile();
+            OpenAPIFunctionDefinition toolDefinition = new(
+                name: "get_weather",
+                spec: BinaryData.FromBytes(File.ReadAllBytes(filePath)),
+                auth: new OpenAPIAnonymousAuthenticationDetails()
             );
-        Console.WriteLine(response.GetOutputText());
+            toolDefinition.Description = "Retrieve weather information for a location.";
+            OpenAPITool openapiTool = new(toolDefinition);
 
-        // Finally, delete all the resources created in this sample.
-        projectClient.AgentAdministrationClient.DeleteAgentVersion(agentName: agentVersion.Name, agentVersion: agentVersion.Version);
+            // Create the agent definition and the agent version.
+            DeclarativeAgentDefinition agentDefinition = new(model: "gpt-4.1-mini")
+            {
+                Instructions = "You are a helpful assistant.",
+                Tools = { openapiTool }
+            };
+            AgentVersion agentVersion = projectClient.AgentAdministrationClient.CreateAgentVersion(
+                agentName: "myAgent",
+                options: new(agentDefinition));
+
+            // Create a response object and ask the question about the weather in Seattle, WA.
+            ProjectResponsesClient responseClient = projectClient.ProjectOpenAIClient.GetProjectResponsesClientForAgent(agentVersion.Name);
+            ResponseResult response = responseClient.CreateResponse(
+                    userInputText: "Use the OpenAPI tool to print out, what is the weather in Seattle, WA today."
+                );
+            Console.WriteLine(response.GetOutputText());
+
+            // Finally, delete all the resources created in this sample.
+            projectClient.AgentAdministrationClient.DeleteAgentVersion(agentName: agentVersion.Name, agentVersion: agentVersion.Version);
+        }
     }
-}
-```
+    ```
 
-### What this code does
+    ### What this code does
 
-This C# example creates an agent with an OpenAPI tool that retrieves weather information from wttr.in by using anonymous authentication. When you run the code:
+    This C# example creates an agent with an OpenAPI tool that retrieves weather information from wttr.in by using anonymous authentication. When you run the code:
 
-1. It reads the weather OpenAPI specification from a local JSON file.
-1. Creates an agent with the weather tool configured.
-1. Sends a request asking about Seattle's weather using the OpenAPI tool.
-1. The agent calls the weather API and returns the results.
-1. Cleans up by deleting the agent.
+    1. It reads the weather OpenAPI specification from a local JSON file.
+    1. Creates an agent with the weather tool configured.
+    1. Sends a request asking about Seattle's weather using the OpenAPI tool.
+    1. The agent calls the weather API and returns the results.
+    1. Cleans up by deleting the agent.
 
-### Required inputs
+    ### Required inputs
 
-- Inline string value: `projectEndpoint` (your Foundry project endpoint)
-- Local file: `Assets/weather_openapi.json` (OpenAPI specification)
+    - Inline string value: `projectEndpoint` (your Foundry project endpoint)
+    - Local file: `Assets/weather_openapi.json` (OpenAPI specification)
 
-### Expected output
+    ### Expected output
 
-```console
-The weather in Seattle, WA today is cloudy with temperatures around 52°F...
-```
+    ```console
+    The weather in Seattle, WA today is cloudy with temperatures around 52°F...
+    ```
 
-### Common errors
+    ### Common errors
 
-- `FileNotFoundException`: OpenAPI specification file not found in Assets folder
-- `UnauthorizedAccessException`: Invalid credentials or insufficient RBAC permissions
-- **API key not injected**: Verify your OpenAPI spec includes both `securitySchemes` (in `components`) and `security` sections with matching scheme names
+    - `FileNotFoundException`: OpenAPI specification file not found in Assets folder
+    - `UnauthorizedAccessException`: Invalid credentials or insufficient RBAC permissions
+    - **API key not injected**: Verify your OpenAPI spec includes both `securitySchemes` (in `components`) and `security` sections with matching scheme names
+
+  </Tab>
+  <Tab title="Hosted Agents">
+
+    This sample uses the Microsoft Agent Framework and calls `AsAIAgent(...)` on `AIProjectClient` together with `FoundryAITool.CreateOpenApiTool(...)` from `Microsoft.Agents.AI.Foundry`. Install the `Microsoft.Agents.AI.Foundry` and `Azure.AI.Projects` packages, set the `AZURE_AI_PROJECT_ENDPOINT` and `AZURE_AI_MODEL_DEPLOYMENT_NAME` environment variables, and sign in with `az login`.
+
+    ```csharp
+    using Azure.AI.Projects;
+    using Azure.AI.Projects.Agents;
+    using Azure.Identity;
+    using Microsoft.Agents.AI;
+    using Microsoft.Agents.AI.Foundry;
+    using Microsoft.Extensions.AI;
+
+    string endpoint = Environment.GetEnvironmentVariable("AZURE_AI_PROJECT_ENDPOINT")
+        ?? throw new InvalidOperationException("AZURE_AI_PROJECT_ENDPOINT is not set.");
+    string deploymentName = Environment.GetEnvironmentVariable("AZURE_AI_MODEL_DEPLOYMENT_NAME") ?? "gpt-5-mini";
+
+    const string AgentInstructions = "You are a helpful assistant that can use the countries API to retrieve information about countries by their currency code.";
+
+    AIProjectClient aiProjectClient = new(new Uri(endpoint), new DefaultAzureCredential());
+
+    AITool openApiTool = FoundryAITool.CreateOpenApiTool(CreateOpenAPIFunctionDefinition());
+
+    AIAgent agent = aiProjectClient.AsAIAgent(
+        deploymentName,
+        instructions: AgentInstructions,
+        name: "OpenAPIToolsAgent",
+        tools: [openApiTool]);
+
+    Console.WriteLine(await agent.RunAsync(
+        "What countries use the Euro (EUR) as their currency? Please list them."));
+
+    static OpenApiFunctionDefinition CreateOpenAPIFunctionDefinition()
+    {
+        const string CountriesOpenApiSpec = """
+        {
+          "openapi": "3.1.0",
+          "info": {
+            "title": "REST Countries API",
+            "description": "Retrieve information about countries by currency code",
+            "version": "v3.1"
+          },
+          "servers": [ { "url": "https://restcountries.com/v3.1" } ],
+          "paths": {
+            "/currency/{currency}": {
+              "get": {
+                "description": "Get countries that use a specific currency code (e.g., USD, EUR, GBP)",
+                "operationId": "GetCountriesByCurrency",
+                "parameters": [
+                  {
+                    "name": "currency", "in": "path", "required": true,
+                    "schema": { "type": "string" }
+                  }
+                ],
+                "responses": {
+                  "200": { "description": "Successful response with list of countries" },
+                  "404": { "description": "No countries found for the currency" }
+                }
+              }
+            }
+          }
+        }
+        """;
+
+        return new OpenApiFunctionDefinition(
+            "get_countries",
+            BinaryData.FromString(CountriesOpenApiSpec),
+            new OpenAPIAnonymousAuthenticationDetails())
+        {
+            Description = "Retrieve information about countries by currency code"
+        };
+    }
+    ```
+
+    ### Expected output
+
+    The agent calls the REST Countries API through the OpenAPI tool and lists the matching countries:
+
+    ```console
+    Countries that use the Euro (EUR) as their currency include: Austria, Belgium, Croatia, Cyprus, Estonia, Finland, France, Germany, Greece, Ireland, Italy, Latvia, Lithuania, Luxembourg, Malta, Netherlands, Portugal, Slovakia, Slovenia, Spain ...
+    ```
+
+    For the full sample including authenticated API patterns, see [Agent_Step17_OpenAPITools](https://github.com/microsoft/agent-framework/tree/main/dotnet/samples/02-agents/AgentsWithFoundry/Agent_Step17_OpenAPITools).
+
+  </Tab>
+</Tabs>
 
 ## Sample of using Agents with OpenAPI tool on Web service, requiring authentication
 

@@ -48,59 +48,121 @@ Before you start, install the latest SDK package. The .NET SDK is currently in p
 
 ## Create an agent with the image generation tool
 
-This sample creates an agent with the image generation tool, generates an image, and saves it to a file.
+This sample creates an agent with the image generation tool, generates an image, and saves it to a file. Select **Prompt Agents** to use the Azure AI Projects SDK to create a server-side prompt agent, or **Hosted Agents** to use the Agent Framework [`FoundryChatClient`](/agent-service/responses-api) to build an ephemeral, in-process agent.
 
-```python
-import base64
-import os
+<Tabs>
+  <Tab title="Prompt Agents">
 
-from azure.identity import DefaultAzureCredential
-from azure.ai.projects import AIProjectClient
-from azure.ai.projects.models import PromptAgentDefinition, ImageGenTool
+    ```python
+    import base64
+    import os
 
-# Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-PROJECT_ENDPOINT = "your_project_endpoint"
-IMAGE_MODEL = "gpt-image-1"
+    from azure.identity import DefaultAzureCredential
+    from azure.ai.projects import AIProjectClient
+    from azure.ai.projects.models import PromptAgentDefinition, ImageGenTool
 
-# Create clients to call Foundry API
-project = AIProjectClient(
-    endpoint=PROJECT_ENDPOINT,
-    credential=DefaultAzureCredential(),
-)
-openai = project.get_openai_client()
+    # Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+    PROJECT_ENDPOINT = "your_project_endpoint"
+    IMAGE_MODEL = "gpt-image-1"
 
-# Create an agent with the image generation tool
-agent = project.agents.create_version(
-    agent_name="agent-image-generation",
-    definition=PromptAgentDefinition(
-        model="gpt-4.1-mini",
-        instructions="Generate images based on user prompts.",
-        tools=[ImageGenTool(model=IMAGE_MODEL, quality="low", size="1024x1024")],
-    ),
-    description="Agent for image generation.",
-)
-print(f"Agent created (id: {agent.id}, name: {agent.name}, version: {agent.version})")
+    # Create clients to call Foundry API
+    project = AIProjectClient(
+        endpoint=PROJECT_ENDPOINT,
+        credential=DefaultAzureCredential(),
+    )
+    openai = project.get_openai_client()
 
-# Generate an image using the agent
-response = openai.responses.create(
-    input="Generate an image of the Microsoft logo.",
-    extra_headers={
-        "x-ms-oai-image-generation-deployment": IMAGE_MODEL,
-    },
-    extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
-)
+    # Create an agent with the image generation tool
+    agent = project.agents.create_version(
+        agent_name="agent-image-generation",
+        definition=PromptAgentDefinition(
+            model="gpt-4.1-mini",
+            instructions="Generate images based on user prompts.",
+            tools=[ImageGenTool(model=IMAGE_MODEL, quality="low", size="1024x1024")],
+        ),
+        description="Agent for image generation.",
+    )
+    print(f"Agent created (id: {agent.id}, name: {agent.name}, version: {agent.version})")
 
-# Clean up the agent
-project.agents.delete_version(agent_name=agent.name, agent_version=agent.version)
+    # Generate an image using the agent
+    response = openai.responses.create(
+        input="Generate an image of the Microsoft logo.",
+        extra_headers={
+            "x-ms-oai-image-generation-deployment": IMAGE_MODEL,
+        },
+        extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
+    )
 
-# Extract and save the generated image
-image_data = [output.result for output in response.output if output.type == "image_generation_call"]
-if image_data and image_data[0]:
-    file_path = os.path.abspath("microsoft.png")
-    with open(file_path, "wb") as f:
-        f.write(base64.b64decode(image_data[0]))
-    print(f"Image saved to: {file_path}")
-```
+    # Clean up the agent
+    project.agents.delete_version(agent_name=agent.name, agent_version=agent.version)
+
+    # Extract and save the generated image
+    image_data = [output.result for output in response.output if output.type == "image_generation_call"]
+    if image_data and image_data[0]:
+        file_path = os.path.abspath("microsoft.png")
+        with open(file_path, "wb") as f:
+            f.write(base64.b64decode(image_data[0]))
+        print(f"Image saved to: {file_path}")
+    ```
+
+  </Tab>
+  <Tab title="Hosted Agents">
+
+    This sample uses [`FoundryChatClient`](/agent-service/responses-api) from the Microsoft Agent Framework and calls `get_image_generation_tool()` to attach the image generation tool. Install the package with `pip install agent-framework-foundry aiohttp`, set the `FOUNDRY_PROJECT_ENDPOINT` and `FOUNDRY_MODEL` environment variables, and sign in with `az login`.
+
+    ```python
+    import asyncio
+    import base64
+    import os
+
+    from agent_framework import Agent
+    from agent_framework.foundry import FoundryChatClient
+    from azure.identity import AzureCliCredential
+
+    IMAGE_MODEL = "gpt-image-1"
+
+    async def main() -> None:
+        agent = Agent(
+            client=FoundryChatClient(credential=AzureCliCredential()),
+            instructions="Generate images based on user prompts.",
+            tools=[
+                FoundryChatClient.get_image_generation_tool(
+                    model=IMAGE_MODEL,
+                    quality="low",
+                    size="1024x1024",
+                )
+            ],
+        )
+
+        result = await agent.run("Generate an image of the Microsoft logo.")
+
+        # Extract and save the generated image from the raw response.
+        for output in result.raw_representation.output:
+            if output.type == "image_generation_call":
+                file_path = os.path.abspath("microsoft.png")
+                with open(file_path, "wb") as f:
+                    f.write(base64.b64decode(output.result))
+                print(f"Image saved to: {file_path}")
+
+        print(f"Agent: {result.text}")
+
+    if __name__ == "__main__":
+        asyncio.run(main())
+    ```
+
+    ### Expected output
+
+    The tool returns base64-encoded image bytes, which the sample saves to disk; the model's text reply is also printed:
+
+    ```console
+    Image saved to: /path/to/microsoft.png
+    Agent: Here is the generated Microsoft logo image.
+    ```
+
+    For more about Agent Framework Foundry tool factories, see the [Foundry provider samples](https://github.com/microsoft/agent-framework/tree/main/python/samples/02-agents/providers/foundry).
+
+  </Tab>
+</Tabs>
 
 </ZoneContent>
 <ZoneContent group="csharp__java__python__rest-api__typescript" value="csharp" options={[{"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "rest-api", "title": "REST API"}, {"id": "typescript", "title": "TypeScript"}, {"id": "java", "title": "Java"}]} values={["python", "csharp", "rest-api", "typescript", "java"]} defaultValue="python">

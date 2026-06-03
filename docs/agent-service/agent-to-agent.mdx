@@ -105,143 +105,251 @@ Use your connection name in code. Your code uses this name to retrieve the full 
 
 ## Create an agent with the A2A tool
 
-```python
-from azure.identity import DefaultAzureCredential
-from azure.ai.projects import AIProjectClient
-from azure.ai.projects.models import (
-    PromptAgentDefinition,
-    A2APreviewTool,
-)
+Select **Prompt Agents** to use the Azure AI Projects SDK to create a server-side prompt agent, or **Hosted Agents** to use the Agent Framework [`FoundryChatClient`](/agent-service/responses-api) to build an ephemeral, in-process agent.
 
-# Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-PROJECT_ENDPOINT = "your_project_endpoint"
-A2A_CONNECTION_NAME = "my-a2a-connection"
-AGENT_NAME = "my-agent"
+<Tabs>
+  <Tab title="Prompt Agents">
 
-# Create clients to call Foundry API
-project = AIProjectClient(
-    endpoint=PROJECT_ENDPOINT,
-    credential=DefaultAzureCredential(),
-)
-openai = project.get_openai_client()
+    ```python
+    from azure.identity import DefaultAzureCredential
+    from azure.ai.projects import AIProjectClient
+    from azure.ai.projects.models import (
+        PromptAgentDefinition,
+        A2APreviewTool,
+    )
 
-a2a_connection = project.connections.get(A2A_CONNECTION_NAME)
+    # Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+    PROJECT_ENDPOINT = "your_project_endpoint"
+    A2A_CONNECTION_NAME = "my-a2a-connection"
+    AGENT_NAME = "my-agent"
 
-tool = A2APreviewTool(
-    project_connection_id=a2a_connection.id,
-)
+    # Create clients to call Foundry API
+    project = AIProjectClient(
+        endpoint=PROJECT_ENDPOINT,
+        credential=DefaultAzureCredential(),
+    )
+    openai = project.get_openai_client()
 
-agent = project.agents.create_version(
-    agent_name=AGENT_NAME,
-    definition=PromptAgentDefinition(
-        model="gpt-4.1-mini",
-        instructions="You are a helpful assistant.",
-        tools=[tool],
-    ),
-)
-print(f"Agent created (id: {agent.id}, name: {agent.name}, version: {agent.version})")
+    a2a_connection = project.connections.get(A2A_CONNECTION_NAME)
 
-user_input = input("Enter your question (e.g., 'What can the secondary agent do?'): \n")
+    tool = A2APreviewTool(
+        project_connection_id=a2a_connection.id,
+    )
 
-stream_response = openai.responses.create(
-    stream=True,
-    tool_choice="required",
-    input=user_input,
-    extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
-)
+    agent = project.agents.create_version(
+        agent_name=AGENT_NAME,
+        definition=PromptAgentDefinition(
+            model="gpt-4.1-mini",
+            instructions="You are a helpful assistant.",
+            tools=[tool],
+        ),
+    )
+    print(f"Agent created (id: {agent.id}, name: {agent.name}, version: {agent.version})")
 
-for event in stream_response:
-    if event.type == "response.created":
-        print(f"Follow-up response created with ID: {event.response.id}")
-    elif event.type == "response.output_text.delta":
-        print(f"Delta: {event.delta}")
-    elif event.type == "response.text.done":
-        print(f"\nFollow-up response done!")
-    elif event.type == "response.output_item.done":
-        item = event.item
-        if item.type == "remote_function_call":
-            print(f"Call ID: {getattr(item, 'call_id')}")
-            print(f"Label: {getattr(item, 'label')}")
-    elif event.type == "response.completed":
-        print(f"\nFollow-up completed!")
-        print(f"Full response: {event.response.output_text}")
+    user_input = input("Enter your question (e.g., 'What can the secondary agent do?'): \n")
 
-# Clean up the created agent version
-project.agents.delete_version(agent_name=agent.name, agent_version=agent.version)
-```
+    stream_response = openai.responses.create(
+        stream=True,
+        tool_choice="required",
+        input=user_input,
+        extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
+    )
 
-### Expected output
+    for event in stream_response:
+        if event.type == "response.created":
+            print(f"Follow-up response created with ID: {event.response.id}")
+        elif event.type == "response.output_text.delta":
+            print(f"Delta: {event.delta}")
+        elif event.type == "response.text.done":
+            print(f"\nFollow-up response done!")
+        elif event.type == "response.output_item.done":
+            item = event.item
+            if item.type == "remote_function_call":
+                print(f"Call ID: {getattr(item, 'call_id')}")
+                print(f"Label: {getattr(item, 'label')}")
+        elif event.type == "response.completed":
+            print(f"\nFollow-up completed!")
+            print(f"Full response: {event.response.output_text}")
 
-The agent responds with information about the secondary agent's capabilities, demonstrating successful A2A communication. You see streaming delta text as the response is generated, followed by completion messages. The output includes the follow-up response ID, text deltas, and a final summary of what the secondary agent can do.
+    # Clean up the created agent version
+    project.agents.delete_version(agent_name=agent.name, agent_version=agent.version)
+    ```
+
+    ### Expected output
+
+    The agent responds with information about the secondary agent's capabilities, demonstrating successful A2A communication. You see streaming delta text as the response is generated, followed by completion messages. The output includes the follow-up response ID, text deltas, and a final summary of what the secondary agent can do.
+
+  </Tab>
+  <Tab title="Hosted Agents">
+
+    This sample uses [`FoundryChatClient`](/agent-service/responses-api) from the Microsoft Agent Framework and calls `get_a2a_tool()` to attach an A2A connection. It uses `AIProjectClient` to resolve the connection name to a connection ID. Install the package with `pip install agent-framework-foundry aiohttp`, set the `FOUNDRY_PROJECT_ENDPOINT` and `FOUNDRY_MODEL` environment variables, and sign in with `az login`.
+
+    ```python
+    import asyncio
+    import os
+
+    from agent_framework import Agent
+    from agent_framework.foundry import FoundryChatClient
+    from azure.ai.projects import AIProjectClient
+    from azure.identity import AzureCliCredential
+
+    A2A_CONNECTION_NAME = "my-a2a-connection"
+
+    async def main() -> None:
+        credential = AzureCliCredential()
+        project = AIProjectClient(
+            endpoint=os.environ["FOUNDRY_PROJECT_ENDPOINT"],
+            credential=credential,
+        )
+        a2a_connection_id = project.connections.get(A2A_CONNECTION_NAME).id
+
+        agent = Agent(
+            client=FoundryChatClient(credential=credential),
+            instructions="You are a helpful assistant.",
+            tools=[FoundryChatClient.get_a2a_tool(project_connection_id=a2a_connection_id)],
+        )
+
+        result = await agent.run("What can the secondary agent do?")
+        print(f"Agent: {result.text}")
+
+    if __name__ == "__main__":
+        asyncio.run(main())
+    ```
+
+    ### Expected output
+
+    The agent calls the remote A2A endpoint and prints the consolidated reply:
+
+    ```console
+    Agent: The secondary agent can help with ...
+    ```
+
+    For more about Agent Framework Foundry tool factories, see the [Foundry provider samples](https://github.com/microsoft/agent-framework/tree/main/python/samples/02-agents/providers/foundry).
+
+  </Tab>
+</Tabs>
 
 </ZoneContent>
 <ZoneContent group="csharp__java__python__rest-api__typescript" value="csharp" options={[{"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "rest-api", "title": "REST API"}, {"id": "typescript", "title": "TypeScript"}, {"id": "java", "title": "Java"}]} values={["python", "csharp", "rest-api", "typescript", "java"]} defaultValue="python">
 
 ## Create an agent with the A2A tool
 
-This example creates an agent that can call a remote A2A endpoint. For the connection setup steps, see [Create an A2A connection](#create-an-a2a-connection).
+This example creates an agent that can call a remote A2A endpoint. For the connection setup steps, see [Create an A2A connection](#create-an-a2a-connection). Select **Prompt Agents** to use the Azure AI Projects SDK to create a server-side prompt agent, or **Hosted Agents** to use the Microsoft Agent Framework to compose two agents in-process by exposing one agent as a function tool of another.
 
-```csharp
-using System;
-using Azure.AI.Projects;
-using Azure.AI.Extensions.OpenAI;
-using Azure.Identity;
+<Tabs>
+  <Tab title="Prompt Agents">
 
-var projectEndpoint = "https://<resource>.ai.azure.com/api/projects/<project>";
-var a2aConnectionName = "my-a2a-connection";
-var a2aBaseUri = "https://<a2a-endpoint>"; // Optional for non-RemoteA2A connections.
+    ```csharp
+    using System;
+    using Azure.AI.Projects;
+    using Azure.AI.Extensions.OpenAI;
+    using Azure.Identity;
 
-AIProjectClient projectClient = new(endpoint: new Uri(projectEndpoint), tokenProvider: new DefaultAzureCredential());
+    var projectEndpoint = "https://<resource>.ai.azure.com/api/projects/<project>";
+    var a2aConnectionName = "my-a2a-connection";
+    var a2aBaseUri = "https://<a2a-endpoint>"; // Optional for non-RemoteA2A connections.
 
-// Create the A2ATool and provide it with the A2A connection ID.
-AIProjectConnection a2aConnection = projectClient.Connections.GetConnection(connectionName: a2aConnectionName);
-A2APreviewTool a2aTool = new()
-{
-    ProjectConnectionId = a2aConnection.Id
-};
-if (!string.Equals(a2aConnection.Type.ToString(), "RemoteA2A"))
-{
-  if (string.IsNullOrWhiteSpace(a2aBaseUri))
+    AIProjectClient projectClient = new(endpoint: new Uri(projectEndpoint), tokenProvider: new DefaultAzureCredential());
+
+    // Create the A2ATool and provide it with the A2A connection ID.
+    AIProjectConnection a2aConnection = projectClient.Connections.GetConnection(connectionName: a2aConnectionName);
+    A2APreviewTool a2aTool = new()
     {
-    throw new InvalidOperationException($"The connection {a2aConnection.Name} is of {a2aConnection.Type.ToString()} type and does not carry the A2A service base URI. Set a2aBaseUri before running this sample.");
+        ProjectConnectionId = a2aConnection.Id
+    };
+    if (!string.Equals(a2aConnection.Type.ToString(), "RemoteA2A"))
+    {
+      if (string.IsNullOrWhiteSpace(a2aBaseUri))
+        {
+        throw new InvalidOperationException($"The connection {a2aConnection.Name} is of {a2aConnection.Type.ToString()} type and does not carry the A2A service base URI. Set a2aBaseUri before running this sample.");
+        }
+        // Provide the service endpoint as a baseUri parameter
+        // if the connection is not of a RemoteA2A type.
+        a2aTool.BaseUri = new Uri(a2aBaseUri);
     }
-    // Provide the service endpoint as a baseUri parameter
-    // if the connection is not of a RemoteA2A type.
-    a2aTool.BaseUri = new Uri(a2aBaseUri);
-}
-DeclarativeAgentDefinition agentDefinition = new(model: "gpt-4.1-mini")
-{
-    Instructions = "You are a helpful assistant.",
-    Tools = { a2aTool }
-};
-// Create the Agent version with the A2A tool.
-AgentVersion agentVersion = projectClient.AgentAdministrationClient.CreateAgentVersion(
-    agentName: "myAgent",
-    options: new(agentDefinition));
+    DeclarativeAgentDefinition agentDefinition = new(model: "gpt-4.1-mini")
+    {
+        Instructions = "You are a helpful assistant.",
+        Tools = { a2aTool }
+    };
+    // Create the Agent version with the A2A tool.
+    AgentVersion agentVersion = projectClient.AgentAdministrationClient.CreateAgentVersion(
+        agentName: "myAgent",
+        options: new(agentDefinition));
 
-// Create the response and make sure we are always using tool.
-ProjectResponsesClient responseClient = projectClient.ProjectOpenAIClient.GetProjectResponsesClientForAgent(agentVersion.Name);
-CreateResponseOptions responseOptions = new()
-{
-    ToolChoice = ResponseToolChoice.CreateRequiredChoice(),
-    InputItems = { ResponseItem.CreateUserMessageItem("What can the secondary agent do?") },
-};
-ResponseResult response = responseClient.CreateResponse(responseOptions);
+    // Create the response and make sure we are always using tool.
+    ProjectResponsesClient responseClient = projectClient.ProjectOpenAIClient.GetProjectResponsesClientForAgent(agentVersion.Name);
+    CreateResponseOptions responseOptions = new()
+    {
+        ToolChoice = ResponseToolChoice.CreateRequiredChoice(),
+        InputItems = { ResponseItem.CreateUserMessageItem("What can the secondary agent do?") },
+    };
+    ResponseResult response = responseClient.CreateResponse(responseOptions);
 
-// Print the Agent output.
-if (response.Status != ResponseStatus.Completed)
-{
-    throw new InvalidOperationException($"Response did not complete. Status: {response.Status}");
-}
-Console.WriteLine(response.GetOutputText());
+    // Print the Agent output.
+    if (response.Status != ResponseStatus.Completed)
+    {
+        throw new InvalidOperationException($"Response did not complete. Status: {response.Status}");
+    }
+    Console.WriteLine(response.GetOutputText());
 
-// Clean up the created Agent version.
-projectClient.AgentAdministrationClient.DeleteAgentVersion(agentName: agentVersion.Name, agentVersion: agentVersion.Version);
-```
+    // Clean up the created Agent version.
+    projectClient.AgentAdministrationClient.DeleteAgentVersion(agentName: agentVersion.Name, agentVersion: agentVersion.Version);
+    ```
 
-### Expected output
+    ### Expected output
 
-The console displays the agent's response text from the A2A endpoint. After completion, the agent version is deleted to clean up resources.
+    The console displays the agent's response text from the A2A endpoint. After completion, the agent version is deleted to clean up resources.
+
+  </Tab>
+  <Tab title="Hosted Agents">
+
+    The Microsoft Agent Framework lets you compose agents directly in your process by exposing one `AIAgent` as an `AIFunction` of another. This sample creates a specialist `WeatherAgent` and a top-level `MainAgent` that calls it via `weatherAgent.AsAIFunction()`. Install the `Microsoft.Agents.AI.Foundry` and `Azure.AI.Projects` packages, set the `AZURE_AI_PROJECT_ENDPOINT` and `AZURE_AI_MODEL_DEPLOYMENT_NAME` environment variables, and sign in with `az login`.
+
+    ```csharp
+    using System.ComponentModel;
+    using Azure.AI.Projects;
+    using Azure.Identity;
+    using Microsoft.Agents.AI;
+    using Microsoft.Extensions.AI;
+
+    [Description("Get the weather for a given location.")]
+    static string GetWeather([Description("The location to get the weather for.")] string location)
+        => $"The weather in {location} is cloudy with a high of 15°C.";
+
+    string endpoint = Environment.GetEnvironmentVariable("AZURE_AI_PROJECT_ENDPOINT")
+        ?? throw new InvalidOperationException("AZURE_AI_PROJECT_ENDPOINT is not set.");
+    string deploymentName = Environment.GetEnvironmentVariable("AZURE_AI_MODEL_DEPLOYMENT_NAME") ?? "gpt-5-mini";
+
+    AIProjectClient aiProjectClient = new(new Uri(endpoint), new DefaultAzureCredential());
+
+    AITool weatherTool = AIFunctionFactory.Create(GetWeather);
+    AIAgent weatherAgent = aiProjectClient.AsAIAgent(deploymentName,
+        instructions: "You answer questions about the weather.",
+        name: "WeatherAgent",
+        tools: [weatherTool]);
+
+    AIAgent agent = aiProjectClient.AsAIAgent(deploymentName,
+        instructions: "You are a helpful assistant who responds in French.",
+        name: "MainAgent",
+        tools: [weatherAgent.AsAIFunction()]);
+
+    AgentSession session = await agent.CreateSessionAsync();
+    Console.WriteLine(await agent.RunAsync("What is the weather like in Amsterdam?", session));
+    ```
+
+    ### Expected output
+
+    The top-level agent delegates the weather question to the `WeatherAgent` sub-agent and prints the consolidated reply in French:
+
+    ```console
+    Le temps à Amsterdam est nuageux avec une température maximale de 15 °C.
+    ```
+
+    For the full sample, see [Agent_Step11_AsFunctionTool](https://github.com/microsoft/agent-framework/tree/main/dotnet/samples/02-agents/AgentsWithFoundry/Agent_Step11_AsFunctionTool).
+
+  </Tab>
+</Tabs>
 
 </ZoneContent>
 <ZoneContent group="csharp__java__python__rest-api__typescript" value="rest-api" options={[{"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "rest-api", "title": "REST API"}, {"id": "typescript", "title": "TypeScript"}, {"id": "java", "title": "Java"}]} values={["python", "csharp", "rest-api", "typescript", "java"]} defaultValue="python">

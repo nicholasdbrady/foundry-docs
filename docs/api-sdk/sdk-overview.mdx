@@ -7,20 +7,22 @@ import { ZoneContent, ZonePivot } from "/snippets/zone-pivot.jsx"
 
 A Foundry resource provides unified access to models, agents, and tools. This article explains which SDK and endpoint to use for your scenario.
 
+The **Foundry SDK** is a thin-client SDK that exposes all of the Foundry project APIs through a single project endpoint. Higher-level SDKs build on it — for example, the Agent Framework `foundry` package depends on the Foundry SDK to access Foundry models, tools, and project configuration.
+
 | SDK | What it's for | Endpoint |
 | --- | --- | --- |
-| **Foundry SDK** | Foundry-specific capabilities with OpenAI-compatible interfaces. Includes access to Foundry direct models through the Responses API (not Chat Completions). | `https://<resource-name>.services.ai.azure.com/api/projects/<project-name>` |
-| **OpenAI SDK** | Latest OpenAI SDK models and features with the full OpenAI API surface, including embeddings. Foundry direct models available through Chat Completions API (not Responses). | `https://<resource-name>.openai.azure.com/openai/v1` |
-| **Anthropic SDK** | Anthropic Claude models deployed in Foundry, using the Anthropic Messages API. | `https://<resource-name>.services.ai.azure.com/anthropic` |
-| **Foundry Tools SDKs** | Prebuilt solutions (Vision, Speech, Content Safety, and more). | Tool-specific endpoints (varies by service). |
-| **Agent Framework** | Multi-agent orchestration in code. Cloud-agnostic. | Uses the project endpoint via the Foundry SDK. |
+| **Foundry SDK** | Thin-client SDK over all Foundry project APIs. Access to Foundry Models and platform tools (file search, code interpreter, web search, memory, SharePoint, WorkIQ, Fabric IQ, MCP). | `https://<resource-name>.services.ai.azure.com/api/projects/<project-name>` |
+| **Agent Framework** | Hosted agents and multi-agent systems build using code. The `foundry` package depends on the Foundry SDK for project access. Run in your own process. | Responses API in the project endpoint, via `FoundryChatClient`. |
+| **OpenAI SDK** | Full OpenAI API surface, including embeddings. Best latency and maximum OpenAI compatibility. | `https://<resource-name>.openai.azure.com/openai/v1` |
+| **Anthropic SDK** | Anthropic Claude models deployed in Foundry. | `https://<resource-name>.services.ai.azure.com/anthropic` |
+| **Foundry Tools SDKs** | Prebuilt solutions (Vision, Speech, Content Safety, and more). | Tool-specific endpoints. |
 
 **Choose your SDK**:
 - Use **Foundry SDK** when building apps with agents, evaluations, or Foundry-specific features
-- Use **OpenAI SDK** when maximum OpenAI compatibility is required, when generating embeddings, or using Foundry direct models via Chat Completions
+- Use **Agent Framework** when building hosted agents or multi-agent systems in code using the Responses API
+- Use **OpenAI SDK** when maximum OpenAI compatibility or lowest latency is required, when generating embeddings, or when using Foundry direct models via Chat Completions
 - Use **Anthropic SDK** when working with Anthropic Claude models deployed in Foundry
 - Use **Foundry Tools SDKs** when working with specific AI services (Vision, Speech, Language, etc.)
-- Use **Agent Framework** when building multi-agent systems in code (local orchestration)
 
 <Note>
 
@@ -91,11 +93,13 @@ Before proceeding, confirm:
 
 ## Foundry SDK
 
-The Foundry SDK connects to a single project endpoint that provides access to the most popular Foundry capabilities:
+The Foundry SDK is a thin-client SDK that gives you access to all of the Foundry project APIs through a single project endpoint:
 
 ```
 https://<resource-name>.services.ai.azure.com/api/projects/<project-name>
 ```
+
+It's the foundation other Foundry-aware SDKs build on. For example, the Agent Framework `foundry` package takes a dependency on the Foundry SDK and uses it to access Foundry functionality — you don't need to wire up the project endpoint or OpenAI-compatible client yourself when you use `FoundryChatClient`.
 
 <Note>
 
@@ -199,7 +203,7 @@ dotnet add package Azure.Identity
 The SDK exposes two client types because Foundry and OpenAI have different API shapes:
 
 - **Project client** – Use for Foundry-native operations where OpenAI has no equivalent. Examples: listing connections, retrieving project properties, enabling tracing.
-- **OpenAI-compatible client** – Use for Foundry functionality that builds on OpenAI concepts. The Responses API, agents, evaluations, and fine-tuning all use OpenAI-style request/response patterns. This client also gives you access to Foundry direct models (non-Azure-OpenAI models hosted in Foundry). The project endpoint serves this traffic on the `/openai` route.
+- **OpenAI-compatible client** – Use for Foundry functionality that builds on OpenAI concepts. The Responses API, agents, evaluations, and fine-tuning all use OpenAI-style request/response patterns. This client targets the Responses API in your project endpoint, which gives you access to Foundry Models from the catalog (including non-Azure-OpenAI direct models) plus platform tools — standard OpenAI tools like file search, code interpreter, and web search, alongside Foundry-exclusive tools like memory, SharePoint, WorkIQ, Fabric IQ, and MCP servers. The project endpoint serves this traffic on the `/openai` route.
 
 Most apps use both clients. Use the project client for setup and configuration, then use the OpenAI-compatible client for running agents, evaluations, and calling models (including Foundry direct models).
 
@@ -359,7 +363,7 @@ If code samples fail with `AttributeError` or `ModuleNotFoundError`:
 
 ## OpenAI SDK
 
-Use the OpenAI SDK when you want the full OpenAI API surface and maximum client compatibility. This endpoint provides access to Azure OpenAI models and Foundry direct models (via Responses API), including embeddings, chat completions, and image generation. It doesn't provide access to Foundry-specific features like agents and evaluations.
+Use the OpenAI SDK when you want the full OpenAI API surface, the best latency, and maximum compatibility with existing OpenAI clients. This endpoint exposes the Responses API on Azure OpenAI directly and provides access to Azure OpenAI models and Foundry direct models, including embeddings, chat completions, and image generation. It doesn't provide access to Foundry-specific features like agents, evaluations, or Foundry-exclusive platform tools — for those, use the Responses API in your project endpoint through the [Foundry SDK](#foundry-sdk).
 
 <Tip>
 
@@ -659,13 +663,33 @@ System.out.println(response.body());
 
 For more information, see [Use Anthropic Claude models in Microsoft Foundry](/foundry-models/use-foundry-models-claude).
 
-## Using the Agent Framework for local orchestration
+## Agent Framework
 
-Microsoft Agent Framework is an open-source SDK for building multi-agent systems in code (for example, .NET and Python) with a cloud-provider-agnostic interface.
+[Microsoft Agent Framework](/agent-framework/overview/agent-framework-overview) is an open-source SDK (Python and .NET) for building agents and multi-agent systems in code. It's the recommended path for [Hosted agents (preview)](../agents/overview#hosted-agents-preview) on Microsoft Foundry.
 
-Use Agent Framework when you want to define and orchestrate agents locally. Pair it with the Foundry SDK when you want those agents to run against Foundry models or when you want Agent Framework to orchestrate agents hosted in Foundry.
+### Run your code as a Hosted agent
 
-For more information, see the [Microsoft Agent Framework overview](/agent-framework/overview/agent-framework-overview).
+The main story for code-based agents in Foundry is [Hosted agents (preview)](../agents/overview#hosted-agents-preview). Write your agent with Agent Framework, package it as a container image or zip of your source code, and let Foundry run it with a managed endpoint, automatic scaling on isolated Micro VMs, a dedicated Microsoft Entra agent identity, session-level state, and end-to-end observability.
+
+Hosted agents are the recommended path when you want a Foundry-managed, network-addressable endpoint that other apps or agents can call. See [Deploy your first Hosted agent](../agents/quickstarts/quickstart-hosted-agent).
+
+### Build agents in code outside Foundry with the Responses API
+
+If you're hosting your agent outside of Foundry — in your own process or infrastructure — you can also use Agent Framework to call the **Responses API in your project endpoint** directly. Agent Framework connects through the `FoundryChatClient` provider, which targets:
+
+```
+{project_endpoint}/openai/v1/responses
+```
+
+Going through the project endpoint — instead of a resource-level OpenAI endpoint — gives your agent:
+
+- Foundry models from the catalog (Azure OpenAI and Foundry direct models) through one API.
+- Platform tools beyond the OpenAI tool set, including file search, code interpreter, memory, web search, MCP servers, SharePoint, WorkIQ, and Fabric IQ.
+- Project-scoped data, On-Behalf-Of (OBO) tool authentication, and the project's tracing, content filters, and identity configuration.
+
+This pattern is additive to Hosted agents, not an alternative — the same Agent Framework code can call the Responses API from your own process today and be packaged as a Hosted agent later when you want a Foundry-managed endpoint. See [Quickstart: Build agents using the Responses API](../agents/quickstarts/responses-api).
+
+For a full comparison of agent types and hosting choices, see [What is Microsoft Foundry Agent Service?](../agents/overview).
 
 ## Foundry Tools SDKs
 

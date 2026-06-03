@@ -54,208 +54,333 @@ You can customize Code Interpreter behavior at runtime, such as specifying which
 
 ## Sample of using agent with code interpreter tool in Python SDK
 
-The following Python sample shows how to create an agent with the code interpreter tool, upload a CSV file for analysis, and request a bar chart based on the data. It demonstrates a complete workflow: upload a file, create an agent with Code Interpreter enabled, request data visualization, and download the generated chart.
+The following Python sample shows how to create an agent with the code interpreter tool, upload a CSV file for analysis, and request a bar chart based on the data. Select **Prompt Agents** to use the Azure AI Projects SDK to create a server-side prompt agent, or **Hosted Agents** to use the Agent Framework [`FoundryChatClient`](/agent-service/responses-api) to build an ephemeral, in-process agent.
 
-```python
-import os
-from azure.identity import DefaultAzureCredential
-from azure.ai.projects import AIProjectClient
-from azure.ai.projects.models import PromptAgentDefinition, CodeInterpreterTool, AutoCodeInterpreterToolParam
+<Tabs>
+  <Tab title="Prompt Agents">
 
-# Load the CSV file to be processed
-asset_file_path = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "../assets/synthetic_500_quarterly_results.csv")
-)
+    This sample demonstrates a complete workflow: upload a file, create an agent with Code Interpreter enabled, request data visualization, and download the generated chart.
 
-# Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-PROJECT_ENDPOINT = "your_project_endpoint"
+    ```python
+    import os
+    from azure.identity import DefaultAzureCredential
+    from azure.ai.projects import AIProjectClient
+    from azure.ai.projects.models import PromptAgentDefinition, CodeInterpreterTool, AutoCodeInterpreterToolParam
 
-# Create clients to call Foundry API
-project = AIProjectClient(
-    endpoint=PROJECT_ENDPOINT,
-    credential=DefaultAzureCredential(),
-)
-openai = project.get_openai_client()
+    # Load the CSV file to be processed
+    asset_file_path = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "../assets/synthetic_500_quarterly_results.csv")
+    )
 
-# Upload the CSV file for the code interpreter to use
-file = openai.files.create(purpose="assistants", file=open(asset_file_path, "rb"))
+    # Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+    PROJECT_ENDPOINT = "your_project_endpoint"
 
-# Create agent with code interpreter tool
-agent = project.agents.create_version(
-    agent_name="MyAgent",
-    definition=PromptAgentDefinition(
-        model="gpt-5-mini",
-        instructions="You are a helpful assistant.",
-        tools=[CodeInterpreterTool(container=AutoCodeInterpreterToolParam(file_ids=[file.id]))],
-    ),
-    description="Code interpreter agent for data analysis and visualization.",
-)
+    # Create clients to call Foundry API
+    project = AIProjectClient(
+        endpoint=PROJECT_ENDPOINT,
+        credential=DefaultAzureCredential(),
+    )
+    openai = project.get_openai_client()
 
-# Create a conversation for the agent interaction
-conversation = openai.conversations.create()
+    # Upload the CSV file for the code interpreter to use
+    file = openai.files.create(purpose="assistants", file=open(asset_file_path, "rb"))
 
-# Send request to create a chart and generate a file
-response = openai.responses.create(
-    conversation=conversation.id,
-    input="Could you please create bar chart in TRANSPORTATION sector for the operating profit from the uploaded csv file and provide file to me?",
-    extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
-)
+    # Create agent with code interpreter tool
+    agent = project.agents.create_version(
+        agent_name="MyAgent",
+        definition=PromptAgentDefinition(
+            model="gpt-5-mini",
+            instructions="You are a helpful assistant.",
+            tools=[CodeInterpreterTool(container=AutoCodeInterpreterToolParam(file_ids=[file.id]))],
+        ),
+        description="Code interpreter agent for data analysis and visualization.",
+    )
 
-# Extract file information from response annotations
-file_id = ""
-filename = ""
-container_id = ""
+    # Create a conversation for the agent interaction
+    conversation = openai.conversations.create()
 
-# Get the last message which should contain file citations
-last_message = response.output[-1]  # ResponseOutputMessage
-if (
-    last_message.type == "message"
-    and last_message.content
-    and last_message.content[-1].type == "output_text"
-    and last_message.content[-1].annotations
-):
-    file_citation = last_message.content[-1].annotations[-1]  # AnnotationContainerFileCitation
-    if file_citation.type == "container_file_citation":
-        file_id = file_citation.file_id
-        filename = file_citation.filename
-        container_id = file_citation.container_id
-        print(f"Found generated file: {filename} (ID: {file_id})")
+    # Send request to create a chart and generate a file
+    response = openai.responses.create(
+        conversation=conversation.id,
+        input="Could you please create bar chart in TRANSPORTATION sector for the operating profit from the uploaded csv file and provide file to me?",
+        extra_body={"agent_reference": {"name": agent.name, "type": "agent_reference"}},
+    )
 
-# Clean up resources
-project.agents.delete_version(agent_name=agent.name, agent_version=agent.version)
+    # Extract file information from response annotations
+    file_id = ""
+    filename = ""
+    container_id = ""
 
-# Download the generated file if available
-if file_id and filename:
-    file_content = openai.containers.files.content.retrieve(file_id=file_id, container_id=container_id)
-    print(f"File ready for download: {filename}")
-    file_path = os.path.join(os.path.dirname(__file__), filename)
-    with open(file_path, "wb") as f:
-        f.write(file_content.read())
-    print(f"File downloaded successfully: {file_path}")
-else:
-    print("No file generated in response")
-```
+    # Get the last message which should contain file citations
+    last_message = response.output[-1]  # ResponseOutputMessage
+    if (
+        last_message.type == "message"
+        and last_message.content
+        and last_message.content[-1].type == "output_text"
+        and last_message.content[-1].annotations
+    ):
+        file_citation = last_message.content[-1].annotations[-1]  # AnnotationContainerFileCitation
+        if file_citation.type == "container_file_citation":
+            file_id = file_citation.file_id
+            filename = file_citation.filename
+            container_id = file_citation.container_id
+            print(f"Found generated file: {filename} (ID: {file_id})")
 
-### Expected output
+    # Clean up resources
+    project.agents.delete_version(agent_name=agent.name, agent_version=agent.version)
 
-The sample code produces output similar to the following example:
+    # Download the generated file if available
+    if file_id and filename:
+        file_content = openai.containers.files.content.retrieve(file_id=file_id, container_id=container_id)
+        print(f"File ready for download: {filename}")
+        file_path = os.path.join(os.path.dirname(__file__), filename)
+        with open(file_path, "wb") as f:
+            f.write(file_content.read())
+        print(f"File downloaded successfully: {file_path}")
+    else:
+        print("No file generated in response")
+    ```
 
-```console
-Found generated file: transportation_operating_profit_bar_chart.png (ID: file-xxxxxxxxxxxxxxxxxxxx)
-File ready for download: transportation_operating_profit_bar_chart.png
-File downloaded successfully: transportation_operating_profit_bar_chart.png
-```
+    ### Expected output
 
-The agent uploads your CSV file to Azure storage, creates a sandboxed Python environment, analyzes the data to filter transportation sector records, generates a PNG bar chart showing operating profit by quarter, and downloads the chart to your local directory. The file annotations in the response provide the file ID and container information needed to retrieve the generated chart.
+    The sample code produces output similar to the following example:
+
+    ```console
+    Found generated file: transportation_operating_profit_bar_chart.png (ID: file-xxxxxxxxxxxxxxxxxxxx)
+    File ready for download: transportation_operating_profit_bar_chart.png
+    File downloaded successfully: transportation_operating_profit_bar_chart.png
+    ```
+
+    The agent uploads your CSV file to Azure storage, creates a sandboxed Python environment, analyzes the data to filter transportation sector records, generates a PNG bar chart showing operating profit by quarter, and downloads the chart to your local directory. The file annotations in the response provide the file ID and container information needed to retrieve the generated chart.
+
+  </Tab>
+  <Tab title="Hosted Agents">
+
+    This sample uses [`FoundryChatClient`](/agent-service/responses-api) from the Microsoft Agent Framework and calls `get_code_interpreter_tool()` to give the agent a sandboxed Python execution environment. Install the package with `pip install agent-framework-foundry aiohttp`, set the `FOUNDRY_PROJECT_ENDPOINT` and `FOUNDRY_MODEL` environment variables, and sign in with `az login`.
+
+    ```python
+    import asyncio
+
+    from agent_framework import Agent
+    from agent_framework.foundry import FoundryChatClient
+    from azure.identity import AzureCliCredential
+
+    async def main() -> None:
+        # Reads FOUNDRY_PROJECT_ENDPOINT and FOUNDRY_MODEL from the environment.
+        agent = Agent(
+            client=FoundryChatClient(credential=AzureCliCredential()),
+            instructions="You are a helpful assistant that can write and execute Python code to solve problems.",
+            tools=[FoundryChatClient.get_code_interpreter_tool()],
+        )
+
+        result = await agent.run("Use code to calculate the factorial of 100.")
+        print(f"Agent: {result.text}")
+
+    if __name__ == "__main__":
+        asyncio.run(main())
+    ```
+
+    ### Expected output
+
+    The agent generates Python code, runs it in the sandboxed container, and returns the answer:
+
+    ```console
+    Agent: 100! = 93326215443944152681699238856266700490715968264381621468592963895217599993229915608941463976156518286253697920827223758251185210916864000000000000000000000000
+    ```
+
+    For the full sample (including file inputs and extracting the generated code), see [foundry_chat_client_with_code_interpreter.py](https://github.com/microsoft/agent-framework/blob/main/python/samples/02-agents/providers/foundry/foundry_chat_client_with_code_interpreter.py) and [foundry_chat_client_code_interpreter_files.py](https://github.com/microsoft/agent-framework/blob/main/python/samples/02-agents/providers/foundry/foundry_chat_client_code_interpreter_files.py).
+
+  </Tab>
+</Tabs>
 
 </ZoneContent>
 <ZoneContent group="csharp__java__python__rest__typescript" value="csharp" options={[{"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "typescript", "title": "TypeScript"}, {"id": "java", "title": "Java"}, {"id": "rest", "title": "REST"}]} values={["python", "csharp", "typescript", "java", "rest"]} defaultValue="python">
 
 ## Create a chart with Code Interpreter in C#
 
-The following C# sample shows how to create an agent with the Code Interpreter tool, upload a CSV file for analysis, and download the generated chart. For asynchronous usage, see the [code sample](https://github.com/Azure/azure-sdk-for-net/blob/main/sdk/ai/Azure.AI.Extensions.OpenAI/samples/Sample32_CodeInterpreterFileGeneration.md) in the Azure SDK for .NET repository on GitHub.
+The following C# sample shows how to create an agent with the Code Interpreter tool, upload a CSV file for analysis, and download the generated chart. Select **Prompt Agents** to use the Azure AI Projects SDK to create a server-side prompt agent, or **Hosted Agents** to use the Microsoft Agent Framework to build an ephemeral, in-process agent.
 
-```csharp
-using System;
-using System.IO;
-using Azure.AI.Projects;
-using Azure.AI.Extensions.OpenAI;
-using Azure.Identity;
-using OpenAI.Files;
+<Tabs>
+  <Tab title="Prompt Agents">
 
-// Format: "https://resource_name.ai.azure.com/api/projects/project_name"
-var projectEndpoint = "your_project_endpoint";
+    For asynchronous usage, see the [code sample](https://github.com/Azure/azure-sdk-for-net/blob/main/sdk/ai/Azure.AI.Extensions.OpenAI/samples/Sample32_CodeInterpreterFileGeneration.md) in the Azure SDK for .NET repository on GitHub.
 
-// Create project client to call Foundry API
-AIProjectClient projectClient = new(
-    endpoint: new Uri(projectEndpoint),
-    tokenProvider: new DefaultAzureCredential());
+    ```csharp
+    using System;
+    using System.IO;
+    using Azure.AI.Projects;
+    using Azure.AI.Extensions.OpenAI;
+    using Azure.Identity;
+    using OpenAI.Files;
 
-// Upload a CSV file for Code Interpreter to analyze
-OpenAIFileClient fileClient = projectClient.ProjectOpenAIClient.GetOpenAIFileClient();
-OpenAIFile uploadedFile = fileClient.UploadFile(
-    filePath: "synthetic_500_quarterly_results.csv",
-    purpose: FileUploadPurpose.Assistants);
-Console.WriteLine($"Uploaded file: {uploadedFile.Id}");
+    // Format: "https://resource_name.ai.azure.com/api/projects/project_name"
+    var projectEndpoint = "your_project_endpoint";
 
-// Create an agent with Code Interpreter enabled
-DeclarativeAgentDefinition agentDefinition = new(model: "gpt-5-mini")
-{
-    Instructions = "You are a helpful assistant.",
-    Tools = {
-        ResponseTool.CreateCodeInterpreterTool(
-            new CodeInterpreterToolContainer(
-                CodeInterpreterToolContainerConfiguration.CreateAutomaticContainerConfiguration(
-                    fileIds: [uploadedFile.Id]
-                )
-            )
-        ),
-    }
-};
-ProjectsAgentVersion agentVersion = projectClient.AgentAdministrationClient.CreateAgentVersion(
-    agentName: "myChartAgent",
-    options: new(agentDefinition));
+    // Create project client to call Foundry API
+    AIProjectClient projectClient = new(
+        endpoint: new Uri(projectEndpoint),
+        tokenProvider: new DefaultAzureCredential());
 
-// Request chart generation from the uploaded CSV data
-AgentReference agentReference = new(name: agentVersion.Name, version: agentVersion.Version);
-ProjectResponsesClient responseClient = projectClient.ProjectOpenAIClient.GetProjectResponsesClientForAgent(agentReference);
+    // Upload a CSV file for Code Interpreter to analyze
+    OpenAIFileClient fileClient = projectClient.ProjectOpenAIClient.GetOpenAIFileClient();
+    OpenAIFile uploadedFile = fileClient.UploadFile(
+        filePath: "synthetic_500_quarterly_results.csv",
+        purpose: FileUploadPurpose.Assistants);
+    Console.WriteLine($"Uploaded file: {uploadedFile.Id}");
 
-ResponseResult response = responseClient.CreateResponse(
-    "Could you please create bar chart in TRANSPORTATION sector for the operating profit " +
-    "from the uploaded csv file and provide file to me?");
-
-Console.WriteLine(response.GetOutputText());
-
-// Extract file information from response annotations
-ContainerFileCitationMessageAnnotation containerAnnotation = null;
-foreach (ResponseItem item in response.OutputItems)
-{
-    if (item is MessageResponseItem messageItem)
+    // Create an agent with Code Interpreter enabled
+    DeclarativeAgentDefinition agentDefinition = new(model: "gpt-5-mini")
     {
-        foreach (ResponseContentPart content in messageItem.Content)
+        Instructions = "You are a helpful assistant.",
+        Tools = {
+            ResponseTool.CreateCodeInterpreterTool(
+                new CodeInterpreterToolContainer(
+                    CodeInterpreterToolContainerConfiguration.CreateAutomaticContainerConfiguration(
+                        fileIds: [uploadedFile.Id]
+                    )
+                )
+            ),
+        }
+    };
+    ProjectsAgentVersion agentVersion = projectClient.AgentAdministrationClient.CreateAgentVersion(
+        agentName: "myChartAgent",
+        options: new(agentDefinition));
+
+    // Request chart generation from the uploaded CSV data
+    AgentReference agentReference = new(name: agentVersion.Name, version: agentVersion.Version);
+    ProjectResponsesClient responseClient = projectClient.ProjectOpenAIClient.GetProjectResponsesClientForAgent(agentReference);
+
+    ResponseResult response = responseClient.CreateResponse(
+        "Could you please create bar chart in TRANSPORTATION sector for the operating profit " +
+        "from the uploaded csv file and provide file to me?");
+
+    Console.WriteLine(response.GetOutputText());
+
+    // Extract file information from response annotations
+    ContainerFileCitationMessageAnnotation containerAnnotation = null;
+    foreach (ResponseItem item in response.OutputItems)
+    {
+        if (item is MessageResponseItem messageItem)
         {
-            foreach (ResponseMessageAnnotation annotation in content.OutputTextAnnotations)
+            foreach (ResponseContentPart content in messageItem.Content)
             {
-                if (annotation is ContainerFileCitationMessageAnnotation cntrAnnotation)
+                foreach (ResponseMessageAnnotation annotation in content.OutputTextAnnotations)
                 {
-                    containerAnnotation = cntrAnnotation;
+                    if (annotation is ContainerFileCitationMessageAnnotation cntrAnnotation)
+                    {
+                        containerAnnotation = cntrAnnotation;
+                    }
                 }
             }
         }
     }
-}
 
-// Download the generated chart if available
-if (containerAnnotation is not null)
-{
-    ContainerClient containerClient = projectClient.ProjectOpenAIClient.GetContainerClient();
-    BinaryData fileData = containerClient.DownloadContainerFile(
-        containerId: containerAnnotation.ContainerId,
-        fileId: containerAnnotation.FileId);
-    File.WriteAllBytes("chart.png", fileData.ToArray());
-    Console.WriteLine($"Chart downloaded: {Path.GetFullPath("chart.png")}");
-}
-else
-{
-    Console.WriteLine("No file generated in response");
-}
+    // Download the generated chart if available
+    if (containerAnnotation is not null)
+    {
+        ContainerClient containerClient = projectClient.ProjectOpenAIClient.GetContainerClient();
+        BinaryData fileData = containerClient.DownloadContainerFile(
+            containerId: containerAnnotation.ContainerId,
+            fileId: containerAnnotation.FileId);
+        File.WriteAllBytes("chart.png", fileData.ToArray());
+        Console.WriteLine($"Chart downloaded: {Path.GetFullPath("chart.png")}");
+    }
+    else
+    {
+        Console.WriteLine("No file generated in response");
+    }
 
-// Clean up resources
-projectClient.AgentAdministrationClient.DeleteAgentVersion(
-    agentName: agentVersion.Name, agentVersion: agentVersion.Version);
-```
+    // Clean up resources
+    projectClient.AgentAdministrationClient.DeleteAgentVersion(
+        agentName: agentVersion.Name, agentVersion: agentVersion.Version);
+    ```
 
-### Expected output
+    ### Expected output
 
-The sample code produces output similar to the following example:
+    The sample code produces output similar to the following example:
 
-```console
-Uploaded file: file-xxxxxxxxxxxxxxxxxxxx
-Here is the bar chart showing operating profit by quarter in the TRANSPORTATION sector...
-Chart downloaded: C:\Users\you\chart.png
-```
+    ```console
+    Uploaded file: file-xxxxxxxxxxxxxxxxxxxx
+    Here is the bar chart showing operating profit by quarter in the TRANSPORTATION sector...
+    Chart downloaded: C:\Users\you\chart.png
+    ```
 
-The agent uploads your CSV file to Azure storage, creates a sandboxed Python environment, analyzes the data to filter transportation sector records, and generates a PNG bar chart. The annotation parsing extracts the container ID and file ID from the response, which are used to download the chart to your local directory.
+    The agent uploads your CSV file to Azure storage, creates a sandboxed Python environment, analyzes the data to filter transportation sector records, and generates a PNG bar chart. The annotation parsing extracts the container ID and file ID from the response, which are used to download the chart to your local directory.
+
+  </Tab>
+  <Tab title="Hosted Agents">
+
+    This sample uses the Microsoft Agent Framework and calls `AsAIAgent(...)` on `AIProjectClient` together with `HostedCodeInterpreterTool` to give the agent a sandboxed Python environment. Install the `Microsoft.Agents.AI.Foundry` and `Azure.AI.Projects` packages, set the `AZURE_AI_PROJECT_ENDPOINT` and `AZURE_AI_MODEL_DEPLOYMENT_NAME` environment variables, and sign in with `az login`.
+
+    ```csharp
+    using System.Text;
+    using Azure.AI.Projects;
+    using Azure.Identity;
+    using Microsoft.Agents.AI;
+    using Microsoft.Extensions.AI;
+    using OpenAI.Assistants;
+
+    const string AgentInstructions = "You are a personal math tutor. When asked a math question, write and run code using the python tool to answer the question.";
+    const string AgentName = "CoderAgent";
+
+    string endpoint = Environment.GetEnvironmentVariable("AZURE_AI_PROJECT_ENDPOINT")
+        ?? throw new InvalidOperationException("AZURE_AI_PROJECT_ENDPOINT is not set.");
+    string deploymentName = Environment.GetEnvironmentVariable("AZURE_AI_MODEL_DEPLOYMENT_NAME") ?? "gpt-5-mini";
+
+    AIProjectClient aiProjectClient = new(new Uri(endpoint), new DefaultAzureCredential());
+
+    AIAgent agent = aiProjectClient.AsAIAgent(
+        deploymentName,
+        instructions: AgentInstructions,
+        name: AgentName,
+        tools: [new HostedCodeInterpreterTool() { Inputs = [] }]);
+
+    AgentResponse response = await agent.RunAsync("I need to solve the equation sin(x) + x^2 = 42");
+
+    // Print the code that the agent generated.
+    CodeInterpreterToolCallContent? toolCallContent = response.Messages
+        .SelectMany(m => m.Contents)
+        .OfType<CodeInterpreterToolCallContent>()
+        .FirstOrDefault();
+    if (toolCallContent?.Inputs is not null)
+    {
+        DataContent? codeInput = toolCallContent.Inputs.OfType<DataContent>().FirstOrDefault();
+        if (codeInput?.HasTopLevelMediaType("text") ?? false)
+        {
+            Console.WriteLine($"Code Input: {Encoding.UTF8.GetString(codeInput.Data.ToArray())}");
+        }
+    }
+
+    // Print the code execution result.
+    CodeInterpreterToolResultContent? toolResultContent = response.Messages
+        .SelectMany(m => m.Contents)
+        .OfType<CodeInterpreterToolResultContent>()
+        .FirstOrDefault();
+    if (toolResultContent?.Outputs is not null &&
+        toolResultContent.Outputs.OfType<TextContent>().FirstOrDefault() is { } resultOutput)
+    {
+        Console.WriteLine($"Code Tool Result: {resultOutput.Text}");
+    }
+
+    Console.WriteLine($"Agent: {response.Text}");
+    ```
+
+    ### Expected output
+
+    The agent writes Python in the sandbox, runs it, and prints both the generated code and the final answer:
+
+    ```console
+    Code Input: import math
+    result = math.sin(0.5) + 0.5**2
+    print(result)
+    Code Tool Result: 0.7294255386042029
+    Agent: One solution is x ≈ 0.5, since sin(0.5) + 0.5^2 ≈ 0.73 ...
+    ```
+
+    To download container files generated by the agent, see [Agent_Step24_CodeInterpreterFileDownload](https://github.com/microsoft/agent-framework/tree/main/dotnet/samples/02-agents/AgentsWithFoundry/Agent_Step24_CodeInterpreterFileDownload).
+
+  </Tab>
+</Tabs>
 
 </ZoneContent>
 <ZoneContent group="csharp__java__python__rest__typescript" value="typescript" options={[{"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "typescript", "title": "TypeScript"}, {"id": "java", "title": "Java"}, {"id": "rest", "title": "REST"}]} values={["python", "csharp", "typescript", "java", "rest"]} defaultValue="python">
