@@ -37,6 +37,9 @@ Dense numeric vector representations of text (or other content) used for semanti
 ### File Search
 A built-in Foundry agent tool that enables agents to retrieve information from uploaded files using vector store search. The tool applies hybrid keyword and semantic retrieval, query rewriting, and reranking before adding results to the model context.
 
+### Fireworks on Foundry
+A third-party inference integration available directly within a Microsoft Foundry project that lets customers deploy open-source catalog models and import custom model weights (bring your own model, BYOM) using the Fireworks AI inference runtime. Supports both pay-per-token and provisioned throughput billing, and inherits Azure project-level governance and access controls.
+
 ### Foundry Agent Service
 The managed agent infrastructure in Microsoft Foundry, providing APIs and SDKs for creating, deploying, and operating AI agents. Foundry Agent Service manages the agent lifecycle, conversation state, tool execution, and response generation.
 
@@ -69,6 +72,12 @@ A top-level Foundry IQ resource that orchestrates agentic retrieval over one or 
 ### MCP (Model Context Protocol)
 An open protocol that enables AI agents to connect to external data sources and tools through a standardized interface. In Microsoft Foundry, agents can use MCP servers as tools via the Model Context Protocol tool type, allowing integration with custom data sources and services.
 
+### Memory (Agent Memory)
+A managed, long-term memory solution in Foundry Agent Service that enables agents to retain information across sessions, devices, and workflows. Memory operates in three phases: extraction (identifying key facts and preferences from conversations), consolidation (merging or resolving duplicate and conflicting information), and retrieval (surfacing relevant context when the agent needs it). Memory stores two types of information: user profile memory (static user preferences and facts) and chat summary memory (distilled summaries of past conversation sessions).
+
+### Memory Store
+A persistent storage resource in Foundry Agent Service that defines which types of memory are retained for an agent. Memory stores use a `scope` parameter to segment memories across users, ensuring isolated and secure experiences. Agents interact with memory stores either through the memory search tool (which handles extraction and retrieval automatically) or directly through the Memory Store API for advanced use cases.
+
 ### Microsoft Entra ID
 Microsoft's cloud identity and access management service, formerly Azure Active Directory. Used in Foundry for keyless authentication (instead of API keys) and as the identity provider for role-based access control (RBAC) assignments.
 
@@ -90,6 +99,11 @@ The output of a single agent invocation in Foundry Agent Service. A response inc
 
 ### Responses API
 The API surface for generating agent outputs in Foundry Agent Service. The Responses API accepts a conversation (or previous response output) and returns a new response with the agent's result. It supersedes the older Assistants API runs endpoint.
+
+## S
+
+### Skill
+A behavioral guideline for a Foundry agent, authored as a Markdown file with YAML front matter (a `SKILL.md` file). Skills are stored centrally in Foundry via the Skills REST API and downloaded into Hosted agent projects. Agent code loads these files and injects their contents as additional instructions into conversation sessions, enabling consistent behavior across agents without code duplication. When a skill changes, agents can pick up the update by re-downloading the skill and redeploying, without modifying application code.
 
 ## V
 
