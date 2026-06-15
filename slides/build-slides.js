@@ -39,21 +39,24 @@ const C = {
 
 // ── LIVE DATA — computed from repo ────────────────────────────────────────
 const DATA = {
-  mdxDocs:           274,
-  agenticWorkflows:  26,
-  totalWorkflows:    31,
+  mdxDocs:           280,
+  agenticWorkflows:  29,
+  totalWorkflows:    29,
   slashCommands:     7,
-  workflowChains:    4,
+  workflowChains:    3,
   scheduleWorkflows: 12,
-  pushWorkflows:     1,
-  prWorkflows:       3,
-  issueWorkflows:    25,
-  dispatchWorkflows: 22,
+  pushWorkflows:     2,
+  prWorkflows:       8,
+  issueWorkflows:    22,
+  dispatchWorkflows: 18,
   sdkRepos:          4,
   docSections:       16,
+  vnextUniqueFiles:  14,
+  evalDate:          "2026-06-14",
+  evalEvals:         200,
   sections: [
-    { name: "Models",            count: 72 },
-    { name: "Agents",            count: 57 },
+    { name: "Models",            count: 73 },
+    { name: "Agents",            count: 60 },
     { name: "Observability",     count: 24 },
     { name: "Setup",             count: 20 },
     { name: "Security",          count: 20 },
@@ -62,9 +65,9 @@ const DATA = {
     { name: "Dev Experience",    count: 11 },
     { name: "Manage",            count: 9  },
     { name: "Responsible AI",    count: 8  },
-    { name: "Operate",           count: 7  },
+    { name: "Operate",           count: 8  },
     { name: "Best Practices",    count: 5  },
-    { name: "Get Started",       count: 4  },
+    { name: "Get Started",       count: 6  },
     { name: "Overview",          count: 3  },
     { name: "Reference",         count: 1  },
     { name: "Glossary",          count: 1  },
@@ -291,7 +294,7 @@ async function buildPresentation() {
     const boxes = [
       { label: "MicrosoftDocs\nupstream", sub: "azure-ai-docs-pr", color: C.darkBg,   textCol: C.white,  subCol: C.lightTeal },
       { label: "Sync &\nConvert",         sub: "scripts/",         color: C.primary,  textCol: C.white,  subCol: C.accent },
-      { label: "docs-vnext/",             sub: "274 MDX pages",    color: C.secondary,textCol: C.white,  subCol: C.darkBg },
+      { label: "docs-vnext/",             sub: "280 MDX pages",    color: C.secondary,textCol: C.white,  subCol: C.darkBg },
       { label: "FastMCP\nServer",         sub: "foundry_docs_mcp/",color: C.primary,  textCol: C.white,  subCol: C.accent },
       { label: "AI Assistants\n& IDEs",   sub: "via MCP protocol", color: C.darkBg,   textCol: C.white,  subCol: C.lightTeal },
     ];
@@ -652,7 +655,414 @@ async function buildPresentation() {
   }
 
   // ══════════════════════════════════════════════════════════════════════
-  // SLIDE 8 — Evaluation Harness Results (Dark)
+  // SLIDE 8 — docs-vnext History & Impact (Dark)
+  // ══════════════════════════════════════════════════════════════════════
+  {
+    const s = pres.addSlide();
+    s.background = { color: C.darkBg };
+
+    s.addShape(pres.shapes.RECTANGLE, {
+      x: 0, y: 0, w: 10, h: 0.25,
+      fill: { color: C.accent },
+      line: { color: C.accent, width: 0 },
+    });
+
+    s.addText("docs-vnext: History & Impact", {
+      x: 0.4, y: 0.35, w: 9.2, h: 0.65,
+      fontSize: 36, fontFace: "Trebuchet MS", bold: true,
+      color: C.white, margin: 0,
+    });
+
+    s.addText("From pipeline launch to a living, agent-maintained documentation surface", {
+      x: 0.4, y: 1.06, w: 9.2, h: 0.32,
+      fontSize: 13, fontFace: "Calibri",
+      color: C.accent, margin: 0,
+    });
+
+    // ── Impact metric cards (top row) ─────────────────────────────────
+    const impactStats = [
+      { val: `${DATA.mdxDocs}`,           label: "MDX Pages",         sub: "across 16 sections",         icon: FaFileAlt   },
+      { val: `${DATA.vnextUniqueFiles}`,   label: "Agent-Only Pages",  sub: "not in canonical docs/",     icon: FaRobot     },
+      { val: "280",                        label: "docs/ Total",        sub: "upstream canonical",         icon: FaBook      },
+      { val: "18+",                        label: "Agentic PRs",       sub: "created by agents",          icon: FaCodeBranch },
+    ];
+
+    const iW = 2.15, iH = 1.55;
+    const iColors = [C.primary, C.secondary, "014A55", C.secondary];
+    for (let i = 0; i < impactStats.length; i++) {
+      const st = impactStats[i];
+      const ix = 0.35 + i * (iW + 0.22);
+      s.addShape(pres.shapes.RECTANGLE, {
+        x: ix, y: 1.52, w: iW, h: iH,
+        fill: { color: iColors[i] },
+        line: { color: iColors[i], width: 0 },
+        shadow: mkShadow(),
+      });
+      s.addShape(pres.shapes.RECTANGLE, {
+        x: ix, y: 1.52, w: iW, h: 0.07,
+        fill: { color: C.accent },
+        line: { color: C.accent, width: 0 },
+      });
+      const ic = await iconPng(st.icon, "#" + C.accent, 128);
+      s.addImage({ data: ic, x: ix + 0.17, y: 1.68, w: 0.42, h: 0.42 });
+      s.addText(st.val, {
+        x: ix + 0.7, y: 1.57, w: iW - 0.8, h: 0.62,
+        fontSize: 34, fontFace: "Trebuchet MS", bold: true,
+        color: C.white, margin: 0,
+      });
+      s.addText(st.label, {
+        x: ix + 0.1, y: 2.2, w: iW - 0.2, h: 0.3,
+        fontSize: 11, fontFace: "Trebuchet MS", bold: true,
+        color: C.accent, margin: 0,
+      });
+      s.addText(st.sub, {
+        x: ix + 0.1, y: 2.52, w: iW - 0.2, h: 0.3,
+        fontSize: 9.5, fontFace: "Calibri",
+        color: C.lightTeal, margin: 0,
+      });
+    }
+
+    // ── Milestone timeline ────────────────────────────────────────────
+    s.addText("Key Milestones", {
+      x: 0.4, y: 3.25, w: 9.2, h: 0.32,
+      fontSize: 13, fontFace: "Trebuchet MS", bold: true,
+      color: C.accent, margin: 0,
+    });
+
+    const milestones = [
+      { date: "Mar 2, 2026",  pr: "PR #23",  icon: FaBug,        desc: "First unbloat — cloud-evaluation.mdx · −232 words (7%) · −10 bullets (34%)" },
+      { date: "Mar 2, 2026",  pr: "PR #28",  icon: FaBook,       desc: "Glossary created from scratch — 35 terms, 16 alpha sections, 0→1 reference page" },
+      { date: "May 21, 2026", pr: "PR #346", icon: FaSync,       desc: "Zone pivot conversion — MS Learn Tabs → Mintlify Tabs across 10+ pages" },
+      { date: "Jun 5, 2026",  pr: "PR #408", icon: FaCodeBranch, desc: "Upstream propagation — 32 new files added to docs-vnext in one run" },
+    ];
+
+    // Timeline line
+    s.addShape(pres.shapes.LINE, {
+      x: 0.75, y: 3.65, w: 0, h: 1.68,
+      line: { color: C.secondary, width: 2 },
+    });
+
+    for (let i = 0; i < milestones.length; i++) {
+      const m = milestones[i];
+      const my = 3.6 + i * 0.43;
+      // Circle on timeline
+      s.addShape(pres.shapes.OVAL, {
+        x: 0.56, y: my + 0.06, w: 0.38, h: 0.38,
+        fill: { color: C.secondary },
+        line: { color: C.secondary, width: 0 },
+      });
+      const ic = await iconPng(m.icon, "#" + C.darkBg, 128);
+      s.addImage({ data: ic, x: 0.63, y: my + 0.1, w: 0.24, h: 0.24 });
+      s.addText(`${m.date}  ·  ${m.pr}`, {
+        x: 1.08, y: my + 0.02, w: 2.6, h: 0.28,
+        fontSize: 9.5, fontFace: "Consolas", bold: true,
+        color: C.accent, margin: 0,
+      });
+      s.addText(m.desc, {
+        x: 3.72, y: my + 0.02, w: 6.1, h: 0.3,
+        fontSize: 10.5, fontFace: "Calibri",
+        color: C.lightTeal, margin: 0,
+      });
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // SLIDE 9 — Deep Dive: Agentic Chain in Action (Light)
+  // ══════════════════════════════════════════════════════════════════════
+  {
+    const s = pres.addSlide();
+    s.background = { color: C.white };
+
+    s.addShape(pres.shapes.RECTANGLE, {
+      x: 0, y: 0, w: 10, h: 0.28,
+      fill: { color: C.secondary },
+      line: { color: C.secondary, width: 0 },
+    });
+
+    s.addText("Deep Dive: Agentic Chain in Action", {
+      x: 0.4, y: 0.38, w: 9.2, h: 0.62,
+      fontSize: 32, fontFace: "Trebuchet MS", bold: true,
+      color: C.darkBg, margin: 0,
+    });
+
+    // ── Chain 1: Upstream Sync ────────────────────────────────────────
+    s.addText("Chain A — Upstream Docs Sync", {
+      x: 0.4, y: 1.1, w: 9.2, h: 0.3,
+      fontSize: 13, fontFace: "Trebuchet MS", bold: true,
+      color: C.primary, margin: 0,
+    });
+
+    const chainA = [
+      { icon: FaGlobe,        label: "MicrosoftDocs\ncommit",     sub: "azure-ai-docs-pr"   },
+      { icon: FaBell,         label: "Issue #421\ncreated",       sub: "upstream-sync label" },
+      { icon: FaSync,         label: "sync-and-\nconvert runs",   sub: "scripts/ pipeline"   },
+      { icon: FaRobot,        label: "post-sync-\nupdater",       sub: "analyzes diffs"      },
+      { icon: FaCodeBranch,   label: "PR #408\ncreated",          sub: "+32 new files"       },
+    ];
+
+    const cAW = 1.7, cAH = 1.22, cAY = 1.52;
+    for (let i = 0; i < chainA.length; i++) {
+      const c = chainA[i];
+      const cx = 0.32 + i * (cAW + 0.25);
+      s.addShape(pres.shapes.RECTANGLE, {
+        x: cx, y: cAY, w: cAW, h: cAH,
+        fill: { color: i === 0 ? C.darkBg : i === 4 ? C.secondary : C.primary },
+        line: { color: C.primary, width: 0 },
+        shadow: mkShadowSm(),
+      });
+      s.addShape(pres.shapes.RECTANGLE, {
+        x: cx, y: cAY, w: cAW, h: 0.07,
+        fill: { color: C.accent },
+        line: { color: C.accent, width: 0 },
+      });
+      const ic = await iconPng(c.icon, "#" + C.accent, 128);
+      s.addImage({ data: ic, x: cx + 0.12, y: cAY + 0.16, w: 0.38, h: 0.38 });
+      s.addText(c.label, {
+        x: cx + 0.56, y: cAY + 0.1, w: cAW - 0.62, h: 0.55,
+        fontSize: 10.5, fontFace: "Trebuchet MS", bold: true,
+        color: C.white, margin: 0,
+      });
+      s.addText(c.sub, {
+        x: cx + 0.1, y: cAY + 0.82, w: cAW - 0.2, h: 0.3,
+        fontSize: 8.5, fontFace: "Calibri",
+        color: C.accent, align: "center", margin: 0,
+      });
+      if (i < chainA.length - 1) {
+        const ax = cx + cAW + 0.04;
+        s.addShape(pres.shapes.LINE, {
+          x: ax, y: cAY + cAH / 2, w: 0.18, h: 0,
+          line: { color: C.secondary, width: 2 },
+        });
+      }
+    }
+
+    // ── Chain 2: SDK Release Alert ────────────────────────────────────
+    s.addText("Chain B — SDK Release Alert", {
+      x: 0.4, y: 2.94, w: 9.2, h: 0.3,
+      fontSize: 13, fontFace: "Trebuchet MS", bold: true,
+      color: C.primary, margin: 0,
+    });
+
+    const chainB = [
+      { icon: FaTag,     label: "Java SDK\n2.0.0-beta.2",  sub: "azure-sdk-for-java"   },
+      { icon: FaBell,    label: "Issue #53\ncreated",       sub: "sdk-update label"      },
+      { icon: FaSearch,  label: "Breaking changes\nassessed", sub: "3 impact areas"     },
+      { icon: FaClipboardCheck, label: "Docs impact\nreport",  sub: "per docs-vnext/"  },
+    ];
+
+    const cBW = 2.2, cBH = 1.15, cBY = 3.32;
+    const cBColors = [C.darkBg, "014A55", C.primary, C.secondary];
+    for (let i = 0; i < chainB.length; i++) {
+      const c = chainB[i];
+      const cx = 0.32 + i * (cBW + 0.32);
+      s.addShape(pres.shapes.RECTANGLE, {
+        x: cx, y: cBY, w: cBW, h: cBH,
+        fill: { color: cBColors[i] },
+        line: { color: cBColors[i], width: 0 },
+        shadow: mkShadowSm(),
+      });
+      const ic = await iconPng(c.icon, "#" + C.accent, 128);
+      s.addImage({ data: ic, x: cx + 0.14, y: cBY + 0.22, w: 0.38, h: 0.38 });
+      s.addText(c.label, {
+        x: cx + 0.58, y: cBY + 0.08, w: cBW - 0.65, h: 0.55,
+        fontSize: 10.5, fontFace: "Trebuchet MS", bold: true,
+        color: C.white, margin: 0,
+      });
+      s.addText(c.sub, {
+        x: cx + 0.1, y: cBY + 0.76, w: cBW - 0.2, h: 0.28,
+        fontSize: 8.5, fontFace: "Calibri",
+        color: C.accent, align: "center", margin: 0,
+      });
+      if (i < chainB.length - 1) {
+        s.addShape(pres.shapes.LINE, {
+          x: cx + cBW + 0.06, y: cBY + cBH / 2, w: 0.22, h: 0,
+          line: { color: C.secondary, width: 2 },
+        });
+      }
+    }
+
+    s.addShape(pres.shapes.RECTANGLE, {
+      x: 0, y: 5.22, w: 10, h: 0.405,
+      fill: { color: C.lightBg },
+      line: { color: C.lightBg, width: 0 },
+    });
+    s.addText(
+      "Issue #53: Java 2.0.0-beta.2 · Index → AIProjectIndex rename · DayOfWeek type change · FoundryFeaturesOptInKeys removed",
+      {
+        x: 0.4, y: 5.28, w: 9.2, h: 0.28,
+        fontSize: 9.5, fontFace: "Calibri", italic: true,
+        color: C.textMuted, align: "center", margin: 0,
+      }
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // SLIDE 10 — Deep Dive: Content Improvements (Dark)
+  // ══════════════════════════════════════════════════════════════════════
+  {
+    const s = pres.addSlide();
+    s.background = { color: C.darkBg };
+
+    s.addShape(pres.shapes.RECTANGLE, {
+      x: 0, y: 0, w: 10, h: 0.25,
+      fill: { color: C.secondary },
+      line: { color: C.secondary, width: 0 },
+    });
+
+    s.addText("Deep Dive: Content Improvements", {
+      x: 0.4, y: 0.35, w: 9.2, h: 0.65,
+      fontSize: 32, fontFace: "Trebuchet MS", bold: true,
+      color: C.white, margin: 0,
+    });
+
+    // ── Left card: Glossary (PR #28) ──────────────────────────────────
+    const lcX = 0.35, lcY = 1.12, lcW = 4.55, lcH = 4.2;
+    s.addShape(pres.shapes.RECTANGLE, {
+      x: lcX, y: lcY, w: lcW, h: lcH,
+      fill: { color: C.primary },
+      line: { color: C.primary, width: 0 },
+      shadow: mkShadow(),
+    });
+    s.addShape(pres.shapes.RECTANGLE, {
+      x: lcX, y: lcY, w: lcW, h: 0.08,
+      fill: { color: C.accent },
+      line: { color: C.accent, width: 0 },
+    });
+
+    const glossaryIcon = await iconPng(FaBook, "#" + C.accent, 256);
+    s.addImage({ data: glossaryIcon, x: lcX + 0.2, y: lcY + 0.2, w: 0.52, h: 0.52 });
+
+    s.addText("PR #28 — Glossary Created", {
+      x: lcX + 0.85, y: lcY + 0.22, w: lcW - 0.95, h: 0.42,
+      fontSize: 14, fontFace: "Trebuchet MS", bold: true,
+      color: C.white, margin: 0,
+    });
+    s.addText("glossary-maintainer · Mar 2, 2026", {
+      x: lcX + 0.85, y: lcY + 0.65, w: lcW - 0.95, h: 0.26,
+      fontSize: 10, fontFace: "Calibri",
+      color: C.accent, margin: 0,
+    });
+
+    s.addText("0 → 1 reference page generated in a single agent run", {
+      x: lcX + 0.2, y: lcY + 1.05, w: lcW - 0.4, h: 0.32,
+      fontSize: 11.5, fontFace: "Calibri", italic: true,
+      color: C.lightTeal, margin: 0,
+    });
+
+    const glossaryStats = [
+      { val: "35",  label: "Terms defined" },
+      { val: "16",  label: "Alpha sections" },
+      { val: "5",   label: "Commits scanned" },
+    ];
+    for (let i = 0; i < glossaryStats.length; i++) {
+      const gx = lcX + 0.22 + i * 1.44;
+      s.addShape(pres.shapes.RECTANGLE, {
+        x: gx, y: lcY + 1.48, w: 1.32, h: 0.9,
+        fill: { color: C.darkBg },
+        line: { color: C.darkBg, width: 0 },
+      });
+      s.addText(glossaryStats[i].val, {
+        x: gx, y: lcY + 1.52, w: 1.32, h: 0.5,
+        fontSize: 30, fontFace: "Trebuchet MS", bold: true,
+        color: C.accent, align: "center", margin: 0,
+      });
+      s.addText(glossaryStats[i].label, {
+        x: gx, y: lcY + 2.04, w: 1.32, h: 0.3,
+        fontSize: 9.5, fontFace: "Calibri",
+        color: C.lightTeal, align: "center", margin: 0,
+      });
+    }
+
+    const glossaryTermGroups = [
+      "Core Foundry — Agent · Foundry Resource · RBAC · Guardrails",
+      "MCP Ecosystem — MCP · FastMCP · MCP Gateway · docs-vnext · Mintlify",
+      "Search & Retrieval — RAG · Hybrid Search · Vector Search · TF-IDF",
+      "Evaluation — Evaluator · Hit@K · MRR · A/B/C/D eval",
+    ];
+    for (let i = 0; i < glossaryTermGroups.length; i++) {
+      s.addText("▸  " + glossaryTermGroups[i], {
+        x: lcX + 0.2, y: lcY + 2.58 + i * 0.36, w: lcW - 0.4, h: 0.3,
+        fontSize: 10, fontFace: "Calibri",
+        color: C.lightTeal, margin: 0,
+      });
+    }
+
+    // ── Right card: Unbloat (PR #23) ──────────────────────────────────
+    const rcX = 5.1, rcY = 1.12, rcW = 4.55, rcH = 4.2;
+    s.addShape(pres.shapes.RECTANGLE, {
+      x: rcX, y: rcY, w: rcW, h: rcH,
+      fill: { color: "025E6A" },
+      line: { color: "025E6A", width: 0 },
+      shadow: mkShadow(),
+    });
+    s.addShape(pres.shapes.RECTANGLE, {
+      x: rcX, y: rcY, w: rcW, h: 0.08,
+      fill: { color: C.accent },
+      line: { color: C.accent, width: 0 },
+    });
+
+    const unbloatIcon = await iconPng(FaBug, "#" + C.accent, 256);
+    s.addImage({ data: unbloatIcon, x: rcX + 0.2, y: rcY + 0.2, w: 0.52, h: 0.52 });
+
+    s.addText("PR #23 — Unbloat cloud-evaluation.mdx", {
+      x: rcX + 0.85, y: rcY + 0.22, w: rcW - 0.95, h: 0.42,
+      fontSize: 13, fontFace: "Trebuchet MS", bold: true,
+      color: C.white, margin: 0,
+    });
+    s.addText("unbloat-docs · Mar 1, 2026 · MERGED", {
+      x: rcX + 0.85, y: rcY + 0.65, w: rcW - 0.95, h: 0.26,
+      fontSize: 10, fontFace: "Calibri",
+      color: C.accent, margin: 0,
+    });
+
+    s.addText("Agent identified 7 types of documentation bloat in one pass", {
+      x: rcX + 0.2, y: rcY + 1.05, w: rcW - 0.4, h: 0.32,
+      fontSize: 11.5, fontFace: "Calibri", italic: true,
+      color: C.lightTeal, margin: 0,
+    });
+
+    const unbloatStats = [
+      { val: "−232", label: "Words (−7%)" },
+      { val: "−29",  label: "Lines (−3%)" },
+      { val: "−10",  label: "Bullets (−35%)" },
+    ];
+    for (let i = 0; i < unbloatStats.length; i++) {
+      const ux = rcX + 0.22 + i * 1.44;
+      s.addShape(pres.shapes.RECTANGLE, {
+        x: ux, y: rcY + 1.48, w: 1.32, h: 0.9,
+        fill: { color: C.darkBg },
+        line: { color: C.darkBg, width: 0 },
+      });
+      s.addText(unbloatStats[i].val, {
+        x: ux, y: rcY + 1.52, w: 1.32, h: 0.5,
+        fontSize: 26, fontFace: "Trebuchet MS", bold: true,
+        color: C.accent, align: "center", margin: 0,
+      });
+      s.addText(unbloatStats[i].label, {
+        x: ux, y: rcY + 2.04, w: 1.32, h: 0.3,
+        fontSize: 9.5, fontFace: "Calibri",
+        color: C.lightTeal, align: "center", margin: 0,
+      });
+    }
+
+    const bloatTypes = [
+      "Duplicate paragraph — restating evaluator support info",
+      "4× repetitive 'Before you begin' Tip callouts removed",
+      "Trivial tip removed — 'use same code' adds no value",
+      "Verbose bullets → prose (Rate limit errors section)",
+      "5-bullet Interpret Results schema → concise table",
+    ];
+    for (let i = 0; i < bloatTypes.length; i++) {
+      s.addText("✂  " + bloatTypes[i], {
+        x: rcX + 0.2, y: rcY + 2.58 + i * 0.3, w: rcW - 0.4, h: 0.26,
+        fontSize: 9.5, fontFace: "Calibri",
+        color: C.lightTeal, margin: 0,
+      });
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // SLIDE 11 — Evaluation Harness Results (Dark)
   // ══════════════════════════════════════════════════════════════════════
   {
     const s = pres.addSlide();
@@ -671,7 +1081,7 @@ async function buildPresentation() {
       color: C.white, margin: 0,
     });
 
-    s.addText("300 evaluations · 4 servers · 3 frontier models · 2026-03-05", {
+    s.addText("200 evaluations · 4 servers · claude-sonnet-4.6 · 2026-06-14", {
       x: 0.4, y: 0.98, w: 9.2, h: 0.28,
       fontSize: 11.5, fontFace: "Calibri",
       color: C.textMuted, margin: 0,
@@ -685,39 +1095,29 @@ async function buildPresentation() {
 
     const tableData = [
       [
-        { text: "Server",               options: { bold: true, color: "FFFFFF", fill: hdrFill, align: "left" } },
-        { text: "claude-opus-4.6",      options: { bold: true, color: "FFFFFF", fill: hdrFill, align: "center" } },
-        { text: "gemini-3-pro",         options: { bold: true, color: "FFFFFF", fill: hdrFill, align: "center" } },
-        { text: "gpt-5.3-codex",        options: { bold: true, color: "FFFFFF", fill: hdrFill, align: "center" } },
-        { text: "Avg",                  options: { bold: true, color: "FFFFFF", fill: hdrFill, align: "center" } },
+        { text: "Server",                   options: { bold: true, color: "FFFFFF", fill: hdrFill, align: "left" } },
+        { text: "claude-sonnet-4.6",        options: { bold: true, color: "FFFFFF", fill: hdrFill, align: "center" } },
+        { text: "Avg",                      options: { bold: true, color: "FFFFFF", fill: hdrFill, align: "center" } },
       ],
       [
-        { text: "MS Learn 🥇",          options: { color: "1A2E30", fill: bodyFill } },
-        { text: "0.933",                options: { color: "1A2E30", fill: bodyFill, align: "center" } },
-        { text: "0.882",                options: { color: "1A2E30", fill: bodyFill, align: "center" } },
-        { text: "0.906",                options: { color: "1A2E30", fill: bodyFill, align: "center" } },
-        { text: "0.908",                options: { bold: true, color: "1A2E30", fill: bodyFill, align: "center" } },
+        { text: "FastMCP docs/ 🥇",         options: { color: "1A2E30", fill: bodyFill } },
+        { text: "0.895",                    options: { color: "1A2E30", fill: bodyFill, align: "center" } },
+        { text: "0.895",                    options: { bold: true, color: "1A2E30", fill: bodyFill, align: "center" } },
       ],
       [
-        { text: "Mintlify MCP 🥈",      options: { color: "1A2E30", fill: bodyFill } },
-        { text: "0.949",                options: { color: "1A2E30", fill: bodyFill, align: "center" } },
-        { text: "0.868",                options: { color: "1A2E30", fill: bodyFill, align: "center" } },
-        { text: "0.905",                options: { color: "1A2E30", fill: bodyFill, align: "center" } },
-        { text: "0.908",                options: { bold: true, color: "1A2E30", fill: bodyFill, align: "center" } },
+        { text: "MS Learn 🥈",              options: { color: "1A2E30", fill: bodyFill } },
+        { text: "0.889",                    options: { color: "1A2E30", fill: bodyFill, align: "center" } },
+        { text: "0.889",                    options: { bold: true, color: "1A2E30", fill: bodyFill, align: "center" } },
       ],
       [
-        { text: "docs-vnext/ 🥉",       options: { bold: true, color: C.accent, fill: vnextFill } },
-        { text: "0.927",                options: { bold: true, color: C.accent, fill: vnextFill, align: "center" } },
-        { text: "0.879",                options: { bold: true, color: C.accent, fill: vnextFill, align: "center" } },
-        { text: "0.912",                options: { bold: true, color: C.accent, fill: vnextFill, align: "center" } },
-        { text: "0.906",                options: { bold: true, color: C.accent, fill: vnextFill, align: "center" } },
+        { text: "docs-vnext/ 🥉",           options: { bold: true, color: C.accent, fill: vnextFill } },
+        { text: "0.888",                    options: { bold: true, color: C.accent, fill: vnextFill, align: "center" } },
+        { text: "0.888",                    options: { bold: true, color: C.accent, fill: vnextFill, align: "center" } },
       ],
       [
-        { text: "docs/ (baseline)",     options: { color: "5A8087", fill: baseFill } },
-        { text: "0.924",                options: { color: "5A8087", fill: baseFill, align: "center" } },
-        { text: "0.860",                options: { color: "5A8087", fill: baseFill, align: "center" } },
-        { text: "0.931",                options: { color: "5A8087", fill: baseFill, align: "center" } },
-        { text: "0.904",                options: { color: "5A8087", fill: baseFill, align: "center" } },
+        { text: "Mintlify MCP",             options: { color: "5A8087", fill: baseFill } },
+        { text: "0.888",                    options: { color: "5A8087", fill: baseFill, align: "center" } },
+        { text: "0.888",                    options: { color: "5A8087", fill: baseFill, align: "center" } },
       ],
     ];
 
@@ -725,7 +1125,7 @@ async function buildPresentation() {
       x: 0.35, y: 1.3, w: 5.65, h: 1.9,
       fontSize: 11, fontFace: "Calibri",
       border: { type: "solid", pt: 0.5, color: "028090" },
-      colW: [1.8, 0.97, 0.97, 0.97, 0.94],
+      colW: [2.6, 1.6, 1.45],
     });
 
     // ── Hypothesis results ────────────────────────────────────────────────
@@ -736,10 +1136,10 @@ async function buildPresentation() {
     });
 
     const hyps = [
-      { id: "H1", badge: "⚠️ MARGINAL", detail: "docs-vnext (0.906) vs docs/ (0.904), δ=+0.002",  badgeColor: "C9A800" },
-      { id: "H2", badge: "❌ REJECTED",  detail: "vs Mintlify MCP (0.908), δ=−0.002",              badgeColor: "C04040" },
-      { id: "H3", badge: "❌ REJECTED",  detail: "vs MS Learn (0.908), δ=−0.002",                  badgeColor: "C04040" },
-      { id: "H4", badge: "⚠️ MIXED",     detail: "Rankings vary: gpt-5.3 ranks docs-vnext 2nd",   badgeColor: "C9A800" },
+      { id: "H1", badge: "❌ REJECTED",      detail: "docs-vnext (0.888) vs docs/ (0.895), δ=−0.007",      badgeColor: "C04040" },
+      { id: "H2", badge: "➖ NO DIFFERENCE", detail: "vs Mintlify MCP (0.888), δ=+0.000",                   badgeColor: "C9A800" },
+      { id: "H3", badge: "❌ REJECTED",      detail: "vs MS Learn (0.889), δ=−0.001",                       badgeColor: "C04040" },
+      { id: "H4", badge: "✅ SUPPORTED",     detail: "Rankings consistent across claude-sonnet-4.6",        badgeColor: "2E8B57" },
     ];
 
     for (let i = 0; i < hyps.length; i++) {
@@ -776,11 +1176,11 @@ async function buildPresentation() {
     });
 
     const cats = [
-      { name: "agent-development",   vnext: 0.971, docs: 0.962, lead: true  },
-      { name: "getting-started",     vnext: 0.887, docs: 0.867, lead: true  },
-      { name: "infra-security",      vnext: 0.927, docs: 0.918, lead: true  },
-      { name: "observability",       vnext: 0.802, docs: 0.829, lead: false },
-      { name: "sdk-api",             vnext: 0.947, docs: 0.947, lead: false },
+      { name: "agent-development",   vnext: 0.880, docs: 0.880, lead: false },
+      { name: "getting-started",     vnext: 0.880, docs: 0.827, lead: true  },
+      { name: "infra-security",      vnext: 0.853, docs: 0.940, lead: false },
+      { name: "observability",       vnext: 0.853, docs: 0.853, lead: false },
+      { name: "sdk-api",             vnext: 0.973, docs: 0.973, lead: false },
     ];
 
     const barMaxW = 3.1;
@@ -824,7 +1224,7 @@ async function buildPresentation() {
       line: { color: C.primary, transparency: 70, width: 0 },
     });
     s.addText(
-      "docs-vnext leads in agent-development (0.971) and getting-started (0.887) — areas benefiting most from Mintlify MDX enhancements",
+      "docs-vnext leads in getting-started (0.880 vs 0.827) — opportunity: improve infra-security coverage (0.853 vs 0.940 for canonical docs/)",
       {
         x: 0.4, y: 5.24, w: 9.2, h: 0.35,
         fontSize: 10.5, fontFace: "Calibri", italic: true,
@@ -834,7 +1234,7 @@ async function buildPresentation() {
   }
 
   // ══════════════════════════════════════════════════════════════════════
-  // SLIDE 9 — Community Integration (Light)
+  // SLIDE 12 — Community Integration (Light)
   // ══════════════════════════════════════════════════════════════════════
   {
     const s = pres.addSlide();
@@ -920,7 +1320,7 @@ async function buildPresentation() {
   }
 
   // ══════════════════════════════════════════════════════════════════════
-  // SLIDE 10 — SDK Monitoring (Dark)
+  // SLIDE 13 — SDK Monitoring (Dark)
   // ══════════════════════════════════════════════════════════════════════
   {
     const s = pres.addSlide();
@@ -1009,7 +1409,7 @@ async function buildPresentation() {
   }
 
   // ══════════════════════════════════════════════════════════════════════
-  // SLIDE 11 — Key Metrics (Light)
+  // SLIDE 14 — Key Metrics (Light)
   // ══════════════════════════════════════════════════════════════════════
   {
     const s = pres.addSlide();
@@ -1077,7 +1477,7 @@ async function buildPresentation() {
   }
 
   // ══════════════════════════════════════════════════════════════════════
-  // SLIDE 12 — What's Next (Dark)
+  // SLIDE 15 — What's Next (Dark)
   // ══════════════════════════════════════════════════════════════════════
   {
     const s = pres.addSlide();
@@ -1103,12 +1503,12 @@ async function buildPresentation() {
     });
 
     const roadmap = [
-      { icon: FaGlobe,        item: "Structured overview page generated from agent-surfaced coverage gaps" },
+      { icon: FaShieldAlt,    item: "Improve infra-security docs coverage — current weak spot (0.853 vs 0.940 for docs/)" },
       { icon: FaChartBar,     item: "Search quality dashboard — track MRR/NDCG trends over time" },
       { icon: FaRocket,       item: "Proactive gap filling — auto-draft missing pages from upstream signals" },
       { icon: FaSync,         item: "Docs-vnext → Mintlify deployment via GitHub Pages or Vercel" },
-      { icon: FaShieldAlt,    item: "Responsible AI guardrails section expansion with worked examples" },
-      { icon: MdOutlineMonitor, item: "Real-time ops dashboard embedding MCP server telemetry" },
+      { icon: FaGlobe,        item: "Increase agentic PR merge rate — build review confidence with automated pre-checks" },
+      { icon: MdOutlineMonitor, item: "Expand eval harness to multi-model coverage and additional query categories" },
     ];
 
     for (let i = 0; i < roadmap.length; i++) {
