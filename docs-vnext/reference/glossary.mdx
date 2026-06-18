@@ -46,6 +46,12 @@ The management layer in Microsoft Foundry for registering, discovering, and mana
 ### Foundry IQ
 A managed knowledge layer in Microsoft Foundry that turns enterprise data into reusable, permission-aware knowledge bases for AI agents. Foundry IQ connects structured and unstructured data sources (Azure Blob Storage, SharePoint, OneLake, and the public web), automates indexing and chunking, enforces access controls via Microsoft Entra ID and Microsoft Purview, and uses agentic retrieval to return grounded answers with citations.
 
+### Foundry resource
+The primary Azure resource type for Microsoft Foundry (`Microsoft.CognitiveServices/accounts` with `kind: AIServices`). A Foundry resource provides access to Foundry Models, Foundry Agent Service, Foundry IQ, and Foundry Tools — a superset of the Azure OpenAI resource type. An existing Azure OpenAI resource can be upgraded to a Foundry resource while preserving the existing endpoint, API keys, and configurations.
+
+### Foundry Tools
+The collection of Azure AI service capabilities accessible through a Microsoft Foundry resource, including Speech, Language, Vision, Content Safety, Document Intelligence, Custom Vision, Translator, and Face services. Foundry Tools are integrated into the Foundry resource type and can be used alongside Foundry Models and Foundry Agent Service.
+
 ### Function Calling
 A capability that allows agents and language models to invoke user-defined functions based on structured parameters. The model determines when to call a function, generates the arguments, and the application executes the function and returns results back to the model.
 
@@ -55,6 +61,9 @@ A capability that allows agents and language models to invoke user-defined funct
 Content retrieved from an external data source and provided to a language model as additional context. Grounding data reduces hallucination by anchoring model responses to your data rather than the model's parametric knowledge alone.
 
 ## H
+
+### Hosted Agent
+A containerized agentic AI application deployed to and managed by Foundry Agent Service. Unlike prompt-based agents, hosted agents consist of custom code packaged as container images and run on Microsoft-managed, pay-as-you-go infrastructure. Foundry Agent Service handles scaling, security integration, memory persistence, observability, and version management. Compatible with any open-source agent framework.
 
 ### Hybrid Search
 A retrieval strategy that combines keyword (BM25) search and vector (semantic) search to improve recall. Results from both methods are merged and optionally reranked using a semantic ranker for higher relevance. Supported in Azure AI Search and used in Foundry Agent Service file search.
