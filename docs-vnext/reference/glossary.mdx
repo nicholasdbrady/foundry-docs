@@ -27,6 +27,11 @@ A built-in Foundry agent tool that lets agents write and execute Python code in 
 ### Conversation
 A durable object in Foundry Agent Service that persists interaction state across turns and sessions. Conversations store items (messages, tool calls, tool outputs) and have unique identifiers that can be reused across sessions. Replaces the thread concept from the Assistants API.
 
+## D
+
+### Deep Research
+An agent-driven investigation mode in the Responses API powered by the `o3-deep-research` model. Deep Research performs multi-step reasoning, browses and synthesizes information from hundreds of web pages and remote MCP servers, and produces a comprehensive, citation-rich report. Because tasks can take extended time, Deep Research requests should run in `background` mode with webhooks for completion notifications.
+
 ## E
 
 ### Embeddings
@@ -91,6 +96,11 @@ The output of a single agent invocation in Foundry Agent Service. A response inc
 ### Responses API
 The API surface for generating agent outputs in Foundry Agent Service. The Responses API accepts a conversation (or previous response output) and returns a new response with the agent's result. It supersedes the older Assistants API runs endpoint.
 
+## S
+
+### Standard Agent Setup
+A Foundry Agent Service deployment configuration that uses customer-managed, single-tenant Azure resources to store all agent state. Conversation history, uploaded files, and vector stores are stored in your own Azure Storage, Azure Cosmos DB for NoSQL, and Azure AI Search resources, keeping all data within your Azure tenant. Contrasts with basic agent setup, which uses Microsoft-managed multitenant resources.
+
 ## V
 
 ### Vector Store
@@ -98,3 +108,8 @@ A container for searchable file content (chunks and embeddings) used by the file
 
 ### Voice Live
 A real-time voice API in Microsoft Foundry that enables building voice agents using Azure Speech capabilities. Voice Live supports low-latency, bidirectional audio streaming for interactive voice agent scenarios.
+
+## W
+
+### Web Search
+A built-in tool in the Responses API and Foundry Agent Service that enables models to retrieve real-time information from the public web. Declared as `{"type": "web_search"}` in a request, the tool grounds model responses with current data and inline citations. Supports three modes: direct web search (fast, single-step lookups), agentic search with reasoning models (multi-step, suited for complex workflows), and Deep Research (extended multi-source investigation using the o3-deep-research model). Uses Grounding with Bing Search as the underlying retrieval service.
