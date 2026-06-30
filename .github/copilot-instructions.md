@@ -31,6 +31,8 @@ ruff check --fix .
 
 Ruff line-length is set to **120** in `pyproject.toml`.
 
+For staged agent/workflow repair work, use `.github/agent-harness-map.md` as the canonical map for harness ownership, capability gaps, verifier roles, and stop conditions. Keep this file focused on always-on project context.
+
 ## Architecture
 
 ### Doc ingestion pipeline (`scripts/`)
