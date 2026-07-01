@@ -56,6 +56,10 @@ MAX_RETRIES = 3
 RETRY_DELAY = 5.0
 
 
+class CatalogContractError(RuntimeError):
+    """Raised when the signed-out asset-gallery API stops matching the expected contract."""
+
+
 @dataclass(slots=True)
 class CatalogModel:
     """Normalized model record for the catalog JSON output."""
@@ -135,10 +139,34 @@ def fetch_publisher_icons() -> dict[str, str]:
     return icons
 
 
+def validate_catalog_page_contract(data: object, page: int) -> None:
+    """Validate the minimal signed-out asset-gallery response shape used by the scraper."""
+    if not isinstance(data, dict):
+        raise CatalogContractError(f"Catalog page {page} response is not an object")
+
+    items = data.get("value")
+    if not isinstance(items, list):
+        raise CatalogContractError(f"Catalog page {page} is missing a list-valued 'value' field")
+
+    continuation_token = data.get("continuationToken")
+    if continuation_token is not None and not isinstance(continuation_token, str):
+        raise CatalogContractError(f"Catalog page {page} returned a non-string continuationToken")
+
+    for index, item in enumerate(items):
+        if not isinstance(item, dict):
+            raise CatalogContractError(f"Catalog page {page} item {index} is not an object")
+        annotations = item.get("annotations")
+        if not isinstance(annotations, dict):
+            raise CatalogContractError(f"Catalog page {page} item {index} is missing annotations")
+        if not item.get("version"):
+            raise CatalogContractError(f"Catalog page {page} item {index} is missing version")
+
+
 def fetch_all_models() -> list[dict]:
     """Paginate through the Asset Gallery API to collect all model records."""
     all_models = []
     continuation_token = None
+    page = 0
 
     for page in range(1, MAX_PAGES + 1):
         body: dict = {
@@ -151,6 +179,7 @@ def fetch_all_models() -> list[dict]:
 
         log.info("  📄 Page %d (have %d models so far)...", page, len(all_models))
         data = _api_post(CATALOG_API_URL, body, CATALOG_HEADERS)
+        validate_catalog_page_contract(data, page)
 
         items = data.get("value", [])
         all_models.extend(items)
@@ -161,6 +190,11 @@ def fetch_all_models() -> list[dict]:
 
         # Be polite
         time.sleep(0.2)
+
+    if continuation_token:
+        raise CatalogContractError(
+            f"Asset Gallery still returned continuationToken after {MAX_PAGES} pages; aborting to avoid truncated data"
+        )
 
     log.info("  ✅ Fetched %d total model records across %d pages", len(all_models), page)
     return all_models
