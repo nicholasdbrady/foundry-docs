@@ -132,8 +132,7 @@ def chunk_directory(docs_dir: Path, chunker: MarkdownChunker | None = None) -> l
     chunker = chunker or MarkdownChunker()
     chunks: list[Chunk] = []
     for mdx_file in sorted(docs_dir.rglob("*.mdx")):
-        rel_path = str(mdx_file.relative_to(docs_dir))
-        doc_path = rel_path.rsplit(".mdx", 1)[0]
+        doc_path = mdx_file.relative_to(docs_dir).with_suffix("").as_posix()
         raw = mdx_file.read_text(encoding="utf-8", errors="replace")
         chunks.extend(chunker.chunk(doc_path=doc_path, raw_mdx=raw))
     return chunks

@@ -141,9 +141,7 @@ class SearchIndex:
     def load_from_directory(self, docs_dir: Path):
         """Load all MDX files from a directory into the index."""
         for mdx_file in sorted(docs_dir.rglob("*.mdx")):
-            rel_path = str(mdx_file.relative_to(docs_dir))
-            # Remove .mdx extension for clean paths
-            path = rel_path.rsplit(".mdx", 1)[0]
+            path = mdx_file.relative_to(docs_dir).with_suffix("").as_posix()
             content = mdx_file.read_text(encoding="utf-8", errors="replace")
             self.add_doc(path, content)
         self.build()
