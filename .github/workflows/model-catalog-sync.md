@@ -23,6 +23,8 @@ network:
   allowed:
     - defaults
     - github
+    - python
+    - playwright
     - ai.azure.com
 
 safe-outputs:
@@ -41,10 +43,14 @@ tools:
   github:
     toolsets: [default]
   edit:
+  playwright:
+    mode: cli
   bash:
     - "python3 scripts/*"
+    - "python3 -m playwright *"
     - "git *"
     - "cat *"
+    - "cp *"
     - "diff *"
     - "wc *"
     - "ls *"
@@ -69,6 +75,16 @@ You are an automation agent that regenerates the model catalog data files for th
 - Uses `--include-partners` to include all providers (Azure Direct + partners), split into core and HuggingFace shards
 
 ## Step 1: Run the Catalog Scraper
+
+First install the local Python tooling and run the signed-out API/UI watchdog:
+
+```bash
+pip install -e ".[dev]"
+python3 -m playwright install chromium
+python3 scripts/check_model_catalog_watchdog.py --output /tmp/gh-aw/agent/model-catalog-watchdog.json
+```
+
+If dependency installation, browser installation, or the watchdog fails, call `report_incomplete` with the command output and `/tmp/gh-aw/agent/model-catalog-watchdog.json` contents if present, then STOP. Do not continue to scrape or create a PR.
 
 Run the scraper for the primary docs site:
 
@@ -101,18 +117,40 @@ If data files changed, analyze the diff to summarize:
 - New models added
 - Models removed
 - Changed fields
+- The bounded watchdog result from `/tmp/gh-aw/agent/model-catalog-watchdog.json`
 
 Use this to build the PR description.
 
-## Step 4: Create Pull Request
+## Step 4: Protected File Guard
+
+Before creating a pull request, inspect the changed file list:
+
+```bash
+git diff --name-only
+```
+
+If any changed path is outside these data outputs, call `report_incomplete` and STOP:
+
+- `docs/static/data/models-core.json`
+- `docs/static/data/models-huggingface.json`
+- `docs/static/data/models.json`
+- `docs-vnext/static/data/models-core.json`
+- `docs-vnext/static/data/models-huggingface.json`
+- `docs-vnext/static/data/models.json`
+
+This workflow must never attempt a safe-output PR containing `.github/workflows/**`, `.github/agents/**`, or other protected automation files.
+
+## Step 5: Create Pull Request
 
 Use `create_pull_request` with:
 - Title describing what changed (e.g., "Update model catalog: 3 new models, 1 removed")
-- Body with the change summary from Step 3
+- Body with the change summary from Step 3 and a short watchdog summary
 - The changed files in both `docs/static/data/` and `docs-vnext/static/data/`
 
 ## Error Handling
 
+- If the watchdog fails: `report_incomplete` with the blocked infrastructure/API/UI contract detail
 - If the scraper fails: `report_incomplete` with error message
+- If unexpected files changed: `report_incomplete` with the changed path list
 - If no changes: `noop` with "up to date" message
 - Never commit or PR bad data
