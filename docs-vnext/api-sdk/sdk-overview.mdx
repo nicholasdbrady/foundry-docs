@@ -5,17 +5,11 @@ description: "This article provides an overview of the Microsoft Foundry SDKs an
 A Foundry resource provides unified access to models, agents, and tools. This article explains which SDK and endpoint to use for your scenario.
 
 <Warning>
-**Use the 2.x preview SDK for new Foundry projects.** Running `pip install azure-ai-projects` (without `--pre`) installs the stable 1.x package, which targets the legacy Foundry classic experience. New projects created at [ai.azure.com](https://ai.azure.com) require the **2.x preview** SDK. Install it with:
-
-```bash
-pip install --pre azure-ai-projects azure-identity
-```
-
-Code written for 2.x is **not compatible** with 1.x. See the [Foundry SDK](#foundry-sdk) section for version details.
+**If you have existing code targeting the 2.x preview SDK**, review the [Python 2.3.0 breaking changes](#python-230-breaking-changes) before upgrading, as several beta features were promoted to stable with API changes.
 </Warning>
 
 <Tip>
-**Just getting started?** Run `pip install --pre azure-ai-projects azure-identity` and jump to [Foundry SDK](#foundry-sdk).
+**Just getting started?** Run `pip install azure-ai-projects azure-identity` and jump to [Foundry SDK](#foundry-sdk).
 </Tip>
 
 | SDK | What it's for | Endpoint |
@@ -86,23 +80,23 @@ This approach simplifies application configuration. Instead of managing multiple
 ### Install the SDK
 
 <Note>
-**SDK versions:** The 2.x preview SDK targets the new Foundry portal and API. The 1.x GA SDK targets Foundry classic. Make sure the samples you follow match your installed package.
+**SDK versions:** The 2.x SDK targets the new Foundry portal and API. The 1.x GA SDK targets Foundry classic. Make sure the samples you follow match your installed package.
 </Note>
 
 <Tip>
-If you created a new Foundry project at [ai.azure.com](https://ai.azure.com), use the **2.x preview SDK**. The 1.x GA SDK targets the classic Foundry experience and is not compatible with new projects.
+If you created a new Foundry project at [ai.azure.com](https://ai.azure.com), use the **2.x SDK**. The 1.x GA SDK targets the classic Foundry experience and is not compatible with new projects.
 </Tip>
 
 | SDK Version   | Portal Version  | Status  | Python Package                |
 |---------------|-----------------|---------|-------------------------------|
-| 2.x (preview) | Foundry (new)   | Preview | `azure-ai-projects>=2.0.0b1 --pre`  |
+| 2.x (stable)  | Foundry (new)   | Stable  | `azure-ai-projects>=2.3.0`    |
 | 1.x (GA)      | Foundry classic | Stable  | `azure-ai-projects==1.0.0`    |
 
 The [Azure AI Projects client library for Python](https://learn.microsoft.com/python/api/overview/azure/ai-projects-readme) is a unified library that enables you to use multiple client libraries together by connecting to a single project endpoint.
 
-Run these commands to install the preview packages for Foundry projects.
+Run these commands to install the packages for Foundry projects.
 ```bash
-pip install --pre azure-ai-projects
+pip install azure-ai-projects
 pip install azure-identity openai
 ```
 
@@ -564,3 +558,39 @@ The following sections include quickstart links for the Foundry Tools SDKs and r
 | ![Speech icon](/images/ai-services/speech.svg) [Speech](../../../ai-services/speech-service/index.yml) | Add speech to text, text to speech, translation, and speaker recognition capabilities to applications. | &bullet;&NonBreakingSpace;[Speech SDK for Swift (Objective-C)](/objectivec/cognitive-services/speech/)<br /><br />&bullet;&NonBreakingSpace;[Download Speech Swift package](https://aka.ms/csspeech/macosbinary)|
 ::: zone-end 
 */}
+
+## Python 2.3.0 breaking changes
+
+`azure-ai-projects` 2.3.0 (released 2026-07-01) promoted several beta features to stable with API changes. If you are upgrading from an earlier 2.x preview release, update your code for the following changes.
+
+<details>
+<summary><b>Breaking changes list</b></summary>
+
+| Change | Old | New |
+|--------|-----|-----|
+| Toolboxes subclient | `.beta.toolboxes` | `.toolboxes` |
+| Sessions and session files | `.beta.agents.*session*` | `.agents.*session*` |
+| Agent code methods | `.beta.agents.create_version_from_code` / `.beta.agents.download_code` | `.agents.create_version_from_code` / `.agents.download_code` |
+| Session file argument | `agent_session_id=` | `session_id=` |
+| Agent details update | `.agents.patch_agent_details()` | `.agents.update_details()` |
+| Toolbox tool type | `List[Tool]` in `create_version` | `List[ToolboxTool]` |
+| Agent endpoint protocols | `AgentEndpointConfig.protocols` | `AgentEndpointConfig.protocol_configuration` |
+| Memory store TTL type | `int` (seconds) | `datetime.timedelta` |
+| Preview tool properties | `description`, `name`, `tool_configs` on `*PreviewTool` classes | Removed (deprecated on stable tool classes) |
+| Optimization candidates paging | `AgentsPagedResultOptimizationCandidate` | `ItemPaged[OptimizationCandidate]` with continuation-token paging |
+| `AgentProtocol` class | `AgentProtocol` | Removed; `ProtocolVersionRecord.protocol` is now `Union[str, AgentEndpointProtocol]` |
+
+</details>
+
+<details>
+<summary><b>New features in 2.3.0</b></summary>
+
+- **Hosted Agents stable**: `AIProjectClient` no longer requires `allow_preview=True`.
+- **Agent enable/disable**: New `.agents.enable()` and `.agents.disable()` methods.
+- **Draft agent versions**: Pass `draft=True` to `.agents.create_version()`; use `include_drafts=True` on `.agents.list_versions()`.
+- **New toolbox tool**: `ReminderPreviewToolboxTool` added.
+- **Deferred tool loading**: `defer_loading` property on several agent tool classes.
+- **New auth scheme**: `BotServiceTenantAuthorizationScheme`.
+- **New evaluator type**: `EndpointBasedEvaluatorDefinition`.
+
+</details>
