@@ -41,7 +41,7 @@ network:
     - python
 steps:
   - name: Setup Node.js
-    uses: actions/setup-node@v6
+    uses: actions/setup-node@v6.4.0
     with:
       node-version: "24"
   - name: Install pptxgenjs and dependencies
@@ -192,7 +192,7 @@ Use bash commands to explore docs structure:
 
 ## Step 4: Create or Update the Slide Deck
 
-Write a Node.js script at `/tmp/build-slides.js` that uses PptxGenJS to generate the deck.
+Write a Node.js script at `/tmp/gh-aw/agent/build-slides.js` that uses PptxGenJS to generate the deck.
 
 ### Required Slides
 
@@ -224,7 +224,7 @@ Write a Node.js script at `/tmp/build-slides.js` that uses PptxGenJS to generate
 ### Build the Deck
 
 ```bash
-node /tmp/build-slides.js
+node /tmp/gh-aw/agent/build-slides.js
 ```
 
 Output to: `slides/foundry-docs-overview.pptx`
@@ -252,4 +252,4 @@ If no changes were needed (deck is current), call `noop`.
 - **Dynamic data only** — never hardcode metrics, always compute from repo
 - **One deck file** — `slides/foundry-docs-overview.pptx`
 - **Professional quality** — this is for stakeholders, follow the PPTX skill design guidelines
-- **Include the build script** — commit `/tmp/build-slides.js` to `slides/build-slides.js` so the deck can be regenerated
+- **Include the build script** — commit `/tmp/gh-aw/agent/build-slides.js` to `slides/build-slides.js` so the deck can be regenerated
