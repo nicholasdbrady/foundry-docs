@@ -56,7 +56,7 @@ Each deployment has a URL that's formed by concatenating the **Azure OpenAI** ba
     from openai import AzureOpenAI
 
     client = AzureOpenAI(
-        azure_endpoint = "https://<resource>.services.ai.azure.com"
+        azure_endpoint = "https://<resource>.services.ai.azure.com",
         api_key=os.getenv("AZURE_INFERENCE_CREDENTIAL"),  
         api_version="2024-10-21",
     )
@@ -74,21 +74,20 @@ Each deployment has a URL that's formed by concatenating the **Azure OpenAI** ba
     Then, you can use the package to consume the model. The following example shows how to create a client to consume chat completions:
 
     ```javascript
-    import { AzureKeyCredential } from "@azure/openai";
+    import { AzureOpenAI } from "openai";
 
     const endpoint = "https://<resource>.services.ai.azure.com";
-    const apiKey = new AzureKeyCredential(process.env.AZURE_INFERENCE_CREDENTIAL);
-    const apiVersion = "2024-10-21"
+    const apiKey = process.env.AZURE_INFERENCE_CREDENTIAL;
+    const apiVersion = "2024-10-21";
 
     const client = new AzureOpenAI({ 
         endpoint, 
         apiKey, 
-        apiVersion, 
-        "deepseek-v3-0324"
+        apiVersion,
     });
     ```
 
-    Here, `deepseek-v3-0324` is the name of a model deployment in the Microsoft Foundry resource.
+    Pass the deployment name as `model` in the `client.chat.completions.create()` call, not in the constructor.
 
   </Tab>
   <Tab title="C#">
@@ -160,7 +159,7 @@ Each deployment has a URL that's formed by concatenating the **Azure OpenAI** ba
         ]
     )
 
-    print(response.model_dump_json(indent=2)
+    print(response.model_dump_json(indent=2))
     ```
 
   </Tab>
