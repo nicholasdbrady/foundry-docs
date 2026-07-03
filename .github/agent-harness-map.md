@@ -48,8 +48,10 @@ Confidence: High for repo-local inventory and harness recommendations; Medium fo
 | `fastmcp.json` | FastMCP packaging metadata | Server name, version, description, entrypoint, and deployment transport for the primary server. |
 | `foundry_docs_mcp/_server_factory.py` | MCP server implementation | Source of truth for primary/vnext FastMCP tools, resources, prompts, lifespan search indexes, and Azure hybrid fallback behavior. |
 | `scripts/*.py` | Deterministic automation | Source of truth for model catalog scrape, docs sync/conversion, indexing, retrieval testbench, A/B/C/D eval, and answer-quality eval. |
-| `tests/*.py` and `tests/*.json` | Deterministic validation | Unit tests plus retrieval and answer-quality fixtures; dependent tranches should extend these before relying on reports. |
-| `README.md` | Human setup reference | Installation, MCP tools, Azure configuration, pipeline scripts, and ongoing automation summary. |
+| `tests/*.py` and `tests/*.json` | Deterministic validation | Unit tests plus retrieval and answer-quality fixtures; dependent tranches should extend these before relying on reports. Includes `tests/test_mcp_server_inspection.py` (#474): deterministic FastMCP in-memory client tests for both servers. |
+| `scripts/check_mcp_discovery.py` | Deterministic MCP/Mintlify readiness report | #474: local FastMCP inventory (in-memory, verified live), hosted Mintlify MCP/skill/llms endpoint checks (live HTTP, best-effort), and Azure-backed hybrid config presence. Consumed by `scripts/eval_report.py --mcp-discovery`. |
+| `.github/workflows/mintlify-fastmcp-readiness.yml` | Deterministic (non-gh-aw) GitHub Actions workflow | #474: hard-gates on `tests/test_mcp_server_inspection.py`; reports (non-blocking) `mint validate`/`broken-links`/`a11y` per docs directory and hosted MCP discovery state. |
+| `README.md` | Human setup reference | Installation, MCP tools/resources/prompts, Azure configuration, pipeline scripts, agent-readiness (MCP + Mintlify discovery), and ongoing automation summary. |
 
 ## Workflow and automation inventory
 
@@ -104,15 +106,24 @@ The gh-aw fleet-upgrade tranche (#477-#481) is intentionally scoped to **mechani
 
 | Gap | Impact | Recommended route |
 | --- | --- | --- |
-| No committed FastMCP inspection tests for both servers | MCP readiness can regress without failing CI. | Use existing FastMCP client and pytest patterns; add targeted tests in #474. |
+| No committed FastMCP inspection tests for both servers | MCP readiness can regress without failing CI. | ~~Use existing FastMCP client and pytest patterns; add targeted tests in #474.~~ **Resolved in #474**: `tests/test_mcp_server_inspection.py` (22 deterministic in-memory `Client(server)` assertions covering both servers) is a hard gate in `.github/workflows/mintlify-fastmcp-readiness.yml`. |
 | Eval harness does not enforce selected MCP/server source per row | Answer-quality matrix can claim a source without actually constraining the agent to it. | Keep deterministic; repair `scripts/run_docs_eval.py` in #470 before final rerun. |
 | Azure hybrid mode can fall back to local in server/runtime paths | Final evidence could omit the required Azure-backed variant. | Add explicit required mode/setup diagnostics in #470; keep local fallback only for non-final dev mode. |
 | gh-aw report prompts perform unbounded shell work | Scheduled agents can time out or produce inconsistent reports. | Move collection to deterministic scripts/custom prep steps; agent summarizes bounded artifacts in #469 and #471. |
-| Mintlify dashboard CI/readiness settings are not represented in repo | Agents cannot distinguish missing setup from passing readiness. | In #474, inspect hosted endpoints and document dashboard-dependent checks as "not configured" unless verifiable. |
+| Mintlify dashboard CI/readiness settings are not represented in repo | Agents cannot distinguish missing setup from passing readiness. | ~~In #474, inspect hosted endpoints and document dashboard-dependent checks as "not configured" unless verifiable.~~ **Resolved in #474**: `scripts/check_mcp_discovery.py` live-checks hosted `/mcp`, `/.well-known/mcp`, `/.well-known/mcp/server-card.json`, `/skill.md`, `/llms.txt`, `/llms-full.txt`; `mint score <url>` is reported as **not configured** since it requires an authenticated Mintlify account (`mint login`), not fabricated. |
 | No reusable committed skill for this repo's evaluation rerun | Future agents may repeat context-heavy setup from issues. | After #470/#474 stabilize, consider `skill-creator` for a repo skill only if the workflow repeats. |
 | Protected workflow-file PR behavior is unclear for automation | Agents could attempt unsafe workflow-file edits or PRs. | Keep gh-aw workflow mutations in human-owned implementation sessions; use safe-output fallback issue/report paths for scheduled agents. |
+| `mint validate`/`mint broken-links` surfaced real, pre-existing content debt (#474 finding) | `docs/broken-links` found dangling relative links across `docs/`; `docs-vnext validate` currently fails (OpenAPI page generation produces an invalid overlong filename from a spec description). | Do not fix as part of #474 (MCP/readiness surface only). Track as follow-on docs-content work; `.github/workflows/mintlify-fastmcp-readiness.yml` reports these non-blockingly (`continue-on-error`) so they are visible without gating merges. |
 
-## Human-gated actions
+### #474 implementation evidence
+
+- `tests/test_mcp_server_inspection.py` — 22 deterministic FastMCP in-memory `Client(server)` tests (no LLM) asserting server name/version/instructions, `ping`, the exact tool/prompt name sets, tool input schemas + `readOnlyHint` annotations, and resource/resource-template URIs for both `foundry-docs` and `foundry-docs-vnext`.
+- `scripts/check_mcp_discovery.py` — deterministic report distinguishing local FastMCP (verified live via in-memory client), hosted Mintlify MCP (live HTTP checks against `/mcp`, `/.well-known/mcp`, `/.well-known/mcp/server-card.json`, `/skill.md`, `/llms.txt`, `/llms-full.txt`), and Azure-backed hybrid search (env-var configuration presence only, never a fabricated live-call result). Verified live against `hobbyist-e43fa225.mintlify.app` during implementation: `/mcp` → `405` (present, POST-only streamable-HTTP transport); the other five endpoints → `200`; `mint score <url>` → requires `mint login` (reported not configured, not guessed).
+- `scripts/eval_report.py --mcp-discovery <path>` — new "MCP & Tool Discovery State" report section; explicitly states "no report supplied" rather than fabricating pass/fail when the discovery JSON is absent.
+- `.github/workflows/mintlify-fastmcp-readiness.yml` — new deterministic (non-gh-aw) GitHub Actions workflow: FastMCP inspection tests as a hard gate; MCP discovery report and Mintlify CLI (`mint validate`/`broken-links`/`a11y`, pinned `mint@4.2.513`) as non-blocking, always-reported job-summary output, run per-directory (`docs/`, `docs-vnext/`) since invoking `mint` from the repo root incorrectly globs `raw_docs/`/`research/` via the root `docs.json`.
+- `README.md` — documents the full tool/resource/prompt inventory (shared by both servers via `_server_factory.build_server()`), how to run the deterministic tests and discovery script, and current live-checked hosted-discovery state.
+
+
 
 These actions require explicit human approval or an already-approved gh-aw safe-output path with bounded payloads:
 

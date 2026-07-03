@@ -7,6 +7,8 @@ Produces a report comparing 4 MCP servers across 2 models with:
 - Category breakdown
 - Model agreement analysis
 - Regression detection vs. previous runs
+- MCP/tool discovery state (local FastMCP, hosted Mintlify, Azure-backed hybrid)
+  when a scripts/check_mcp_discovery.py report is available
 """
 
 import argparse
@@ -14,9 +16,11 @@ import json
 import sys
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 RESULTS_DIR = PROJECT_ROOT / "tests" / "eval_results"
+DEFAULT_MCP_DISCOVERY_FILE = RESULTS_DIR / "mcp_discovery.json"
 
 SERVER_LABELS = {
     "microsoft-learn": "MS Learn (Control A)",
@@ -170,7 +174,60 @@ def generate_category_breakdown(aggregates: dict) -> str:
     return "\n".join(lines) + "\n"
 
 
-def generate_report(scored_data: dict) -> str:
+def generate_mcp_discovery_section(discovery: dict[str, Any] | None) -> str:
+    """Render the MCP/tool discovery state section.
+
+    `discovery` is the JSON produced by scripts/check_mcp_discovery.py. If it
+    is missing, this section says so explicitly rather than fabricating any
+    discovery state -- absence of data is reported as absence, not as pass.
+    """
+    if discovery is None:
+        return (
+            "*No MCP discovery report was supplied for this run.* "
+            "Run `python scripts/check_mcp_discovery.py --output "
+            "tests/eval_results/mcp_discovery.json` and pass `--mcp-discovery` "
+            "to this script to include current MCP/tool discovery state.\n"
+        )
+
+    lines: list[str] = [f"_Discovery generated: {discovery.get('generated_at', 'unknown')}_\n"]
+
+    lines.append("**Local FastMCP servers** (in-memory client, verified live):\n")
+    for name, data in discovery.get("local_fastmcp", {}).items():
+        if data.get("status") == "verified":
+            lines.append(
+                f"- `{name}` v{data.get('server_version')}: "
+                f"{len(data.get('tools', []))} tools, "
+                f"{len(data.get('resources', []))} resources, "
+                f"{len(data.get('resource_templates', []))} resource templates, "
+                f"{len(data.get('prompts', []))} prompts"
+            )
+        else:
+            lines.append(f"- `{name}`: **error** -- {data.get('error', 'unknown error')}")
+    lines.append("")
+
+    lines.append("**Hosted Mintlify docs site**:\n")
+    hosted = discovery.get("hosted_mintlify", {})
+    if hosted.get("status") == "skipped":
+        lines.append(f"- Not checked: {hosted.get('note', 'skipped')}")
+    elif "endpoints" in hosted:
+        lines.append(f"- Base URL: {hosted.get('base_url')}")
+        for path, entry in hosted["endpoints"].items():
+            lines.append(f"  - `{path}` → {entry.get('status')}")
+        lines.append(f"- {hosted.get('note', '')}")
+    else:
+        lines.append("- Not configured/unavailable (no hosted discovery data in this report).")
+    lines.append("")
+
+    lines.append("**Azure-backed hybrid search**:\n")
+    azure = discovery.get("azure_backed_hybrid", {})
+    lines.append(f"- Status: **{azure.get('status', 'unknown')}**")
+    if azure.get("note"):
+        lines.append(f"- {azure['note']}")
+
+    return "\n".join(lines) + "\n"
+
+
+def generate_report(scored_data: dict, discovery: dict[str, Any] | None = None) -> str:
     """Generate the full markdown report."""
     metadata = scored_data.get("metadata", {})
     aggregates = scored_data.get("aggregates", {})
@@ -207,6 +264,12 @@ def generate_report(scored_data: dict) -> str:
 
 ---
 
+## MCP & Tool Discovery State
+
+{generate_mcp_discovery_section(discovery)}
+
+---
+
 ## Methodology
 
 Each evaluation scenario poses a real-world Microsoft Foundry documentation question to a frontier model,
@@ -236,6 +299,13 @@ def _parse_args() -> argparse.Namespace:
         "--output", default=None,
         help="Output file path (default: stdout)"
     )
+    parser.add_argument(
+        "--mcp-discovery", default=None,
+        help=(
+            "Path to a JSON report from scripts/check_mcp_discovery.py to include "
+            f"as an MCP/tool discovery section (default: {DEFAULT_MCP_DISCOVERY_FILE} if present)"
+        ),
+    )
     return parser.parse_args()
 
 
@@ -250,14 +320,22 @@ def main():
     with open(input_path) as f:
         scored_data = json.load(f)
 
-    report = generate_report(scored_data)
+    discovery_path = Path(args.mcp_discovery) if args.mcp_discovery else DEFAULT_MCP_DISCOVERY_FILE
+    discovery = None
+    if discovery_path.exists():
+        with open(discovery_path) as f:
+            discovery = json.load(f)
+    elif args.mcp_discovery:
+        print(f"Warning: MCP discovery file not found: {discovery_path}", file=sys.stderr)
+
+    report = generate_report(scored_data, discovery=discovery)
 
     if args.output:
         output_path = Path(args.output)
-        output_path.write_text(report)
+        output_path.write_text(report, encoding="utf-8")
         print(f"Report saved to {output_path}", file=sys.stderr)
     else:
-        print(report)
+        sys.stdout.buffer.write(report.encode("utf-8"))
 
 
 if __name__ == "__main__":

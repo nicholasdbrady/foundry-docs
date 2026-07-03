@@ -29,6 +29,85 @@ foundry-docs
 When Azure Search variables are configured, `search_docs` uses hybrid retrieval
 (keyword + vector + semantic reranking). Otherwise it falls back to local TF-IDF.
 
+Both servers (`foundry_docs_mcp` over `docs/`, `foundry_docs_vnext_mcp` over
+`docs-vnext/`) expose the same tool/resource/prompt surface — they differ only
+in the content set and URI prefix, since both are built by
+`foundry_docs_mcp._server_factory.build_server()`.
+
+| Resource / template | Description |
+|---|---|
+| `docs://navigation` (`docs://vnext/navigation`) | Full Mintlify navigation JSON |
+| `docs://page/{section}/{page}` | Read a page by section/page |
+| `docs://page/{section}/{subsection}/{page}` | Read a nested page |
+
+| Prompt | Description |
+|---|---|
+| `explain_foundry_concept(concept)` | Ground an explanation of a Foundry concept in the docs |
+| `build_foundry_agent(agent_type, tools)` | Step-by-step agent-building guidance |
+| `compare_foundry_options(option_a, option_b, context)` | Compare two Foundry options |
+
+## Agent Readiness: MCP & Mintlify Discovery
+
+This repo verifies its own agent-readiness surface deterministically instead of
+relying on an LLM to "vibe-check" it. See `.github/agent-harness-map.md` for the
+full harness routing and current known gaps.
+
+**FastMCP server inspection (deterministic, in-memory, no LLM):**
+
+```bash
+pytest tests/test_mcp_server_inspection.py -v
+```
+
+Uses FastMCP's standard in-memory `Client(server)` testing pattern
+(<https://gofastmcp.com/development/tests>) to assert tool/resource/prompt
+inventories, schemas, and server metadata for both `foundry-docs` and
+`foundry-docs-vnext`. This is the hard gate in
+[`.github/workflows/mintlify-fastmcp-readiness.yml`](.github/workflows/mintlify-fastmcp-readiness.yml).
+
+**MCP/tool discovery state report (local + hosted + Azure-backed):**
+
+```bash
+python scripts/check_mcp_discovery.py --output tests/eval_results/mcp_discovery.json
+```
+
+Reports, for each variant, only what was actually verified — it never
+fabricates a "pass":
+
+- **Local FastMCP** (`foundry-docs`, `foundry-docs-vnext`) — verified live via
+  an in-memory client.
+- **Hosted Mintlify MCP** (the docs-vnext site configured in `.mcp.json`) —
+  live HTTP checks against `/mcp`, `/.well-known/mcp`,
+  `/.well-known/mcp/server-card.json`, `/skill.md`, `/llms.txt`, and
+  `/llms-full.txt`. As of this writing: `/mcp` responds `405` to a plain `GET`
+  (present, POST-only streamable-HTTP transport); the other five endpoints
+  return `200`. `mint score <url>` (Mintlify's hosted agent-readiness scoring)
+  requires an authenticated Mintlify account (`mint login`) and is reported as
+  **not configured** rather than guessed.
+- **Azure-backed hybrid search** — reports whether `AZURE_SEARCH_ENDPOINT` /
+  `AZURE_AI_PROJECT_ENDPOINT` are configured (env-var presence only; this does
+  not make a live Azure call).
+
+Pass a discovery JSON to `scripts/eval_report.py --mcp-discovery <path>` to
+include an "MCP & Tool Discovery State" section in the eval report, alongside
+the existing local/hosted-Mintlify/FastMCP/Azure-backed comparison rows.
+
+**Mintlify CLI readiness (`mint validate`, `mint broken-links`, `mint a11y`):**
+
+These must be run with `docs/` or `docs-vnext/` as the working directory —
+running from the repo root picks up unrelated content (`raw_docs/`, `research/`,
+etc.) via the root `docs.json`.
+
+```bash
+cd docs && npx --yes mint validate && npx --yes mint broken-links && npx --yes mint a11y
+cd docs-vnext && npx --yes mint validate && npx --yes mint broken-links && npx --yes mint a11y
+```
+
+These run as informational (non-blocking) checks in
+[`.github/workflows/mintlify-fastmcp-readiness.yml`](.github/workflows/mintlify-fastmcp-readiness.yml)
+on docs changes and weekly — they report current state rather than gate merges,
+since `docs/`/`docs-vnext/` content quality is owned by separate tranches. See
+`.github/agent-harness-map.md` for currently known content gaps this surfaced.
+
 ## Azure Configuration
 
 The server uses Azure AI Foundry project endpoints and the OpenAI Responses API
