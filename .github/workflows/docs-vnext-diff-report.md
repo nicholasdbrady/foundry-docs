@@ -28,14 +28,8 @@ tools:
   github:
     toolsets: [default]
   bash:
-    - "diff *"
-    - "find *"
-    - "wc *"
-    - "grep *"
+    - "python3 scripts/generate_docs_vnext_diff_report.py *"
     - "cat *"
-    - "git *"
-    - "sort *"
-    - "head *"
 
 safe-outputs:
   create-issue:
@@ -57,124 +51,61 @@ imports:
 
 You are a documentation metrics agent that generates a weekly "before vs. after" report comparing the canonical `docs/` with the agent-improved `docs-vnext/`.
 
-## Your Mission
-
-Generate a comprehensive report showing what agentic workflows have changed, improved, or added to `docs-vnext/` compared to the canonical `docs/`.
+All diffing and statistics are computed **deterministically** by `scripts/generate_docs_vnext_diff_report.py` — you do not diff files, walk directories, or query PRs yourself. Your job is to run that script once, read its bounded output, and turn it into a report, a noop, or an incomplete report.
 
 ## Context
 
 - **Repository**: ${{ github.repository }}
 - **Canonical docs**: `docs/` (upstream source of truth)
 - **Agent-improved docs**: `docs-vnext/` (where agentic workflows operate)
+- **Script**: `scripts/generate_docs_vnext_diff_report.py`
 
-## Step 1: Generate Diff Statistics
-
-```bash
-# Count files in each directory
-echo "=== File Counts ==="
-echo "Canonical docs: $(find docs -name '*.mdx' | wc -l) MDX files"
-echo "docs-vnext: $(find docs-vnext -name '*.mdx' | wc -l) MDX files"
-
-# Find files unique to docs-vnext (agent-created content)
-echo ""
-echo "=== Files unique to docs-vnext ==="
-diff <(cd docs && find . -name '*.mdx' | sort) <(cd docs-vnext && find . -name '*.mdx' | sort) | grep '^>' | sed 's/^> //'
-
-# Find modified files
-echo ""
-echo "=== Modified files ==="
-for f in $(find docs -name '*.mdx' | sed 's|^docs/||'); do
-  if [ -f "docs-vnext/$f" ]; then
-    if ! diff -q "docs/$f" "docs-vnext/$f" > /dev/null 2>&1; then
-      echo "MODIFIED: $f"
-    fi
-  fi
-done
-```
-
-## Step 2: Analyze Changes
-
-For each modified file, compute:
-- Lines added/removed
-- Word count difference
-- Type of change (unbloating, content addition, formatting fix, etc.)
+## Step 1: Run the Deterministic Report Generator
 
 ```bash
-for f in $(find docs -name '*.mdx' | sed 's|^docs/||'); do
-  if [ -f "docs-vnext/$f" ]; then
-    if ! diff -q "docs/$f" "docs-vnext/$f" > /dev/null 2>&1; then
-      echo "--- $f ---"
-      diff --stat "docs/$f" "docs-vnext/$f" 2>/dev/null || true
-    fi
-  fi
-done
+python3 scripts/generate_docs_vnext_diff_report.py \
+  --repo "${{ github.repository }}" \
+  --pr-days 7 \
+  --pr-limit 20 \
+  --json-output /tmp/gh-aw/agent/docs-vnext-diff-report.json \
+  --markdown-output /tmp/gh-aw/agent/docs-vnext-diff-report.md
 ```
 
-## Step 3: Review Agent Activity
+The script always exits `0` unless it could not read `docs/` or `docs-vnext/` at all (exit `2`). It never performs unbounded work: every file list in its JSON output is capped with a `total`/`sample`/`truncated` shape, and the PR-activity lookup uses a single bounded `gh pr list` call per label with a hard timeout.
 
-Search for recent agent-created PRs:
-- PRs with `[docs-vnext]` prefix
-- PRs with labels: `documentation`, `automation`, `docs-vnext`
-- Merge rates and review status
+If the command exits non-zero, or `/tmp/gh-aw/agent/docs-vnext-diff-report.json` is missing or not valid JSON, call `report_incomplete` with the command output and STOP. Do not attempt to reconstruct statistics yourself.
 
-## Step 4: Generate Report
+## Step 2: Read the Bounded Artifacts
 
-Create an issue with the following structure:
-
-```markdown
-### 📊 Docs-vnext Weekly Report - [Date]
-
-### Overview
-- **Canonical docs**: X MDX files
-- **docs-vnext**: Y MDX files (Z unique to vnext)
-- **Modified files**: N files changed by agents
-- **Total lines changed**: +A / -B
-
-### Agent Activity This Week
-- PRs created: X
-- PRs merged: Y (Z% merge rate)
-- Files improved: N
-
-### Changes by Category
-
-<details>
-<summary><b>📝 Content Improvements (N files)</b></summary>
-
-| File | Lines +/- | Change Type |
-|------|-----------|-------------|
-| path/to/file.mdx | +10/-5 | Unbloated |
-
-</details>
-
-<details>
-<summary><b>📚 New Content (N files)</b></summary>
-
-- `reference/glossary.mdx` — Agent-maintained glossary
-- `slides/index.md` — Stakeholder presentation
-
-</details>
-
-### Quality Metrics
-- Average line reduction from unbloating: X%
-- Glossary terms added: N
-- Documentation gaps filled: N
-
-### Recommendations
-- Improvements ready to upstream to azure-ai-docs
-- Areas needing more agent attention
+```bash
+cat /tmp/gh-aw/agent/docs-vnext-diff-report.json
+cat /tmp/gh-aw/agent/docs-vnext-diff-report.md
 ```
 
-## Step 5: Handle No Changes
+The JSON has a top-level `status` field:
 
-If docs/ and docs-vnext/ are identical, call `noop`:
+- **`"blocked"`** — `docs/` or `docs-vnext/` could not be read. Call `report_incomplete` with the `error` field and STOP.
+- **`"empty"`** — `docs/` and `docs-vnext/` are identical (`hasChanges: false`). Call `noop`:
+  ```json
+  {"noop": {"message": "No differences between docs/ and docs-vnext/. Agents have not yet made changes."}}
+  ```
+- **`"ok"`** — there are differences. Continue to Step 3.
 
-```json
-{"noop": {"message": "No differences between docs/ and docs-vnext/. Agents have not yet made changes."}}
-```
+Note that `prActivity.status` is independent of the top-level `status`: it can be `"ok"`, `"skipped"` (no repo provided), or `"blocked"` (the `gh` CLI/API call failed). A blocked `prActivity` does **not** block the overall report — summarize the file-diff findings and note that PR activity was unavailable, citing `prActivity.error`.
+
+## Step 3: Generate Report
+
+When `status` is `"ok"`, use the precomputed `docs-vnext-diff-report.md` as the primary source for the issue body — it already contains the Overview, Agent Activity, and bounded per-file `<details>` sections in the correct progressive-disclosure format. You may lightly edit wording, add a short recommendations section, and reference cache-memory trends, but do **not** recompute or re-diff any files — every number must come from the JSON artifact.
+
+Create an issue titled `### 📊 Docs-vnext Weekly Report - [Date]` with:
+
+- The Overview and Agent Activity sections from the artifact (verbatim numbers)
+- The bounded per-file `<details>` sections from the artifact
+- A short **Recommendations** section — call out which improvements look ready to upstream to `azure-ai-docs`, and where agents need more attention. Base this only on the file paths and deltas already present in the artifact.
 
 ## Guidelines
 
-- Be data-driven: use actual diff statistics
-- Highlight the most impactful changes
-- Track trends over time using cache-memory
-- Make recommendations for upstreaming improvements
+- Be data-driven: every number in the report must trace back to `docs-vnext-diff-report.json`.
+- Never invent counts, file names, or PR numbers that aren't in the artifact.
+- Track trends over time using cache-memory.
+- If `modifiedFiles.truncated` or `vnextOnlyFiles.truncated` is `true`, mention in the report that the list was capped (the artifact already reports the true `total`).

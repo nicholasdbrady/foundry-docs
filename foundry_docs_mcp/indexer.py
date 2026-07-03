@@ -34,16 +34,30 @@ from azure.search.documents.models import QueryType, VectorizedQuery
 
 from .retry import AdaptiveThrottle, with_retry
 
+# Common English function words filtered out of both documents and queries.
+# Without this, a word like "what" or "is" can dominate BM25/TF-IDF scoring
+# for natural-language queries ("what is X") purely because it happens to be
+# repeated many times in unrelated FAQ-style pages, drowning out the
+# meaningful terms in the query.
+STOPWORDS = frozenset({
+    "a", "an", "the", "is", "are", "was", "were", "be", "been", "being",
+    "what", "which", "who", "whom", "this", "that", "these", "those",
+    "of", "to", "in", "on", "for", "with", "as", "by", "at", "from",
+    "and", "or", "but", "if", "so", "than", "then", "not", "no",
+    "do", "does", "did", "can", "could", "will", "would", "should",
+    "it", "its", "you", "your", "i", "we", "our", "they", "their",
+})
+
 
 def tokenize(text: str) -> list[str]:
-    """Simple tokenizer: lowercase, split on non-alphanumeric, filter short tokens."""
+    """Simple tokenizer: lowercase, split on non-alphanumeric, filter short/stop tokens."""
     text = text.lower()
     # Remove MDX/HTML tags
     text = re.sub(r'<[^>]+>', ' ', text)
     # Remove code blocks
     text = re.sub(r'```.*?```', ' ', text, flags=re.DOTALL)
     tokens = re.findall(r'[a-z0-9]+(?:[-_][a-z0-9]+)*', text)
-    return [t for t in tokens if len(t) > 1]
+    return [t for t in tokens if len(t) > 1 and t not in STOPWORDS]
 
 
 def extract_title(content: str) -> str:
@@ -76,13 +90,26 @@ def strip_mdx_markup(content: str) -> str:
 
 
 class SearchIndex:
-    """Simple TF-IDF search index for docs."""
+    """BM25 search index for docs.
+
+    Uses Okapi BM25 instead of a plain sum of tf*idf so that a single very
+    common query term (e.g. "agent" or "model", which appear in most docs in
+    this corpus) can't dominate the score just by occurring many times in one
+    long, broad document. BM25's per-term saturation (k1) and document-length
+    normalization (b) keep short, topically-focused pages competitive against
+    long generic ones that happen to mention every query term in passing.
+    """
+
+    # Standard Okapi BM25 defaults.
+    K1 = 1.5
+    B = 0.75
 
     def __init__(self):
         self.docs: dict[str, dict] = {}  # path → {title, description, content, tokens}
         self.idf: dict[str, float] = {}
         self.doc_freq: dict[str, int] = defaultdict(int)
         self.total_docs = 0
+        self.avg_doc_len = 0.0
 
     def add_doc(self, path: str, content: str):
         """Add a document to the index."""
@@ -106,23 +133,32 @@ class SearchIndex:
         self.total_docs += 1
 
     def build(self):
-        """Compute IDF scores after all docs are added."""
+        """Compute BM25 IDF scores and average document length after all docs are added."""
         for token, df in self.doc_freq.items():
-            self.idf[token] = math.log((self.total_docs + 1) / (df + 1)) + 1
+            self.idf[token] = math.log((self.total_docs - df + 0.5) / (df + 0.5) + 1)
+        total_tokens = sum(doc["token_count"] for doc in self.docs.values())
+        self.avg_doc_len = total_tokens / max(self.total_docs, 1)
 
     def search(self, query: str, limit: int = 10) -> list[dict]:
-        """Search for docs matching the query."""
+        """Search for docs matching the query using Okapi BM25."""
         query_tokens = tokenize(query)
         if not query_tokens:
             return []
 
+        avg_len = max(self.avg_doc_len, 1)
         scores = {}
         for path, doc in self.docs.items():
             score = 0.0
+            doc_len = doc["token_count"]
+            length_norm = 1 - self.B + self.B * (doc_len / avg_len)
             for qt in query_tokens:
-                tf = doc["tokens"].get(qt, 0) / max(doc["token_count"], 1)
+                freq = doc["tokens"].get(qt, 0)
+                if freq == 0:
+                    continue
                 idf = self.idf.get(qt, 0)
-                score += tf * idf
+                numerator = freq * (self.K1 + 1)
+                denominator = freq + self.K1 * length_norm
+                score += idf * (numerator / denominator)
             if score > 0:
                 scores[path] = score
 
@@ -145,6 +181,7 @@ class SearchIndex:
             content = mdx_file.read_text(encoding="utf-8", errors="replace")
             self.add_doc(path, content)
         self.build()
+
 
 
 class AzureSearchIndex:
