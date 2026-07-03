@@ -46,11 +46,21 @@ def _split_with_overlap(text: str, max_chars: int, overlap: int) -> list[str]:
         if current:
             chunks.append(current)
             tail = current[-overlap:] if overlap > 0 else ""
-            current = f"{tail} {sentence}".strip()
+            new_current = f"{tail} {sentence}".strip()
+        else:
+            new_current = sentence
+
+        # `new_current` (tail + sentence, or the sentence alone) can still exceed
+        # max_chars whenever `sentence` itself has no sentence-ending punctuation
+        # within max_chars (e.g. a large table, code fence, or minified example).
+        # Hard-split it unconditionally so no chunk emitted below can ever exceed
+        # max_chars, regardless of whether the accumulator was empty beforehand.
+        if len(new_current) <= max_chars:
+            current = new_current
         else:
             hard_chunks = [
-                sentence[idx: idx + max_chars]
-                for idx in range(0, len(sentence), max_chars)
+                new_current[idx: idx + max_chars]
+                for idx in range(0, len(new_current), max_chars)
             ]
             chunks.extend(hard_chunks[:-1])
             current = hard_chunks[-1]
