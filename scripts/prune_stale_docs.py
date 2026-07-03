@@ -1,12 +1,21 @@
 #!/usr/bin/env python3
-"""Remove stale MDX files that are no longer in the upstream manifest.
+"""Remove stale MDX files that are no longer part of the published navigation.
 
 Compares files on disk in the docs directory against the current
-manifest.json and deletes any .mdx files whose output_path no longer
-appears.  Preserves manually-created files listed in a keep list.
+docs.json navigation tree (the source of truth for what's actually
+published) and deletes any .mdx files that aren't referenced anywhere in
+it. Falls back to manifest.json's flat doc list only if no docs.json is
+present (e.g. for a docs directory without navigation).
+
+manifest.json's flat "docs" list is not used as the primary source because
+a page can be cross-listed under multiple TOC sections (see
+"also_in_sections"): only one of its several possible output_path values
+ends up in the flat list, while the others are only visible via
+toc_hierarchy / docs.json. Comparing against docs.json avoids incorrectly
+flagging those still-published pages as stale.
 
 Usage:
-    python scripts/prune_stale_docs.py [--docs-dir docs] [--manifest manifest.json] [--dry-run]
+    python scripts/prune_stale_docs.py [--docs-dir docs] [--nav-file docs/docs.json] [--dry-run]
 """
 
 import argparse
@@ -15,10 +24,38 @@ import sys
 from pathlib import Path
 
 # Files that are manually maintained and should never be pruned,
-# even if they don't appear in the manifest.
+# even if they don't appear in the navigation.
 KEEP = {
     "api-sdk/sdk-api-reference",
 }
+
+
+def _collect_nav_pages(nav_json: dict) -> set[str]:
+    """Recursively collect every page path referenced in a Mintlify docs.json."""
+    pages: set[str] = set()
+
+    def walk(node) -> None:
+        if isinstance(node, str):
+            pages.add(node)
+        elif isinstance(node, dict):
+            for key in ("tabs", "groups", "pages", "anchors", "children"):
+                if key in node:
+                    walk(node[key])
+        elif isinstance(node, list):
+            for item in node:
+                walk(item)
+
+    walk(nav_json.get("navigation", {}))
+    return pages
+
+
+def _collect_manifest_paths(manifest: dict) -> set[str]:
+    paths: set[str] = set()
+    for doc in manifest.get("docs", []):
+        op = doc.get("output_path", "")
+        if op:
+            paths.add(op)
+    return paths
 
 
 def main():
@@ -28,8 +65,12 @@ def main():
         help="Directory containing .mdx files (default: docs)",
     )
     parser.add_argument(
+        "--nav-file", default=None,
+        help="Path to docs.json navigation (default: <docs-dir>/docs.json)",
+    )
+    parser.add_argument(
         "--manifest", default="manifest.json",
-        help="Path to manifest.json (default: manifest.json)",
+        help="Path to manifest.json, used only if --nav-file is missing (default: manifest.json)",
     )
     parser.add_argument(
         "--dry-run", action="store_true",
@@ -38,20 +79,21 @@ def main():
     args = parser.parse_args()
 
     docs_dir = Path(args.docs_dir)
-    manifest = json.load(open(args.manifest))
+    nav_file = Path(args.nav_file) if args.nav_file else docs_dir / "docs.json"
 
-    # Collect all output_paths the manifest knows about
-    manifest_paths: set[str] = set()
-    for doc in manifest.get("docs", []):
-        op = doc.get("output_path", "")
-        if op:
-            manifest_paths.add(op)
+    if nav_file.exists():
+        known_paths = _collect_nav_pages(json.load(open(nav_file)))
+    else:
+        known_paths = _collect_manifest_paths(json.load(open(args.manifest)))
 
-    # Walk the docs directory and find .mdx files not in the manifest
+    # Walk the docs directory and find .mdx files that aren't published.
+    # Use as_posix() so this comparison is correct on Windows too, where
+    # relative_to() yields backslash-separated paths that would otherwise
+    # never match the forward-slash paths in the navigation/manifest.
     stale: list[Path] = []
     for mdx_file in sorted(docs_dir.rglob("*.mdx")):
-        rel = str(mdx_file.relative_to(docs_dir)).replace(".mdx", "")
-        if rel not in manifest_paths and rel not in KEEP:
+        rel = mdx_file.relative_to(docs_dir).with_suffix("").as_posix()
+        if rel not in known_paths and rel not in KEEP:
             stale.append(mdx_file)
 
     if not stale:
