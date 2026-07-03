@@ -5,6 +5,7 @@ on:
   pull_request:
     types: [opened, synchronize]
   reaction: "eyes"
+  bots: ["github-actions[bot]"]
   skip-bots: [dependabot]
 
 permissions:

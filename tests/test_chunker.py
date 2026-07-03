@@ -63,6 +63,37 @@ class TestSplitWithOverlap:
         result = _split_with_overlap("", max_chars=100, overlap=10)
         assert result == [""]
 
+    def test_oversized_sentence_after_nonempty_accumulator_is_hard_split(self):
+        """Regression for #498: a single oversized "sentence" (no sentence-ending
+        punctuation, e.g. a large table/code fence) that arrives after some
+        content has already accumulated in `current` must still be hard-split.
+
+        Previously, `_split_with_overlap` only applied the oversized-sentence
+        hard-split fallback when the accumulator was empty. When `current` was
+        non-empty, it unconditionally set
+        `current = f"{tail} {sentence}".strip()` with no length check, so a huge
+        trailing "sentence" (e.g. a minified table with no periods) could emit a
+        chunk far larger than `max_chars` -- and, for token-dense content, larger
+        than the embedding model's max input tokens.
+        """
+        max_chars = 100
+        overlap = 10
+        # First "sentence" is short and fits, so it seeds a non-empty accumulator.
+        first_sentence = "Intro sentence."
+        # Second "sentence" has no sentence-ending punctuation and is far larger
+        # than max_chars -- simulating a large table/code fence/minified example.
+        oversized_sentence = "X" * (max_chars * 5)
+        text = f"{first_sentence} {oversized_sentence}"
+
+        chunks = _split_with_overlap(text, max_chars=max_chars, overlap=overlap)
+
+        assert all(len(chunk) <= max_chars for chunk in chunks), (
+            f"Chunk exceeding max_chars={max_chars} was emitted: "
+            f"{[len(c) for c in chunks]}"
+        )
+        # No content should be silently dropped.
+        assert "".join(chunks).replace(" ", "").count("X") == len(oversized_sentence)
+
 
 # ---------------------------------------------------------------------------
 # MarkdownChunker

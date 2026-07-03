@@ -157,7 +157,7 @@ For each merged PR and commit, analyze:
 - **Features Added**: New MCP tools, API changes, pipeline improvements
 - **Features Removed**: Deprecated functionality
 - **Features Modified**: Changed behavior, updated APIs
-- **Upstream Sync Changes**: New/updated docs from azure-ai-docs-pr sync
+- **Upstream Sync Changes**: New/updated docs from azure-ai-docs sync
 - **Breaking Changes**: Any changes affecting users
 
 ### Quality Gate: Compare Against Canonical Sources

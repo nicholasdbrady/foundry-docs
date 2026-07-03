@@ -2,7 +2,7 @@
 
 ## Project overview
 
-This repository is a **FastMCP MCP server** that extracts Microsoft Foundry documentation from the upstream `MicrosoftDocs/azure-ai-docs-pr` repo, converts it from Microsoft Learn markdown to **Mintlify MDX**, and serves it via two MCP servers:
+This repository is a **FastMCP MCP server** that extracts Microsoft Foundry documentation from the upstream `MicrosoftDocs/azure-ai-docs` repo, converts it from Microsoft Learn markdown to **Mintlify MDX**, and serves it via two MCP servers:
 
 - `foundry_docs_mcp` — serves `docs/` (primary content set)
 - `foundry_docs_vnext_mcp` — serves `docs-vnext/` (A/B/C/D comparison variant)
