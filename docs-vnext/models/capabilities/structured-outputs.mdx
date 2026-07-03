@@ -4,55 +4,6 @@ description: "Learn how to improve your model responses with structured outputs"
 ---
 Structured outputs make a model follow a [JSON Schema](https://json-schema.org/overview/what-is-jsonschema) definition that you provide as part of your inference API call. This is in contrast to the older [JSON mode](/models/capabilities/json-mode) feature, which guaranteed valid JSON would be generated, but was unable to ensure strict adherence to the supplied schema. Structured outputs are recommended for function calling, extracting structured data, and building complex multi-step workflows.
 
-{/* Code snippet for quick reference */}
-<CodeGroup>
-```python Python
-from openai import OpenAI
-
-client = OpenAI(
-    base_url="YOUR_ENDPOINT/openai/v1",
-    api_key="YOUR_API_KEY",
-)
-
-response = client.chat.completions.create(
-    model="gpt-4.1",
-    messages=[{"role": "user", "content": "Extract: Alice joins on 2025-01-15"}],
-    response_format={"type": "json_schema", "json_schema": {
-        "name": "event",
-        "strict": True,
-        "schema": {"type": "object", "properties": {
-            "name": {"type": "string"},
-            "date": {"type": "string"},
-        }, "required": ["name", "date"], "additionalProperties": False},
-    }},
-)
-print(response.choices[0].message.content)
-```
-
-```javascript JavaScript
-import OpenAI from "openai";
-
-const client = new OpenAI({
-    baseURL: "YOUR_ENDPOINT/openai/v1",
-    apiKey: "YOUR_API_KEY",
-});
-
-const response = await client.chat.completions.create({
-    model: "gpt-4.1",
-    messages: [{ role: "user", content: "Extract: Alice joins on 2025-01-15" }],
-    response_format: { type: "json_schema", json_schema: {
-        name: "event",
-        strict: true,
-        schema: { type: "object", properties: {
-            name: { type: "string" },
-            date: { type: "string" },
-        }, required: ["name", "date"], additionalProperties: false },
-    }},
-});
-console.log(response.choices[0].message.content);
-```
-</CodeGroup>
-
 ## Getting started
 
 <Tabs>
@@ -64,7 +15,7 @@ console.log(response.choices[0].message.content);
     pip install openai pydantic azure-identity --upgrade
     ```
 
-    If you are new to using Microsoft Entra ID for authentication see [How to configure Azure OpenAI in Microsoft Foundry Models with Microsoft Entra ID authentication](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/how-to/managed-identity).
+    If you are new to using Microsoft Entra ID for authentication see [How to configure Azure OpenAI in Microsoft Foundry Models with Microsoft Entra ID authentication](../../../foundry-classic/openai/how-to/managed-identity.md).
 
     ```python
     from pydantic import BaseModel
@@ -321,7 +272,7 @@ Structured outputs are not supported with parallel function calls. When using st
   </Tab>
   <Tab title="Microsoft Entra ID">
 
-    If you're new to using Microsoft Entra ID for authentication see [How to configure Azure OpenAI in Microsoft Foundry Models with Microsoft Entra ID authentication](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/how-to/managed-identity).
+    If you're new to using Microsoft Entra ID for authentication see [How to configure Azure OpenAI in Microsoft Foundry Models with Microsoft Entra ID authentication](../../../foundry-classic/openai/how-to/managed-identity.md).
 
     ```csharp
     using Azure.Identity;
@@ -939,8 +890,8 @@ Example of explicit recursion:
 ```
 <Note>
 Currently structured outputs are not supported with:
-- [Bring your own data](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/concepts/use-your-data) scenarios.
-- [Assistants](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/how-to/assistant) or [Foundry Agents Service](/agents/development/overview).
+- [Bring your own data](../../../foundry-classic/openai/concepts/use-your-data.md) scenarios.
+- [Assistants](../../../foundry-classic/openai/how-to/assistant.md) or [Foundry Agents Service](/agents/development/overview).
 - `gpt-4o-audio-preview` and `gpt-4o-mini-audio-preview` version: `2024-12-17`.
 </Note>
 

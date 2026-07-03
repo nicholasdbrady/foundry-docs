@@ -1,10 +1,10 @@
 ---
-title: "Quickstart: Create a Guardrail policy"
+title: "Quickstart: Create a guardrail policy"
 description: "Learn how to create a guardrail policy for model deployments in Microsoft Foundry so that you can govern the usage of guardrail controls across your subscription."
 ---
 In this quickstart, you create a policy in Microsoft Foundry to govern the use of guardrail controls for model deployments across your subscription.
 
-If you don't have an Azure subscription, create a [free account](https://azure.microsoft.com/free/) before you begin.
+If you don't have an Azure subscription, create a [free account](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn) before you begin.
 
 ## Prerequisites
 
@@ -12,10 +12,12 @@ If you don't have an Azure subscription, create a [free account](https://azure.m
 
 - A Foundry project. If you don't have one, [create a project](/setup/create-projects).
 
-- The appropriate roles for using Azure Policy to create a policy for your subscription. You can learn more about Azure Policy roles in the [overview of Azure Policy](https://learn.microsoft.com/azure/governance/policy/overview#azure-policy-and-azure-rbac).
+- The [Owner](https://learn.microsoft.com/azure/role-based-access-control/built-in-roles#owner) or [Resource Policy Contributor](https://learn.microsoft.com/azure/role-based-access-control/built-in-roles#resource-policy-contributor) role at the subscription or resource group level. For more information, see the [overview of Azure Policy](https://learn.microsoft.com/azure/governance/policy/overview#azure-policy-and-azure-rbac).
 
 <Note>
-This capability is available only in the [Microsoft Foundry (new) portal](/overview/what-is-foundry#microsoft-foundry-portals).
+
+This capability is available only in the [Microsoft Foundry (new) portal](/what-is-microsoft-foundry/what-is-foundry).
+
 </Note>
 
 ## Create the guardrail policy
@@ -34,7 +36,7 @@ This capability is available only in the [Microsoft Foundry (new) portal](/overv
 <img src="/images/compliance-tab.png" alt="Screenshot of the Compliance pane of Foundry Control Plane." />
 </Frame>
 
-1. Select the controls to add to the policy. Guardrail controls include content safety filters, prompt shields, and groundedness checks. These controls represent the minimum settings required for a model deployment to be considered compliant with the policy.
+1. Select the controls to add to the policy. Guardrail controls include content safety, prompt injection, and protected materials. These controls represent the minimum settings required for a model deployment to be considered compliant with the policy.
 
    As you configure each control, select **Add control** to add it to the policy.
 
@@ -44,7 +46,7 @@ This capability is available only in the [Microsoft Foundry (new) portal](/overv
 
 1. Select **Next** to move to scope selection. You can scope your policy to a single subscription or a resource group.
 
-   Select a scope, select the subscription or resource group that you want to apply to the policy, and then choose **Select**.
+   Select a scope, select the subscription or resource group that you want the policy to apply to, and then choose **Select**.
 
 <Frame>
 <img src="/images/select-scope.png" alt="Screenshot of the area for selecting a scope." />
@@ -75,12 +77,10 @@ After you submit your policy, verify that it was created successfully:
 1. Check that the policy name, scope, and status are correct.
 
 <Note>
-It takes some time for Azure Policy to perform a compliance scan. Initial compliance results might not appear immediately after policy creation.
-</Note>
 
-<Tip>
-If you receive a permissions error when creating a policy, verify that you have the [Owner](https://learn.microsoft.com/azure/role-based-access-control/built-in-roles#owner) or [Resource Policy Contributor](https://learn.microsoft.com/azure/role-based-access-control/built-in-roles#resource-policy-contributor) role at the subscription or resource group level.
-</Tip>
+It takes some time for Azure Policy to perform a compliance scan. Initial compliance results might not appear immediately after policy creation. After the scan completes, return to the **Compliance** pane to review compliance status for your model deployments.
+
+</Note>
 
 ## Clean up resources
 
@@ -90,10 +90,12 @@ If you no longer need the guardrail policy, you can delete it:
 
 1. Select the policy that you want to remove.
 
-1. Select **Delete Policy**, and then confirm the deletion.
+1. Select **Delete policy**, and then confirm the deletion.
 
 <Note>
+
 Deleting a policy in the Foundry portal also removes the associated policy assignment in Azure Policy.
+
 </Note>
 
 ## Related content

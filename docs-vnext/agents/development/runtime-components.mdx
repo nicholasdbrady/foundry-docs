@@ -84,22 +84,6 @@ Because conversations and responses can persist user-provided content and tool o
 - **Use least privilege for tool access**. When a tool accesses external systems, the agent can potentially read or send data through that tool.
 - **Be careful with non-Microsoft services**. If your agent calls tools backed by non-Microsoft services, some data might flow to those services. For related considerations, see [Discover tools in the Foundry Tools](/agents/tools/tool-catalog).
 
-## Response lifecycle and expiration
-
-Responses have a **10-minute expiration** from creation. If your agent invokes tools, you must submit tool outputs before the response expires. After expiration, the response fails and cannot be resumed — you need to create a new response.
-
-<Warning>
-Tool calls that take longer than 10 minutes (such as long-running data processing or external API calls) cause the response to expire silently. Design tools to complete within this window, or break long operations into smaller steps.
-</Warning>
-
-### Conversation lifecycle
-
-Conversations persist indefinitely and can be reused across sessions. Consider these guidelines for managing conversation state:
-
-- **Create a new conversation** when the user starts a new topic, when accumulated history exceeds the model's context window, or when you want a clean debugging boundary.
-- **Reuse an existing conversation** for multi-turn interactions within the same topic, or when the user returns to continue a previous session.
-- **Monitor conversation size** — as conversations accumulate items (messages, tool calls, tool outputs), each response generation includes all items as context. Large conversations increase latency and token consumption.
-
 ## Limits and constraints
 
 Limits can depend on the model, region, and the tools you attach (for example, streaming availability and tool support). For current availability and constraints for responses, see [Responses API](/models/capabilities/responses).

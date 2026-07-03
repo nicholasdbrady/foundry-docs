@@ -12,7 +12,7 @@ This feature is currently in public preview. This preview is provided without a 
 <Info>
 Monitoring support is currently limited to Microsoft Foundry hubs. Foundry projects aren't supported.
 
-To learn about Foundry hubs and projects, see [What is Microsoft Foundry?](/overview/what-is-foundry) and [Migrate from hub-based to Foundry projects](https://learn.microsoft.com/en-us/azure/foundry-classic/how-to/migrate-project).
+To learn about Foundry hubs and projects, see [What is Microsoft Foundry?](/overview/what-is-foundry) and [Migrate from hub-based to Foundry projects](../../../foundry-classic/how-to/migrate-project.md).
 </Info>
 
 <Note>
@@ -76,7 +76,7 @@ Agent Service shares a subset of metrics with other Foundry components. The foll
 | Tokens | `AgentTotalTokens` | Count | Average, Maximum, Minimum, Total (Sum) | `AgentId`, `ModelName`, `ModelVersion` | PT1M |
 | Tool calls | `AgentToolCalls` | Count | Average, Maximum, Minimum, Total (Sum) | `AgentId`, `ToolName` | PT1M |
 
-For metric definitions, see [Monitoring data reference](https://learn.microsoft.com/en-us/azure/foundry-classic/agents/reference/monitor-service).
+For metric definitions, see [Monitoring data reference](../../../foundry-classic/agents/reference/monitor-service.md).
 
 ## Analyze monitoring data
 
@@ -152,51 +152,7 @@ To create a metric alert rule:
 
 After you create the rule, it appears in the **Alert rules** list. The rule becomes active immediately and evaluates based on the frequency you configured.
 
-For application-layer observability, see [Monitor your generative AI applications (preview)](https://learn.microsoft.com/en-us/azure/foundry-classic/how-to/monitor-applications).
-
-### Common troubleshooting queries
-
-Use the following KQL queries to diagnose common production issues:
-
-**Find failed agent runs and their error details:**
-
-```kusto
-AzureMetrics
-| where MetricName == "AgentRuns"
-| extend RunStatus = tostring(parse_json(Tags).RunStatus)
-| where RunStatus == "Failed"
-| summarize FailedRuns = sum(Total) by bin(TimeGenerated, 1h), RunStatus
-| order by TimeGenerated desc
-```
-
-**Measure P95 and P99 response latency:**
-
-```kusto
-AzureMetrics
-| where MetricName == "AgentRunDuration"
-| summarize P95 = percentile(Average, 95), P99 = percentile(Average, 99) by bin(TimeGenerated, 1h)
-| order by TimeGenerated desc
-```
-
-**Detect rate limiting (HTTP 429 responses):**
-
-```kusto
-AzureMetrics
-| where MetricName == "AgentRuns"
-| extend StatusCode = tostring(parse_json(Tags).StatusCode)
-| where StatusCode == "429"
-| summarize ThrottledRequests = sum(Total) by bin(TimeGenerated, 15m)
-| order by TimeGenerated desc
-```
-
-**Token consumption by model deployment:**
-
-```kusto
-AzureMetrics
-| where MetricName in ("ProcessedPromptTokens", "GeneratedCompletionTokens")
-| summarize TotalTokens = sum(Total) by MetricName, bin(TimeGenerated, 1h)
-| order by TimeGenerated desc
-```
+For application-layer observability, see [Monitor your generative AI applications (preview)](../../../foundry-classic/how-to/monitor-applications.md).
 
 ## Troubleshooting
 
@@ -216,5 +172,5 @@ AzureMetrics
 ## Next steps
 
 - If you're using a Foundry project, see [Monitor AI Agents with the Agent Monitoring Dashboard (preview)](/agents/development/how-to-monitor-agents-dashboard).
-- For end-to-end debugging, see [Trace and observe AI agents in Foundry (preview)](https://learn.microsoft.com/en-us/azure/foundry-classic/how-to/develop/trace-agents-sdk).
-- For metric definitions, see [Monitoring data reference](https://learn.microsoft.com/en-us/azure/foundry-classic/agents/reference/monitor-service).
+- For end-to-end debugging, see [Trace and observe AI agents in Foundry (preview)](../../../foundry-classic/how-to/develop/trace-agents-sdk.md).
+- For metric definitions, see [Monitoring data reference](../../../foundry-classic/agents/reference/monitor-service.md).

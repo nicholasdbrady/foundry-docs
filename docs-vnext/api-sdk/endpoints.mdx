@@ -7,7 +7,7 @@ Microsoft Foundry Models enables you to access the most powerful models from lea
 This article explains how the Foundry services organize models and how to use the inference endpoint to access them.
 
 <Info>
-Azure AI Inference beta SDK is deprecated and will be retired on May 30, 2026. Switch to the generally available [OpenAI/v1 API](https://aka.ms/openai/v1) with a stable OpenAI SDK. Follow the [migration guide](../how-to/model-inference-to-openai-migration) to switch to OpenAI/v1, using the SDK for your preferred programming language.
+Azure AI Inference beta SDK is deprecated and will be retired on May 30, 2026. Switch to the generally available [OpenAI/v1 API](https://aka.ms/openai/v1) with a stable OpenAI SDK. Follow the [migration guide](../how-to/model-inference-to-openai-migration.md) to switch to OpenAI/v1, using the SDK for your preferred programming language.
 </Info>
 
 ## Deployments
@@ -56,7 +56,7 @@ Each deployment has a URL that's formed by concatenating the **Azure OpenAI** ba
     from openai import AzureOpenAI
 
     client = AzureOpenAI(
-        azure_endpoint = "https://<resource>.services.ai.azure.com",
+        azure_endpoint = "https://<resource>.services.ai.azure.com"
         api_key=os.getenv("AZURE_INFERENCE_CREDENTIAL"),  
         api_version="2024-10-21",
     )
@@ -74,20 +74,21 @@ Each deployment has a URL that's formed by concatenating the **Azure OpenAI** ba
     Then, you can use the package to consume the model. The following example shows how to create a client to consume chat completions:
 
     ```javascript
-    import { AzureOpenAI } from "openai";
+    import { AzureKeyCredential } from "@azure/openai";
 
     const endpoint = "https://<resource>.services.ai.azure.com";
-    const apiKey = process.env.AZURE_INFERENCE_CREDENTIAL;
-    const apiVersion = "2024-10-21";
+    const apiKey = new AzureKeyCredential(process.env.AZURE_INFERENCE_CREDENTIAL);
+    const apiVersion = "2024-10-21"
 
     const client = new AzureOpenAI({ 
         endpoint, 
         apiKey, 
-        apiVersion,
+        apiVersion, 
+        "deepseek-v3-0324"
     });
     ```
 
-    Pass the deployment name as `model` in the `client.chat.completions.create()` call, not in the constructor.
+    Here, `deepseek-v3-0324` is the name of a model deployment in the Microsoft Foundry resource.
 
   </Tab>
   <Tab title="C#">
@@ -159,7 +160,7 @@ Each deployment has a URL that's formed by concatenating the **Azure OpenAI** ba
         ]
     )
 
-    print(response.model_dump_json(indent=2))
+    print(response.model_dump_json(indent=2)
     ```
 
   </Tab>
@@ -547,5 +548,5 @@ To use keyless authentication, [configure your resource and grant access to user
 
 - [Foundry Models and capabilities](/models/catalog/models-sold-directly-by-azure)
 - [Deployment types in Foundry Models](/models/capabilities/deployment-types)
-- [Model and region availability for Foundry Models](https://learn.microsoft.com/en-us/azure/foundry-classic/how-to/deploy-models-serverless-availability)
+- [Model and region availability for Foundry Models](../../../foundry-classic/how-to/deploy-models-serverless-availability.md)
 - [What is Azure OpenAI in Foundry Models?](/models/catalog/models-sold-directly-by-azure)
