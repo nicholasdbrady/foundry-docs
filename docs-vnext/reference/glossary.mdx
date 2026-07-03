@@ -10,6 +10,12 @@ Key terms and concepts used throughout the Microsoft Foundry documentation.
 ### Agent
 An AI-powered entity that can perform tasks autonomously using tools, models, and instructions. In Microsoft Foundry, agents are created via the Azure AI Projects SDK and can use built-in tools like Code Interpreter, File Search, and Function Calling.
 
+### Agent Manifest
+A pre-built agent template available in the Foundry portal under **Discover → Agents**. Each manifest provides a working agent configuration for a specific business scenario along with a demonstration of a prompt engineering technique (such as XML-structured instructions or autonomous decision logic). Agent manifests are intended for educational and experimentation purposes and are not production-ready without further review and testing.
+
+### Agent Optimizer
+A preview service in Foundry Agent Service that automatically improves hosted agents through a closed-loop evaluation and improvement cycle. The optimizer evaluates an agent against a task dataset, generates candidate configurations (rewritten system instructions and improved skills), scores each candidate, and recommends the best-performing result. Run via `azd ai agent optimize` from the azd CLI extension.
+
 ### Agentic Retrieval
 A multi-query retrieval pipeline that uses a language model to decompose complex questions into focused subqueries, executes them in parallel, applies semantic reranking, and returns structured grounding data with citations. Used in Foundry IQ and Azure AI Search to improve retrieval quality over classic single-query RAG patterns.
 
@@ -51,6 +57,9 @@ The management layer in Microsoft Foundry for registering, discovering, and mana
 ### Foundry IQ
 A managed knowledge layer in Microsoft Foundry that turns enterprise data into reusable, permission-aware knowledge bases for AI agents. Foundry IQ connects structured and unstructured data sources (Azure Blob Storage, SharePoint, OneLake, and the public web), automates indexing and chunking, enforces access controls via Microsoft Entra ID and Microsoft Purview, and uses agentic retrieval to return grounded answers with citations.
 
+### Foundry Models
+Microsoft's AI model catalog and deployment service inside the Foundry portal. Foundry Models provides access to 1,900+ models from OpenAI, Microsoft, Meta, Anthropic, Hugging Face, and community contributors with options to discover, compare, fine-tune, and deploy models. Deployment types include standard pay-per-token, provisioned throughput, batch, and instant models.
+
 ### Function Calling
 A capability that allows agents and language models to invoke user-defined functions based on structured parameters. The model determines when to call a function, generates the arguments, and the application executes the function and returns results back to the model.
 
@@ -63,6 +72,11 @@ Content retrieved from an external data source and provided to a language model 
 
 ### Hybrid Search
 A retrieval strategy that combines keyword (BM25) search and vector (semantic) search to improve recall. Results from both methods are merged and optionally reranked using a semantic ranker for higher relevance. Supported in Azure AI Search and used in Foundry Agent Service file search.
+
+## I
+
+### Instant Models
+A Foundry Models capability (preview) that lets you call any supported model by name without creating a deployment first. Instant models use the same API, SDK, and client as deployment-based models — only the `model` parameter changes, referencing the model name instead of a deployment name. Currently limited to select regions.
 
 ## K
 
@@ -82,6 +96,11 @@ Microsoft's cloud identity and access management service, formerly Azure Active 
 ### OpenTelemetry
 An open-source observability framework for collecting traces, metrics, and logs. Foundry Agent Service integrates with OpenTelemetry to emit agent traces to Application Insights or other compatible backends, enabling debugging, latency analysis, and production monitoring.
 
+## P
+
+### Provisioned Throughput
+A deployment type in Microsoft Foundry that provides dedicated AI model processing capacity for your deployment, measured in **Provisioned Throughput Units (PTUs)**. Unlike standard deployments where capacity is shared across customers, a provisioned deployment holds a fixed amount of compute exclusively for your use regardless of request volume, delivering predictable latency for high-scale, latency-sensitive production workloads. PTU quota is scoped per Azure subscription, per region, and per deployment type (Global Provisioned, Data Zone Provisioned, Regional Provisioned).
+
 ## R
 
 ### RAG (Retrieval Augmented Generation)
@@ -95,6 +114,9 @@ The output of a single agent invocation in Foundry Agent Service. A response inc
 
 ### Responses API
 The API surface for generating agent outputs in Foundry Agent Service. The Responses API accepts a conversation (or previous response output) and returns a new response with the agent's result. It supersedes the older Assistants API runs endpoint.
+
+### Routines
+A Foundry Agent Service feature (preview) that automatically invokes an agent when a defined trigger fires. A routine has one trigger (a one-time timer or a recurring cron-style schedule) and one action (invoking a specified agent). Routines replace external scheduler infrastructure (Azure Functions, Logic Apps, event queues) with a project-native trigger layer that shares the same governance model, connections, and run history as the agent. Use routines for lightweight automation such as daily summaries or periodic checks; use workflows for branching logic, multiple agents, or human approval steps.
 
 ## S
 
