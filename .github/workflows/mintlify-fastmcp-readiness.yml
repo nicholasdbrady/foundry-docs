@@ -1,0 +1,158 @@
+name: Mintlify & FastMCP Agent Readiness
+
+# Deterministic MCP inspection tests plus docs/readiness workflow guidance for
+# issue #474. This workflow has two kinds of jobs:
+#
+#   - fastmcp-inspection: a hard gate. Runs the deterministic FastMCP in-memory
+#     client tests (tests/test_mcp_server_inspection.py) that assert real tool/
+#     resource/prompt/schema/metadata facts for both servers -- no LLM involved.
+#
+#   - mcp-discovery-report / mintlify-cli-checks: reporting jobs. They surface
+#     current Mintlify CLI readiness (validate/broken-links/a11y) and hosted
+#     MCP discovery state (docs://mcp, /.well-known/mcp, skill.md, llms.txt) as
+#     job summaries and artifacts. These are informational (continue-on-error)
+#     because docs/ and docs-vnext/ content quality is owned by separate
+#     tranches (see .github/agent-harness-map.md); this workflow reports
+#     current state rather than gating merges on pre-existing content debt.
+
+on:
+  pull_request:
+    paths:
+      - 'docs/**'
+      - 'docs-vnext/**'
+      - 'docs.json'
+      - 'foundry_docs_mcp/**'
+      - 'foundry_docs_vnext_mcp/**'
+      - 'tests/test_mcp_server_inspection.py'
+      - 'scripts/check_mcp_discovery.py'
+      - '.github/workflows/mintlify-fastmcp-readiness.yml'
+  push:
+    branches: [ main ]
+    paths:
+      - 'docs/**'
+      - 'docs-vnext/**'
+      - 'docs.json'
+      - 'foundry_docs_mcp/**'
+      - 'foundry_docs_vnext_mcp/**'
+  schedule:
+    - cron: "0 8 * * 1" # Weekly Monday 08:00 UTC -- catches hosted-site drift
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  fastmcp-inspection:
+    name: FastMCP in-memory client inspection (hard gate)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Run deterministic MCP server inspection tests
+        run: python -m pytest tests/test_mcp_server_inspection.py -v
+
+  mcp-discovery-report:
+    name: MCP & tool discovery state report
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -e .
+
+      - name: Run MCP discovery report
+        run: |
+          python scripts/check_mcp_discovery.py \
+            --output tests/eval_results/mcp_discovery.json \
+            --summary-output tests/eval_results/mcp_discovery.md
+
+      - name: Publish discovery summary
+        if: always()
+        run: cat tests/eval_results/mcp_discovery.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+
+      - name: Upload discovery report
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        with:
+          name: mcp-discovery-report
+          path: tests/eval_results/mcp_discovery.*
+          retention-days: 30
+
+  mintlify-cli-checks:
+    name: Mintlify CLI readiness (${{ matrix.docs_dir }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        docs_dir: [ docs, docs-vnext ]
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: "22"
+
+      # Pinned for deterministic output; bump intentionally alongside a
+      # re-check of docs/ and docs-vnext/ readiness state.
+      - name: Mint validate (build validation, strict mode)
+        working-directory: ${{ matrix.docs_dir }}
+        continue-on-error: true
+        run: npx --yes mint@4.2.513 validate | tee "$GITHUB_WORKSPACE/mint-validate-${{ matrix.docs_dir }}.log"
+
+      - name: Mint broken-links
+        working-directory: ${{ matrix.docs_dir }}
+        continue-on-error: true
+        run: npx --yes mint@4.2.513 broken-links | tee "$GITHUB_WORKSPACE/mint-broken-links-${{ matrix.docs_dir }}.log"
+
+      - name: Mint accessibility check
+        working-directory: ${{ matrix.docs_dir }}
+        continue-on-error: true
+        run: npx --yes mint@4.2.513 a11y | tee "$GITHUB_WORKSPACE/mint-a11y-${{ matrix.docs_dir }}.log"
+
+      - name: Publish readiness summary
+        if: always()
+        run: |
+          {
+            echo "### Mintlify CLI readiness — ${{ matrix.docs_dir }}/"
+            echo
+            echo "_Reported as-is; pre-existing content issues are tracked separately"
+            echo "and are not gated by this workflow. See .github/agent-harness-map.md._"
+            echo
+            for check in validate broken-links a11y; do
+              echo "<details><summary><code>mint $check</code></summary>"
+              echo
+              echo '```'
+              tail -n 40 "mint-$check-${{ matrix.docs_dir }}.log" 2>/dev/null || echo "(no output captured)"
+              echo '```'
+              echo "</details>"
+              echo
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload readiness logs
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        with:
+          name: mintlify-cli-readiness-${{ matrix.docs_dir }}
+          path: mint-*-${{ matrix.docs_dir }}.log
+          retention-days: 30
