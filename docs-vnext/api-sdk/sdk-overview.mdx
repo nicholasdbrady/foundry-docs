@@ -46,23 +46,6 @@ This SDK structure reflects a deliberate consolidation. Previously, building an 
 
 - Install the required language runtimes, global tools, and VS Code extensions as described in [Prepare your development environment](/developer-experience/install-cli-sdk).
 
-<Info>
-Before starting, make sure your development environment is ready.  
-This article focuses on **scenario-specific steps** like SDK installation, authentication, and running sample code.
-</Info>
-
-### Verify prerequisites
-
-Before proceeding, confirm:
-
-- [ ] Azure subscription is active: `az account show`
-- [ ] You have the required RBAC role: Check Azure portal → Foundry resource → Access control (IAM)
-- [ ] Language runtime installed:
-  - Python: `python --version` (≥3.8)
-  - Node.js: `node --version` (≥18)
-  - .NET: `dotnet --version` (≥6.0)
-  - Java: `java --version` (≥11)
-
 ## Foundry SDK
 
 The Foundry SDK connects to a single project endpoint that provides access to the most popular Foundry capabilities:
@@ -92,9 +75,7 @@ If you created a new Foundry project at [ai.azure.com](https://ai.azure.com), us
 | 2.x (stable)  | Foundry (new)   | Stable  | `azure-ai-projects>=2.3.0`    |
 | 1.x (GA)      | Foundry classic | Stable  | `azure-ai-projects==1.0.0`    |
 
-The [Azure AI Projects client library for Python](https://learn.microsoft.com/python/api/overview/azure/ai-projects-readme) is a unified library that enables you to use multiple client libraries together by connecting to a single project endpoint.
-
-Run these commands to install the packages for Foundry projects.
+Run these commands to install the Python packages:
 ```bash
 pip install azure-ai-projects
 pip install azure-identity openai
@@ -114,8 +95,6 @@ pip install azure-identity openai
 | 1.2.0-beta.5 (preview) | Foundry (new)   | Preview | `Azure.AI.Projects`<br />`Azure.AI.Projects.Openai` |
 | 1.x (GA)      | Foundry classic | Stable  | `Azure.AI.Projects`             |
 
-The [Azure AI Projects client library for Java (preview)](https://learn.microsoft.com/java/api/overview/azure/ai-projects-readme) is a unified library that enables you to use multiple client libraries together by connecting to a single project endpoint.
-
 <Info>
 Items marked (preview) in this article are currently in public preview. This preview is provided without a service-level agreement, and we don't recommend it for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
 </Info>
@@ -131,16 +110,12 @@ import com.openai.models.responses.Response;
 import com.openai.models.responses.ResponseCreateParams;
 ```
 
-The [Azure AI Projects client library for JavaScript](https://learn.microsoft.com/javascript/api/overview/azure/ai-projects-readme) is a unified library that enables you to use multiple client libraries together by connecting to a single project endpoint.
-
-Run this command to install the preview JavaScript packages for Foundry projects.
+Install the JavaScript package:
 ```bash
 npm install @azure/ai-projects@beta @azure/identity dotenv
 ```
 
-The [Azure AI Projects client library for .NET](https://learn.microsoft.com/dotnet/api/overview/azure/ai.projects-readme) is a unified library that enables you to use multiple client libraries together by connecting to a single project endpoint.
-
-Run this command to add the Azure.AI.Projects package to your .NET project.
+Install the .NET packages:
 
 ```bash
 dotnet add package Azure.AI.Projects --prerelease
@@ -244,15 +219,6 @@ Console.WriteLine(response.GetOutputText());
 #pragma warning restore OPENAI001
 ```
 
-### What you can do with the Foundry SDK
-
-- [Access Foundry Models](/get-started/get-started-code), including Azure OpenAI
-- [Use the Foundry Agent Service](../../../ai-services/agents/quickstart)
-- [Run cloud evaluations](/observability/cloud-evaluation)
-- [Enable app tracing](https://learn.microsoft.com/en-us/azure/foundry-classic/how-to/develop/trace-application)
-- [Fine-tune a model](https://learn.microsoft.com/azure/ai-foundry/openai/how-to/fine-tuning)
-- Get endpoints and keys for Foundry Tools, local orchestration, and more
-
 ## Troubleshooting
 
 ### Authentication errors
@@ -334,11 +300,6 @@ print(response.model_dump_json(indent=2))
 
 For more information, see [Azure OpenAI supported programming languages](https://learn.microsoft.com/azure/ai-foundry/openai/supported-languages)
 
-<Info>
-Items marked (preview) in this article are currently in public preview. This preview is provided without a service-level agreement, and we don't recommend it for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
-</Info>
-The following snippet shows how to use the Azure OpenAI `/openai/v1` endpoint directly.
-
 ```java
 import com.azure.identity.AuthenticationUtil;
 import com.azure.identity.DefaultAzureCredential;
@@ -368,7 +329,6 @@ Response response = openAIClient.responses().create(responseCreateParams);
 
 System.out.println("Response output: " + response.getOutputText());
 ```
-For more information on using the OpenAI SDK, see [Azure OpenAI supported programming languages](https://learn.microsoft.com/azure/ai-foundry/openai/supported-languages)
 
 ```javascript
 const endpoint = "https://<resource-name>.openai.azure.com/openai/v1";
@@ -381,8 +341,6 @@ const response = await client.responses.create({
     });
 console.log(`Response output: ${response.output_text}`);
 ```
-
-For more information on using the OpenAI SDK, see [Azure OpenAI supported programming languages](https://learn.microsoft.com/azure/ai-foundry/openai/supported-languages)
 
 1. Install the OpenAI package:
    Run this command to add the OpenAI client library to your .NET project.
@@ -429,7 +387,6 @@ For more information on using the OpenAI SDK, see [Azure OpenAI supported progra
    #pragma warning restore OPENAI001
    // The ResponseClient lets you interact with models and services in your project.
    ```
-For more information on using the OpenAI SDK, see [Azure OpenAI supported programming languages](https://learn.microsoft.com/azure/ai-foundry/openai/supported-languages)
 
 ## Using the Agent Framework for local orchestration
 
