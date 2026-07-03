@@ -11,7 +11,10 @@ Variants covered:
   - local-fastmcp-docs        FastMCP server over docs/ (in-memory client)
   - local-fastmcp-vnext       FastMCP server over docs-vnext/ (in-memory client)
   - hosted-mintlify           Mintlify-hosted docs site's own MCP/AI-readiness
-                              endpoints (live HTTP checks, best-effort)
+                              endpoints (live HTTP checks, best-effort). The
+                              default URL below serves the primary docs/
+                              corpus, not docs-vnext/ -- confirmed by direct
+                              fetch (docs-vnext-only paths 404 on this host).
   - azure-backed-hybrid       Whether Azure AI Search hybrid retrieval mode is
                               configured for search_docs (env-var presence
                               only -- this does not make a live Azure call)
@@ -39,7 +42,11 @@ from fastmcp import Client
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
-# Default hosted docs-vnext site, as configured in .mcp.json for this repo.
+# Default hosted Mintlify site for this repo. This domain serves the primary
+# docs/ corpus (not docs-vnext/), despite the "docs-vnext" naming used for it
+# elsewhere (e.g. the .mcp.json server key) -- verified by direct fetch: a
+# path that exists only in docs-vnext/ (overview/classic-vs-new) 404s here,
+# while docs/ paths resolve correctly.
 DEFAULT_HOSTED_BASE_URL = "https://hobbyist-e43fa225.mintlify.app"
 
 # Endpoints Mintlify documents as its agent-readiness/MCP-discovery surface.
