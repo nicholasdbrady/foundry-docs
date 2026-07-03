@@ -82,6 +82,18 @@ def score_result(result: dict) -> dict:
     rubric = result.get("rubric", {})
     status = result.get("status", "error")
 
+    # Operational metrics captured by run_docs_eval.py's structured event-stream
+    # parsing. Older raw result files won't have these -- default to None/0 so
+    # aggregation can distinguish "known zero" from "not captured".
+    operational = {
+        "passed": result.get("passed"),
+        "turns": result.get("turns"),
+        "tool_calls": result.get("tool_calls"),
+        "tool_errors": result.get("tool_errors"),
+        "output_tokens": result.get("output_tokens"),
+        "response_time_seconds": result.get("response_time_seconds"),
+    }
+
     if status != "success" or not response:
         return {
             **result,
@@ -92,6 +104,7 @@ def score_result(result: dict) -> dict:
                 "response_length": 0,
                 "has_response": False,
             },
+            "operational": operational,
         }
 
     scores = {
@@ -115,7 +128,7 @@ def score_result(result: dict) -> dict:
         + scores["doc_retrieval"] * 0.3
     )
 
-    return {**result, "scores": scores}
+    return {**result, "scores": scores, "operational": operational}
 
 
 def aggregate_scores(scored_results: list[dict]) -> dict:
@@ -126,14 +139,47 @@ def aggregate_scores(scored_results: list[dict]) -> dict:
     categories = defaultdict(lambda: defaultdict(list))
     # Per-server aggregates
     server_agg = defaultdict(list)
+    # Per-server operational metrics (independent of has_response, since a
+    # failed/errored run is itself an operational data point)
+    server_ops = defaultdict(lambda: {
+        "total": 0,
+        "passed": 0,
+        "passed_known": 0,
+        "turns": [],
+        "tool_calls": [],
+        "tool_errors": 0,
+        "tool_errors_known": False,
+        "output_tokens": [],
+        "response_time_seconds": [],
+    })
 
     for r in scored_results:
-        if not r.get("scores", {}).get("has_response", False):
-            continue
-
         server = r["server"]
         model = r["model"]
         category = r["category"]
+
+        ops = r.get("operational", {})
+        agg = server_ops[server]
+        agg["total"] += 1
+        if ops.get("passed") is not None:
+            agg["passed_known"] += 1
+            if ops["passed"]:
+                agg["passed"] += 1
+        if ops.get("turns") is not None:
+            agg["turns"].append(ops["turns"])
+        if ops.get("tool_calls") is not None:
+            agg["tool_calls"].append(ops["tool_calls"])
+        if ops.get("tool_errors") is not None:
+            agg["tool_errors_known"] = True
+            agg["tool_errors"] += ops["tool_errors"]
+        if ops.get("output_tokens") is not None:
+            agg["output_tokens"].append(ops["output_tokens"])
+        if ops.get("response_time_seconds") is not None:
+            agg["response_time_seconds"].append(ops["response_time_seconds"])
+
+        if not r.get("scores", {}).get("has_response", False):
+            continue
+
         composite = r["scores"]["composite"]
 
         matrix[server][model].append(composite)
@@ -156,10 +202,29 @@ def aggregate_scores(scored_results: list[dict]) -> dict:
 
     server_avg = {server: avg(scores) for server, scores in server_agg.items()}
 
+    operational_avg = {}
+    for server, agg in server_ops.items():
+        operational_avg[server] = {
+            "total_evaluations": agg["total"],
+            "pass_rate": (
+                round(agg["passed"] / agg["passed_known"], 3)
+                if agg["passed_known"] else None
+            ),
+            "passed_known": agg["passed_known"],
+            "avg_turns": avg(agg["turns"]) if agg["turns"] else None,
+            "avg_tool_calls": avg(agg["tool_calls"]) if agg["tool_calls"] else None,
+            "total_tool_errors": agg["tool_errors"] if agg["tool_errors_known"] else None,
+            "avg_output_tokens": avg(agg["output_tokens"]) if agg["output_tokens"] else None,
+            "avg_response_time_seconds": (
+                avg(agg["response_time_seconds"]) if agg["response_time_seconds"] else None
+            ),
+        }
+
     return {
         "server_model_matrix": matrix_avg,
         "category_breakdown": category_avg,
         "server_averages": server_avg,
+        "operational_metrics": operational_avg,
     }
 
 

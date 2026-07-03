@@ -227,6 +227,48 @@ def generate_mcp_discovery_section(discovery: dict[str, Any] | None) -> str:
     return "\n".join(lines) + "\n"
 
 
+def generate_operational_metrics(aggregates: dict) -> str:
+    """Generate the per-server operational metrics table (pass rate, tokens, turns,
+    tool calls, tool errors, response time) alongside the quality composite score."""
+    ops = aggregates.get("operational_metrics", {})
+    if not ops:
+        return "*No operational metrics available for this run.*\n"
+
+    def fmt(value, suffix=""):
+        return "n/a" if value is None else f"{value}{suffix}"
+
+    lines = [
+        "| Server | Evaluations | Pass Rate | Avg Turns | Avg Tool Calls | "
+        "Tool Errors | Avg Output Tokens | Avg Response Time |",
+        "|---|---|---|---|---|---|---|---|",
+    ]
+
+    server_avgs = aggregates.get("server_averages", {})
+    ranked = sorted(ops.keys(), key=lambda s: server_avgs.get(s, 0), reverse=True)
+
+    for server in ranked:
+        m = ops[server]
+        label = SERVER_LABELS.get(server, server)
+        raw_pass_rate = m.get("pass_rate")
+        pass_rate_display = (
+            f"{raw_pass_rate:.1%}" if isinstance(raw_pass_rate, (int, float)) else "n/a"
+        )
+        lines.append(
+            f"| {label} | {m.get('total_evaluations', 0)} | {pass_rate_display} | "
+            f"{fmt(m.get('avg_turns'))} | {fmt(m.get('avg_tool_calls'))} | "
+            f"{fmt(m.get('total_tool_errors'))} | {fmt(m.get('avg_output_tokens'))} | "
+            f"{fmt(m.get('avg_response_time_seconds'), 's')} |"
+        )
+
+    lines.append(
+        "\n_Pass = process exited 0, produced a non-empty response, and no tool "
+        "execution reported a failure. \"n/a\" means this run's raw results predate "
+        "operational-metrics capture._"
+    )
+
+    return "\n".join(lines) + "\n"
+
+
 def generate_report(scored_data: dict, discovery: dict[str, Any] | None = None) -> str:
     """Generate the full markdown report."""
     metadata = scored_data.get("metadata", {})
@@ -249,6 +291,12 @@ def generate_report(scored_data: dict, discovery: dict[str, Any] | None = None) 
 ## Scoreboard: Server × Model Matrix
 
 {generate_scoreboard(aggregates)}
+
+---
+
+## Operational Metrics
+
+{generate_operational_metrics(aggregates)}
 
 ---
 
@@ -282,6 +330,10 @@ providing only one MCP server's tools. Responses are scored on:
 | Doc Retrieval | 30% | Whether the model found and referenced expected documentation pages |
 
 **Composite score** = 0.4 × completeness + 0.3 × quality + 0.3 × doc_retrieval
+
+Alongside the quality composite, each run also captures **operational metrics** parsed from the
+`copilot --output-format json` event stream: pass/fail, turn count, tool-call count, tool
+execution errors, output token usage, and wall-clock response time (see Operational Metrics above).
 
 ---
 
