@@ -434,6 +434,44 @@ Session management isn't currently available as a standalone command. Use the RE
 
 </ZoneContent>
 
+## Stop a session
+
+Stopping a session terminates its running compute while preserving the persistent filesystem volume. Unlike deleting a session, the session is retained and can be resumed by a later invocation.
+
+Stopping a session that's already stopped succeeds without error.
+
+When the agent endpoint uses `Header` isolation, the isolation key must match the value used when the session was created. When the endpoint uses `Entra` isolation, the platform scopes the stop to the calling identity.
+
+<ZoneContent group="azd__python__rest" value="rest" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "azd"]} defaultValue="rest">
+
+```bash
+SESSION_ID="<session-id>"
+ISOLATION_KEY="user-123"
+
+az rest --method POST \
+    --url "${BASE_URL}/agents/my-agent/endpoint/sessions/${SESSION_ID}:stop?api-version=${API_VERSION}" \
+    --resource "${RESOURCE}" \
+    --headers "x-ms-user-isolation-key=${ISOLATION_KEY}" "Foundry-Features=HostedAgents=V1Preview"
+```
+
+</ZoneContent>
+<ZoneContent group="azd__python__rest" value="python" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "azd"]} defaultValue="rest">
+
+```python
+project.beta.agents.stop_session(
+    agent_name="my-agent",
+    session_id="<session-id>",
+    isolation_key="user-123",
+)
+```
+
+</ZoneContent>
+<ZoneContent group="azd__python__rest" value="azd" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "azd"]} defaultValue="rest">
+
+Session management isn't currently available as a standalone command. Use the REST API or SDK.
+
+</ZoneContent>
+
 ## Delete a session
 
 Deleting a session terminates the sandbox and releases its resources. When the agent endpoint uses `Header` isolation, the isolation key must match the value used when the session was created. When the endpoint uses `Entra` isolation, the platform scopes the delete to the calling identity.
