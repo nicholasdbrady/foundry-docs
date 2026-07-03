@@ -24,9 +24,9 @@ This directory is an **experimental, agent-maintained** copy of the canonical `d
 
 ## Relationship to `docs/`
 
-- `docs/` = production, synced daily from MicrosoftDocs/azure-ai-docs-pr
+- `docs/` = production, synced daily from MicrosoftDocs/azure-ai-docs
 - `docs-vnext/` = experimental, agent-improved fork
-- Changes proven valuable in `docs-vnext/` can be upstreamed to azure-ai-docs-pr
+- Changes proven valuable in `docs-vnext/` can be upstreamed to azure-ai-docs
 
 ## Viewing
 

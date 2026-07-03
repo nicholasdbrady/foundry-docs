@@ -160,7 +160,7 @@ Create an issue with the following structure:
 - Documentation gaps filled: N
 
 ### Recommendations
-- Improvements ready to upstream to azure-ai-docs-pr
+- Improvements ready to upstream to azure-ai-docs
 - Areas needing more agent attention
 ```
 

@@ -69,7 +69,7 @@ Read the issue title and body from the activation context. Classify the issue in
 | Bug | error, crash, broken, fail, doesn't work, 404 | `bug` |
 | Enhancement | feature, request, add, improve, should, would be nice | `enhancement` |
 | docs-vnext | docs-vnext, vnext, Mintlify, MDX | `docs-vnext` |
-| Upstream Sync | upstream, sync, azure-ai-docs-pr, canonical | `upstream-sync` |
+| Upstream Sync | upstream, sync, azure-ai-docs, canonical | `upstream-sync` |
 | Question | how, what, why, question, help | `question` |
 
 ## Step 2: Determine Complexity

@@ -289,7 +289,7 @@ async function buildPresentation() {
 
     // Pipeline boxes
     const boxes = [
-      { label: "MicrosoftDocs\nupstream", sub: "azure-ai-docs-pr", color: C.darkBg,   textCol: C.white,  subCol: C.lightTeal },
+      { label: "MicrosoftDocs\nupstream", sub: "azure-ai-docs", color: C.darkBg,   textCol: C.white,  subCol: C.lightTeal },
       { label: "Sync &\nConvert",         sub: "scripts/",         color: C.primary,  textCol: C.white,  subCol: C.accent },
       { label: "docs-vnext/",             sub: "274 MDX pages",    color: C.secondary,textCol: C.white,  subCol: C.darkBg },
       { label: "FastMCP\nServer",         sub: "foundry_docs_mcp/",color: C.primary,  textCol: C.white,  subCol: C.accent },
