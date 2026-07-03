@@ -89,6 +89,72 @@ def build_prompt(question: str, server_name: str) -> str:
     )
 
 
+def parse_event_stream(stdout: str) -> dict:
+    """Parse `copilot --output-format json` JSONL output into operational metrics.
+
+    Extracts the final assistant response text plus turn count, tool-call count,
+    tool-execution failures, output token usage, and session/API duration from the
+    structured event stream. Falls back gracefully (zeroed metrics, raw stdout as
+    response) if a line fails to parse or the expected events are absent -- e.g. for
+    older copilot CLI builds or unexpected output shapes.
+    """
+    metrics = {
+        "turns": 0,
+        "tool_calls": 0,
+        "tool_errors": 0,
+        "output_tokens": 0,
+        "premium_requests": None,
+        "api_duration_ms": None,
+        "session_duration_ms": None,
+        "result_exit_code": None,
+        "parse_error": None,
+    }
+
+    last_message_content = ""
+    turn_ids: set[str] = set()
+    parsed_any = False
+
+    for line in stdout.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            event = json.loads(line)
+        except (json.JSONDecodeError, ValueError):
+            continue
+
+        parsed_any = True
+        etype = event.get("type")
+        data = event.get("data", {})
+
+        if etype == "assistant.turn_start":
+            turn_id = data.get("turnId")
+            if turn_id is not None:
+                turn_ids.add(turn_id)
+        elif etype == "assistant.message":
+            content = data.get("content")
+            if content:
+                last_message_content = content
+            metrics["output_tokens"] += data.get("outputTokens", 0) or 0
+        elif etype == "tool.execution_complete":
+            metrics["tool_calls"] += 1
+            if data.get("success") is False:
+                metrics["tool_errors"] += 1
+        elif etype == "result":
+            metrics["result_exit_code"] = event.get("exitCode")
+            usage = event.get("usage", {}) or {}
+            metrics["premium_requests"] = usage.get("premiumRequests")
+            metrics["api_duration_ms"] = usage.get("totalApiDurationMs")
+            metrics["session_duration_ms"] = usage.get("sessionDurationMs")
+
+    metrics["turns"] = len(turn_ids)
+
+    if not parsed_any:
+        metrics["parse_error"] = "no parseable JSON events found in stdout"
+
+    return {"response": last_message_content, **metrics}
+
+
 def run_single_eval(
     scenario: dict,
     server_name: str,
@@ -117,24 +183,44 @@ def run_single_eval(
             "copilot",
             "--model", model,
             "--prompt", prompt,
+            "--output-format", "json",
         ]
 
         proc = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=timeout,
             cwd=str(PROJECT_ROOT),
         )
 
         elapsed = time.monotonic() - start_time
+        parsed = parse_event_stream(proc.stdout)
+
+        # If the JSON event stream didn't parse (unexpected CLI version/output),
+        # fall back to raw stdout so the response isn't silently lost.
+        response = parsed["response"] or (proc.stdout.strip() if parsed["parse_error"] else "")
+
+        tool_errors = parsed["tool_errors"]
+        clean_run = proc.returncode == 0 and tool_errors == 0 and bool(response)
 
         result.update({
-            "response": proc.stdout.strip(),
+            "response": response,
             "stderr": proc.stderr.strip() if proc.stderr else "",
             "exit_code": proc.returncode,
             "response_time_seconds": round(elapsed, 2),
             "status": "success" if proc.returncode == 0 else "error",
+            "passed": clean_run,
+            "turns": parsed["turns"],
+            "tool_calls": parsed["tool_calls"],
+            "tool_errors": tool_errors,
+            "output_tokens": parsed["output_tokens"],
+            "premium_requests": parsed["premium_requests"],
+            "api_duration_ms": parsed["api_duration_ms"],
+            "session_duration_ms": parsed["session_duration_ms"],
+            "event_parse_error": parsed["parse_error"],
         })
 
     except subprocess.TimeoutExpired:
@@ -145,6 +231,15 @@ def run_single_eval(
             "exit_code": -1,
             "response_time_seconds": round(elapsed, 2),
             "status": "timeout",
+            "passed": False,
+            "turns": 0,
+            "tool_calls": 0,
+            "tool_errors": 0,
+            "output_tokens": 0,
+            "premium_requests": None,
+            "api_duration_ms": None,
+            "session_duration_ms": None,
+            "event_parse_error": None,
         })
     except Exception as e:
         elapsed = time.monotonic() - start_time
@@ -154,6 +249,15 @@ def run_single_eval(
             "exit_code": -1,
             "response_time_seconds": round(elapsed, 2),
             "status": "error",
+            "passed": False,
+            "turns": 0,
+            "tool_calls": 0,
+            "tool_errors": 0,
+            "output_tokens": 0,
+            "premium_requests": None,
+            "api_duration_ms": None,
+            "session_duration_ms": None,
+            "event_parse_error": None,
         })
 
     return result
