@@ -145,9 +145,16 @@ jobs:
             ${{ steps.collect.outputs.files }} \
             --output tests/eval_results/scored-merged.json
 
+      - name: Check MCP/tool discovery state
+        run: |
+          python scripts/check_mcp_discovery.py \
+            --output tests/eval_results/mcp_discovery.json \
+            --skip-hosted || true
+
       - name: Generate report
         run: |
           python scripts/eval_report.py tests/eval_results/scored-merged.json \
+            --mcp-discovery tests/eval_results/mcp_discovery.json \
             --output tests/eval_results/report.md
           cat tests/eval_results/report.md
 
