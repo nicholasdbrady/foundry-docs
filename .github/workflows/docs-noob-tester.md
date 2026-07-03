@@ -11,7 +11,7 @@ permissions:
   issues: read
   pull-requests: read
 engine: copilot
-strict: false
+strict: true
 concurrency:
   group: "gh-aw-${{ github.workflow }}"
   cancel-in-progress: true
@@ -21,7 +21,11 @@ tools:
     mode: cli
   web-fetch:
   bash:
-    - "*"
+    - "mkdir -p *"
+    - "cat *"
+    - "wc *"
+    - "playwright-cli *"
+    - "python3 scripts/validate_noob_report.py *"
 safe-outputs:
   upload-asset:
   create-issue:
@@ -57,9 +61,54 @@ You are a brand new user trying to learn about Microsoft Foundry for the first t
 - Repository: ${{ github.repository }}
 - Documentation site: https://hobbyist-e43fa225.mintlify.app/
 
-## Your Mission
+## Quality Gate (read this first)
 
-Act as a complete beginner who has never used Microsoft Foundry before. Navigate the live documentation site, follow tutorials step-by-step, and document any issues you encounter.
+This workflow has a deterministic gate: a report can only be published as a
+success (`create-issue` or `noop`) if it contains concrete, checkable
+evidence. `scripts/validate_noob_report.py` enforces this — you cannot skip
+it. Follow the steps below in order:
+
+1. **Step 0** confirms browsing actually works before you claim to have
+   tested anything.
+2. **Steps 1–2** collect real evidence, tracking every page you evaluated
+   and every page you could not access.
+3. **Step 2.5** drafts the report to a file and runs the validator against
+   it. The validator's pass/fail result decides which safe output you are
+   allowed to call — it is not a suggestion.
+
+Never write a report from assumptions, prior runs, or general Foundry
+knowledge. Every claim must trace back to a page you fetched (or attempted
+to fetch) during this run.
+
+## Step 0: Connectivity Preflight
+
+Before evaluating any content, verify that browsing actually works:
+
+```bash
+mkdir -p /tmp/gh-aw/agent
+```
+
+Use `web-fetch` to fetch the home page: `https://hobbyist-e43fa225.mintlify.app/`
+
+- If the fetch fails, times out, returns an error, or the page renders empty/broken content, this is an **infrastructure block** — not a documentation issue.
+- Do the same quick check with `playwright-cli` (a simple navigation to the home page) if you plan to do viewport testing in Step 2B. If Playwright cannot launch a browser or navigate, that is also an infrastructure block.
+
+If either check fails, immediately write a diagnostic report to `/tmp/gh-aw/agent/noob-report.md` describing:
+
+- `### Infrastructure Blocked` as the first heading (this exact marker is required)
+- The attempted URL(s)
+- The specific error/diagnostic observed (timeout, network error, HTTP status, firewall block, Playwright launch failure, etc.)
+- That no pages were evaluated this run
+
+Then validate and publish it as an incomplete run:
+
+```bash
+python3 scripts/validate_noob_report.py /tmp/gh-aw/agent/noob-report.md --mode blocked
+```
+
+Call `report_incomplete` with the file's contents (regardless of the validator's exit code — if the validator itself rejects your diagnostic as too thin, add the missing detail and re-run it before calling `report_incomplete`). **Do not** proceed to Step 1, and do not call `create-issue` or `noop`. STOP here.
+
+If both checks succeed, continue to Step 1.
 
 ## Step 1: Navigate Documentation as a Noob
 
@@ -86,6 +135,13 @@ Use `web-fetch` to fetch each page from the live documentation site. This lets y
 5. **Setup & Configuration** — fetch https://hobbyist-e43fa225.mintlify.app/setup/planning
    - Is the setup flow logical?
    - Are there missing steps?
+
+### Track evaluated vs. blocked pages
+
+Keep two explicit lists as you go — you'll need both for the report:
+
+- **Evaluated pages**: pages that loaded successfully and that you actually assessed. Only these count toward "pages visited."
+- **Blocked/skipped pages**: pages that failed to load (network error, 404, timeout, rendering failure) or that you had to skip. Never fold these into "pages visited" — a page you couldn't load is not a page you evaluated. If more than half the planned pages end up here, treat it as an infrastructure block (see Step 0) rather than a normal report with gaps.
 
 ### Checking links
 
@@ -119,7 +175,7 @@ After fetching each live page, also read the corresponding source file from `doc
 
 ## Step 2B: Multi-Device Viewport Testing
 
-Use `playwright-cli` from bash for viewport testing when needed. If browser automation is unavailable, skip this section — the content analysis from Step 1 is the primary value.
+Use `playwright-cli` from bash for viewport testing when needed. If browser automation is unavailable (and Step 0 already confirmed this), skip this section — the content analysis from Step 1 is the primary value. Do not claim viewport results for a device you did not actually render.
 
 ### Mobile (375×812)
 Check: Is the navigation menu accessible? Is text readable? Do code blocks scroll horizontally?
@@ -135,12 +191,34 @@ For each viewport, note:
 - 🟡 Usability issues (too-small tap targets, unreadable text)
 - 🟢 What works well
 
+## Step 2.5: Draft and Validate the Report
+
+Write your full draft report to `/tmp/gh-aw/agent/noob-report.md` using the structure in Step 3 below, filled in with the concrete evidence you collected — real URLs from your "evaluated pages" list, the specific tasks you attempted, the specific friction/failures you hit (or an explicit statement that none were found), what worked, and prioritized recommendations. Use bash heredoc to write it, for example:
+
+```bash
+cat > /tmp/gh-aw/agent/noob-report.md << 'EOF'
+... your full draft report ...
+EOF
+```
+
+Then run the deterministic validator against the draft:
+
+```bash
+python3 scripts/validate_noob_report.py /tmp/gh-aw/agent/noob-report.md
+```
+
+Branch on the result:
+
+- **Validator fails (non-zero exit / `ok: false`)**: Do not publish it as a success. Read the JSON `errors` array it prints, and call `report_incomplete` with those errors plus the draft content — this signals the run could not produce a trustworthy report, distinct from "no issues found." STOP. Do not call `create-issue` or `noop`.
+- **Validator passes and you found no critical or confusing issues**: Call `noop` with a short message that still cites concrete evidence, e.g. `"Evaluated N pages (list URLs) as a new user; no critical or confusing issues found this run."` Never call `noop` with a bare "looks good" — it must reference what was actually checked.
+- **Validator passes and you found real issues**: Proceed to Step 3 and create the issue using the exact validated draft body (do not rewrite it after validation).
+
 ## Step 3: Create Issue Report
 
-Create a GitHub issue titled "📚 Foundry Docs Noob Test Report - [Date]" with:
+Create a GitHub issue titled "📚 Foundry Docs Noob Test Report - [Date]" with the validated draft from Step 2.5:
 
 ### Summary
-- Pages visited, overall impression as a new user
+- Pages visited (the evaluated-pages list, with URLs), overall impression as a new user
 
 ### Critical Issues Found
 - Blocking issues with screenshots
@@ -154,12 +232,12 @@ Create a GitHub issue titled "📚 Foundry Docs Noob Test Report - [Date]" with:
 ### Recommendations
 - Prioritized suggestions for improving the getting started experience
 
-If no issues found, call `noop` instead.
-
 ## Guidelines
 
 - **Be genuinely naive**: Don't assume knowledge of Azure, AI, or Foundry
 - **Document everything**: Even minor confusion points matter
 - **Be specific**: "I don't understand what 'MCP server' means" is better than "This is confusing"
 - **Be constructive**: Focus on helping improve the docs
-- **Target `docs-vnext/` documentation only**
+- **Target `docs-vnext/` documentation only** — never claim findings for the canonical `docs/` corpus, and never claim a page or viewport was evaluated if it wasn't actually fetched/rendered this run
+- **No placeholder language**: never write generic filler ("as an AI language model...", "TBD", "[insert findings here]") — the validator rejects it, and a human reading the issue should be able to verify every claim against a real URL
+- **Blocked is not the same as clean**: if browsing, the network, or rendering failed, that is an infrastructure-blocked outcome (`report_incomplete`), never a quiet `noop` or a success report with gaps papered over
