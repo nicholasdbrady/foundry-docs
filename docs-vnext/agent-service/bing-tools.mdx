@@ -52,11 +52,12 @@ Before you begin, make sure you have:
   - **Contributor** or **Owner** role at the subscription or resource group level to create Bing resources and get resource keys.
   - **Foundry Project Manager** role to create project connections in Foundry. For more information, see [Role-based access control for Microsoft Foundry](/security/rbac-foundry).
 
-<Info>
+<Note>
 
-</Info>
+The Foundry RBAC roles were recently renamed. **Foundry User**, **Foundry Owner**, **Foundry Account Owner**, and **Foundry Project Manager** were previously named Azure AI User, Azure AI Owner, Azure AI Account Owner, and Azure AI Project Manager. You might still see the previous names in some places while the rename rolls out. The role IDs and core permissions are unchanged by the rename.
 
-> The Foundry RBAC roles were recently renamed. **Foundry User**, **Foundry Owner**, **Foundry Account Owner**, and **Foundry Project Manager** were previously named Azure AI User, Azure AI Owner, Azure AI Account Owner, and Azure AI Project Manager. You might still see the previous names in some places while the rename rolls out. The role IDs and core permissions are unchanged by the rename.
+</Note>
+
 - A Foundry project created with a configured endpoint.
 - An AI model deployed in your project.
 - SDK installed for your preferred language:
@@ -209,21 +210,6 @@ The following examples demonstrate how to create an agent with Grounding with Bi
             print(f"\nFollow-up completed!")
             print(f"Full response: {event.response.output_text}")
     ```
-
-    ### What this code does
-
-    This example creates an agent with grounding by using the Bing Search tool that can retrieve real-time information from the web. When you run the code:
-
-    1. It creates an `AIProjectClient` and authenticates by using your Azure credentials.
-    1. Creates an agent with the Bing grounding tool configured by using your Bing connection.
-    1. Sends a query asking about current date and weather in Seattle.
-    1. The agent uses the Bing grounding tool to search the web and streams the response.
-    1. Extracts and displays URL citations from the search results.
-
-    ### Required inputs
-
-    - Update the `PROJECT_ENDPOINT` and `BING_CONNECTION_NAME` constants in the code with your values.
-    - Azure credentials configured for `DefaultAzureCredential`.
 
     ### Expected output
 
@@ -496,22 +482,6 @@ To enable your Agent to use Bing search API, use `BingGroundingTool`. Select **P
     projectClient.AgentAdministrationClient.DeleteAgentVersion(agentName: agentVersion.Name, agentVersion: agentVersion.Version);
     ```
 
-    ### What this code does
-
-    This example creates an agent that uses the Grounding with Bing Search tool and demonstrates synchronous response handling. When you run the code:
-
-    1. It creates an AIProjectClient by using your project endpoint.
-    1. Retrieves the Bing connection configuration from your project.
-    1. Creates an agent with the Bing grounding tool configured.
-    1. Sends a query asking how Wikipedia explains Euler's Identity.
-    1. The agent uses the Bing grounding tool to search and returns formatted results with URL citations.
-    1. Cleans up by deleting the agent version.
-
-    ### Required inputs
-
-    - Update the `projectEndpoint` and `bingConnectionName` constants in the code with your values.
-    - Azure credentials configured for `DefaultAzureCredential`.
-
     ### Expected output
 
     ```console
@@ -661,23 +631,6 @@ Console.WriteLine($"{text}{annotation}");
 projectClient.AgentAdministrationClient.DeleteAgentVersion(agentName: agentVersion.Name, agentVersion: agentVersion.Version);
 ```
 
-### What this code does
-
-This example creates an agent with grounding by using the Bing Search tool and demonstrates streaming response handling. When you run the code:
-
-1. It creates an AIProjectClient by using your project endpoint.
-1. Retrieves the Bing connection configuration from your project.
-1. Creates an agent with the Bing grounding tool configured.
-1. Sends a query asking how Wikipedia explains Euler's Identity.
-1. The agent uses the Bing grounding tool and streams the response in real-time.
-1. Processes streaming events including delta text updates and citation extraction.
-1. Cleans up by deleting the agent version.
-
-### Required inputs
-
-- Update the `projectEndpoint` and `bingConnectionName` constants in the code with your values.
-- Azure credentials configured for `DefaultAzureCredential`.
-
 ### Expected output
 
 ```console
@@ -737,20 +690,6 @@ Before running REST API calls, configure authentication:
    }'
    ```
 
-### What this code does
-
-This REST API request creates a response using Grounding with Bing Search. The request:
-
-1. Sends a POST request to the Foundry responses endpoint.
-1. Includes the model deployment and user input in the request body.
-1. Configures the Bing grounding tool with search parameters (count, market, language, freshness).
-1. Returns a response with web search results and citations.
-
-### Required inputs
-
-- Environment variables: `FOUNDRY_PROJECT_ENDPOINT`, `AGENT_TOKEN`, `FOUNDRY_MODEL_DEPLOYMENT_NAME`, `BING_PROJECT_CONNECTION_ID`.
-- Valid bearer token with appropriate permissions.
-
 ### Expected output
 
 JSON response with:
@@ -788,21 +727,6 @@ curl --request POST \
   ]
 }'
 ```
-
-### What this code does
-
-This REST API request creates a response using Grounding with Bing Custom Search. The request:
-
-1. Sends a POST request to the Foundry responses endpoint.
-1. Includes the model deployment and user input in the request body.
-1. Configures the Bing Custom Search tool with your instance name and search parameters.
-1. Returns a response with custom search results limited to your configured domains.
-
-### Required inputs
-
-- Environment variables: `FOUNDRY_PROJECT_ENDPOINT`, `AGENT_TOKEN`, `FOUNDRY_MODEL_DEPLOYMENT_NAME`, `BING_CUSTOM_SEARCH_PROJECT_CONNECTION_ID`, `BING_CUSTOM_SEARCH_INSTANCE_NAME`
-- Valid bearer token with appropriate permissions.
-- Bing Custom Search instance already configured with target domains
 
 ### Expected output
 
