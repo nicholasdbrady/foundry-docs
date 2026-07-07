@@ -46,6 +46,17 @@ network:
     - registry.npmjs.org
     - cdn.playwright.dev
     - playwright.download.prss.microsoft.com
+    - accounts.google.com
+    - android.clients.google.com
+    - clients2.google.com
+    - contentautofill.googleapis.com
+    - d3gk2c5xim1je2.cloudfront.net
+    - d4tuoctqmanu0.cloudfront.net
+    - fonts.googleapis.com
+    - mintcdn.com
+    - mintlify.s3.uswest1.amazonaws.com
+    - safebrowsingohttpgateway.googleapis.com
+    - www.google.com
 
 imports:
   - shared/mood.md
