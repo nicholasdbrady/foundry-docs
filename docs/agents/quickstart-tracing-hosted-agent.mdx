@@ -1,0 +1,137 @@
+---
+title: "Quickstart: Trace your hosted agent"
+description: "View end-to-end traces for a deployed hosted agent in Foundry Agent Service. The hosting libraries integrate the Microsoft OpenTelemetry distro for out-of-the-box instrumentation—just invoke your agent and review traces in the Foundry portal."
+---
+
+<Note>
+
+Tracing is currently in preview.
+
+</Note>
+
+In this quickstart, you view end-to-end traces for the hosted agent you deployed in [Deploy your first hosted agent](/agents/quickstart-hosted-agent). You invoke your agent to generate trace data and review traces in the Foundry portal.
+
+The hosting libraries ([`azure-ai-agentserver-responses`](https://pypi.org/project/azure-ai-agentserver-responses/) and [`azure-ai-agentserver-invocations`](https://pypi.org/project/azure-ai-agentserver-invocations/)) smoothly integrate the [Microsoft OpenTelemetry distro](https://pypi.org/project/microsoft-opentelemetry/), which provides out-of-the-box instrumentation for Microsoft Agent Framework and LangChain, and exports traces to Application Insights. In addition, Foundry Agent Service emits server-side telemetry for agent invocation automatically—no code changes required.
+
+Tracing gives you visibility into how your agent handles each request so you can debug issues, monitor latency, and understand agent behavior before releasing changes to users.
+
+## Prerequisites
+
+Before you begin, you need:
+
+* A deployed, invokable hosted agent from [Deploy your first hosted agent](/agents/quickstart-hosted-agent), and the `azd` project directory you created in that quickstart.
+* The **Foundry User** role on the Foundry resource.
+* To use the UI path, access to the [Foundry portal](https://ai.azure.com). For the azd path, see the next requirements.
+* [Azure Developer CLI (AZD) 1.25.3 or later](https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd) with the `azd microsoft.foundry` extension:
+
+    ```bash
+    azd ext install microsoft.foundry
+    ```
+
+* An authenticated `azd` session. Check your status with `azd auth status`, and run `azd auth login` if you're not signed in.
+
+<Info>
+
+</Info>
+
+> The Foundry RBAC roles were recently renamed. **Foundry User**, **Foundry Owner**, **Foundry Account Owner**, and **Foundry Project Manager** were previously named Azure AI User, Azure AI Owner, Azure AI Account Owner, and Azure AI Project Manager. You might still see the previous names in some places while the rename rolls out. The role IDs and core permissions are unchanged by the rename.
+
+* An [Azure Monitor Application Insights resource](https://learn.microsoft.com/azure/azure-monitor/app/app-insights-overview) connected to your Foundry project. To set it up, see [Set up tracing in Microsoft Foundry](/observability/trace-agent-setup).
+* The [Log Analytics Reader role](https://learn.microsoft.com/azure/azure-monitor/logs/manage-access) on the Application Insights resource connected to your project. If the underlying Log Analytics tables are [protected](https://learn.microsoft.com/azure/azure-monitor/logs/protected-tables-configure), also assign the [Privileged Monitoring Data Reader role](https://learn.microsoft.com/azure/azure-monitor/logs/manage-access).
+
+## Step 1: Invoke your agent
+
+Generate trace data by sending a request to your deployed agent.
+
+<Tabs>
+  <Tab title="Azure Developer CLI">
+
+    From your `azd` project directory, send a test prompt:
+
+    ```bash
+    azd ai agent invoke "Summarize the benefits of distributed tracing for AI agents."
+    ```
+
+    You should see a response within a few seconds.
+
+  </Tab>
+  <Tab title="Foundry portal">
+
+    1. Open the [Foundry portal](https://ai.azure.com) and go to your project.
+    1. Select your agent, and then select the **Playground** tab.
+    1. Send a test prompt, such as `Summarize the benefits of distributed tracing for AI agents.`
+
+    You should see a response within a few seconds.
+
+  </Tab>
+</Tabs>
+
+Each invocation generates a complete trace. For richer traces, send prompts that trigger tool calls or multi-turn reasoning.
+
+## Step 2: View traces in the Foundry portal
+
+Traces can be viewed in the Foundry portal after invocation.
+
+1. In the [Foundry portal](https://ai.azure.com), open your project.
+1. In the left navigation, select **Agents**.
+1. At the top, select **Traces**.
+1. Find your trace in the list. You can search by **Trace ID**, **Response ID**, or filter by time range.
+
+### Trajectory
+
+![Screenshot of the trace waterfall view in the Foundry portal showing spans for invoke_agent, chat completions, and token requests with input/output details on the right.](/images/trace-waterfall-hosted-agent.png)
+
+### User view
+
+<Frame>
+  <img src="/images/user-view.gif" alt="Animation of the user view of traces in the Foundry portal." />
+</Frame>
+
+<Tip>
+
+If your agent uses **Microsoft Agent Framework**, it emits its own OpenTelemetry spans automatically. These spans appear as children of the hosting layer spans, giving you a complete trace tree from the HTTP request through agent orchestration to individual tool calls and LLM interactions.
+
+</Tip>
+
+## Clean up resources
+
+Tracing data is stored in Application Insights and follows your workspace's data retention settings. No additional resources are created in this quickstart. To remove everything you created across this and the previous quickstart, run `azd down` from your agent project directory.
+
+<Warning>
+
+`azd down` permanently deletes every resource in the resource group, including the Foundry project, model deployments, Application Insights, and the hosted agent.
+
+</Warning>
+
+## Troubleshooting
+
+| Issue | Solution |
+| ----- | -------- |
+| Not using Foundry hosted agents and traces aren't showing | This quickstart covers hosted agents only. For tracing agents hosted outside of Foundry, see [Register an external agent](/observability/register-external-agent). |
+| No traces appear after invoking agent | Confirm Application Insights is connected to your Foundry project. If it isn't enabled, see [Set up tracing in Microsoft Foundry](/observability/trace-agent-setup). Verify the agent responded successfully with `azd ai agent invoke`. |
+| Traces appear but spans are missing input/output data attributes | Enable content recording by setting the environment variable `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=true` in your agent configuration. |
+| `AuthorizationFailed` when viewing traces | You need the [Log Analytics Reader role](https://learn.microsoft.com/azure/azure-monitor/logs/manage-access) on the Application Insights resource. If the tables are [protected](https://learn.microsoft.com/azure/azure-monitor/logs/protected-tables-configure), also assign [Privileged Monitoring Data Reader](https://learn.microsoft.com/azure/azure-monitor/logs/manage-access). |
+| Traces appear but are missing tool call spans | Verify your agent defines tools and the model invokes them during the request. If using Microsoft Agent Framework, confirm tools are registered with the `Agent` constructor via the `tools` parameter. See [Add tools to your agent](/agent-framework/get-started/add-tools). |
+| `AuthenticationError` or `DefaultAzureCredential` failure | Refresh credentials with `azd auth logout` and then `azd auth login`. |
+
+## What you learned
+
+In this quickstart, you:
+
+* Learned that hosting libraries integrate the Microsoft OpenTelemetry distro for out-of-the-box instrumentation.
+* Invoked your deployed agent to generate trace data.
+* Viewed end-to-end traces in the Foundry portal.
+
+## Next steps
+
+<Card title="Set up tracing in Microsoft Foundry" icon="arrow-right" href="../how-to/trace-agent-setup.md" />
+- [Set up tracing in Microsoft Foundry](/observability/trace-agent-setup) for detailed tracing configuration.
+- [Configure tracing for AI agent frameworks](/observability/trace-agent-framework) to instrument LangChain and other frameworks.
+- [Monitor AI agents with the Agent Monitoring Dashboard](/agents/how-to-monitor-agents-dashboard) for production monitoring.
+
+## Related content
+
+* [Agent tracing overview](/observability/trace-agent-concept)
+* [What are hosted agents?](/agents/hosted-agents)
+* [Deploy your first hosted agent](/agents/quickstart-hosted-agent)
+* [Observability in generative AI](/observability/observability)

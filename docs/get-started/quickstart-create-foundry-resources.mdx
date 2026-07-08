@@ -6,7 +6,7 @@ In this quickstart, you create a [Microsoft Foundry](https://ai.azure.com) proje
 
 <Tip>
 
-This quickstart shows you how to create resources to build an agent with a basic setup. For more advanced scenarios that use your own resources, see [Set up your environment for agent development](/setup/environment-setup).
+This quickstart shows you how to create resources to build an agent with a basic setup. For more advanced scenarios that use your own resources, see [Set up your environment for agent development](../agents/environment-setup).
 
 </Tip>
 
@@ -14,14 +14,14 @@ This quickstart shows you how to create resources to build an agent with a basic
 
 - An Azure account with an active subscription. If you don't have one, create a [free Azure account, which includes a free trial subscription](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
 - If you're creating the project for yourself: 
-    - Access to a role that allows you to create a Foundry resource, such as **Foundry Account Owner** or **Foundry Owner** on the subscription or resource group. For more information about permissions, see [Role-based access control for Microsoft Foundry](/security/rbac-foundry#permissions-for-each-built-in-role).
+    - Access to a role that allows you to create a Foundry resource, such as **Foundry Account Owner** or **Foundry Owner** on the subscription or resource group. For more information about permissions, see [Role-based access control for Microsoft Foundry](../concepts/rbac-foundry#permissions-for-each-built-in-role).
 <Info>
 
 The Foundry RBAC roles were recently renamed. **Foundry User**, **Foundry Owner**, **Foundry Account Owner**, and **Foundry Project Manager** were previously named Azure AI User, Azure AI Owner, Azure AI Account Owner, and Azure AI Project Manager. You might still see the previous names in some places while the rename rolls out. The role IDs and core permissions are unchanged by the rename.
 
 </Info>
 - If you're creating the project for a team: 
-    - Access to a role that allows you to complete role assignments, such as **Owner**. For more information about permissions, see [Role-based access control for Microsoft Foundry](/security/rbac-foundry#permissions-for-each-built-in-role).
+    - Access to a role that allows you to complete role assignments, such as **Owner**. For more information about permissions, see [Role-based access control for Microsoft Foundry](../concepts/rbac-foundry#permissions-for-each-built-in-role).
     - A list of user email addresses or Microsoft Entra security group IDs for team members who need access.
 
 Select your preferred method by using the following tabs:
@@ -50,12 +50,18 @@ Create a Foundry project to organize your work. The project contains models, age
 
 <Tip>
 
-Create your project in the **West US 3** region if you want to try an [instant model (preview)](/foundry-models/instant-models).
+Create your project in the **West US 3** region if you want to try an [instant model (preview)](/models/instant-models).
 
 </Tip>
 
 <Tabs>
   <Tab title="Azure CLI">
+
+    <Note>
+
+    These steps require Azure CLI and **Contributor** or **Owner** role on the resource group. Run `az login` to sign in before you start. For supported regions, see [Region support](/models/region-support).
+
+    </Note>
 
     1. Create a resource group or use an existing one. For example, create `my-foundry-rg` in `eastus`:
 
@@ -63,30 +69,22 @@ Create your project in the **West US 3** region if you want to try an [instant m
        az group create --name my-foundry-rg --location eastus
        ```
 
-    1. Create the Foundry resource. For example, create `my-foundry-resource` in the `my-foundry-rg` resource group:
+    1. Create the Foundry resource with project management enabled. For example, create `my-foundry-resource` in the `my-foundry-rg` resource group:
 
        ```azurecli
        az cognitiveservices account create \
            --name my-foundry-resource \
            --resource-group my-foundry-rg \
            --kind AIServices \
-           --sku s0 \
+           --sku S0 \
            --location eastus \
-          --allow-project-management
+           --custom-domain my-foundry-resource \
+           --allow-project-management
        ```
 
-       The `--allow-project-management` flag enables project creation within this resource.
+       Set the `--allow-project-management` flag to enable project management. You can't change this flag after resource creation. The `--custom-domain` value must be globally unique - if `my-foundry-resource` is already taken, choose a different name.
 
-    1. Create a custom subdomain for the resource. The custom domain name must be globally unique. If `my-foundry-resource` is taken, try a more unique name.
-
-       ```azurecli
-       az cognitiveservices account update \
-           --name my-foundry-resource \
-           --resource-group my-foundry-rg \
-           --custom-domain my-foundry-resource
-       ```
-
-    1. Create the project. For example, create `my-foundry-project` in the `my-foundry-resource`:
+    1. Create a project. For example, create `my-foundry-project` in the `my-foundry-resource`:
 
        ```azurecli
        az cognitiveservices account project create \
@@ -96,18 +94,28 @@ Create your project in the **West US 3** region if you want to try an [instant m
            --location eastus
        ```
 
+    1. Verify that the resource is provisioned:
+
+       ```azurecli
+       az cognitiveservices account show \
+           --name my-foundry-resource \
+           --resource-group my-foundry-rg \
+           --query properties.provisioningState --output tsv
+       ```
+
+       The output should show `Succeeded`. If the output shows a different state, check your permissions, region availability, and resource quotas. For more help, see [Create a multi-service resource](../../ai-services/multi-service-resource).
+
     1. Verify the project was created:
 
        ```azurecli
        az cognitiveservices account project show \
            --name my-foundry-resource \
            --resource-group my-foundry-rg \
-           --project-name my-foundry-project
+           --project-name my-foundry-project \
+           --query properties.provisioningState --output tsv
        ```
 
-       The output displays the project properties, including its resource ID.
-
-    Reference: [az cognitiveservices account](https://learn.microsoft.com/cli/azure/cognitiveservices/account)
+       The output should show `Succeeded`.
 
   </Tab>
   <Tab title="Foundry portal">
@@ -145,7 +153,7 @@ Deploy a model that you can use. This example uses **gpt-5.1-mini**, but you can
 
 <Tip>
 
-You can skip this step altogether if you want to try an [instant model (preview)](/foundry-models/instant-models).
+You can skip this step altogether if you want to try an [instant model (preview)](/models/instant-models).
 
 </Tip>
 
@@ -203,7 +211,7 @@ You need your project endpoint to connect from code. If you're administering thi
 
 ## For administrators - grant access
 
-If you're administering a team, assign the **Foundry User** role to team members so they can use the project and deployed models. This role provides the minimum permissions needed to build and test AI applications. For other roles you might need to assign, see [Role-based access control for Microsoft Foundry](/security/rbac-foundry)
+If you're administering a team, assign the **Foundry User** role to team members so they can use the project and deployed models. This role provides the minimum permissions needed to build and test AI applications. For other roles you might need to assign, see [Role-based access control for Microsoft Foundry](../concepts/rbac-foundry)
 
 <Info>
 

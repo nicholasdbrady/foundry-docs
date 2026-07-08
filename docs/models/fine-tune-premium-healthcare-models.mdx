@@ -1,0 +1,64 @@
+---
+title: "Customize a premium healthcare AI model by fine-tuning it in Microsoft Foundry"
+description: "Learn how to fine-tune a premium healthcare AI model in Microsoft Foundry."
+sidebarTitle: "Customize a premium healthcare AI model by fine-tuning it in Microsoft Foundry"
+---
+
+Fine-tuning lets you adapt a premium healthcare AI model to your data and domain tasks. This article covers prerequisites and steps to create a fine-tuning job, with links to the core fine-tuning workflow in Microsoft Foundry.
+
+<Info>
+
+The healthcare AI models marked (preview) in this article are currently in *limited preview*. These models are intended and provided as-is for research and model development exploration. The healthcare AI models are not designed or intended to be deployed in clinical settings as-is. They are not intended for use in the diagnosis or treatment of any health or medical condition, and the individual models' performances for such purposes have not been established. 
+
+You bear sole responsibility and liability for any use of the healthcare AI models, including verification of outputs and incorporation into any product or service intended for a medical purpose or to inform clinical decision-making, compliance with applicable healthcare laws and regulations, and obtaining any necessary clearances or approvals.
+
+</Info>
+
+## Prerequisites
+
+- An Azure subscription. If you don't have one, [create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
+- A Foundry project in a region that supports your target fine-tuning model. If you don't have one, [create a project](../create-projects).
+- Access to a [premium healthcare model](/models/healthcare-ai-models) such as [MedImageInsight Premium (preview)](/models/deploy-medimageinsight-premium) or [CxrReportGen Premium (preview)](/models/deploy-cxrreportgen-premium) in the model catalog for your project.
+- The **Foundry Owner** role, or a custom role that includes permissions to fine-tune and deploy models.
+- Training and validation files in JSONL format, encoded as UTF-8 with BOM, and less than 512 MB per file.
+- A healthcare data governance process that covers de-identification, retention, auditing, and access control.
+- Review the core guidance before you train:
+   - [Customize a model with fine-tuning](/models/fine-tuning)
+   - [Microsoft Foundry fine-tuning considerations](/models/fine-tuning-considerations)
+   - [Quotas and limits for Azure OpenAI in Foundry](/models/quotas-limits)
+
+## Fine-tune a premium healthcare AI model
+
+To create a fine-tuning job in the Foundry portal:
+
+1. Sign in to [Microsoft Foundry](https://ai.azure.com/?cid=learnDocs). Make sure the **New Foundry** toggle is on. These steps refer to **Foundry (new)**.
+
+<img src="/images/new-foundry.png" />
+1. Select your subscription and Foundry resource.
+1. Go to **Build** > **Fine-tune**, and select **Start fine-tuning**.
+1. Select the premium healthcare model you want to customize. You can also select a previously fine-tuned model.
+1. Choose the customization method that your selected model supports: **Supervised** for supervised fine-tuning (SFT), or **Direct Preference Optimization** (DPO), or **Reinforcement** for reinforcement fine-tuning (RFT).
+1. Select the training type: **Standard** (in-region, data residency), or **Global** (lower cost, faster queue), or **Developer** (experimentation, preemptible).
+1. Upload or select your training and validation datasets.
+1. Optionally, configure a suffix, seed, and hyperparameters.
+1. Select **Submit** to start the job.
+
+After the job completes:
+
+1. Review training metrics and checkpoints on the job details page.
+1. Confirm safety evaluation status before deployment.
+1. Select **Deploy** on the job details page to deploy the fine-tuned model.
+1. Test with a representative validation set and keep qualified human reviewers in the workflow.
+
+For the full fine-tuning workflow, including data preparation, format requirements, hyperparameter options, monitoring, and deployment, see [Customize a model with fine-tuning](/models/fine-tuning).
+
+For model-specific fine-tuning details, including supported methods and training parameters, see the model card for your chosen model in the Foundry model catalog.
+
+## Related content
+
+- [Healthcare AI examples (GitHub)](https://aka.ms/HealthcareAIExamples)
+- [Customize a model with fine-tuning](/models/fine-tuning)
+- [Deploy a fine-tuned model](/models/fine-tuning-deploy)
+- [Fine-tuning safety evaluation](/models/fine-tuning-safety-evaluation)
+- [CxrReportGen Premium healthcare AI model](/models/deploy-cxrreportgen-premium)
+- [MedImageInsight Premium healthcare AI model](/models/deploy-medimageinsight-premium)

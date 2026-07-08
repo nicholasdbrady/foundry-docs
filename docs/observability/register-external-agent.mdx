@@ -9,7 +9,7 @@ Items marked (preview) in this article are currently in public preview. This pre
 </Info>
 Microsoft Foundry Agent Service lets you register agents that run outside Foundry, on any cloud, on-premises, or other host, so you can use Foundry's trace view and evaluation experiences. Foundry stores only registration metadata for these agents. It doesn't host, proxy, or invoke the runtime.
 
-External agents differ from [Control Plane custom agents](/manage/register-custom-agent), which route traffic through an AI Gateway. With external agents, your agent keeps its existing endpoint and shares only OpenTelemetry telemetry. No AI Gateway is required.
+External agents differ from [Control Plane custom agents](../../control-plane/register-custom-agent), which route traffic through an AI Gateway. With external agents, your agent keeps its existing endpoint and shares only OpenTelemetry telemetry. No AI Gateway is required.
 
 In this article, you learn how to:
 
@@ -32,7 +32,7 @@ External agents are in preview. Create and update requests require the `Foundry-
 
 ## Prerequisites
 
-- A [Foundry project](/setup/create-projects) with an [Application Insights resource connected](/agent-service/trace-agent-setup#connect-application-insights-to-your-foundry-project).
+- A [Foundry project](../../how-to/create-projects) with an [Application Insights resource connected](/observability/trace-agent-setup#connect-application-insights-to-your-foundry-project).
 - An agent running outside Foundry that can emit OpenTelemetry spans to that Application Insights resource.
 - Python 3.11 or later.
 - **Foundry User** role on the project.
@@ -113,7 +113,7 @@ with tracer.start_as_current_span("agent-run") as span:
 
 <Tip>
 
-For framework-specific auto-instrumentation (LangChain, LangGraph), the [Microsoft OpenTelemetry distro for Python](https://github.com/microsoft/opentelemetry-distro-python) can set `gen_ai.agent.id` automatically via `instrumentation_options`. For .NET and JavaScript, see the [.NET distro](https://github.com/microsoft/opentelemetry-distro-dotnet) and [JavaScript distro](https://github.com/microsoft/opentelemetry-distro-javascript). For general guidance, see [Configure tracing for AI agent frameworks](/agent-service/trace-agent-framework).
+For framework-specific auto-instrumentation (LangChain, LangGraph), the [Microsoft OpenTelemetry distro for Python](https://github.com/microsoft/opentelemetry-distro-python) can set `gen_ai.agent.id` automatically via `instrumentation_options`. For .NET and JavaScript, see the [.NET distro](https://github.com/microsoft/opentelemetry-distro-dotnet) and [JavaScript distro](https://github.com/microsoft/opentelemetry-distro-javascript). For general guidance, see [Configure tracing for AI agent frameworks](/observability/trace-agent-framework).
 
 </Tip>
 
@@ -124,7 +124,7 @@ After the agent emits spans to Application Insights, register it in Foundry so t
 ### Install the SDK
 
 ```bash
-pip install azure-ai-projects>=2.2.0 azure-identity>=1.17.0
+pip install azure-ai-projects>=2.3.0 azure-identity>=1.17.0
 ```
 
 ### Create the registration
@@ -231,7 +231,7 @@ otel_agent_id = agent.versions.latest.definition.otel_agent_id
 
 ### Create and run the evaluation
 
-Use the `otel_agent_id` to run a trace evaluation over the agent's collected telemetry. For the full walkthrough, including how to create an eval group, configure testing criteria, and interpret results, see [Trace evaluation (preview)](/observability/cloud-evaluation#trace-evaluation-preview).
+Use the `otel_agent_id` to run a trace evaluation over the agent's collected telemetry. For the full walkthrough, including how to create an eval group, configure testing criteria, and interpret results, see [Trace evaluation (preview)](/evaluation/cloud-evaluation#trace-evaluation-preview).
 
 ## Manage external agents
 
@@ -275,13 +275,21 @@ If `create_version()` fails, check the following items:
 - Your identity has the **Foundry User** role (or higher) on the project.
 - The `agent_name` value uses only alphanumeric characters, hyphens, and underscores.
 - No existing agent with the same name and a different kind already exists. Use `project.agents.get()` to check.
+## Current limitations
+
+The following Foundry features aren't currently supported for external agents:
+
+- [Human evaluation](/evaluation/human-evaluation) — Manual review workflows aren't available for externally registered agents.
+- [Convert agent traces into evaluation datasets](/observability/traces-to-dataset) — Trace-to-dataset conversion isn't supported for external agents.
+- [AI red teaming](/evaluation/ai-red-teaming-agent) — Red teaming scans can't target external agents.
+
 ## Related content
 
-- [Agent tracing overview](/agent-service/trace-agent-concept)
-- [Set up tracing in Microsoft Foundry](/agent-service/trace-agent-setup)
-- [Configure tracing for AI agent frameworks](/agent-service/trace-agent-framework)
-- [Evaluate your AI agents](/agent-service/evaluate-agent)
-- [Register and manage custom agents (Control Plane)](/manage/register-custom-agent)
-- [Built-in evaluators](/observability/general-purpose-evaluators)
+- [Agent tracing overview](/observability/trace-agent-concept)
+- [Set up tracing in Microsoft Foundry](/observability/trace-agent-setup)
+- [Configure tracing for AI agent frameworks](/observability/trace-agent-framework)
+- [Evaluate your AI agents](/evaluation/evaluate-agent)
+- [Register and manage custom agents (Control Plane)](../../control-plane/register-custom-agent)
+- [Built-in evaluators](/evaluation/general-purpose-evaluators)
 - [Azure Monitor OpenTelemetry overview](https://learn.microsoft.com/azure/azure-monitor/app/opentelemetry-enable)
-- [Run cloud evaluations](/observability/cloud-evaluation#prerequisites)
+- [Run cloud evaluations](/evaluation/cloud-evaluation#prerequisites)
