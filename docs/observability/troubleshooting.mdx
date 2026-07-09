@@ -20,7 +20,7 @@ Connect your storage account to the Foundry project by creating an Azure Blob St
 
 You can authenticate the connection by using either an **account key** or **Microsoft Entra ID** (recommended). If you use Entra ID, see [Missing RBAC role assignment for Entra ID authentication](#missing-rbac-role-assignment-for-entra-id-authentication) to configure the required permissions.
 
-For more details on bringing your own storage for evaluations, see [Rate limits, region support, and enterprise features for evaluation](/evaluation/evaluation-regions-limits-virtual-network#bring-your-own-storage).
+For more details on bringing your own storage for evaluations, see [Rate limits, region support, and enterprise features for evaluation](../../concepts/evaluation-regions-limits-virtual-network#bring-your-own-storage).
 
 ## Missing RBAC role assignment for Entra ID authentication
 
@@ -228,7 +228,7 @@ After a run completes, some evaluator scores might be missing or unexpectedly ze
 | Symptom | Possible cause | Action |
 |---|---|---|
 | An evaluator's metric is missing | The evaluator wasn't selected when the evaluation was created | Rerun the evaluation and select the required evaluators. |
-| All safety metrics are zero | The safety category is disabled, or the model doesn't support the evaluator | Confirm model and evaluator support in [Risk and safety evaluators](/evaluation/built-in-evaluators#risk-and-safety-evaluators). |
+| All safety metrics are zero | The safety category is disabled, or the model doesn't support the evaluator | Confirm model and evaluator support in [Risk and safety evaluators](../../concepts/built-in-evaluators#risk-and-safety-evaluators). |
 | Groundedness is unexpectedly low | The retrieval context is incomplete | Verify how context is constructed, and check retrieval latency. |
 | Many rows show errors or low scores | Agent response or evaluator errors during the run | Open the run report, review the errored rows, fix the underlying errors, then rerun. |
 
@@ -236,7 +236,7 @@ After a run completes, some evaluator scores might be missing or unexpectedly ze
 
 If an agent evaluator returns an error for unsupported tools:
 
-- Check the [supported tools](/evaluation/agent-evaluators#supported-tools) for agent evaluators.
+- Check the [supported tools](../../concepts/evaluation-evaluators/agent-evaluators#supported-tools) for agent evaluators.
 - As a workaround, wrap unsupported tools as user-defined function tools so the evaluator can assess them.
 
 ## Azure Developer CLI (azd) evaluation issues
@@ -249,11 +249,11 @@ These issues apply when you run agent evaluations with the `azd ai agent eval` c
 | Evaluation target not found or agent not invokable | Confirm the agent is deployed and invokable with `azd ai agent show`. Redeploy with `azd deploy` if needed. |
 | Eval model deployment not found | Verify the chat-completion deployment name exists in your project under **Build** > **Deployments**. |
 
-For the full azd evaluation workflow, see [Run agent evaluations with the azd CLI](/evaluation/azure-developer-cli-evaluation).
+For the full azd evaluation workflow, see [Run agent evaluations with the azd CLI](azure-developer-cli-evaluation).
 
 ## Trace evaluation issues
 
-[Trace evaluation](/evaluation/cloud-evaluation#trace-evaluation-preview) runs evaluators against agent interactions that Application Insights already captured, instead of replaying requests. 
+[Trace evaluation](../../how-to/develop/cloud-evaluation#trace-evaluation-preview) runs evaluators against agent interactions that Application Insights already captured, instead of replaying requests. 
 
 ### Project managed identity is missing trace read permissions
 
@@ -313,7 +313,7 @@ This section covers common issues with the human evaluation feature for Foundry 
 
 **Cause:** No evaluation template is set as active for the agent.
 
-**Resolution:** In the **Human Evaluation** tab, select **Set as active** for the desired template. Only one template can be active at a time. For more information, see [Set up human evaluation for your agents](/evaluation/human-evaluation#manage-your-evaluation-templates).
+**Resolution:** In the **Human Evaluation** tab, select **Set as active** for the desired template. Only one template can be active at a time. For more information, see [Set up human evaluation for your agents](human-evaluation#manage-your-evaluation-templates).
 
 ### No results visible in the Evaluation Results section
 
@@ -331,10 +331,10 @@ This section covers common issues with the human evaluation feature for Foundry 
 
 - [Add a new connection to your project](../../how-to/connections-add)
 - [Connect to your own storage](../../how-to/bring-your-own-azure-storage-foundry)
-- [Rate limits, region support, and enterprise features for evaluation](/evaluation/evaluation-regions-limits-virtual-network)
-- [Evaluate your AI agents](/evaluation/evaluate-agent)
-- [Run agent evaluations with the azd CLI](/evaluation/azure-developer-cli-evaluation)
-- [Run evaluations from the Foundry portal](/evaluation/evaluate-generative-ai-app)
-- [View evaluation results in the Foundry portal](/evaluation/evaluate-results)
+- [Rate limits, region support, and enterprise features for evaluation](../../concepts/evaluation-regions-limits-virtual-network)
+- [Evaluate your AI agents](evaluate-agent)
+- [Run agent evaluations with the azd CLI](azure-developer-cli-evaluation)
+- [Run evaluations from the Foundry portal](../../how-to/evaluate-generative-ai-app)
+- [View evaluation results in the Foundry portal](../../how-to/evaluate-results)
 - [Set up tracing in Microsoft Foundry](/observability/trace-agent-setup)
-- [Set up human evaluation for your agents](/evaluation/human-evaluation)
+- [Set up human evaluation for your agents](human-evaluation)

@@ -54,9 +54,9 @@ For tool configuration syntax and authentication options for each tool type, see
 | Toolbox version list, get, and delete | ✔️ | ✔️ | ✔️ | ✔️ | N/A | No. UI shows the latest version only. |
 | [MCP tool](/tools-and-knowledge/model-context-protocol) | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ |
 | [Web Search tool](/tools-and-knowledge/web-search) | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ |
-| [Azure AI Search tool](/agents/ai-search) | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ |
-| [Code Interpreter tool](/agents/code-interpreter) | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ |
-| [File Search tool](/agents/file-search) | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ |
+| [Azure AI Search tool](/tools-and-knowledge/ai-search) | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ |
+| [Code Interpreter tool](/tools-and-knowledge/code-interpreter) | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ |
+| [File Search tool](/tools-and-knowledge/file-search) | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ |
 | [OpenAPI tool](/tools-and-knowledge/openapi) | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ | No |
 | [Agent-to-Agent (A2A) tool](/tools-and-knowledge/agent-to-agent) | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ | No |
 | [Fabric IQ tool](/tools-and-knowledge/fabric-iq) | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ |
@@ -73,7 +73,7 @@ For tool configuration syntax and authentication options for each tool type, see
   - **Developer** (always required) — the identity that creates, updates, and manages toolbox versions.
   - **Agent identity** (required if using a hosted agent) — the agent's managed identity that calls tools at runtime.
   - **End user** (required only for OAuth flows) — any user whose identity is proxied through OAuth or UserEntraToken connections (for example, OAuth-based MCP or user Entra token (managed user identity passthrough) flows).
-- Your Foundry project needs to be at one of the supported [regions](/agents/limits-quotas-regions#supported-regions). Individual tool types within a toolbox are further limited by region and model – not all tool types are available in every region or with every model. See [Region and model compatibility](#region-and-model-compatibility).
+- Your Foundry project needs to be at one of the supported [regions](../../concepts/limits-quotas-regions#supported-regions). Individual tool types within a toolbox are further limited by region and model – not all tool types are available in every region or with every model. See [Region and model compatibility](#region-and-model-compatibility).
 - [Visual Studio Code (VS Code)](https://code.visualstudio.com/).
 - Install the [Microsoft Foundry Toolkit for Visual Studio Code extension](https://aka.ms/foundrytk) from the Visual Studio Code Marketplace.
 - **Python SDK**: `pip install azure-ai-projects azure-identity`
@@ -1832,7 +1832,7 @@ When Web Search returns results over MCP, the response is a `resource` content i
 
 </Note>
 
-### [Azure AI Search](/agents/ai-search)
+### [Azure AI Search](/tools-and-knowledge/ai-search)
 
 <ZoneContent group="azd__dotnet__javascript__python__rest-api" value="rest-api" options={[{"id": "rest-api", "title": "REST API"}, {"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest-api", "python", "dotnet", "javascript", "azd"]} defaultValue="rest-api">
 
@@ -1955,7 +1955,7 @@ azd ai toolbox create my-toolbox --from-file my-toolbox.yaml
 
 The search results include chunk metadata in `result.structuredContent.documents[]`. Each document includes `title`, `url`, `id`, and `score` fields that you can use to generate citation details in your application.
 
-### [Code Interpreter](/agents/code-interpreter)
+### [Code Interpreter](/tools-and-knowledge/code-interpreter)
 
 Use this pattern to let the agent write and execute Python code. The pattern doesn't require a project connection or extra configuration.
 
@@ -1981,7 +1981,7 @@ To upload a file for Code Interpreter to use through a toolbox, upload the file 
       -F "file=@your-file.csv"
     ```
 
-The returned file `id` is the value you supply as `<FILE_ID>` in the tool configuration. Files are mounted in the sandbox at `/mnt/data/{file-id}-{original-filename}`. See [Code Interpreter](/agents/code-interpreter) for additional upload examples and language-specific samples.
+The returned file `id` is the value you supply as `<FILE_ID>` in the tool configuration. Files are mounted in the sandbox at `/mnt/data/{file-id}-{original-filename}`. See [Code Interpreter](/tools-and-knowledge/code-interpreter) for additional upload examples and language-specific samples.
 
 <Info>
 
@@ -2091,7 +2091,7 @@ The response returns a list of files with their names and IDs.
 
 Use the file name returned from Step 1 to download the file via the [File API download endpoint](https://learn.microsoft.com/rest/api/microsoft-foundry/azureopenai/files).
 
-### [File Search](/agents/file-search)
+### [File Search](/tools-and-knowledge/file-search)
 
 Use this pattern to let the agent search over uploaded files stored in a vector store. Provide `vector_store_ids` referencing vector stores already created in your Foundry project.
 
@@ -2100,7 +2100,7 @@ To create a file and vector store for use with a toolbox, upload the file at the
 1. Upload your file: `POST {account_endpoint}/openai/v1/files` with `purpose=assistants` and header `x-aml-project-id: {project-guid}`.
 1. Create a vector store: `POST {account_endpoint}/openai/v1/vector_stores` with the returned file ID and the same `x-aml-project-id` header.
 
-The resulting vector store ID is the value you supply as `<VECTOR_STORE_ID>`. See [File Search](/agents/file-search) for full examples in each language.
+The resulting vector store ID is the value you supply as `<VECTOR_STORE_ID>`. See [File Search](/tools-and-knowledge/file-search) for full examples in each language.
 
 <Info>
 
@@ -3312,11 +3312,11 @@ When your Foundry project uses [network isolation (private link)](../../../how-t
 | Tool type | VNet support | Traffic flow |
 | --------- | ------------ | ------------ |
 | [MCP](/tools-and-knowledge/model-context-protocol) | ✅ Supported | Through your VNet subnet |
-| [Azure AI Search](/agents/ai-search) | ✅ Supported | Through private endpoint |
-| [Code Interpreter](/agents/code-interpreter) | ✅ Supported | Microsoft backbone network |
+| [Azure AI Search](/tools-and-knowledge/ai-search) | ✅ Supported | Through private endpoint |
+| [Code Interpreter](/tools-and-knowledge/code-interpreter) | ✅ Supported | Microsoft backbone network |
 | [Web Search](/tools-and-knowledge/web-search) | ✅ Supported | Public endpoint |
 | [OpenAPI](/tools-and-knowledge/openapi) | ✅ Supported | Depends on target API network configuration |
-| [File Search](/agents/file-search) | ❌ Not supported | Not yet available |
+| [File Search](/tools-and-knowledge/file-search) | ❌ Not supported | Not yet available |
 | [Agent-to-Agent (A2A)](/tools-and-knowledge/agent-to-agent) | ✅ Supported | Through private endpoint |
 | [Fabric IQ](/tools-and-knowledge/fabric-iq) | ❌ Not supported | Not yet available |
 | [Work IQ](/tools-and-knowledge/work-iq) | ❌ Not supported | Not yet available |
@@ -3330,16 +3330,16 @@ Toolbox availability depends on two factors beyond the project region:
 
 - **Region**: Some tool types aren't available in every region that supports the agent service. For example, a region that supports the toolbox endpoint might not support all built-in tool types.
 
-Before deploying a toolbox, verify that your target region supports the tool types you plan to use. For the full compatibility tables, see [Tool support by region and model](/agents/tool-best-practice#tool-support-by-region-and-model).
+Before deploying a toolbox, verify that your target region supports the tool types you plan to use. For the full compatibility tables, see [Tool support by region and model](/tools-and-knowledge/tool-best-practice#tool-support-by-region-and-model).
 
 ## Related content
 
 - [Connect agents to Model Context Protocol servers](/tools-and-knowledge/model-context-protocol)
 - [Add MCP server authentication](/tools-and-knowledge/mcp-authentication)
 - [Web search tool](/tools-and-knowledge/web-search)
-- [Azure AI Search tool](/agents/ai-search)
+- [Azure AI Search tool](/tools-and-knowledge/ai-search)
 - [Guardrails overview](../../../guardrails/guardrails-overview)
 - [Manage skills](/tools-and-knowledge/skills)
-- [Deploy a Hosted agent](/agents/deploy-hosted-agent)
+- [Deploy a Hosted agent](../deploy-hosted-agent)
 - [Add a connection to your project](../../../how-to/connections-add)
 - [Configure network isolation for Microsoft Foundry](../../../how-to/configure-private-link)

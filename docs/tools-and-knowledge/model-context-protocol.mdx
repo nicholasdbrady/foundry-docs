@@ -53,7 +53,7 @@ Foundry Toolboxes let you bundle multiple tools - such as Web Search, Code Inter
 
 Because the Toolbox endpoint is MCP-compatible, any runtime that can consume an MCP server can also consume a Toolbox. This compatibility includes Foundry Agent Service, Microsoft Agent Framework, LangGraph, GitHub Copilot SDK, and other MCP-enabled clients. You can add, remove, or reconfigure tools in the Toolbox without changing your agent code.
 
-For setup steps, see [Create and use a Foundry Toolbox](/agents/toolbox).
+For setup steps, see [Create and use a Foundry Toolbox](/tools-and-knowledge/toolbox).
 
 ## Authentication
 
@@ -75,7 +75,7 @@ When you add the Azure DevOps MCP Server (preview) through the **Add Tools** cat
 
 </Tip>
 
-When you use a Foundry Toolbox MCP endpoint, the Toolbox centrally manages authentication. The Toolbox handles credential injection, token refresh, and policy enforcement at runtime for all tools in the bundle. Agents authenticate to the Toolbox endpoint itself by using Microsoft Entra credentials, such as `DefaultAzureCredential`, and individual tool credentials don't need to be passed by each agent. For Toolbox auth configuration, see [Toolbox prerequisites](/agents/toolbox#prerequisites).
+When you use a Foundry Toolbox MCP endpoint, the Toolbox centrally manages authentication. The Toolbox handles credential injection, token refresh, and policy enforcement at runtime for all tools in the bundle. Agents authenticate to the Toolbox endpoint itself by using Microsoft Entra credentials, such as `DefaultAzureCredential`, and individual tool credentials don't need to be passed by each agent. For Toolbox auth configuration, see [Toolbox prerequisites](/tools-and-knowledge/toolbox#prerequisites).
 
 {/* The verbiage in the following section is required. Do not remove or modify. */}
 ## Considerations for using non-Microsoft services and servers
@@ -96,7 +96,7 @@ Foundry Toolboxes are different from third-party MCP servers. Toolboxes are orga
 
 ## Best practices
 
-For general guidance on tool usage, see [Best practices for using tools in Microsoft Foundry Agent Service](/agents/tool-best-practice).
+For general guidance on tool usage, see [Best practices for using tools in Microsoft Foundry Agent Service](/tools-and-knowledge/tool-best-practice).
 
 When you use MCP servers, follow these practices:
 
@@ -119,7 +119,7 @@ Use the following code sample to create an agent and call the function. The .NET
 
 <ZoneContent group="csharp__java__python__rest__typescript" value="python" options={[{"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "typescript", "title": "TypeScript"}, {"id": "java", "title": "Java"}, {"id": "rest", "title": "REST"}]} values={["python", "csharp", "typescript", "java", "rest"]} defaultValue="python">
 
-The following example shows how to use the GitHub MCP server as a tool for an agent. Select **Prompt Agents** to use the Azure AI Projects SDK to create a server-side prompt agent, or **Hosted Agents** to use the Agent Framework [`FoundryChatClient`](/agents/responses-api) to build an ephemeral, in-process agent.
+The following example shows how to use the GitHub MCP server as a tool for an agent. Select **Prompt Agents** to use the Azure AI Projects SDK to create a server-side prompt agent, or **Hosted Agents** to use the Agent Framework [`FoundryChatClient`](../../quickstarts/responses-api) to build an ephemeral, in-process agent.
 
 <Tabs>
   <Tab title="Prompt Agents">
@@ -225,7 +225,7 @@ The following example shows how to use the GitHub MCP server as a tool for an ag
   </Tab>
   <Tab title="Hosted Agents">
 
-    This sample uses [`FoundryChatClient`](/agents/responses-api) from the Microsoft Agent Framework and calls `get_mcp_tool()` to register a hosted MCP server with per-tool approval control. Install the package with `pip install agent-framework-foundry aiohttp`, set the `FOUNDRY_PROJECT_ENDPOINT` and `FOUNDRY_MODEL` environment variables, and sign in with `az login`.
+    This sample uses [`FoundryChatClient`](../../quickstarts/responses-api) from the Microsoft Agent Framework and calls `get_mcp_tool()` to register a hosted MCP server with per-tool approval control. Install the package with `pip install agent-framework-foundry aiohttp`, set the `FOUNDRY_PROJECT_ENDPOINT` and `FOUNDRY_MODEL` environment variables, and sign in with `az login`.
 
     ```python
     import asyncio
@@ -1109,13 +1109,13 @@ This catalog-based setup creates the MCP tool for use by agents without requirin
 
 <Tip>
 
-**Toolbox versioning**: Foundry Toolboxes support versioning, so you can iterate on a new version without affecting production agents. Use the **consumer endpoint** (`{project_endpoint}/toolboxes/{name}/mcp?api-version=v1`) for production agents - it always serves the promoted default version. Use the **version-specific endpoint** (`{project_endpoint}/toolboxes/{name}/versions/{version}/mcp?api-version=v1`) to test before promoting. Keep `server_label` unique per agent, even when switching Toolbox versions. For details, see [Promote a version to default](/agents/toolbox#promote-a-version-to-default).
+**Toolbox versioning**: Foundry Toolboxes support versioning, so you can iterate on a new version without affecting production agents. Use the **consumer endpoint** (`{project_endpoint}/toolboxes/{name}/mcp?api-version=v1`) for production agents - it always serves the promoted default version. Use the **version-specific endpoint** (`{project_endpoint}/toolboxes/{name}/versions/{version}/mcp?api-version=v1`) to test before promoting. Keep `server_label` unique per agent, even when switching Toolbox versions. For details, see [Promote a version to default](/tools-and-knowledge/toolbox#promote-a-version-to-default).
 
 </Tip>
 
 ## Long-running operations (preview)
 
-Some MCP servers expose tools that take longer than the standard synchronous timeout to return a result. To support these operations, run the agent in [background mode](/agents/runtime-components#run-an-agent-in-background-mode). Background mode runs the response asynchronously, so the MCP tool call can continue without holding an open connection, and you poll for the response status until it completes. This approach lets MCP tool calls exceed the 100-second non-streaming timeout described in [Known limitations](#known-limitations).
+Some MCP servers expose tools that take longer than the standard synchronous timeout to return a result. To support these operations, run the agent in [background mode](../../concepts/runtime-components#run-an-agent-in-background-mode). Background mode runs the response asynchronously, so the MCP tool call can continue without holding an open connection, and you poll for the response status until it completes. This approach lets MCP tool calls exceed the 100-second non-streaming timeout described in [Known limitations](#known-limitations).
 
 <Note>
 
