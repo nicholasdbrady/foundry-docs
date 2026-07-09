@@ -21,7 +21,7 @@ You're responsible for carefully reviewing and testing applications you build in
 
 <Note>
 
-For information on optimizing tool usage, see [best practices](/tools-and-knowledge/tool-best-practice).
+For information on optimizing tool usage, see [best practices](/agents/tool-best-practice).
 
 </Note>
 
@@ -81,7 +81,7 @@ You can find the workspace and item GUIDs in the Microsoft Fabric portal: open y
 
 If the data agent's workspace uses a [workspace-level private link](#virtual-network-support), replace `api.fabric.microsoft.com` with the workspace-specific host. See [Connect to a data agent over a workspace-level private link](#connect-to-a-data-agent-over-a-workspace-level-private-link).
 
-Among the Fabric IQ item types, only the **data agent** MCP endpoint supports long-running operations through [background mode](../../concepts/runtime-components#run-an-agent-in-background-mode). Ontology and Power BI semantic model endpoints run synchronously and are subject to the standard tool-call timeout. Because the data agent endpoint is an MCP server, you run it in background mode the same way as any other MCP tool - set `background` to `true` and poll the response until it completes. For code samples, see [Long-running operations](/tools-and-knowledge/model-context-protocol#long-running-operations-preview).
+Among the Fabric IQ item types, only the **data agent** MCP endpoint supports long-running operations through [background mode](/agents/runtime-components#run-an-agent-in-background-mode). Ontology and Power BI semantic model endpoints run synchronously and are subject to the standard tool-call timeout. Because the data agent endpoint is an MCP server, you run it in background mode the same way as any other MCP tool - set `background` to `true` and poll the response until it completes. For code samples, see [Long-running operations](/tools-and-knowledge/model-context-protocol#long-running-operations-preview).
 
 <Tip>
 
@@ -113,7 +113,7 @@ Adding a Fabric IQ (OneLake Catalog) connection from Foundry Toolkit isn't direc
   <img src="/images/toolbox-vscode-fabric-iq.png" alt="Screenshot of Foundry Toolkit in Visual Studio Code showing the Select a tool dialog with Fabric IQ OneLake Catalog in the Configured list." />
 </Frame>
 
-For the full toolbox creation workflow, see [Curate intent-based toolbox in Foundry](/tools-and-knowledge/toolbox#step-1-create-a-toolbox-version).
+For the full toolbox creation workflow, see [Curate intent-based toolbox in Foundry](/agents/toolbox#step-1-create-a-toolbox-version).
 
 To add the Fabric IQ tool directly to an agent by using code or the REST API, select the Python, .NET, JavaScript, or REST API tab in this section.
 
@@ -332,6 +332,30 @@ main().catch((err) => {
 
 </ZoneContent>
 
+## Run a Fabric data agent in background mode
+
+Fabric data agent queries can take longer than the standard synchronous tool-call timeout. To let these calls run to completion, enable [background mode](/agents/runtime-components#run-an-agent-in-background-mode) and use a model that supports it, such as `gpt-5.4` or `gpt-5.5`. You can enable background mode in code or in the [Microsoft Foundry portal](https://ai.azure.com/) playground.
+
+To enable background mode and run a data agent in the portal:
+
+1. Open your agent, and select the **Playground** tab.
+1. In the **Model** list, select a model that supports background mode, such as `gpt-5.4` or `gpt-5.5`.
+1. Select the parameters icon next to the model, and turn on **Background mode**.
+1. Under **Tools**, select **Add** > **Browse all tools** > **Fabric IQ (OneLake Catalog)**, and then select **Add tool**.
+1. In the **OneLake Catalog**, select a **Data agent** item, and then select **Add**.
+
+<Frame>
+<img src="/images/onelake-catalog-data-agent.png" alt="Screenshot of the OneLake Catalog in the Foundry portal with a Fabric data agent item selected." />
+</Frame>
+
+1. Send a message. The agent starts a background run and shows its progress while the data agent completes the long-running query. When the run finishes, the response appears in the chat.
+
+<Frame>
+<img src="/images/background-mode-running.png" alt="Screenshot of the Foundry portal chat showing a background run in progress, with a progress indicator, after the user sends a message to a Fabric data agent." />
+</Frame>
+
+For code samples, see [Long-running operations](/tools-and-knowledge/model-context-protocol#long-running-operations-preview).
+
 ## Authentication and security
 
 Fabric IQ uses Microsoft Entra ID delegated authentication (On-Behalf-Of, OBO). All requests run in the context of the signed-in user. Application-only (app-only) authentication isn't supported. Microsoft Fabric permissions and data governance policies are enforced automatically — Fabric IQ can never surface data that the signed-in user isn't already permitted to see.
@@ -520,4 +544,4 @@ A Fabric admin must publish each Fabric item — ontology, data agent, or Power 
 - [What is ontology (preview)?](/fabric/iq/ontology/overview)
 - [Fabric data agent concepts](/fabric/data-science/concept-data-agent)
 - [Overview of the Power BI MCP servers (preview)](/power-bi/developer/mcp/mcp-servers-overview)
-- [Tool best practices](/tools-and-knowledge/tool-best-practice)
+- [Tool best practices](/agents/tool-best-practice)

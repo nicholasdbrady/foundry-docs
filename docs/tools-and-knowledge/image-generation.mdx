@@ -36,7 +36,7 @@ The following table shows SDK and setup support.
 
 1. Deploy your orchestrator model (for example, `gpt-4o`) to your Foundry project.
 1. Deploy `gpt-image-1` to the same Foundry project.
-1. Confirm your region and model support for image generation. See [Best practices for using tools in Microsoft Foundry Agent Service](/tools-and-knowledge/tool-best-practice).
+1. Confirm your region and model support for image generation. See [Best practices for using tools in Microsoft Foundry Agent Service](/agents/tool-best-practice).
 
 ## Code examples
 
@@ -48,7 +48,7 @@ Before you start, install the latest SDK package. The .NET SDK is currently in p
 
 ## Create an agent with the image generation tool
 
-This sample creates an agent with the image generation tool, generates an image, and saves it to a file. Select **Prompt Agents** to use the Azure AI Projects SDK to create a server-side prompt agent, or **Hosted Agents** to use the Agent Framework [`FoundryChatClient`](../../quickstarts/responses-api) to build an ephemeral, in-process agent.
+This sample creates an agent with the image generation tool, generates an image, and saves it to a file. Select **Prompt Agents** to use the Azure AI Projects SDK to create a server-side prompt agent, or **Hosted Agents** to use the Agent Framework [`FoundryChatClient`](/agents/responses-api) to build an ephemeral, in-process agent.
 
 <Tabs>
   <Tab title="Prompt Agents">
@@ -108,7 +108,7 @@ This sample creates an agent with the image generation tool, generates an image,
   </Tab>
   <Tab title="Hosted Agents">
 
-    This sample uses [`FoundryChatClient`](../../quickstarts/responses-api) from the Microsoft Agent Framework and calls `get_image_generation_tool()` to attach the image generation tool. Install the package with `pip install agent-framework-foundry aiohttp`, set the `FOUNDRY_PROJECT_ENDPOINT` and `FOUNDRY_MODEL` environment variables, and sign in with `az login`.
+    This sample uses [`FoundryChatClient`](/agents/responses-api) from the Microsoft Agent Framework and calls `get_image_generation_tool()` to attach the image generation tool. Install the package with `pip install agent-framework-foundry aiohttp`, set the `FOUNDRY_PROJECT_ENDPOINT` and `FOUNDRY_MODEL` environment variables, and sign in with `az login`.
 
     ```python
     import asyncio
@@ -605,14 +605,14 @@ If you see only text output and no `image_generation_call` item, the request mig
 | Image generation fails | Missing or incorrect header | Verify the header `x-ms-oai-image-generation-deployment` is present on the Responses request and matches your image generation deployment name. |
 | Agent uses wrong deployment | Model name misconfiguration | Confirm the orchestrator model name in your agent definition differs from the image generation deployment name. |
 | Prompt doesn't produce an image | Content filtering blocked the request | Check content filtering logs. See [Guardrails and controls overview](../../../guardrails/guardrails-overview) for guidelines on acceptable prompts. |
-| Tool not available | Regional or model limitation | Confirm the image generation tool is available in your region and with your orchestrator model. See [Best practices for using tools](/tools-and-knowledge/tool-best-practice). |
+| Tool not available | Regional or model limitation | Confirm the image generation tool is available in your region and with your orchestrator model. See [Best practices for using tools](/agents/tool-best-practice). |
 | Generated image has low quality | Prompt lacks detail | Provide more specific and detailed prompts describing the desired image style, composition, and elements. |
 | Image generation times out | Large or complex image request | Simplify the prompt or increase timeout settings. Consider breaking complex requests into multiple simpler ones. |
 | Unexpected image content | Ambiguous prompt | Refine your prompt to be more specific. Include negative prompts to exclude unwanted elements. |
 
 ## Related content
 
-- [Best practices for using tools in Microsoft Foundry Agent Service](/tools-and-knowledge/tool-best-practice)
+- [Best practices for using tools in Microsoft Foundry Agent Service](/agents/tool-best-practice)
 - [Image generation in Azure OpenAI](/models/dall-e)
 - [Responses API in Azure OpenAI](/models/responses)
 - [Guardrails and controls overview](../../../guardrails/guardrails-overview)

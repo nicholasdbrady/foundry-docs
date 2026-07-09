@@ -12,7 +12,7 @@ Items marked (preview) in this article are currently in public preview. This pre
 
 A custom code interpreter gives you full control over the runtime environment for agent-generated Python code. You can configure custom Python packages, compute resources, and [Azure Container Apps environment](https://learn.microsoft.com/azure/container-apps/environment) settings. The code interpreter container exposes a Model Context Protocol (MCP) server.
 
-Use a custom code interpreter when the built-in [Code Interpreter tool for agents](/tools-and-knowledge/code-interpreter) doesn't meet your requirements—for example, when you need specific Python packages, custom container images, or dedicated compute resources.
+Use a custom code interpreter when the built-in [Code Interpreter tool for agents](/agents/code-interpreter) doesn't meet your requirements—for example, when you need specific Python packages, custom container images, or dedicated compute resources.
 
 For more information about MCP and how agents connect to MCP tools, see [Connect to Model Context Protocol servers (preview)](/tools-and-knowledge/model-context-protocol).
 
@@ -26,7 +26,7 @@ The following table shows SDK and setup support.
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ | - | ✔️ |
 
-For the latest SDK and API support for agents tools, see [Best practices for using tools in Microsoft Foundry Agent Service](/tools-and-knowledge/tool-best-practice).
+For the latest SDK and API support for agents tools, see [Best practices for using tools in Microsoft Foundry Agent Service](/agents/tool-best-practice).
 
 ## SDK support
 
@@ -469,7 +469,7 @@ After you've provisioned the infrastructure and run the sample:
 
 1. Confirm the Azure deployment completed successfully.
 1. Confirm the sample connects using the values in your `.env` file.
-1. In Microsoft Foundry, verify your agent calls the tool using tracing. For more information, see [Best practices for using tools in Microsoft Foundry Agent Service](/tools-and-knowledge/tool-best-practice).
+1. In Microsoft Foundry, verify your agent calls the tool using tracing. For more information, see [Best practices for using tools in Microsoft Foundry Agent Service](/agents/tool-best-practice).
 
 ## Troubleshooting
 
@@ -478,7 +478,7 @@ After you've provisioned the infrastructure and run the sample:
 | Feature registration is still pending | The `az feature register` command returns `Registering` state. | Wait for registration to complete (can take 15-30 minutes). Check status with `az feature show --namespace Microsoft.App --name SessionPoolsSupportMCP`. Then run `az provider register -n Microsoft.App` again. |
 | Deployment fails with permission error | Missing required role assignments. | Confirm you have **Foundry Owner** and **Container Apps ManagedEnvironment Contributor** roles on the subscription or resource group. |
 | Deployment fails with region error | The selected region doesn't support Azure Container Apps Dynamic Sessions. | Try a different region. See [Azure Container Apps regions](https://learn.microsoft.com/azure/container-apps/overview#regions) for supported regions. |
-| Agent doesn't call the tool | The MCP connection isn't configured correctly, or the agent instructions don't prompt tool use. | Use tracing in Microsoft Foundry to confirm tool invocation. Verify the `MCP_SERVER_URL` matches your deployed Container Apps endpoint. See [Best practices](/tools-and-knowledge/tool-best-practice). |
+| Agent doesn't call the tool | The MCP connection isn't configured correctly, or the agent instructions don't prompt tool use. | Use tracing in Microsoft Foundry to confirm tool invocation. Verify the `MCP_SERVER_URL` matches your deployed Container Apps endpoint. See [Best practices](/agents/tool-best-practice). |
 | MCP server connection timeout | The Container Apps session pool isn't running or has no standby instances. | Check the session pool status in the Azure portal. Increase `standbyInstanceCount` in your Bicep template if needed. |
 | Code execution fails in container | Missing Python packages in the custom container. | Update your container image to include required packages. Rebuild and redeploy the container. |
 | Authentication error connecting to MCP server | The project connection credentials are invalid or expired. | Regenerate the connection credentials and update the `.env` file. Verify the `MCP_PROJECT_CONNECTION_ID` format. |
@@ -502,9 +502,9 @@ To stop billing for provisioned resources, delete the resources created by the s
 ## Related content
 
 - [Connect to Model Context Protocol servers (preview)](/tools-and-knowledge/model-context-protocol)
-- [Best practices for using tools in Microsoft Foundry Agent Service](/tools-and-knowledge/tool-best-practice)
+- [Best practices for using tools in Microsoft Foundry Agent Service](/agents/tool-best-practice)
 - [Azure Container Apps Dynamic Sessions](https://learn.microsoft.com/azure/container-apps/sessions)
 - [Session pools with custom containers](https://learn.microsoft.com/azure/container-apps/session-pool#custom-container-pool)
 - [Azure Container Apps environment](https://learn.microsoft.com/azure/container-apps/environment)
 - [Install the Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli)
-- [Code Interpreter tool for agents](/tools-and-knowledge/code-interpreter)
+- [Code Interpreter tool for agents](/agents/code-interpreter)

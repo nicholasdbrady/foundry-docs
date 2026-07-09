@@ -23,7 +23,7 @@ Use tool search when:
 ## Prerequisites
 
 - An active [Microsoft Foundry project](../../../how-to/create-projects).
-- An existing or new toolbox with at least one tool. See [Curate intent-based toolbox in Foundry](/tools-and-knowledge/toolbox).
+- An existing or new toolbox with at least one tool. See [Curate intent-based toolbox in Foundry](/agents/toolbox).
 - **RBAC**: Grant the **Foundry User** role on the Foundry project to each relevant identity (developer, agent managed identity, and end users in OAuth flows).
 - **Foundry Toolkit**: Install [Visual Studio Code](https://code.visualstudio.com/) and [Foundry Toolkit for Visual Studio Code](https://code.visualstudio.com/docs/intelligentapps/overview#_install-and-setup).
 
@@ -72,7 +72,7 @@ Use Foundry Toolkit for Visual Studio Code to enable tool search when you create
   <img src="/images/toolbox-vscode-tool-search.png" alt="Screenshot of Foundry Toolkit in Visual Studio Code showing the Build a Custom Toolbox view with the Tool search checkbox selected." />
 </Frame>
 
-Publishing a new toolbox creates its first version. That version becomes the default version automatically. For the full toolbox creation workflow, see [Curate intent-based toolbox in Foundry](/tools-and-knowledge/toolbox#step-1-create-a-toolbox-version).
+Publishing a new toolbox creates its first version. That version becomes the default version automatically. For the full toolbox creation workflow, see [Curate intent-based toolbox in Foundry](/agents/toolbox#step-1-create-a-toolbox-version).
 
 </ZoneContent>
 <ZoneContent group="dotnet__javascript__python__rest-api__vscode" value="python" options={[{"id": "vscode", "title": "VS Code"}, {"id": "python", "title": "Python"}, {"id": "rest-api", "title": "REST API"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["vscode", "python", "rest-api", "dotnet", "javascript"]} defaultValue="vscode">
@@ -240,7 +240,6 @@ url = "https://<account>.services.ai.azure.com/api/projects/<proj>/toolboxes/<na
 token = DefaultAzureCredential().get_token("https://ai.azure.com/.default").token
 headers = {
     "Authorization": f"Bearer {token}",
-    "Foundry-Features": "Toolboxes=V1Preview",
 }
 
 async def verify_toolbox():
@@ -272,7 +271,6 @@ Use the version-specific endpoint (`/versions/{version}/mcp`) to validate before
 POST {project_endpoint}/toolboxes/{toolbox_name}/versions/{version}/mcp?api-version=v1
 Authorization: Bearer {token}
 Content-Type: application/json
-Foundry-Features: Toolboxes=V1Preview
 
 {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}
 ```
@@ -283,7 +281,6 @@ Foundry-Features: Toolboxes=V1Preview
 POST {project_endpoint}/toolboxes/{toolbox_name}/versions/{version}/mcp?api-version=v1
 Authorization: Bearer {token}
 Content-Type: application/json
-Foundry-Features: Toolboxes=V1Preview
 
 {"jsonrpc":"2.0","method":"notifications/initialized"}
 ```
@@ -294,7 +291,6 @@ Foundry-Features: Toolboxes=V1Preview
 POST {project_endpoint}/toolboxes/{toolbox_name}/versions/{version}/mcp?api-version=v1
 Authorization: Bearer {token}
 Content-Type: application/json
-Foundry-Features: Toolboxes=V1Preview
 
 {"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}
 ```
@@ -304,12 +300,12 @@ In `result.tools`, `tool_search` should be present and all other toolbox tools s
 </ZoneContent>
 <ZoneContent group="dotnet__javascript__python__rest-api__vscode" value="dotnet" options={[{"id": "vscode", "title": "VS Code"}, {"id": "python", "title": "Python"}, {"id": "rest-api", "title": "REST API"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["vscode", "python", "rest-api", "dotnet", "javascript"]} defaultValue="vscode">
 
-Use any MCP-compatible .NET client. Acquire a token with scope `https://ai.azure.com/.default`, include the `Foundry-Features: Toolboxes=V1Preview` header, and call `tools/list` against the version-specific MCP endpoint. See the **REST API** tab for the request shape.
+Use any MCP-compatible .NET client. Acquire a token with scope `https://ai.azure.com/.default` and call `tools/list` against the version-specific MCP endpoint. See the **REST API** tab for the request shape.
 
 </ZoneContent>
 <ZoneContent group="dotnet__javascript__python__rest-api__vscode" value="javascript" options={[{"id": "vscode", "title": "VS Code"}, {"id": "python", "title": "Python"}, {"id": "rest-api", "title": "REST API"}, {"id": "dotnet", "title": ".NET"}, {"id": "javascript", "title": "JavaScript"}]} values={["vscode", "python", "rest-api", "dotnet", "javascript"]} defaultValue="vscode">
 
-Use any MCP-compatible JavaScript client (for example, the `@modelcontextprotocol/sdk` package). Acquire a token with scope `https://ai.azure.com/.default`, include the `Foundry-Features: Toolboxes=V1Preview` header, and call `tools/list` against the version-specific MCP endpoint. See the **REST API** tab for the request shape.
+Use any MCP-compatible JavaScript client (for example, the `@modelcontextprotocol/sdk` package). Acquire a token with scope `https://ai.azure.com/.default` and call `tools/list` against the version-specific MCP endpoint. See the **REST API** tab for the request shape.
 
 </ZoneContent>
 
@@ -502,7 +498,7 @@ Set `tool_configs` on an individual MCP tool entry to control how specific tools
 - **Returned tools persist for the turn.** Once a tool is returned by `tool_search`, the model can call it multiple times without re-searching.
 - **Pinned tools always appear in `tools/list`.** Tools with `"pin": True` in `tool_configs` appear alongside `tool_search` and `call_tool` on every turn, regardless of search queries.
 - **Auto-pinning surfaces frequently used tools automatically.** Foundry tracks per-user tool call frequency and promotes the most-called tools to `tools/list` after a short warmup period. The hot set is per-user and updates as usage patterns shift.
-- **OAuth consent may be required.** If any tool in the toolbox connects to an OAuth-based MCP server, the first call returns a `CONSENT_REQUIRED` error (code `-32007`) with a consent URL in the response. Open that URL in a browser, complete the OAuth flow, then retry. Subsequent calls succeed without re-prompting. See [Troubleshoot toolbox errors](/tools-and-knowledge/toolbox#troubleshoot) for handling this error.
+- **OAuth consent may be required.** If any tool in the toolbox connects to an OAuth-based MCP server, the first call returns a `CONSENT_REQUIRED` error (code `-32007`) with a consent URL in the response. Open that URL in a browser, complete the OAuth flow, then retry. Subsequent calls succeed without re-prompting. See [Troubleshoot toolbox errors](/agents/toolbox#troubleshoot) for handling this error.
 
 ## Best practices
 
@@ -525,7 +521,7 @@ Set `tool_configs` on an individual MCP tool entry to control how specific tools
 
 ## Related content
 
-- [Curate intent-based toolbox in Foundry (preview)](/tools-and-knowledge/toolbox)
+- [Curate intent-based toolbox in Foundry (preview)](/agents/toolbox)
 - [Model Context Protocol (MCP)](/tools-and-knowledge/model-context-protocol)
 - [Tools overview](/get-started/tool-catalog)
-- [Best practices for tools](/tools-and-knowledge/tool-best-practice)
+- [Best practices for tools](/agents/tool-best-practice)
