@@ -10,6 +10,18 @@ Key terms and concepts used throughout the Microsoft Foundry documentation.
 ### Agent
 An AI-powered entity that can perform tasks autonomously using tools, models, and instructions. In Microsoft Foundry, agents are created via the Azure AI Projects SDK and can use built-in tools like Code Interpreter, File Search, and Function Calling.
 
+### Agent Doctor
+A diagnostic CLI command (`azd ai agent doctor`) that runs local and remote health checks against a Microsoft Foundry hosted agent project and reports the results. Checks include azd version and configuration validity, Foundry project endpoint reachability, required role assignments, model deployment existence, and deployed agent health. Returns structured pass/fail/skip results and suggests the next command to run when all checks pass. Does not modify any state.
+
+### Agent Identity
+A specialized identity type in Microsoft Entra ID assigned to a Foundry agent to authenticate to Azure resources (tools, storage, APIs) without embedding credentials in agent code. Agent identities support RBAC-scoped access and can be managed through agent identity blueprints, which define the permission sets that should be assigned when the agent is deployed.
+
+### Agent Inspector
+A browser-based developer UI for inspecting a Microsoft Foundry hosted agent running locally. The inspector connects to the local agent's HTTP/SSE endpoint, streams request and response payloads turn by turn, and lets developers replay messages while iterating on prompts, tools, and code. Launched automatically by `azd ai agent run` or manually via `azd ai inspector launch`.
+
+### Agent Optimizer
+A cloud-based service in Foundry Agent Service that automatically improves hosted agents by running a closed-loop evaluation and improvement cycle: it evaluates baseline performance against a task dataset, generates alternative configurations (called *candidates*) with rewritten instructions, refined skills, improved tool descriptions, or alternative model selections, then ranks candidates by composite score (0.0–1.0). The winning candidate can be promoted with a single `azd ai agent optimize apply` command. Requires the azd Foundry extensions and supports only agents using the Responses protocol.
+
 ### Agentic Retrieval
 A multi-query retrieval pipeline that uses a language model to decompose complex questions into focused subqueries, executes them in parallel, applies semantic reranking, and returns structured grounding data with citations. Used in Foundry IQ and Azure AI Search to improve retrieval quality over classic single-query RAG patterns.
 
@@ -61,6 +73,9 @@ Content retrieved from an external data source and provided to a language model 
 
 ## H
 
+### Hosted Agent
+A Microsoft Foundry agent type where developers bring their own code or framework (such as Microsoft Agent Framework, LangGraph, or Semantic Kernel), package it as a container, and Foundry runs it with a managed endpoint, automatic scaling, managed identity, and built-in observability. Contrasts with prompt agents, which are declarative and require no application code. Hosted agents are defined in an `azure.yaml` file and managed with the Azure Developer CLI (`azd`).
+
 ### Hybrid Search
 A retrieval strategy that combines keyword (BM25) search and vector (semantic) search to improve recall. Results from both methods are merged and optionally reranked using a semantic ranker for higher relevance. Supported in Azure AI Search and used in Foundry Agent Service file search.
 
@@ -81,6 +96,14 @@ Microsoft's cloud identity and access management service, formerly Azure Active 
 
 ### OpenTelemetry
 An open-source observability framework for collecting traces, metrics, and logs. Foundry Agent Service integrates with OpenTelemetry to emit agent traces to Application Insights or other compatible backends, enabling debugging, latency analysis, and production monitoring.
+
+## P
+
+### Prompt Agent
+A Microsoft Foundry agent type that is defined declaratively—by specifying instructions, a model, and tools—without writing application code or deploying containers. Prompt agents are created and managed through the Foundry portal or SDK, and Foundry hosts and runs them automatically. Suitable for straightforward agent scenarios; developers can migrate to hosted agents when they need more control over the runtime.
+
+### Protocol Adapter
+A lightweight SDK wrapper package that enables a hosted agent's code to implement one of the Microsoft Foundry hosted agent communication protocols (`responses` for conversational agents or `invocations` for custom-payload workloads) without manually implementing the hosted agent runtime contract. Installed via `pip install azure-ai-agentserver-responses` / `azure-ai-agentserver-invocations` (Python) or the equivalent NuGet packages, and declared in `azure.yaml` under the `protocols` field.
 
 ## R
 
