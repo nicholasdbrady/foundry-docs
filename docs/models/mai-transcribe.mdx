@@ -1,0 +1,178 @@
+---
+title: "MAI-Transcribe in LLM Speech API - Speech Service"
+description: "Learn how to use the MAI-Transcribe model in Azure Speech LLM Speech API."
+sidebarTitle: "MAI-Transcribe in LLM Speech API - Speech Service"
+---
+import { ZoneContent, ZonePivot } from "/snippets/zone-pivot.jsx"
+
+
+<Note>
+
+This feature is currently in public preview. This preview is provided without a service-level agreement, and is not recommended for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
+
+</Note>
+
+MAI‑Transcribe models are speech recognition models developed by the Microsoft AI (MAI) Superintelligence team. These models are optimized for both high accuracy and high efficiency, and are available through the LLM Speech API.
+
+The following models are supported:
+- `mai-transcribe-1.5`
+- `mai-transcribe-1`
+
+## Prerequisites
+
+- An Azure subscription. You can [create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
+- [A Microsoft Foundry resource for Speech](https://portal.azure.com/#create/Microsoft.CognitiveServicesAIFoundry) in the Azure portal.
+- The Speech resource key and region. After your Speech resource is deployed, select **Go to resource** to view and manage keys. For the current list of supported regions, see [Speech service regions](regions).
+- An audio file (less than 300 MB in size) in one of these formats: WAV, MP3, or FLAC.
+## Language support
+
+By default, the model operates in multi-lingual mode. The following languages are currently supported:
+
+| Language code | Language | MAI-Transcribe-1.5 support | MAI-transcribe-1 support |
+| ----- | ----- |----- | ----- |
+| `ar` | Arabic | ✅ | ✅ |
+| `as` | Assamese | ✅ |  |
+| `bg` | Bulgarian | ✅ |  |
+| `bn` | Bengali | ✅ |  |
+| `ca` | Catalan | ✅ |  |
+| `cs` | Czech | ✅ | ✅ |
+| `da` | Danish | ✅ | ✅ |
+| `de` | German | ✅ | ✅ |
+| `el` | Greek | ✅ |  |
+| `en` | English | ✅ | ✅ |
+| `es` | Spanish | ✅ | ✅ |
+| `et` | Estonian | ✅ |  |
+| `fi` | Finnish | ✅ | ✅ |
+| `fr` | French | ✅ | ✅ |
+| `gu` | Gujarati | ✅ |  |
+| `hi` | Hindi | ✅ | ✅ |
+| `hu` | Hungarian | ✅ | ✅ |
+| `id` | Indonesian | ✅ | ✅ |
+| `it` | Italian | ✅ | ✅ |
+| `ja` | Japanese | ✅ | ✅ |
+| `kn` | Kannada | ✅ |  |
+| `ko` | Korean | ✅ | ✅ |
+| `lt` | Lithuanian | ✅ |  |
+| `ml` | Malayalam | ✅ |  |
+| `mr` | Marathi | ✅ |  |
+| `nb` | Norwegian Bokmål | ✅ | ✅ |
+| `nl` | Dutch | ✅ | ✅ |
+| `or` | Odia | ✅ |  |
+| `pa` | Punjabi (Gurmukhi script) | ✅ |  |
+| `pl` | Polish | ✅ | ✅ |
+| `pt` | Portuguese | ✅ | ✅ |
+| `ro` | Romanian | ✅ | ✅ |
+| `ru` | Russian | ✅ | ✅ |
+| `sk` | Slovak | ✅ |  |
+| `sl` | Slovenian | ✅ |  |
+| `sv` | Swedish | ✅ | ✅ |
+| `ta` | Tamil | ✅ |  |
+| `te` | Telugu | ✅ |  |
+| `th` | Thai | ✅ | ✅ |
+| `tr` | Turkish | ✅ | ✅ |
+| `uk` | Ukrainian | ✅ |  |
+| `vi` | Vietnamese | ✅ | ✅ |
+| `zh` | Chinese (simplified) | ✅ | ✅ |
+
+## Use a MAI-Transcribe model
+
+You can use MAI‑Transcribe models with the LLM Speech API to generate transcriptions from audio input.
+
+Note the following limitations when you use a MAI-Transcribe model:
+- Diarization isn't supported.
+- Prompt-tuning isn't supported.
+- Phrase list and transcribe style are supported only in `mai-transcribe-1.5`.
+
+<ZonePivot group="ai-foundry__programming-language-csharp__programming-language-java__programming-language-javascript__programming-language-python__programming-language-rest" options={[{"id": "ai-foundry", "title": "Foundry portal"}, {"id": "programming-language-rest", "title": "REST"}, {"id": "programming-language-python", "title": "Python"}, {"id": "programming-language-csharp", "title": "C#"}, {"id": "programming-language-javascript", "title": "JavaScript"}, {"id": "programming-language-java", "title": "Java"}]} defaultValue="ai-foundry" />
+
+<ZoneContent group="ai-foundry__programming-language-csharp__programming-language-java__programming-language-javascript__programming-language-python__programming-language-rest" value="ai-foundry" options={[{"id": "ai-foundry", "title": "Foundry portal"}, {"id": "programming-language-rest", "title": "REST"}, {"id": "programming-language-python", "title": "Python"}, {"id": "programming-language-csharp", "title": "C#"}, {"id": "programming-language-javascript", "title": "JavaScript"}, {"id": "programming-language-java", "title": "Java"}]} values={["ai-foundry", "programming-language-rest", "programming-language-python", "programming-language-csharp", "programming-language-javascript", "programming-language-java"]} defaultValue="ai-foundry">
+
+To start using transcription with enhanced mode, first follow the [LLM Speech quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/llm-speech). Then, specify the `Model`.
+
+</ZoneContent>
+<ZoneContent group="ai-foundry__programming-language-csharp__programming-language-java__programming-language-javascript__programming-language-python__programming-language-rest" value="programming-language-rest" options={[{"id": "ai-foundry", "title": "Foundry portal"}, {"id": "programming-language-rest", "title": "REST"}, {"id": "programming-language-python", "title": "Python"}, {"id": "programming-language-csharp", "title": "C#"}, {"id": "programming-language-javascript", "title": "JavaScript"}, {"id": "programming-language-java", "title": "Java"}]} values={["ai-foundry", "programming-language-rest", "programming-language-python", "programming-language-csharp", "programming-language-javascript", "programming-language-java"]} defaultValue="ai-foundry">
+
+To start using transcription with enhanced mode, first follow the [LLM Speech quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/llm-speech).
+
+To use the MAI-Transcribe model, set the `model` property accordingly in the request.
+
+```azurecli-interactive
+curl --location 'https://YourResourceName.cognitiveservices.azure.com/speechtotext/transcriptions:transcribe?api-version=2025-10-15' \
+--header 'Content-Type: multipart/form-data' \
+--header 'Ocp-Apim-Subscription-Key: <YourSpeechResourceKey>' \
+--form 'audio=@"YourAudioFile.wav"' \
+--form 'definition={
+  "enhancedMode": {
+    "enabled": true,
+    "model":"mai-transcribe-1.5"
+  }
+}'
+```
+
+Optionally, specify a language code in `locales` to force recognition in a single language. For example:
+
+```
+--form 'definition={
+  "locales": ["en"],
+  "enhancedMode": {
+    "enabled": true,
+    "model":"mai-transcribe-1.5"
+  }
+}'
+```
+
+Optionally, for `mai-transcribe-1.5`, you can specify the style of the transcript output by using `transcribeStyle`. By default, the model returns a readability‑optimized transcript. You can set the value to `verbatim` to preserve the original spoken content, including filler words and disfluencies.
+
+```
+  "enhancedMode": {
+    "enabled": true,
+    "model":"mai-transcribe-1.5",
+    "transcribeStyle":"verbatim"
+  }
+```
+
+Optionally, for `mai-transcribe-1.5`, you can add a list of phrases to increase accuracy in specialized domains by using `phraseList`. This implements entity biasing.
+
+```
+ --form 'definition={
+   "phraseList": {
+     "phrases": ["Contoso", "Jessie", "Rehaan"]
+   },
+   "enhancedMode": {
+     "enabled": true,
+     "model": "mai-transcribe-1.5"
+   }
+ }'
+```
+
+</ZoneContent>
+<ZoneContent group="ai-foundry__programming-language-csharp__programming-language-java__programming-language-javascript__programming-language-python__programming-language-rest" value="programming-language-python" options={[{"id": "ai-foundry", "title": "Foundry portal"}, {"id": "programming-language-rest", "title": "REST"}, {"id": "programming-language-python", "title": "Python"}, {"id": "programming-language-csharp", "title": "C#"}, {"id": "programming-language-javascript", "title": "JavaScript"}, {"id": "programming-language-java", "title": "Java"}]} values={["ai-foundry", "programming-language-rest", "programming-language-python", "programming-language-csharp", "programming-language-javascript", "programming-language-java"]} defaultValue="ai-foundry">
+
+To start using transcription with enhanced mode, first follow the [LLM Speech quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/llm-speech). Then, specify the model in the `enhancedMode` property.
+
+</ZoneContent>
+<ZoneContent group="ai-foundry__programming-language-csharp__programming-language-java__programming-language-javascript__programming-language-python__programming-language-rest" value="programming-language-csharp" options={[{"id": "ai-foundry", "title": "Foundry portal"}, {"id": "programming-language-rest", "title": "REST"}, {"id": "programming-language-python", "title": "Python"}, {"id": "programming-language-csharp", "title": "C#"}, {"id": "programming-language-javascript", "title": "JavaScript"}, {"id": "programming-language-java", "title": "Java"}]} values={["ai-foundry", "programming-language-rest", "programming-language-python", "programming-language-csharp", "programming-language-javascript", "programming-language-java"]} defaultValue="ai-foundry">
+
+To start using transcription with enhanced mode, first follow the [LLM Speech quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/llm-speech). Then, specify the model in the `EnhancedMode` property.
+
+</ZoneContent>
+<ZoneContent group="ai-foundry__programming-language-csharp__programming-language-java__programming-language-javascript__programming-language-python__programming-language-rest" value="programming-language-javascript" options={[{"id": "ai-foundry", "title": "Foundry portal"}, {"id": "programming-language-rest", "title": "REST"}, {"id": "programming-language-python", "title": "Python"}, {"id": "programming-language-csharp", "title": "C#"}, {"id": "programming-language-javascript", "title": "JavaScript"}, {"id": "programming-language-java", "title": "Java"}]} values={["ai-foundry", "programming-language-rest", "programming-language-python", "programming-language-csharp", "programming-language-javascript", "programming-language-java"]} defaultValue="ai-foundry">
+
+To start using transcription with enhanced mode, first follow the [LLM Speech quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/llm-speech). Then, specify the model in the `enhancedMode` property.
+
+</ZoneContent>
+<ZoneContent group="ai-foundry__programming-language-csharp__programming-language-java__programming-language-javascript__programming-language-python__programming-language-rest" value="programming-language-java" options={[{"id": "ai-foundry", "title": "Foundry portal"}, {"id": "programming-language-rest", "title": "REST"}, {"id": "programming-language-python", "title": "Python"}, {"id": "programming-language-csharp", "title": "C#"}, {"id": "programming-language-javascript", "title": "JavaScript"}, {"id": "programming-language-java", "title": "Java"}]} values={["ai-foundry", "programming-language-rest", "programming-language-python", "programming-language-csharp", "programming-language-javascript", "programming-language-java"]} defaultValue="ai-foundry">
+
+To start using transcription with enhanced mode, first follow the [LLM Speech quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/llm-speech). Then, specify the model in the `EnhancedModeOptions` object.
+
+</ZoneContent>
+
+### Use MAI-Transcribe with Voice Live
+
+You can also use the MAI-Transcribe model for input audio transcription in the [Voice Live API](./voice-live). Set the `model` field in the `input_audio_transcription` session configuration. For details, see [How to customize Voice Live input and output](./voice-live-how-to-customize).
+
+## Related content
+
+- For more information about using LLM Speech API, see [LLM Speech API](llm-speech)
+- [MAI-Voice in Azure Speech](/models/mai-voices)
+- [How to customize Voice Live input and output](./voice-live-how-to-customize)
