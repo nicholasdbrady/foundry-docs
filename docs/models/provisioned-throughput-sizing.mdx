@@ -119,10 +119,12 @@ The tables in this section list the throughput and deployment parameters for eac
 
 <Note>
 
-Some models don't support *long context*. Long context means requests are estimated to exceed these prompt token limits:
+Latency targets in the following table exclude *long context*, that is, requests exceeding the threshold:
 
-- **128k** for `gpt-5.4`, `gpt-4.1`, `gpt-4.1-mini`, and `gpt-4.1-nano`.
-- **272k** for `gpt-5.6-terra` and `gpt-5.6-sol`.
+- **128k prompt tokens** for `gpt-5.4`, `gpt-4.1`, `gpt-4.1-mini`, and `gpt-4.1-nano`
+- **272k prompt tokens** for `gpt-5.6-terra` and `gpt-5.6-sol`
+
+The system routes such requests to [spillover deployments](/models/spillover-traffic-management), if available. Otherwise, the requests return an error.
 
 </Note>
 
