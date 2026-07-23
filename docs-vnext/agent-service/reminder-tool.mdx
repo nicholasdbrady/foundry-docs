@@ -1,0 +1,209 @@
+---
+title: "Reminder tool for self-scheduling hosted agents"
+description: "Let hosted agents schedule themselves to run again at a future time using the built-in reminder_preview toolbox tool."
+---
+
+<Info>
+The reminder tool is currently in public preview. This preview is provided without a service-level agreement and isn't recommended for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
+</Info>
+
+The `reminder_preview` tool enables a hosted agent to schedule itself to run again at a future time. Use this pattern when the agent decides during a run that it needs to follow up later — for example, to check back on a long-running task or to prompt the user for a status update.
+
+When the agent calls the reminder tool, it specifies a delay in minutes. After that delay, Foundry re-invokes the same agent on the same conversation. The agent can then continue its work, check on external systems, or prompt the user.
+
+<Note>
+The reminder tool is available only for hosted agents. You can't use it with prompt agents. To use the reminder tool, create a toolbox that includes the `reminder_preview` tool, then attach the toolbox to a hosted agent.
+</Note>
+
+## Prerequisites
+
+- A Foundry project with a deployed model
+- A hosted agent — see [Create your first hosted agent](/agent-service/quickstart-hosted-agent)
+- Azure Developer CLI (`azd`) installed and authenticated — see [Install the Azure Developer CLI](https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd)
+
+## How the reminder tool works
+
+The reminder tool accepts the following arguments:
+
+| Argument | Type | Range | Description |
+|----------|------|-------|-------------|
+| `minutes` | integer | 1–43,200 | The number of minutes to wait before re-invoking the agent. |
+| `input` | string | — | Instructions for what the agent needs to do when re-invoked by the reminder. |
+
+When the agent calls the tool, it decides how long to delay based on its reasoning. Foundry then creates a [scheduled routine](/agent-service/use-routines) that fires after the specified delay and re-invokes the same hosted agent on the same conversation. This approach preserves context across invocations, unlike regular routines that start new conversations.
+
+## Add the reminder tool to a toolbox
+
+The reminder tool is connectionless — no external service or authentication configuration is required.
+
+<CodeGroup>
+```python Python
+from azure.identity import DefaultAzureCredential
+from azure.ai.projects import AIProjectClient
+from azure.ai.projects.models import ReminderPreviewToolboxTool
+
+endpoint = "https://YOUR_FOUNDRY_ACCOUNT.services.ai.azure.com/api/projects/YOUR_PROJECT"
+project = AIProjectClient(
+    endpoint=endpoint,
+    credential=DefaultAzureCredential(),
+)
+
+toolbox_version = project.toolboxes.create_version(
+    name="reminder-toolbox",
+    description="Built-in reminder tool for a self-scheduling agent",
+    tools=[
+        ReminderPreviewToolboxTool(
+            name="schedule_reminder",
+            description="Schedule a reminder that re-invokes this agent at a future time.",
+        ),
+    ],
+)
+print(f"Created toolbox: {toolbox_version.name}, version: {toolbox_version.version}")
+print(f"MCP endpoint: {toolbox_version.mcp_endpoint}")
+```
+
+```csharp C#
+using Azure.Identity;
+using Azure.AI.Projects;
+
+var projectEndpoint = "https://YOUR_FOUNDRY_ACCOUNT.services.ai.azure.com/api/projects/YOUR_PROJECT";
+AIProjectClient projectClient = new(new Uri(projectEndpoint), new DefaultAzureCredential());
+
+var reminderTool = new ReminderPreviewToolboxTool
+{
+    Name = "schedule_reminder",
+    Description = "Schedule a reminder that re-invokes this agent at a future time."
+};
+
+ToolboxVersionObject toolboxVersion = await projectClient.Toolboxes.CreateVersionAsync(
+    name: "reminder-toolbox",
+    tools: [reminderTool],
+    description: "Built-in reminder tool for a self-scheduling agent"
+);
+Console.WriteLine($"Created toolbox: {toolboxVersion.Name}, version: {toolboxVersion.Version}");
+Console.WriteLine($"MCP endpoint: {toolboxVersion.McpEndpoint}");
+```
+
+```javascript JavaScript
+import { DefaultAzureCredential } from "@azure/identity";
+import { AIProjectClient } from "@azure/ai-projects";
+
+const projectEndpoint = "https://YOUR_FOUNDRY_ACCOUNT.services.ai.azure.com/api/projects/YOUR_PROJECT";
+const project = new AIProjectClient(projectEndpoint, new DefaultAzureCredential());
+
+const toolboxVersion = await project.toolboxes.createVersion(
+  "reminder-toolbox",
+  [
+    {
+      type: "reminder_preview",
+      name: "schedule_reminder",
+      description: "Schedule a reminder that re-invokes this agent at a future time.",
+    },
+  ],
+  {
+    description: "Built-in reminder tool for a self-scheduling agent",
+  },
+);
+console.log(`Created toolbox: ${toolboxVersion.name}, version: ${toolboxVersion.version}`);
+console.log(`MCP endpoint: ${toolboxVersion.mcpEndpoint}`);
+```
+
+```http REST
+POST https://{project_endpoint}/toolboxes/reminder-toolbox/versions?api-version=v1
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "description": "Built-in reminder tool for a self-scheduling agent",
+  "tools": [
+    {
+      "type": "reminder_preview",
+      "name": "schedule_reminder",
+      "description": "Schedule a reminder that re-invokes this agent at a future time."
+    }
+  ]
+}
+```
+</CodeGroup>
+
+<Note>
+For the REST API, use token scope `https://ai.azure.com/.default` when getting the bearer token.
+The response includes the `mcp_endpoint`. Connect your hosted agent to this endpoint.
+</Note>
+
+You can also use the **Foundry portal**:
+
+1. In the [Foundry portal](https://ai.azure.com), navigate to your project.
+1. In the left pane, select **Build & customize** > **Toolboxes**.
+1. Select **+ New** to create a toolbox, or select an existing toolbox to edit.
+1. In the toolbox editor, select **+ Add tool**.
+1. Under **Built-in tools**, select **Reminder (preview)**.
+1. Configure the tool name and description, then select **Add**.
+1. Select **Save** to save the toolbox.
+
+The toolbox details page shows the **MCP endpoint**. Copy this endpoint to connect your hosted agent.
+
+## Configure the hosted agent
+
+After creating the toolbox, configure your hosted agent to use it. In the agent manifest, add the toolbox endpoint under `resources`:
+
+```yaml
+# agent.yaml
+name: reminder-agent
+model_deployment: gpt-4.1
+instructions: |
+  You are a helpful assistant. When the user asks you to follow up later,
+  use the schedule_reminder tool to re-invoke yourself after the specified time.
+resources:
+  - kind: toolbox
+    url: https://{project-endpoint}/agents/toolboxes/reminder-toolbox/mcp?version=1
+```
+
+## Example: Polling for task completion
+
+A common pattern is polling an external system for task completion:
+
+1. The agent receives a user request to start a long-running task.
+1. The agent calls an external API to start the task and receives a task ID.
+1. The agent uses the reminder tool to schedule a follow-up in 15 minutes.
+1. When the reminder fires, the agent checks the task status.
+1. If the task is still running, the agent schedules another reminder.
+1. When the task completes, the agent notifies the user.
+
+Include instructions in your agent manifest to enable this behavior:
+
+```yaml
+# agent.yaml
+name: task-monitor
+model_deployment: gpt-4.1
+instructions: |
+  You help users monitor long-running tasks.
+
+  When a user asks you to start a task:
+  1. Call the start_task tool with the user's parameters.
+  2. Note the task_id in your response.
+  3. Use the schedule_reminder tool to check back in 15 minutes.
+
+  When you're re-invoked by a reminder:
+  1. Call the check_status tool with the task_id.
+  2. If the task is still running, schedule another reminder for 10 minutes.
+  3. If the task is complete, summarize the results for the user.
+resources:
+  - kind: toolbox
+    url: https://{project-endpoint}/agents/toolboxes/my-toolbox/mcp?version=1
+```
+
+The model decides when and how to use the reminder tool based on these instructions. No code changes are required to handle the reminder invocation.
+
+## Limitations
+
+- **Hosted agents only.** The reminder tool is not available for prompt agents.
+- **Same conversation.** Reminders re-invoke the agent on the same conversation — they don't start new conversations.
+- **Minimum delay.** The minimum delay is 1 minute.
+- **Maximum delay.** The maximum delay is 43,200 minutes (30 days).
+
+## Related content
+
+- [Use toolboxes with agents](/agent-service/toolbox)
+- [Automate agents with routines](/agent-service/use-routines)
+- [Build your first hosted agent](/agent-service/quickstart-hosted-agent)
