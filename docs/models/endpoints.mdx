@@ -170,12 +170,13 @@ Each deployment has a URL that's formed by concatenating the **Azure OpenAI** ba
   <Tab title="JavaScript">
 
     ```javascript
-    var messages = [
-        { role: "system", content: "You are a helpful assistant" },
-        { role: "user", content: "Explain Riemann's conjecture in 1 paragraph" },
-    ];
-
-    const response = await client.chat.completions.create({ messages, model: "deepseek-v3-0324" });
+    const response = await client.chat.completions.create({
+        model: "deepseek-v3-0324",
+        messages: [
+            { role: "system", content: "You are a helpful assistant." },
+            { role: "user", content: "Explain Riemann's conjecture in one paragraph." }
+        ]
+    });
 
     console.log(response.choices[0].message.content)
     ```

@@ -51,6 +51,12 @@ Azure OpenAI is powered by a diverse set of models with different capabilities a
 | [`Video generation`](/models/models-sold-directly-by-azure#video-generation-models) | A model that can generate original video scenes from text instructions. |
 | [Audio](/models/models-sold-directly-by-azure#audio-models) | A series of models for speech to text, translation, and text to speech. GPT-4o audio models support either low latency *speech in, speech out* conversational interactions or audio generation. |
 
+### Understand model token limits
+
+The **Context Window** column lists the total number of tokens that a model can process in a request. When a row lists separate **Input** and **Output** values, these values are individual limits. They aren't additive allowances that you can always use together. Input tokens, generated output tokens, and reasoning tokens share the available context budget. More input leaves fewer tokens for generation.
+
+The **Max Output Tokens** column sets an upper limit, not a guaranteed output size. An API parameter such as `max_output_tokens` doesn't reserve tokens when the request has less context budget available.
+
 ## GPT-chat-latest
 
 For model availability across all regions, grouped by deployment category, see [Region availability for Foundry Models sold by Azure](/models/models-sold-directly-by-azure-region-availability).
@@ -96,6 +102,22 @@ For model availability across all regions, grouped by deployment category, see [
 |  Model ID  | Description | Context Window | Max Output Tokens | Training Data (up to)  |
 |  --- |  :--- |:--- |:---|:---: |
 | `gpt-5.5` (2026-04-24) |  - [Reasoning](../how-to/reasoning) <br /> - [Responses API](../how-to/responses). <br />- Chat Completions API. <br /> - Structured outputs.<br /> - Text and image processing. <br /> - Functions, tools, and parallel tool calling. <br /> - [Computer use](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/how-to/computer-use) <br /> - [Full summary of capabilities](../how-to/reasoning).  | 1,050,000 <br /><br />Input: 922,000<br />Output: 128,000  | 128,000 | December 2025 |
+
+### Responses API token budget
+
+For the current GPT-5.5 Responses API implementation, the effective combined prompt and generation budget is approximately 922,000 tokens. This API limit is lower than the model's 1,050,000-token context window. You can't combine a 922,000-token prompt with 128,000 generated tokens in one request. Calculate the approximate generation budget as follows:
+
+`available generation tokens = 922,000 - prompt tokens`
+
+For example, a request with 921,549 prompt tokens has the following token budget:
+
+- Prompt tokens: 921,549.
+- Effective context budget: 922,000.
+- Remaining generation budget: 451 tokens.
+
+The model can generate at most the remaining 451 tokens, even if you set `max_output_tokens` to 64,000 or 128,000. This generation budget includes visible output and reasoning tokens.
+
+Reaching the available token budget doesn't necessarily produce an HTTP error. A request can return HTTP status code 200 with an incomplete response. Check `status` for `incomplete` and `incomplete_details.reason` for `max_output_tokens` to determine whether generation stopped at the token limit.
 
 <Note>
 
@@ -666,6 +688,7 @@ For model availability across all regions, grouped by deployment category, see [
 
 | Model  | Type | Capabilities |
 | ------ | ---- | ------------ |
+| `MAI-Image-2.5-Pro` <br /> **Preview** | Image-to-Image and Text-to-Image. See [API endpoints](../how-to/use-foundry-models-mai#api-endpoints) for details. | - **Input:** text, image (JPEG or PNG format for image editing workflows) <br /> - **Output:** One image <br /> - **Context length**: 32,000 tokens <br /> - **Tool calling:** No <br /> - **Response formats:** Image (PNG) <br /> - **Languages:** `en` <br /> - **Key features:** High-quality text-to-image generation; Image editing that supports precise, surgical edits without disrupting the rest of the image; Capability to generate more photo-realistic imagery with consistent visual structure than previous models. Well suited for tasks such as concept visualization, creative content generation, image editing workflows, and production design.  <br /> - **Parameters:** `width`, `height`, `prompt` <br /> Minimum 768×768 pixels; maximum total pixel count 1,048,576 (equivalent to 1024×1024). Either dimension can exceed 1024 as long as the total pixel count stays within the limit (for example, 768×1365 is a valid size). |
 | `MAI-Image-2.5-Flash` <br /> **Preview** | Image-to-Image and Text-to-Image. See [API endpoints](../how-to/use-foundry-models-mai#api-endpoints) for details. | - **Input:** text, image (JPEG or PNG format for image editing workflows) <br /> - **Output:** One image <br /> - **Context length**: 32,000 tokens <br /> - **Tool calling:** No <br /> - **Response formats:** Image (PNG) <br /> - **Languages:** `en` <br /> - **Key features:** High-quality text-to-image generation; Image editing that supports precise, surgical edits without disrupting the rest of the image; Capability to generate realistic imagery with consistent visual structure. Well suited for tasks such as concept visualization, creative content generation, image editing workflows, and production design.  <br /> - **Parameters:** `width`, `height`, `prompt` <br /> Minimum 768×768 pixels; maximum total pixel count 1,048,576 (equivalent to 1024×1024). Either dimension can exceed 1024 as long as the total pixel count stays within the limit (for example, 768×1365 is a valid size). |
 | `MAI-Image-2.5` <br /> **Preview** | Image-to-Image and Text-to-Image. See [API endpoints](../how-to/use-foundry-models-mai#api-endpoints) for details. | - **Input:** text, image (JPEG or PNG format for image editing workflows) <br /> - **Output:** One image <br /> - **Context length**: 32,000 tokens <br /> - **Tool calling:** No <br /> - **Response formats:** Image (PNG) <br /> - **Languages:** `en` <br /> - **Key features:** High-quality text-to-image generation; Image editing that supports precise, surgical edits without disrupting the rest of the image; Capability to generate realistic imagery with consistent visual structure. Well suited for tasks such as concept visualization, creative content generation, image editing workflows, and production design. <br /> - **Parameters:** `width`, `height`, `prompt` <br /> Minimum 768×768 pixels; maximum total pixel count 1,048,576 (equivalent to 1024×1024). Either dimension can exceed 1024 as long as the total pixel count stays within the limit (for example, 768×1365 is a valid size). |
 | `model-router`<sup>1</sup> | chat-completion | More details in [Model router overview](https://learn.microsoft.com/azure/ai-foundry/openai/how-to/model-router). <br /> - **Input:** text, image <br /> - **Output:** text (max output tokens varies<sup>2</sup>) <br /> **Context window:** 200,000<sup>3</sup> <br /> - **Languages:** `en` |
