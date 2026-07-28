@@ -24,6 +24,7 @@ from run_docs_eval import (
     MCP_SERVERS,
     _is_search_tool,
     _source_for_tool,
+    serialized_diagnostic_events_size,
 )
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -127,7 +128,7 @@ def validate_row_schema(result: object) -> list[str]:
             errors.append(f"diagnostics.events must contain at most {MAX_DIAGNOSTIC_EVENTS} entries")
         else:
             try:
-                serialized_event_chars = len(json.dumps(events, ensure_ascii=True))
+                serialized_event_chars = serialized_diagnostic_events_size(events)
             except (TypeError, ValueError):
                 errors.append("diagnostics.events must contain JSON-serializable values")
             else:

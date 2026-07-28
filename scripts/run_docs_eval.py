@@ -104,6 +104,9 @@ MAX_STDOUT_PARSE_LINES = 500
 MAX_STDOUT_LINE_BYTES = 32_000
 _SECRET_KEY_PATTERN = re.compile(r"(?:api[_-]?key|authorization|credential|password|secret|token)", re.I)
 _AUTHORIZATION_HEADER_PATTERN = re.compile(r"(?im)(authorization\s*:\s*)[^\r\n]+")
+_SERIALIZED_AUTHORIZATION_KEY_PATTERN = re.compile(
+    r"(?i)(?:\\?[\"'])authorization(?:\\?[\"'])\s*[:=]\s*"
+)
 _SECRET_VALUE_PATTERNS = (
     re.compile(r"\b(?:github_pat_|gh[pousr]_)[A-Za-z0-9_]+\b"),
     re.compile(r"(?i)(bearer\s+)[A-Za-z0-9._~+/=-]+"),
@@ -231,6 +234,7 @@ def _sanitize_text(value: str, max_chars: int = MAX_DIAGNOSTIC_TEXT) -> tuple[st
         if path:
             sanitized = re.sub(re.escape(path), replacement, sanitized, flags=re.I)
 
+    sanitized = _redact_serialized_authorization(sanitized)
     sanitized = _AUTHORIZATION_HEADER_PATTERN.sub(r"\1[REDACTED]", sanitized)
     sanitized = _SECRET_VALUE_PATTERNS[0].sub("[REDACTED]", sanitized)
     sanitized = _SECRET_VALUE_PATTERNS[1].sub(r"\1[REDACTED]", sanitized)
@@ -242,6 +246,44 @@ def _sanitize_text(value: str, max_chars: int = MAX_DIAGNOSTIC_TEXT) -> tuple[st
         truncated = True
         sanitized = sanitized[:max_chars] + "...[truncated]"
     return sanitized, truncated
+
+
+def _redact_serialized_authorization(value: str) -> str:
+    """Redact quoted Authorization values, including double-escaped JSON strings."""
+    cursor = 0
+    while match := _SERIALIZED_AUTHORIZATION_KEY_PATTERN.search(value, cursor):
+        value_start = match.end()
+        opening_slashes = 0
+        if value_start < len(value) and value[value_start] == "\\":
+            opening_slashes = 1
+            value_start += 1
+        if value_start >= len(value) or value[value_start] not in {'"', "'"}:
+            cursor = match.end()
+            continue
+
+        quote = value[value_start]
+        value_content_start = value_start + 1
+        scan = value_content_start
+        while scan < len(value):
+            if value[scan] == quote:
+                slash_count = 0
+                slash_index = scan - 1
+                while slash_index >= value_content_start and value[slash_index] == "\\":
+                    slash_count += 1
+                    slash_index -= 1
+                if slash_count == opening_slashes:
+                    value = value[:value_content_start] + "[REDACTED]" + value[scan:]
+                    cursor = value_content_start + len("[REDACTED]") + 1
+                    break
+            if value[scan] in "\r\n":
+                value = value[:value_content_start] + "[REDACTED]" + value[scan:]
+                cursor = value_content_start + len("[REDACTED]")
+                break
+            scan += 1
+        else:
+            value = value[:value_content_start] + "[REDACTED]"
+            cursor = len(value)
+    return value
 
 
 def _sanitize_diagnostic_value(value: object, *, depth: int = 0) -> object:
@@ -363,6 +405,11 @@ def _contains_oversized_diagnostic_value(value: object, *, depth: int = 0) -> bo
     return isinstance(value, str) and len(value) > MAX_DIAGNOSTIC_TEXT
 
 
+def serialized_diagnostic_events_size(events: list[dict]) -> int:
+    """Return the exact persisted JSON list-envelope size for diagnostics events."""
+    return len(json.dumps(events, ensure_ascii=True, separators=(",", ":")))
+
+
 def _empty_diagnostics() -> dict:
     return {
         "events": [],
@@ -431,11 +478,9 @@ def parse_event_stream(stdout: str | bytes) -> dict:
     completed_tool_calls: set[str] = set()
     final_response_line: int | None = None
     last_successful_tool_line: int | None = None
-    diagnostic_event_chars = 0
     mcp_statuses: dict[str, tuple[str, str | None]] = {}
 
     def add_diagnostic(event_type: str, data: dict) -> None:
-        nonlocal diagnostic_event_chars
         if len(metrics["diagnostic_events"]) >= MAX_DIAGNOSTIC_EVENTS:
             metrics["diagnostic_events_truncated"] = True
             return
@@ -443,12 +488,11 @@ def parse_event_stream(stdout: str | bytes) -> dict:
             "event_type": event_type,
             "data": _sanitize_diagnostic_value(data),
         }
-        diagnostic_chars = len(json.dumps(diagnostic, ensure_ascii=True))
-        if diagnostic_event_chars + diagnostic_chars > MAX_DIAGNOSTIC_EVENTS_CHARS:
+        candidate_events = [*metrics["diagnostic_events"], diagnostic]
+        if serialized_diagnostic_events_size(candidate_events) > MAX_DIAGNOSTIC_EVENTS_CHARS:
             metrics["diagnostic_events_truncated"] = True
             return
         metrics["diagnostic_events"].append(diagnostic)
-        diagnostic_event_chars += diagnostic_chars
 
     lines, boundary_errors, boundary_truncated = _bounded_event_lines(stdout)
     parse_errors.extend(boundary_errors)

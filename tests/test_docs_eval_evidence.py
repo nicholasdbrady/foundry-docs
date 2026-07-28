@@ -24,6 +24,7 @@ from run_docs_eval import (  # noqa: E402
     build_mcp_config,
     parse_event_stream,
     run_single_eval,
+    serialized_diagnostic_events_size,
 )
 
 
@@ -524,6 +525,86 @@ def test_authorization_header_redacts_entire_value_for_every_scheme(raw, secret)
 
 
 @pytest.mark.parametrize(
+    "raw",
+    [
+        r'upstream={\"Authorization\":\"CustomScheme opaque-value\"}',
+        r'upstream={\"authorization\":\"Basic dXNlcjpwYXNz\"}',
+        r'upstream={\"AUTHORIZATION\":\"Digest username=alice response=digest-secret\"}',
+    ],
+)
+def test_escaped_serialized_authorization_is_redacted_from_text(raw):
+    sanitized, _truncated = _sanitize_text(raw)
+
+    assert "opaque-value" not in sanitized
+    assert "dXNlcjpwYXNz" not in sanitized
+    assert "digest-secret" not in sanitized
+    assert "[REDACTED]" in sanitized
+
+
+def test_escaped_authorization_does_not_leak_in_stdout_or_stderr(monkeypatch):
+    leaked = (
+        r'upstream={\"Authorization\":\"Digest username=\\\"alice\\\", '
+        r'response=\\\"digest-secret\\\"\"}'
+    )
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda cmd, **kwargs: subprocess.CompletedProcess(
+            cmd,
+            0,
+            stdout=f"{leaked}\nnot-json",
+            stderr=leaked,
+        ),
+    )
+
+    result = run_single_eval(
+        SCENARIO,
+        "foundry-docs",
+        MCP_SERVERS["foundry-docs"],
+        "model-1",
+    )
+
+    assert "alice" not in result["diagnostics"]["stdout_excerpt"]
+    assert "alice" not in result["diagnostics"]["stderr_excerpt"]
+    assert "digest-secret" not in result["diagnostics"]["stdout_excerpt"]
+    assert "digest-secret" not in result["diagnostics"]["stderr_excerpt"]
+    assert "[REDACTED]" in result["diagnostics"]["stdout_excerpt"]
+    assert "[REDACTED]" in result["diagnostics"]["stderr_excerpt"]
+
+
+def test_truncated_escaped_authorization_value_fails_closed(monkeypatch):
+    leaked = (
+        r'upstream={\"Authorization\":\"Digest nonce=LEAKME, username=\\\"alice\\\", '
+        r'response=\\\"digest-secret\\\"' + ("x" * 20_000)
+    )
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda cmd, **kwargs: subprocess.CompletedProcess(
+            cmd,
+            0,
+            stdout=f"{leaked}\nnot-json",
+            stderr=leaked,
+        ),
+    )
+
+    result = run_single_eval(
+        SCENARIO,
+        "foundry-docs",
+        MCP_SERVERS["foundry-docs"],
+        "model-1",
+    )
+
+    for excerpt in (
+        result["diagnostics"]["stdout_excerpt"],
+        result["diagnostics"]["stderr_excerpt"],
+    ):
+        assert "LEAKME" not in excerpt
+        assert "digest-secret" not in excerpt
+        assert "[REDACTED]" in excerpt
+
+
+@pytest.mark.parametrize(
     "raw_path",
     [
         "C:/Users/Jane Doe/private/file.txt",
@@ -714,6 +795,92 @@ def test_size_based_event_truncation_is_schema_valid():
     row["diagnostics"]["events_truncated"] = True
 
     assert validate_row_schema(row) == []
+
+
+def test_serialized_event_size_helper_matches_persisted_json_envelope():
+    events = [
+        {"event_type": "session.error", "data": {"message": "first"}},
+        {"event_type": "session.mcp_servers_loaded", "data": {"servers": []}},
+    ]
+
+    assert serialized_diagnostic_events_size(events) == len(
+        json.dumps(events, ensure_ascii=True, separators=(",", ":"))
+    )
+
+
+def _session_error_events_at_serialized_size(target_size: int) -> list[dict]:
+    source_events = []
+    diagnostic_events = []
+    for _ in range(5):
+        data = {"errorType": "q", "message": "m"}
+        data.update({f"field{field_index}": "" for field_index in range(18)})
+        source_events.append({"type": "session.error", "data": data})
+        diagnostic_events.append({"event_type": "session.error", "data": dict(data)})
+
+    remaining = target_size - serialized_diagnostic_events_size(diagnostic_events)
+    assert remaining >= 0
+    for field_index in range(18):
+        for event_index in range(5):
+            if remaining == 0:
+                break
+            addition = min(2_000, remaining)
+            value = "x" * addition
+            source_events[event_index]["data"][f"field{field_index}"] = value
+            diagnostic_events[event_index]["data"][f"field{field_index}"] = value
+            remaining -= addition
+        if remaining == 0:
+            break
+
+    assert remaining == 0
+    assert serialized_diagnostic_events_size(diagnostic_events) == target_size
+    return source_events
+
+
+def test_runner_accepts_exact_event_envelope_limit():
+    source_events = _session_error_events_at_serialized_size(50_000)
+    stdout = "\n".join([
+        *(json.dumps(event, separators=(",", ":")) for event in source_events),
+        json.dumps({"type": "result", "exitCode": 0}),
+    ])
+
+    parsed = parse_event_stream(stdout)
+
+    assert parsed["diagnostic_events_truncated"] is False
+    assert len(parsed["diagnostic_events"]) == 5
+    assert serialized_diagnostic_events_size(parsed["diagnostic_events"]) == 50_000
+
+
+def test_runner_truncates_event_envelope_one_byte_over_limit():
+    source_events = _session_error_events_at_serialized_size(50_001)
+    stdout = "\n".join([
+        *(json.dumps(event, separators=(",", ":")) for event in source_events),
+        json.dumps({"type": "result", "exitCode": 0}),
+    ])
+
+    parsed = parse_event_stream(stdout)
+
+    assert parsed["diagnostic_events_truncated"] is True
+    assert len(parsed["diagnostic_events"]) == 4
+    assert serialized_diagnostic_events_size(parsed["diagnostic_events"]) < 50_000
+
+
+def test_scorer_accepts_exact_event_envelope_limit_and_rejects_one_byte_over():
+    event = {"event_type": "boundary", "data": {"message": ""}}
+    overhead = serialized_diagnostic_events_size([event])
+    event["data"]["message"] = "x" * (50_000 - overhead)
+    assert serialized_diagnostic_events_size([event]) == 50_000
+
+    at_limit = _raw_row()
+    at_limit["diagnostics"]["events"] = [event]
+    assert validate_row_schema(at_limit) == []
+
+    over_limit = _raw_row()
+    over_limit["diagnostics"]["events"] = [{
+        "event_type": "boundary",
+        "data": {"message": event["data"]["message"] + "x"},
+    }]
+    assert serialized_diagnostic_events_size(over_limit["diagnostics"]["events"]) == 50_001
+    assert "diagnostics.events exceeds its total serialized size limit" in validate_row_schema(over_limit)
 
 
 def test_nested_stdout_truncation_flag_is_schema_valid():
