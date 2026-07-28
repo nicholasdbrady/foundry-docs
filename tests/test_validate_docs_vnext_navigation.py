@@ -5,6 +5,8 @@ import os
 import sys
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 
 from validate_docs_vnext_navigation import main, validate_navigation  # noqa: E402
@@ -42,6 +44,22 @@ def test_valid_routes_produce_ordered_publishable_inventory(tmp_path: Path) -> N
         "docs-vnext/guide/second.mdx",
         "docs-vnext/guide/first.mdx",
     ]
+
+
+def test_named_page_object_is_included_in_ordered_inventory(tmp_path: Path) -> None:
+    docs_dir = tmp_path / "docs-vnext"
+    navigation_path = _write_navigation(
+        docs_dir,
+        [{"name": "Enterprise Planning", "page": "setup/planning"}, "setup/create-projects"],
+    )
+    _write_page(docs_dir, "setup/planning")
+    _write_page(docs_dir, "setup/create-projects")
+
+    result = validate_navigation(docs_dir, navigation_path)
+
+    assert result["status"] == "passed"
+    assert [entry["route"] for entry in result["routes"]] == ["/setup/planning", "/setup/create-projects"]
+    assert result["routes"][0]["sourceNavigationEntry"] == "navigation.groups[0].pages[0].page"
 
 
 def test_stale_internal_link_fails_with_bounded_route_diagnostic(tmp_path: Path) -> None:
@@ -135,36 +153,56 @@ def test_empty_navigable_page_fails(tmp_path: Path) -> None:
     assert result["diagnosticSummary"]["counts"] == {"empty_navigable_page": 1}
 
 
-def test_incremental_check_scans_only_touched_navigable_pages(tmp_path: Path) -> None:
-    docs_dir = tmp_path / "docs-vnext"
-    navigation_path = _write_navigation(docs_dir, ["guide/touched", "guide/legacy"])
-    _write_page(docs_dir, "guide/touched", "See the [legacy guide](/guide/legacy).\n")
+def test_unchanged_legacy_stale_link_is_explicitly_grandfathered(tmp_path: Path) -> None:
+    docs_dir = tmp_path / "current" / "docs-vnext"
+    base_docs_dir = tmp_path / "base" / "docs-vnext"
+    navigation_path = _write_navigation(docs_dir, ["guide/legacy"])
+    _write_navigation(base_docs_dir, ["guide/legacy"])
     _write_page(docs_dir, "guide/legacy", "Old [broken link](/guide/missing).\n")
+    _write_page(base_docs_dir, "guide/legacy", "Old [broken link](/guide/missing).\n")
 
-    result = validate_navigation(
-        docs_dir,
-        navigation_path,
-        changed_files={"docs-vnext/guide/touched.mdx"},
-    )
+    result = validate_navigation(docs_dir, navigation_path, base_docs_dir=base_docs_dir)
 
     assert result["status"] == "passed"
+    assert result["linkSummary"] == {
+        "currentStale": 1,
+        "baselineStale": 1,
+        "grandfathered": 1,
+        "introduced": 0,
+    }
 
 
-def test_incremental_check_scans_newly_navigable_pages(tmp_path: Path) -> None:
-    docs_dir = tmp_path / "docs-vnext"
-    _write_navigation(docs_dir, ["guide/existing"])
-    base_navigation = tmp_path / "base-docs.json"
-    base_navigation.write_text((docs_dir / "docs.json").read_text(encoding="utf-8"), encoding="utf-8")
-    navigation_path = _write_navigation(docs_dir, ["guide/existing", "guide/new"])
-    _write_page(docs_dir, "guide/existing")
-    _write_page(docs_dir, "guide/new", "New [broken link](/guide/missing).\n")
+def test_removing_route_fails_when_unchanged_page_still_links_to_it(tmp_path: Path) -> None:
+    docs_dir = tmp_path / "current" / "docs-vnext"
+    base_docs_dir = tmp_path / "base" / "docs-vnext"
+    navigation_path = _write_navigation(docs_dir, ["guide/start"])
+    _write_navigation(base_docs_dir, ["guide/start", "guide/target"])
+    _write_page(docs_dir, "guide/start", "Read the [target guide](/guide/target).\n")
+    _write_page(base_docs_dir, "guide/start", "Read the [target guide](/guide/target).\n")
+    _write_page(base_docs_dir, "guide/target")
 
-    result = validate_navigation(
-        docs_dir,
-        navigation_path,
-        changed_files={"docs-vnext/docs.json"},
-        base_navigation_path=base_navigation,
+    result = validate_navigation(docs_dir, navigation_path, base_docs_dir=base_docs_dir)
+
+    assert result["status"] == "failed"
+    assert result["diagnosticSummary"]["counts"] == {"stale_internal_link": 1}
+    assert result["diagnostics"][0]["sourcePage"] == "docs-vnext/guide/start.mdx"
+
+
+def test_removing_alias_fails_when_unchanged_page_still_links_to_it(tmp_path: Path) -> None:
+    docs_dir = tmp_path / "current" / "docs-vnext"
+    base_docs_dir = tmp_path / "base" / "docs-vnext"
+    navigation_path = _write_navigation(docs_dir, ["guide/start", "guide/current"])
+    _write_navigation(
+        base_docs_dir,
+        ["guide/start", "guide/current"],
+        redirects=[{"source": "/guide/old", "destination": "/guide/current"}],
     )
+    _write_page(docs_dir, "guide/start", "Read the [legacy route](/guide/old).\n")
+    _write_page(docs_dir, "guide/current")
+    _write_page(base_docs_dir, "guide/start", "Read the [legacy route](/guide/old).\n")
+    _write_page(base_docs_dir, "guide/current")
+
+    result = validate_navigation(docs_dir, navigation_path, base_docs_dir=base_docs_dir)
 
     assert result["status"] == "failed"
     assert result["diagnosticSummary"]["counts"] == {"stale_internal_link": 1}
@@ -207,6 +245,46 @@ def test_cli_writes_byte_stable_inventory(tmp_path: Path) -> None:
     assert main(args) == 0
 
     assert output.read_bytes() == first
+
+
+@pytest.mark.parametrize(
+    ("navigation_content", "expected_detail"),
+    [
+        ("{", "Expecting property name"),
+        (b"\xff", "utf-8"),
+        (None, "No such file"),
+    ],
+)
+def test_cli_writes_bounded_failure_inventory_for_json_and_io_errors(
+    tmp_path: Path,
+    navigation_content: str | bytes | None,
+    expected_detail: str,
+) -> None:
+    docs_dir = tmp_path / "docs-vnext"
+    docs_dir.mkdir()
+    if isinstance(navigation_content, bytes):
+        (docs_dir / "docs.json").write_bytes(navigation_content)
+    elif navigation_content is not None:
+        (docs_dir / "docs.json").write_text(navigation_content, encoding="utf-8")
+    output = tmp_path / "inventory.json"
+
+    assert main(["--docs-dir", str(docs_dir), "--output", str(output)]) == 2
+
+    result = json.loads(output.read_text(encoding="utf-8"))
+    assert result["status"] == "failed"
+    assert result["diagnosticSummary"]["counts"] == {"validator_error": 1}
+    assert expected_detail in result["diagnostics"][0]["detail"]
+    assert len(result["diagnostics"][0]["detail"]) <= 500
+
+
+def test_cli_can_initialize_uploadable_failure_inventory(tmp_path: Path) -> None:
+    output = tmp_path / "inventory.json"
+
+    assert main(["--output", str(output), "--initialize-output"]) == 0
+
+    result = json.loads(output.read_text(encoding="utf-8"))
+    assert result["status"] == "failed"
+    assert result["diagnosticSummary"]["counts"] == {"workflow_incomplete": 1}
 
 
 def test_link_examples_inside_code_are_not_validated_as_navigation(tmp_path: Path) -> None:
