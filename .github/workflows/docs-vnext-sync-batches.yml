@@ -1,0 +1,110 @@
+name: Docs-vnext Bounded Baseline Sync
+
+on:
+  workflow_run:
+    workflows: ["Docs-vnext Baseline Sync Manifest"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      manifest_run_id:
+        description: Retained successful manifest workflow run ID (defaults to latest)
+        required: false
+        type: string
+
+permissions:
+  actions: read
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: docs-vnext-bounded-baseline-sync
+  cancel-in-progress: false
+
+jobs:
+  apply-batches:
+    name: Apply bounded batches
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.AZURE_AI_DOCS_PR_TOKEN || github.token }}
+
+      - name: Require pull-request automation token
+        env:
+          SYNC_TOKEN: ${{ secrets.AZURE_AI_DOCS_PR_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$SYNC_TOKEN" ]]; then
+            echo "::error::AZURE_AI_DOCS_PR_TOKEN is required so automation-created PRs trigger checks."
+            exit 1
+          fi
+
+      - name: Resolve retained manifest run
+        id: manifest
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_RUN_ID: ${{ inputs.manifest_run_id }}
+          WORKFLOW_RUN_ID: ${{ github.event.workflow_run.id }}
+          GH_TOKEN: ${{ secrets.AZURE_AI_DOCS_PR_TOKEN }}
+        run: |
+          set -euo pipefail
+          run_id="$INPUT_RUN_ID"
+          if [[ -z "$run_id" && "$EVENT_NAME" == "workflow_run" ]]; then
+            run_id="$WORKFLOW_RUN_ID"
+          fi
+          if [[ -z "$run_id" ]]; then
+            run_id=$(gh run list \
+              --workflow docs-vnext-sync-manifest.yml \
+              --status success \
+              --limit 1 \
+              --json databaseId \
+              --jq '.[0].databaseId')
+          fi
+          if [[ ! "$run_id" =~ ^[0-9]+$ ]]; then
+            echo "::error::A successful numeric manifest workflow run ID is required."
+            exit 1
+          fi
+          echo "run-id=$run_id" >> "$GITHUB_OUTPUT"
+
+      - name: Download retained schema-v2 manifest
+        env:
+          GH_TOKEN: ${{ secrets.AZURE_AI_DOCS_PR_TOKEN }}
+          MANIFEST_RUN_ID: ${{ steps.manifest.outputs.run-id }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/docs-vnext-sync"
+          gh run download "$MANIFEST_RUN_ID" \
+            --name "docs-vnext-sync-manifest-$MANIFEST_RUN_ID" \
+            --dir "$RUNNER_TEMP/docs-vnext-sync"
+          test -f "$RUNNER_TEMP/docs-vnext-sync/docs-vnext-sync-manifest.json"
+
+      - name: Apply resumable bounded batches
+        env:
+          GH_TOKEN: ${{ secrets.AZURE_AI_DOCS_PR_TOKEN }}
+          MANIFEST_RUN_ID: ${{ steps.manifest.outputs.run-id }}
+        run: |
+          set -euo pipefail
+          python3 scripts/apply_docs_vnext_sync_batches.py \
+            --manifest "$RUNNER_TEMP/docs-vnext-sync/docs-vnext-sync-manifest.json" \
+            --manifest-run-id "$MANIFEST_RUN_ID" \
+            --repository "${{ github.repository }}" \
+            --repository-root "$GITHUB_WORKSPACE" \
+            --runner-temp "$RUNNER_TEMP/docs-vnext-sync" \
+            --checkpoint "$RUNNER_TEMP/docs-vnext-sync/checkpoint.json" \
+            --summary "$GITHUB_STEP_SUMMARY" \
+            --max-files 50 \
+            --max-payload-bytes 41943040
+
+      - name: Retain batch checkpoint
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: docs-vnext-sync-checkpoint-${{ github.run_id }}
+          path: ${{ runner.temp }}/docs-vnext-sync/checkpoint.json
+          if-no-files-found: error
+          retention-days: 30
