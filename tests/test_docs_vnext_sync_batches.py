@@ -395,6 +395,31 @@ def test_existing_open_pull_request_prevents_duplicate_publish_and_creation(tmp_
     assert state["batches"][0]["result"] == "existing-open-pull-request"
 
 
+def test_open_pull_request_with_missing_branch_is_reconstructed_before_completion(tmp_path):
+    manifest = _write_manifest(tmp_path, [_operation(1, 1)])
+    batch = plan_batches(manifest, max_files=1, max_payload_bytes=10)[0]
+    pull_request = _pull_request(manifest, batch)
+    backend = FakeBackend([pull_request])
+    checkpoint = tmp_path / "checkpoint.json"
+
+    succeeded = execute_batches(
+        manifest,
+        [batch],
+        backend,
+        [pull_request],
+        checkpoint,
+        max_files=1,
+        max_payload_bytes=10,
+    )
+
+    assert succeeded is True
+    assert backend.published == [1]
+    assert backend.reconstructed_branches == [1]
+    assert backend.created == []
+    state = json.loads(checkpoint.read_text(encoding="utf-8"))
+    assert state["batches"][0]["result"] == "existing-open-pull-request"
+
+
 def test_preserve_only_batch_completes_without_branch_or_pull_request(tmp_path):
     manifest = _write_manifest(tmp_path, [_operation(1, 0, decision="preserve")])
     batch = plan_batches(manifest, max_files=1, max_payload_bytes=10)[0]
