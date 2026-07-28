@@ -1,34 +1,27 @@
 ---
-name: Docs-vnext Baseline Sync
-description: Produces a deterministic dry-run manifest for the docs-vnext baseline
+name: Docs-vnext Baseline Sync Summary
+description: Optionally summarizes the latest independently retained docs-vnext sync manifest
 on:
-  schedule: weekly on sunday
   workflow_dispatch:
 
 permissions:
   contents: read
-
-steps:
-  - name: Generate deterministic docs-vnext sync manifest
-    run: |
-      set -euo pipefail
-      mkdir -p /tmp/gh-aw/agent
-      python3 scripts/generate_docs_vnext_sync_manifest.py \
-        --source-dir docs \
-        --target-dir docs-vnext \
-        --allowlist .github/docs-vnext-sync-preserve.json \
-        --output /tmp/gh-aw/agent/docs-vnext-sync-manifest.json
-  - name: Retain docs-vnext sync manifest
-    uses: actions/upload-artifact@v7.0.1
-    with:
-      name: docs-vnext-sync-manifest-${{ github.run_id }}
-      path: /tmp/gh-aw/agent/docs-vnext-sync-manifest.json
-      if-no-files-found: error
-      retention-days: 30
+  actions: read
 
 tools:
   bash:
+    - "gh run list *"
+    - "gh run download *"
+    - "mkdir *"
     - "cat /tmp/gh-aw/agent/docs-vnext-sync-manifest.json"
+  github:
+    mode: gh-proxy
+    toolsets: [actions]
+
+network:
+  allowed:
+    - defaults
+    - github
 
 safe-outputs:
   report-incomplete:
@@ -42,19 +35,42 @@ concurrency:
 timeout-minutes: 10
 ---
 
-# Docs-vnext Baseline Sync
+# Docs-vnext Baseline Sync Summary
 
-Review the deterministic dry-run synchronization manifest generated before agent execution.
+Summarize the latest dry-run manifest retained by the independent
+`docs-vnext-sync-manifest.yml` workflow.
 
 ## Process
 
-1. Read `/tmp/gh-aw/agent/docs-vnext-sync-manifest.json` once.
-2. Verify that it is valid JSON with `schemaVersion: 1`.
-3. Call `noop` with the aggregate add, modify, remove, preserve, and payload-byte totals.
+1. Find the latest successful `docs-vnext-sync-manifest.yml` run:
+
+   ```bash
+   run_id=$(gh run list \
+     --workflow docs-vnext-sync-manifest.yml \
+     --status success \
+     --limit 1 \
+     --json databaseId \
+     --jq '.[0].databaseId')
+   ```
+
+2. If no run exists, call `report_incomplete` and stop.
+3. Download its retained artifact:
+
+   ```bash
+   mkdir -p /tmp/gh-aw/agent
+   gh run download "$run_id" \
+     --name "docs-vnext-sync-manifest-$run_id" \
+     --dir /tmp/gh-aw/agent
+   ```
+
+4. Read `/tmp/gh-aw/agent/docs-vnext-sync-manifest.json` once.
+5. Verify that it is valid JSON with `schemaVersion: 2`.
+6. Call `noop` with the aggregate add, modify, remove, preserve, and conservative payload-byte totals.
 
 ## Important
 
-- This workflow is a dry run. Do not modify files or create a pull request.
+- This optional workflow does not generate or retain the manifest.
+- The independent host workflow remains durable even when gh-aw activation is skipped for daily AI-credit limits.
 - Do not walk, hash, compare, or recalculate the documentation trees.
 - The retained manifest is the complete source of truth for downstream synchronization work.
 - If the manifest is missing, unreadable, or invalid, call `report_incomplete` and stop.

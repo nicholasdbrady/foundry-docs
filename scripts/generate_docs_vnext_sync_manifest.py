@@ -10,9 +10,10 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any, Sequence
 
-MANIFEST_SCHEMA_VERSION = 1
+MANIFEST_SCHEMA_VERSION = 2
 ALLOWLIST_SCHEMA_VERSION = 1
 DECISION_ORDER = {"add": 0, "modify": 1, "remove": 2, "preserve": 3}
+PAYLOAD_ESTIMATION_METHOD = "conservative-file-bytes-v1"
 
 
 class SyncManifestError(RuntimeError):
@@ -151,7 +152,16 @@ def _operation(
     target: FileMetadata | None,
     preserve_rule: PreserveRule | None = None,
 ) -> dict[str, Any]:
-    payload_bytes = source.bytes if decision in {"add", "modify"} and source is not None else 0
+    source_bytes = source.bytes if source is not None else 0
+    target_bytes = target.bytes if target is not None else 0
+    if decision == "add":
+        payload_bytes = source_bytes
+    elif decision == "modify":
+        payload_bytes = source_bytes + target_bytes
+    elif decision == "remove":
+        payload_bytes = target_bytes
+    else:
+        payload_bytes = 0
     operation: dict[str, Any] = {
         "id": _operation_id(decision, relative_path),
         "decision": decision,
@@ -255,6 +265,13 @@ def build_manifest(
         "summary": {
             "operationCount": len(operations),
             "payloadBytes": sum(item["payloadBytes"] for item in operations),
+            "payloadEstimation": {
+                "method": PAYLOAD_ESTIMATION_METHOD,
+                "add": "sourceBytes",
+                "modify": "sourceBytes + targetBytes",
+                "remove": "targetBytes",
+                "preserve": "0",
+            },
             "decisions": decision_summaries,
         },
         "operations": operations,

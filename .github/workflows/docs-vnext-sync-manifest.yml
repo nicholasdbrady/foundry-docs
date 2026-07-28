@@ -1,0 +1,42 @@
+name: Docs-vnext Baseline Sync Manifest
+
+on:
+  schedule:
+    - cron: "24 4 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-vnext-sync-manifest
+  cancel-in-progress: true
+
+jobs:
+  manifest:
+    name: Generate dry-run manifest
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Generate deterministic docs-vnext sync manifest
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/docs-vnext-sync"
+          python3 scripts/generate_docs_vnext_sync_manifest.py \
+            --source-dir docs \
+            --target-dir docs-vnext \
+            --allowlist .github/docs-vnext-sync-preserve.json \
+            --output "$RUNNER_TEMP/docs-vnext-sync/docs-vnext-sync-manifest.json"
+
+      - name: Retain docs-vnext sync manifest
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: docs-vnext-sync-manifest-${{ github.run_id }}
+          path: ${{ runner.temp }}/docs-vnext-sync/docs-vnext-sync-manifest.json
+          if-no-files-found: error
+          retention-days: 30
