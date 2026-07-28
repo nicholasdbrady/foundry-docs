@@ -1,5 +1,10 @@
 name: docs-vnext source navigation required check
 
+# REQUIRED RULESET PREREQUISITE:
+# Require "Validate source navigation" and require branches to be up to date
+# before merging. Legitimate trusted-gate migrations require a dedicated
+# repository-admin ruleset bypass and independent review.
+
 on:
   pull_request_target:
     types: [opened, synchronize, reopened, ready_for_review, edited]
@@ -52,12 +57,28 @@ jobs:
             exit 1
           fi
 
+          if ! merge_result="$(git merge-tree --write-tree "$BASE_SHA" "$HEAD_SHA" 2>&1)"; then
+            echo "::error::The current pull request does not produce a clean synthetic merge."
+            printf '%s\n' "$merge_result"
+            exit 1
+          fi
+          merge_tree="${merge_result%%$'\n'*}"
+          if [[ ! "$merge_tree" =~ ^[0-9a-f]{40,64}$ ]] || ! git cat-file -e "$merge_tree^{tree}"; then
+            echo "::error::Unable to verify the synthetic merge tree."
+            exit 1
+          fi
+          echo "merge_tree=$merge_tree" >> "$GITHUB_OUTPUT"
+
           relevant=false
           while IFS= read -r -d '' path; do
             case "$path" in
-              docs-vnext/*|scripts/validate_docs_vnext_navigation.py|tests/test_validate_docs_vnext_navigation.py|.github/workflows/docs-vnext-source-navigation.yml|.github/workflows/docs-vnext-source-navigation-required.yml)
+              .github/workflows/docs-vnext-source-navigation-required.yml|scripts/validate_docs_vnext_navigation.py)
+                echo "::error::Trusted source navigation enforcement cannot be changed in a normal pull request."
+                echo "::error::Use a dedicated gate-migration pull request with independent review and repository-admin ruleset bypass."
+                exit 1
+                ;;
+              docs-vnext/*|tests/test_validate_docs_vnext_navigation.py|.github/workflows/docs-vnext-source-navigation.yml)
                 relevant=true
-                break
                 ;;
             esac
           done < "$changed_paths"
@@ -121,31 +142,56 @@ jobs:
         if: steps.changes.outputs.relevant == 'true'
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          MERGE_TREE: ${{ steps.changes.outputs.merge_tree }}
         run: |
           base_dir="$RUNNER_TEMP/source-navigation-base"
-          head_dir="$RUNNER_TEMP/source-navigation-head"
-          mkdir -p "$base_dir" "$head_dir"
-          if ! git archive "$BASE_SHA" docs-vnext | tar -x -C "$base_dir"; then
+          merged_dir="$RUNNER_TEMP/source-navigation-merged"
+          base_archive="$RUNNER_TEMP/source-navigation-base.tar"
+          merged_archive="$RUNNER_TEMP/source-navigation-merged.tar"
+          mkdir -p "$base_dir" "$merged_dir"
+          if ! git archive -o "$base_archive" "$BASE_SHA" docs-vnext; then
             echo "::error::Unable to extract the current base documentation tree."
             exit 1
           fi
-          if ! git archive "$HEAD_SHA" docs-vnext | tar -x -C "$head_dir"; then
-            echo "::error::Unable to extract the proposed documentation tree."
+          if ! tar -xf "$base_archive" -C "$base_dir"; then
+            echo "::error::Unable to unpack the current base documentation tree."
             exit 1
           fi
-          if find "$head_dir/docs-vnext" -type l -print -quit | grep -q .; then
-            echo "::error::Proposed docs-vnext tree contains symbolic links."
+          if ! git archive -o "$merged_archive" "$MERGE_TREE" docs-vnext; then
+            echo "::error::Unable to extract the synthetic merge documentation tree."
+            exit 1
+          fi
+          if ! tar -xf "$merged_archive" -C "$merged_dir"; then
+            echo "::error::Unable to unpack the synthetic merge documentation tree."
+            exit 1
+          fi
+          if find "$merged_dir/docs-vnext" -type l -print -quit | grep -q .; then
+            echo "::error::Synthetic merge docs-vnext tree contains symbolic links."
             exit 1
           fi
 
-      - name: Validate proposed docs-vnext source navigation
+      - name: Validate merged docs-vnext source navigation
         if: steps.changes.outputs.relevant == 'true'
         run: |
           python scripts/validate_docs_vnext_navigation.py \
-            --docs-dir "$RUNNER_TEMP/source-navigation-head/docs-vnext" \
+            --docs-dir "$RUNNER_TEMP/source-navigation-merged/docs-vnext" \
             --base-docs-dir "$RUNNER_TEMP/source-navigation-base/docs-vnext" \
             --output tests/eval_results/docs-vnext-route-inventory.json
+
+      - name: Confirm current base branch
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if ! remote_base="$(git ls-remote --exit-code origin "refs/heads/$BASE_REF" | awk 'NR == 1 { print $1 }')"; then
+            echo "::error::Unable to resolve the current pull request base branch."
+            exit 1
+          fi
+          if [[ "$remote_base" != "$BASE_SHA" ]]; then
+            echo "::error::The pull request base advanced during validation."
+            echo "::error::The repository ruleset must require branches to be up to date before merging."
+            exit 1
+          fi
 
       - name: Upload trusted route inventory
         if: always() && steps.changes.outputs.relevant == 'true'
