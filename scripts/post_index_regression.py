@@ -169,10 +169,10 @@ def validation_errors(result: object) -> list[str]:
         if status in EXECUTED_STATUSES:
             if total == 0:
                 errors.append("executed results must contain at least one test")
-            if isinstance(scores, list) and len(scores) != total:
-                errors.append("scores must contain one entry per executed test")
-            if isinstance(failed_queries, list) and len(failed_queries) != total - passed:
-                errors.append("failed_queries must contain one entry per failed test")
+            if isinstance(scores, list):
+                if len(scores) != total:
+                    errors.append("scores must contain one entry per executed test")
+                errors.extend(_score_consistency_errors(scores, failed_queries, total, passed, pass_rate))
             expected_status = "passed" if pass_rate >= threshold else "failed"
             expected_decision = "pass" if expected_status == "passed" else "fail"
             if status != expected_status:
@@ -182,13 +182,13 @@ def validation_errors(result: object) -> list[str]:
         elif status == "blocked":
             if decision != "skip":
                 errors.append("blocked results must use decision 'skip'")
-            if total != 0 or passed != 0:
-                errors.append("blocked results cannot report executed tests")
+            errors.extend(_nonexecuted_evidence_errors(result, "blocked"))
         elif status == "error":
             if decision != "fail":
                 errors.append("error results must use decision 'fail'")
             if not diagnostics:
                 errors.append("error results must include diagnostics")
+            errors.extend(_nonexecuted_evidence_errors(result, "error"))
 
     return errors
 
@@ -224,6 +224,65 @@ def _validate_score(item: object, index: int) -> list[str]:
     return errors
 
 
+def _score_consistency_errors(
+    scores: list[object],
+    failed_queries: object,
+    total: int,
+    passed: int,
+    pass_rate: float,
+) -> list[str]:
+    """Cross-check aggregate and failed-query evidence against score records."""
+    if not all(isinstance(item, dict) for item in scores):
+        return []
+
+    score_queries = [item.get("query") for item in scores]
+    if not all(isinstance(query, str) and query for query in score_queries):
+        return []
+
+    errors: list[str] = []
+    if len(set(score_queries)) != len(score_queries):
+        errors.append("scores must contain unique query identities")
+
+    derived_passed = sum(item.get("passed") is True for item in scores)
+    if derived_passed != passed:
+        errors.append("passed_tests must equal the number of scores with passed=true")
+    derived_rate = derived_passed / total if total else 0.0
+    if not math.isclose(pass_rate, derived_rate, rel_tol=0.0, abs_tol=1e-12):
+        errors.append("pass_rate must equal the pass rate derived from scores")
+
+    failed_scores = {item["query"]: item.get("score") for item in scores if item.get("passed") is False}
+    if len(failed_scores) != total - derived_passed:
+        errors.append("failed score count must equal total_tests minus passed_tests")
+
+    if not isinstance(failed_queries, list) or not all(isinstance(item, dict) for item in failed_queries):
+        return errors
+    failed_query_names = [item.get("query") for item in failed_queries]
+    if not all(isinstance(query, str) and query for query in failed_query_names):
+        return errors
+    if len(set(failed_query_names)) != len(failed_query_names):
+        errors.append("failed_queries must contain unique query identities")
+    if set(failed_query_names) != set(failed_scores):
+        errors.append("failed_queries must exactly match queries whose scores have passed=false")
+        return errors
+
+    for item in failed_queries:
+        query = item["query"]
+        if item.get("score") != failed_scores[query]:
+            errors.append(f"failed_queries score must match scores entry for query {query!r}")
+    return errors
+
+
+def _nonexecuted_evidence_errors(result: dict[str, Any], status: str) -> list[str]:
+    errors = []
+    if result["total_tests"] != 0 or result["passed_tests"] != 0 or result["pass_rate"] != 0.0:
+        errors.append(f"{status} results cannot report executed test aggregates")
+    if result["scores"]:
+        errors.append(f"{status} results cannot contain scores")
+    if result["failed_queries"]:
+        errors.append(f"{status} results cannot contain failed_queries")
+    return errors
+
+
 def write_result(path: Path, result: dict[str, Any]) -> None:
     """Validate and atomically write a result."""
     errors = validation_errors(result)
@@ -251,7 +310,7 @@ def phase_exit_code(result: dict[str, Any], phase: str) -> int:
     if phase == "schema":
         return 0
     if phase == "prepare":
-        return 1 if result["status"] in {"blocked", "error"} else 0
+        return 1 if result["status"] == "error" else 0
     if phase == "final":
         return 0 if result["decision"] in {"pass", "skip"} else 1
     raise ValueError(f"Unknown validation phase: {phase}")
@@ -304,24 +363,20 @@ def build_safe_output(result: dict[str, Any]) -> dict[str, Any]:
             ]
         }
 
-    raise ValueError(f"Cannot render a safe output for status {result['status']!r}")
+    if result["status"] in {"blocked", "error"}:
+        message = " ".join(result["diagnostics"]) or f"Post-index regression status: {result['status']}."
+        return {"items": [{"type": "noop", "message": message}]}
+
+    raise ValueError(f"Cannot render a decision output for status {result['status']!r}")
 
 
-def write_safe_outputs_jsonl(path: Path, result: dict[str, Any]) -> None:
-    """Append deterministic safe outputs and a noop engine short-circuit."""
+def write_decision_output(path: Path, result: dict[str, Any]) -> None:
+    """Write the deterministic issue/noop rendering for host-side processing."""
     safe_output = build_safe_output(result)
-    items = list(safe_output["items"])
-    if not any(item["type"] == "noop" for item in items):
-        items.append(
-            {
-                "type": "noop",
-                "message": "Machine-owned regression decision prepared; no model invocation is required.",
-            }
-        )
     path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8") as output:
-        for item in items:
-            output.write(json.dumps(item, sort_keys=True) + "\n")
+    temporary = path.with_suffix(f"{path.suffix}.tmp")
+    temporary.write_text(json.dumps(safe_output, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    temporary.replace(path)
 
 
 def _parse_args() -> argparse.Namespace:
@@ -347,9 +402,9 @@ def _parse_args() -> argparse.Namespace:
     classify.add_argument("--input", type=Path, required=True)
     classify.add_argument("--github-output", type=Path, required=True)
 
-    render_jsonl = subparsers.add_parser("render-safe-outputs-jsonl")
-    render_jsonl.add_argument("--input", type=Path, required=True)
-    render_jsonl.add_argument("--output", type=Path, required=True)
+    render = subparsers.add_parser("render-decision-output")
+    render.add_argument("--input", type=Path, required=True)
+    render.add_argument("--output", type=Path, required=True)
     return parser.parse_args()
 
 
@@ -380,11 +435,11 @@ def main() -> int:
             output.write(f"decision={result['decision']}\n")
             output.write(f"invoke_agent={'true' if result['status'] in EXECUTED_STATUSES else 'false'}\n")
         return 0
-    if args.command == "render-safe-outputs-jsonl":
+    if args.command == "render-decision-output":
         try:
-            write_safe_outputs_jsonl(args.output, result)
+            write_decision_output(args.output, result)
         except ValueError as exc:
-            print(f"Cannot render post-index safe outputs: {exc}", file=sys.stderr)
+            print(f"Cannot render post-index decision output: {exc}", file=sys.stderr)
             return 2
         return 0
 

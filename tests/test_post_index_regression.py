@@ -16,7 +16,7 @@ from post_index_regression import (  # noqa: E402
     build_safe_output,
     phase_exit_code,
     validation_errors,
-    write_safe_outputs_jsonl,
+    write_decision_output,
 )
 
 
@@ -33,7 +33,7 @@ def _failed_queries(total: int, passed: int) -> list[dict]:
             "query": f"query-{index}",
             "expected_paths": [f"expected/{index}"],
             "returned_paths": [f"actual/{index}"],
-            "score": 0.1,
+            "score": 1.0 - index / 100,
         }
         for index in range(passed, total)
     ]
@@ -56,7 +56,7 @@ def test_failed_or_cancelled_parent_is_blocked_before_agent() -> None:
         assert result["status"] == "blocked"
         assert result["decision"] == "skip"
         assert conclusion in result["diagnostics"][0]
-        assert phase_exit_code(result, "prepare") == 1
+        assert phase_exit_code(result, "prepare") == 0
         assert validation_errors(result) == []
 
 
@@ -68,6 +68,7 @@ def test_setup_failure_is_machine_failure() -> None:
     assert phase_exit_code(result, "prepare") == 1
     assert phase_exit_code(result, "final") == 1
     assert validation_errors(result) == []
+    assert build_safe_output(result)["items"][0]["type"] == "noop"
 
 
 def test_schema_invalid_output_fails_validation() -> None:
@@ -96,7 +97,7 @@ def test_failed_queries_and_scores_are_preserved() -> None:
             "query": "query-2",
             "expected_paths": ["expected/2"],
             "returned_paths": ["actual/2"],
-            "score": 0.1,
+            "score": 0.98,
         }
     ]
     assert result["scores"] == _scores(3, 2)
@@ -131,10 +132,60 @@ def test_safe_output_is_derived_only_from_machine_decision() -> None:
     assert "80.0% (machine threshold: 85.0%)" in failed["items"][0]["body"]
 
 
-def test_jsonl_safe_outputs_always_short_circuit_model_invocation(tmp_path) -> None:
-    output = tmp_path / "safe-outputs.jsonl"
-    write_safe_outputs_jsonl(output, _result(20, 16))
-    items = [json.loads(line) for line in output.read_text(encoding="utf-8").splitlines()]
+def test_decision_output_preserves_deterministic_issue_rendering(tmp_path) -> None:
+    output = tmp_path / "decision-output.json"
+    write_decision_output(output, _result(20, 16))
+    items = json.loads(output.read_text(encoding="utf-8"))["items"]
 
-    assert [item["type"] for item in items] == ["create_issue", "noop"]
+    assert [item["type"] for item in items] == ["create_issue"]
     assert items[0]["title"] == "Search Quality Regression Detected"
+
+
+def test_passed_count_must_match_score_evidence() -> None:
+    result = _result(20, 17)
+    for item in result["scores"]:
+        item["passed"] = False
+
+    errors = validation_errors(result)
+
+    assert "passed_tests must equal the number of scores with passed=true" in errors
+    assert "pass_rate must equal the pass rate derived from scores" in errors
+    assert phase_exit_code(result, "final") == 2
+
+
+def test_failed_queries_must_match_failed_score_identities() -> None:
+    result = _result(3, 2)
+    result["failed_queries"][0]["query"] = "different-query"
+
+    errors = validation_errors(result)
+    assert "failed_queries must exactly match queries whose scores have passed=false" in errors
+    assert phase_exit_code(result, "final") == 2
+
+
+def test_failed_query_score_must_match_score_evidence() -> None:
+    result = _result(3, 2)
+    result["failed_queries"][0]["score"] = 0.9
+
+    errors = validation_errors(result)
+    assert "failed_queries score must match scores entry for query 'query-2'" in errors
+    assert phase_exit_code(result, "final") == 2
+
+
+def test_blocked_and_error_results_reject_execution_evidence() -> None:
+    for result in (build_blocked_result("cancelled"), build_error_result("setup", "failed")):
+        status = result["status"]
+        result["scores"] = [{"query": "contradiction", "score": 0.1, "passed": False}]
+        result["failed_queries"] = [
+            {
+                "query": "contradiction",
+                "expected_paths": ["expected"],
+                "returned_paths": ["actual"],
+                "score": 0.1,
+            }
+        ]
+
+        errors = validation_errors(result)
+
+        assert f"{status} results cannot contain scores" in errors
+        assert f"{status} results cannot contain failed_queries" in errors
+        assert phase_exit_code(result, "final") == 2

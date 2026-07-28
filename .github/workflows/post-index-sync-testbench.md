@@ -7,21 +7,19 @@ on:
     types: [completed]
     branches: [main]
   workflow_dispatch:
+  needs: [post_index_regression, post_index_conclusion]
 
 permissions:
   contents: read
-  issues: read
-  pull-requests: read
 
 engine: copilot
 strict: true
 tracker-id: post-index-testbench
-max-daily-ai-credits: -1
+if: ${{ false }}
 
 jobs:
   post_index_regression:
     name: Execute deterministic post-index regression
-    needs: pre_activation
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -123,6 +121,9 @@ jobs:
           python scripts/post_index_regression.py classify \
             --input "$RESULT_PATH" \
             --github-output "$GITHUB_OUTPUT"
+          python scripts/post_index_regression.py render-decision-output \
+            --input "$RESULT_PATH" \
+            --output /tmp/post-index-regression/decision-output.json
           cat "$RESULT_PATH" >> "$GITHUB_STEP_SUMMARY"
       - name: Upload bounded regression evidence
         if: always()
@@ -136,12 +137,16 @@ jobs:
         if: always()
         run: python scripts/post_index_regression.py validate --input "$RESULT_PATH" --phase prepare
   post_index_conclusion:
-    name: Enforce deterministic post-index conclusion
-    needs: [post_index_regression, agent]
+    name: Report and enforce deterministic post-index conclusion
+    needs: post_index_regression
     if: always()
     runs-on: ubuntu-latest
     permissions:
+      actions: read
       contents: read
+      issues: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -151,52 +156,51 @@ jobs:
         with:
           name: post-index-regression-${{ github.run_id }}
           path: /tmp/post-index-regression
+      - name: Publish deterministic regression incident
+        if: needs.post_index_regression.outputs.status == 'failed'
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          decision = json.loads(
+              Path("/tmp/post-index-regression/decision-output.json").read_text(encoding="utf-8")
+          )
+          issue = decision["items"][0]
+          if issue["type"] != "create_issue":
+              raise SystemExit("Expected deterministic create_issue output")
+          Path("/tmp/post-index-regression/issue-title.txt").write_text(issue["title"], encoding="utf-8")
+          Path("/tmp/post-index-regression/issue-body.md").write_text(issue["body"], encoding="utf-8")
+          PY
+          issue_number=$(
+            gh issue list \
+              --state open \
+              --search 'in:title "[search-quality] Search Quality Regression Detected" label:search label:automation' \
+              --json number \
+              --jq '.[0].number // empty'
+          )
+          if [[ -n "$issue_number" ]]; then
+            gh issue edit "$issue_number" \
+              --title "[search-quality] $(cat /tmp/post-index-regression/issue-title.txt)" \
+              --body-file /tmp/post-index-regression/issue-body.md \
+              --add-label search \
+              --add-label automation
+          else
+            gh issue create \
+              --title "[search-quality] $(cat /tmp/post-index-regression/issue-title.txt)" \
+              --body-file /tmp/post-index-regression/issue-body.md \
+              --label search \
+              --label automation
+          fi
+      - name: Record deterministic no-op or blocked outcome
+        if: needs.post_index_regression.outputs.status != 'failed'
+        run: cat /tmp/post-index-regression/decision-output.json >> "$GITHUB_STEP_SUMMARY"
       - name: Enforce the machine-owned conclusion
         run: >-
           python scripts/post_index_regression.py validate
           --input /tmp/post-index-regression/post-index-result.json
           --phase final
-network:
-  allowed:
-    - defaults
-    - github
-
-tools:
-  github:
-    toolsets: [default]
-  bash:
-    - "cat /tmp/gh-aw/agent/post-index-result.json"
-
-steps:
-  - name: Download deterministic regression evidence
-    uses: actions/download-artifact@v8
-    with:
-      name: post-index-regression-${{ github.run_id }}
-      path: /tmp/gh-aw/agent
-  - name: Materialize deterministic safe outputs and skip model invocation
-    env:
-      GH_AW_SAFE_OUTPUTS: ${{ steps.set-runtime-paths.outputs.GH_AW_SAFE_OUTPUTS }}
-    run: |
-      set -euo pipefail
-      python scripts/post_index_regression.py render-safe-outputs-jsonl \
-        --input /tmp/gh-aw/agent/post-index-result.json \
-        --output "$GH_AW_SAFE_OUTPUTS"
-
-safe-outputs:
-  threat-detection:
-    engine: false
-  create-issue:
-    title-prefix: "[search-quality] "
-    labels: [search, automation]
-    expires: 7d
-    close-older-issues: true
-  report-incomplete:
-  noop:
-    report-as-issue: false
-
-imports:
-  - shared/mood.md
-  - shared/reporting.md
 
 timeout-minutes: 10
 concurrency:
@@ -206,9 +210,9 @@ concurrency:
 
 # Post-Index Search Quality Check
 
-Deterministic host steps execute and validate the search regression suite, materialize the corresponding safe outputs, and
-write a `noop` before engine startup. The `noop` is a mandatory short-circuit: no model invocation is required or permitted for
-this workflow's regression decision.
+This workflow is fully deterministic. Custom jobs execute and validate the regression suite, render the issue/no-op contract,
+publish any regression incident, and enforce the final conclusion. The static activation condition is false, so Copilot
+activation, model credentials, model setup, and safe-output infrastructure are never part of the execution path.
 
 ## Context
 
