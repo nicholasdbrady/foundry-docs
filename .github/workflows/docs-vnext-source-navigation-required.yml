@@ -27,6 +27,43 @@ jobs:
           ref: ${{ github.event.pull_request.base.sha }}
           fetch-depth: 0
 
+      - name: Initialize failure inventory
+        run: |
+          mkdir -p tests/eval_results
+          cat > tests/eval_results/docs-vnext-route-inventory.json <<'JSON'
+          {
+            "schemaVersion": 1,
+            "status": "failed",
+            "navigationSource": "docs-vnext/docs.json",
+            "routes": [],
+            "openapi": [],
+            "aliases": [],
+            "externalNavigation": [],
+            "linkSummary": {
+              "currentStale": 0,
+              "baselineStale": 0,
+              "grandfathered": 0,
+              "introduced": 0
+            },
+            "diagnosticSummary": {
+              "total": 1,
+              "counts": {"workflow_incomplete": 1},
+              "truncated": false
+            },
+            "diagnostics": [
+              {
+                "sourceNavigationEntry": "navigation",
+                "route": null,
+                "failureClass": "workflow_incomplete",
+                "candidateSourcePath": "docs-vnext/docs.json",
+                "detail": "Trusted validation did not complete."
+              }
+            ]
+          }
+          JSON
+          cp tests/eval_results/docs-vnext-route-inventory.json \
+            "$RUNNER_TEMP/source-navigation-failure-inventory.json"
+
       - name: Fetch and classify proposed changes
         id: changes
         env:
@@ -83,60 +120,15 @@ jobs:
             esac
           done < "$changed_paths"
           echo "relevant=$relevant" >> "$GITHUB_OUTPUT"
+          if [[ "$relevant" == "true" ]]; then
+            echo "irrelevant=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "irrelevant=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: No relevant source navigation changes
-        if: steps.changes.outputs.relevant != 'true'
+        if: steps.changes.outputs.irrelevant == 'true'
         run: echo "No docs-vnext source navigation changes require validation."
-
-      - name: Initialize failure inventory
-        if: steps.changes.outputs.relevant == 'true'
-        run: |
-          mkdir -p tests/eval_results
-          cat > tests/eval_results/docs-vnext-route-inventory.json <<'JSON'
-          {
-            "schemaVersion": 1,
-            "status": "failed",
-            "navigationSource": "docs-vnext/docs.json",
-            "routes": [],
-            "openapi": [],
-            "aliases": [],
-            "externalNavigation": [],
-            "linkSummary": {
-              "currentStale": 0,
-              "baselineStale": 0,
-              "grandfathered": 0,
-              "introduced": 0
-            },
-            "diagnosticSummary": {
-              "total": 1,
-              "counts": {"workflow_incomplete": 1},
-              "truncated": false
-            },
-            "diagnostics": [
-              {
-                "sourceNavigationEntry": "navigation",
-                "route": null,
-                "failureClass": "workflow_incomplete",
-                "candidateSourcePath": "docs-vnext/docs.json",
-                "detail": "Trusted validation did not complete."
-              }
-            ]
-          }
-          JSON
-
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
-        if: steps.changes.outputs.relevant == 'true'
-        with:
-          python-version: "3.12"
-          cache: "pip"
-
-      - name: Install trusted test dependencies
-        if: steps.changes.outputs.relevant == 'true'
-        run: pip install -e ".[dev]"
-
-      - name: Run trusted navigation validator tests
-        if: steps.changes.outputs.relevant == 'true'
-        run: python -m pytest tests/test_validate_docs_vnext_navigation.py -q
 
       - name: Extract proposed documentation as data
         if: steps.changes.outputs.relevant == 'true'
@@ -173,28 +165,40 @@ jobs:
       - name: Validate merged docs-vnext source navigation
         if: steps.changes.outputs.relevant == 'true'
         run: |
-          python scripts/validate_docs_vnext_navigation.py \
+          python3 -I scripts/validate_docs_vnext_navigation.py \
             --docs-dir "$RUNNER_TEMP/source-navigation-merged/docs-vnext" \
             --base-docs-dir "$RUNNER_TEMP/source-navigation-base/docs-vnext" \
             --output tests/eval_results/docs-vnext-route-inventory.json
 
       - name: Confirm current base branch
+        id: freshness
         env:
           BASE_REF: ${{ github.event.pull_request.base.ref }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
+          rewrite_failure_inventory() {
+            if ! cp "$RUNNER_TEMP/source-navigation-failure-inventory.json" \
+              tests/eval_results/docs-vnext-route-inventory.json; then
+              echo "::error::Unable to rewrite the route inventory as failed."
+              exit 1
+            fi
+            echo "failure=true" >> "$GITHUB_OUTPUT"
+          }
+
           if ! remote_base="$(git ls-remote --exit-code origin "refs/heads/$BASE_REF" | awk 'NR == 1 { print $1 }')"; then
+            rewrite_failure_inventory
             echo "::error::Unable to resolve the current pull request base branch."
             exit 1
           fi
           if [[ "$remote_base" != "$BASE_SHA" ]]; then
+            rewrite_failure_inventory
             echo "::error::The pull request base advanced during validation."
             echo "::error::The repository ruleset must require branches to be up to date before merging."
             exit 1
           fi
 
       - name: Upload trusted route inventory
-        if: always() && steps.changes.outputs.relevant == 'true'
+        if: always() && (steps.changes.outputs.irrelevant != 'true' || steps.freshness.outputs.failure == 'true')
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
         with:
           name: docs-vnext-required-route-inventory

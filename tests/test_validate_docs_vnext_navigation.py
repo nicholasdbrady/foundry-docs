@@ -448,6 +448,9 @@ def test_required_context_never_checks_out_or_executes_untrusted_pr_code() -> No
     assert checkout_steps[0]["with"]["ref"] == "${{ github.event.pull_request.base.sha }}"
     assert "GH_TOKEN" not in str(workflow)
     assert "github.event.pull_request.head.repo" not in str(workflow)
+    assert "pip install" not in str(workflow)
+    assert "pytest" not in str(workflow)
+    assert "actions/setup-python" not in str(workflow)
 
     extraction = by_name["Extract proposed documentation as data"]["run"]
     assert 'git archive -o "$base_archive" "$BASE_SHA" docs-vnext' in extraction
@@ -457,10 +460,18 @@ def test_required_context_never_checks_out_or_executes_untrusted_pr_code() -> No
     assert 'tar -xf "$merged_archive" -C "$merged_dir"' in extraction
     assert 'find "$merged_dir/docs-vnext" -type l' in extraction
     validation = by_name["Validate merged docs-vnext source navigation"]["run"]
-    assert "python scripts/validate_docs_vnext_navigation.py" in validation
+    assert "python3 -I scripts/validate_docs_vnext_navigation.py" in validation
     assert '--docs-dir "$RUNNER_TEMP/source-navigation-merged/docs-vnext"' in validation
     assert '--base-docs-dir "$RUNNER_TEMP/source-navigation-base/docs-vnext"' in validation
     assert "source-navigation-head/scripts" not in str(workflow)
+    python_commands = [
+        line.strip()
+        for step in steps
+        for line in str(step.get("run", "")).splitlines()
+        if "python" in line
+    ]
+    assert python_commands
+    assert all("python3 -I scripts/validate_docs_vnext_navigation.py" in command for command in python_commands)
 
 
 def test_required_context_noops_irrelevant_and_runs_trusted_gate_for_relevant_changes() -> None:
@@ -468,16 +479,60 @@ def test_required_context_noops_irrelevant_and_runs_trusted_gate_for_relevant_ch
     steps = workflow["jobs"]["require-source-navigation"]["steps"]
     by_name = {step["name"]: step for step in steps if "name" in step}
 
-    assert by_name["No relevant source navigation changes"]["if"] == "steps.changes.outputs.relevant != 'true'"
+    assert "if [[ \"$relevant\" == \"true\" ]]" in by_name["Fetch and classify proposed changes"]["run"]
+    assert 'echo "irrelevant=true" >> "$GITHUB_OUTPUT"' in by_name["Fetch and classify proposed changes"]["run"]
+    assert by_name["No relevant source navigation changes"]["if"] == "steps.changes.outputs.irrelevant == 'true'"
     for step_name in (
-        "Initialize failure inventory",
-        "Install trusted test dependencies",
-        "Run trusted navigation validator tests",
         "Extract proposed documentation as data",
         "Validate merged docs-vnext source navigation",
     ):
         assert by_name[step_name]["if"] == "steps.changes.outputs.relevant == 'true'"
-    assert by_name["Upload trusted route inventory"]["if"] == "always() && steps.changes.outputs.relevant == 'true'"
+    assert "Install trusted test dependencies" not in by_name
+    assert "Run trusted navigation validator tests" not in by_name
+    assert by_name["Upload trusted route inventory"]["if"] == (
+        "always() && (steps.changes.outputs.irrelevant != 'true' || steps.freshness.outputs.failure == 'true')"
+    )
+
+
+def test_required_context_initializes_failure_before_classification_and_uploads_failures() -> None:
+    workflow = yaml.load(REQUIRED_WORKFLOW_PATH.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
+    steps = workflow["jobs"]["require-source-navigation"]["steps"]
+    names = [step.get("name") for step in steps]
+    by_name = {step["name"]: step for step in steps if "name" in step}
+
+    assert names.index("Initialize failure inventory") < names.index("Fetch and classify proposed changes")
+    assert "if" not in by_name["Initialize failure inventory"]
+    assert "$RUNNER_TEMP/source-navigation-failure-inventory.json" in by_name["Initialize failure inventory"]["run"]
+    assert by_name["Upload trusted route inventory"]["if"].startswith(
+        "always() && (steps.changes.outputs.irrelevant != 'true'"
+    )
+    classifier = by_name["Fetch and classify proposed changes"]["run"]
+    assert classifier.count("exit 1") >= 7
+
+
+def test_required_context_skips_successful_irrelevant_artifact() -> None:
+    workflow = yaml.load(REQUIRED_WORKFLOW_PATH.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
+    steps = workflow["jobs"]["require-source-navigation"]["steps"]
+    by_name = {step["name"]: step for step in steps if "name" in step}
+
+    assert by_name["No relevant source navigation changes"]["if"] == "steps.changes.outputs.irrelevant == 'true'"
+    assert 'echo "irrelevant=true" >> "$GITHUB_OUTPUT"' in by_name["Fetch and classify proposed changes"]["run"]
+    assert "steps.changes.outputs.irrelevant != 'true'" in by_name["Upload trusted route inventory"]["if"]
+
+
+def test_stale_base_failure_rewrites_passed_inventory_before_upload() -> None:
+    workflow = yaml.load(REQUIRED_WORKFLOW_PATH.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
+    steps = workflow["jobs"]["require-source-navigation"]["steps"]
+    by_name = {step["name"]: step for step in steps if "name" in step}
+    freshness = by_name["Confirm current base branch"]
+
+    assert freshness["id"] == "freshness"
+    script = freshness["run"]
+    assert 'cp "$RUNNER_TEMP/source-navigation-failure-inventory.json"' in script
+    assert "tests/eval_results/docs-vnext-route-inventory.json" in script
+    assert 'echo "failure=true" >> "$GITHUB_OUTPUT"' in script
+    assert script.index("rewrite_failure_inventory") < script.index("exit 1")
+    assert "steps.freshness.outputs.failure == 'true'" in by_name["Upload trusted route inventory"]["if"]
 
 
 def test_synthetic_merge_catches_failure_that_raw_behind_head_misses(tmp_path: Path) -> None:
