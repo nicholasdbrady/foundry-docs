@@ -15,7 +15,7 @@ from fastmcp import Client
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 
 from eval_report import generate_report  # noqa: E402
-from eval_scorer import aggregate_scores, score_result, validate_required_matrix  # noqa: E402
+from eval_scorer import aggregate_scores, score_result, validate_required_matrix, validate_row_schema  # noqa: E402
 from foundry_docs_mcp._server_factory import DOCS_CONFIG, build_server  # noqa: E402
 from run_docs_eval import MCP_SERVERS, build_mcp_config, parse_event_stream, run_single_eval  # noqa: E402
 
@@ -95,6 +95,14 @@ def _raw_row(
         "azure_live_query_proven": False,
         "failure_reason": failure_reason,
         "event_parse_error": None,
+        "diagnostics": {
+            "events": [],
+            "events_truncated": False,
+            "stdout_excerpt": "",
+            "stdout_truncated": False,
+            "stderr_excerpt": "",
+            "stderr_truncated": False,
+        },
         "exit_code": 0 if valid else -1,
         "rubric": SCENARIO["rubric"],
         "turns": 1,
@@ -252,7 +260,26 @@ def test_azure_required_row_needs_successful_selected_search(monkeypatch):
 
 def test_timeout_is_preserved_as_invalid_row_diagnostics(monkeypatch):
     def time_out(cmd, **kwargs):
-        raise subprocess.TimeoutExpired(cmd=cmd, timeout=kwargs["timeout"])
+        partial_events = "\n".join([
+            json.dumps({
+                "type": "session.mcp_server_status_changed",
+                "data": {
+                    "serverName": "foundry_docs",
+                    "status": "failed",
+                    "error": "API_KEY=super-secret at C:\\Users\\someone\\repo",
+                },
+            }),
+            json.dumps({
+                "type": "tool.execution_start",
+                "data": {"toolCallId": "call-1", "toolName": "foundry_docs-search_docs"},
+            }),
+        ])
+        raise subprocess.TimeoutExpired(
+            cmd=cmd,
+            timeout=kwargs["timeout"],
+            output=partial_events.encode(),
+            stderr=b"Bearer abc.def.ghi from C:\\Users\\someone\\repo",
+        )
 
     monkeypatch.setattr(subprocess, "run", time_out)
 
@@ -268,6 +295,328 @@ def test_timeout_is_preserved_as_invalid_row_diagnostics(monkeypatch):
     assert result["response_present"] is False
     assert result["failure_reason"] == "timeout: exceeded 3s"
     assert result["response_time_seconds"] >= 0
+    assert result["observed_tools"] == ["foundry_docs-search_docs"]
+    assert result["diagnostics"]["events"][0]["event_type"] == "session.mcp_server_status_changed"
+    assert "API_KEY=[REDACTED]" in result["diagnostics"]["events"][0]["data"]["error"]
+    assert "<PATH>" in result["diagnostics"]["events"][0]["data"]["error"]
+    assert "super-secret" not in result["diagnostics"]["stdout_excerpt"]
+    assert "Bearer [REDACTED]" in result["diagnostics"]["stderr_excerpt"]
+    assert result["response"] == ""
+
+    scored = score_result(result)
+    publication = validate_required_matrix(
+        [scored],
+        scenario_ids=["scenario-1"],
+        servers=["foundry-docs"],
+        models=["model-1"],
+    )
+    assert publication["allowed"] is False
+
+
+def test_mcp_initialization_failure_preserves_sanitized_lifecycle_diagnostics(monkeypatch):
+    stdout = "\n".join([
+        json.dumps({
+            "type": "session.mcp_server_status_changed",
+            "data": {
+                "serverName": "foundry_docs",
+                "status": "failed",
+                "error": "token=top-secret failed in C:\\Users\\someone\\repo",
+                "authorization": "Bearer should-never-survive",
+            },
+        }),
+        json.dumps({"type": "result", "exitCode": 0}),
+    ])
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda cmd, **kwargs: subprocess.CompletedProcess(cmd, 0, stdout=stdout, stderr=""),
+    )
+
+    result = run_single_eval(
+        SCENARIO,
+        "foundry-docs",
+        MCP_SERVERS["foundry-docs"],
+        "model-1",
+    )
+
+    assert result["status"] == "invalid"
+    assert result["failure_reason"].startswith("mcp_initialization_failure:")
+    assert "source_selection_unproven" not in result["failure_reason"]
+    diagnostic = result["diagnostics"]["events"][0]
+    assert diagnostic["event_type"] == "session.mcp_server_status_changed"
+    assert diagnostic["data"]["status"] == "failed"
+    assert "token=[REDACTED]" in diagnostic["data"]["error"]
+    assert "<PATH>" in diagnostic["data"]["error"]
+    assert diagnostic["data"]["authorization"] == "[REDACTED]"
+
+
+def test_diagnostic_output_is_bounded(monkeypatch):
+    long_error = "failure " + ("x" * 20_000)
+    stdout = "\n".join([
+        json.dumps({
+            "type": "session.mcp_server_status_changed",
+            "data": {"serverName": "foundry_docs", "status": "failed", "error": long_error},
+        }),
+        json.dumps({"type": "result", "exitCode": 0}),
+    ])
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda cmd, **kwargs: subprocess.CompletedProcess(cmd, 0, stdout=stdout, stderr=long_error),
+    )
+
+    result = run_single_eval(
+        SCENARIO,
+        "foundry-docs",
+        MCP_SERVERS["foundry-docs"],
+        "model-1",
+    )
+
+    assert result["diagnostics"]["stdout_truncated"] is True
+    assert result["diagnostics"]["stderr_truncated"] is True
+    assert len(result["diagnostics"]["stdout_excerpt"]) < 12_100
+    assert len(result["diagnostics"]["stderr_excerpt"]) < 4_100
+
+
+def test_sanitizer_redacts_prefixed_secrets_and_windows_paths(monkeypatch):
+    stderr = (
+        'AZURE_SEARCH_API_KEY="super secret" GITHUB_TOKEN=github_pat_abc '
+        "at C:\\Users\\Jane Doe\\repo and \\\\server\\share\\private"
+    )
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda cmd, **kwargs: subprocess.CompletedProcess(
+            cmd,
+            0,
+            stdout="not-json",
+            stderr=stderr,
+        ),
+    )
+
+    result = run_single_eval(
+        SCENARIO,
+        "foundry-docs",
+        MCP_SERVERS["foundry-docs"],
+        "model-1",
+    )
+
+    excerpt = result["diagnostics"]["stderr_excerpt"]
+    assert "super secret" not in excerpt
+    assert "github_pat_abc" not in excerpt
+    assert "Jane Doe" not in excerpt
+    assert "server\\share" not in excerpt
+    assert "<PATH>" in excerpt
+
+
+def test_sanitizer_redacts_json_style_secret_keys(monkeypatch):
+    stdout = "\n".join([
+        json.dumps({
+            "type": "session.mcp_server_status_changed",
+            "data": {
+                "serverName": "foundry_docs",
+                "status": "failed",
+                "api_key": "json-secret-value",
+            },
+        }),
+        json.dumps({"type": "result", "exitCode": 0}),
+    ])
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda cmd, **kwargs: subprocess.CompletedProcess(cmd, 0, stdout=stdout, stderr=""),
+    )
+
+    result = run_single_eval(
+        SCENARIO,
+        "foundry-docs",
+        MCP_SERVERS["foundry-docs"],
+        "model-1",
+    )
+
+    assert "json-secret-value" not in result["diagnostics"]["stdout_excerpt"]
+    assert result["diagnostics"]["events"][0]["data"]["api_key"] == "[REDACTED]"
+
+
+def test_sanitizer_redacts_escaped_nested_json_secrets(monkeypatch):
+    stdout = "\n".join([
+        json.dumps({
+            "type": "session.mcp_server_status_changed",
+            "data": {
+                "serverName": "foundry_docs",
+                "status": "failed",
+                "message": json.dumps({"AZURE_SEARCH_API_KEY": "nested-json-secret"}),
+            },
+        }),
+        json.dumps({"type": "result", "exitCode": 0}),
+    ])
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda cmd, **kwargs: subprocess.CompletedProcess(cmd, 0, stdout=stdout, stderr=""),
+    )
+
+    result = run_single_eval(
+        SCENARIO,
+        "foundry-docs",
+        MCP_SERVERS["foundry-docs"],
+        "model-1",
+    )
+
+    assert "nested-json-secret" not in result["diagnostics"]["stdout_excerpt"]
+
+
+def test_process_exit_preserves_specific_mcp_failure_reason(monkeypatch):
+    stdout = "\n".join([
+        json.dumps({
+            "type": "session.mcp_server_status_changed",
+            "data": {"serverName": "foundry_docs", "status": "failed", "error": "startup failed"},
+        }),
+        json.dumps({"type": "result", "exitCode": 1}),
+    ])
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda cmd, **kwargs: subprocess.CompletedProcess(cmd, 1, stdout=stdout, stderr=""),
+    )
+
+    result = run_single_eval(
+        SCENARIO,
+        "foundry-docs",
+        MCP_SERVERS["foundry-docs"],
+        "model-1",
+    )
+
+    assert "mcp_initialization_failure:" in result["failure_reason"]
+    assert "process_exit_code: 1" in result["failure_reason"]
+
+
+def test_mcp_failure_server_name_is_sanitized_and_bounded(monkeypatch):
+    stdout = "\n".join([
+        json.dumps({
+            "type": "session.mcp_server_status_changed",
+            "data": {
+                "serverName": "token=server-secret C:\\Users\\alice\\private " + ("x" * 20_000),
+                "status": "failed",
+                "error": "startup failed",
+            },
+        }),
+        json.dumps({"type": "result", "exitCode": 1}),
+    ])
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda cmd, **kwargs: subprocess.CompletedProcess(cmd, 1, stdout=stdout, stderr=""),
+    )
+
+    result = run_single_eval(
+        SCENARIO,
+        "foundry-docs",
+        MCP_SERVERS["foundry-docs"],
+        "model-1",
+    )
+
+    assert "server-secret" not in result["failure_reason"]
+    assert "alice" not in result["failure_reason"]
+    assert len(result["failure_reason"]) < 2_200
+
+
+def test_size_based_event_truncation_is_schema_valid():
+    row = _raw_row()
+    row["diagnostics"]["events"] = [{"event_type": "status", "data": {"message": "x" * 40_000}}]
+    row["diagnostics"]["events_truncated"] = True
+
+    assert validate_row_schema(row) == []
+
+
+def test_nested_stdout_truncation_flag_is_schema_valid():
+    row = _raw_row()
+    row["diagnostics"]["stdout_excerpt"] = "x" * 2_000 + "...[truncated]"
+    row["diagnostics"]["stdout_truncated"] = True
+
+    assert validate_row_schema(row) == []
+
+
+def test_diagnostic_path_keys_are_sanitized(monkeypatch):
+    stdout = "\n".join([
+        json.dumps({
+            "type": "tool.execution_start",
+            "data": {"toolCallId": "call-1", "toolName": "foundry_docs-search_docs"},
+        }),
+        json.dumps({
+            "type": "tool.execution_complete",
+            "data": {
+                "toolCallId": "call-1",
+                "success": False,
+                "result": {"C:\\Users\\someone\\private.txt": "failed"},
+            },
+        }),
+        json.dumps({"type": "result", "exitCode": 0}),
+    ])
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda cmd, **kwargs: subprocess.CompletedProcess(cmd, 0, stdout=stdout, stderr=""),
+    )
+
+    result = run_single_eval(
+        SCENARIO,
+        "foundry-docs",
+        MCP_SERVERS["foundry-docs"],
+        "model-1",
+    )
+
+    serialized = json.dumps(result["diagnostics"])
+    assert "private.txt" not in serialized
+    assert "<PATH>" in serialized
+
+
+@pytest.mark.parametrize(
+    "diagnostics",
+    [
+        None,
+        {
+            "events": [{}] * 21,
+            "events_truncated": True,
+            "stdout_excerpt": "",
+            "stdout_truncated": False,
+            "stderr_excerpt": "",
+            "stderr_truncated": False,
+        },
+        {
+            "events": [],
+            "events_truncated": False,
+            "stdout_excerpt": "x" * 20_000,
+            "stdout_truncated": False,
+            "stderr_excerpt": "",
+            "stderr_truncated": False,
+        },
+        {
+            "events": [{"event_type": "status", "data": {"message": "x" * 1_000_000}}],
+            "events_truncated": False,
+            "stdout_excerpt": "",
+            "stdout_truncated": False,
+            "stderr_excerpt": "",
+            "stderr_truncated": False,
+        },
+        {
+            "events": [],
+            "events_truncated": False,
+            "stdout_excerpt": "",
+            "stdout_truncated": False,
+            "stderr_excerpt": "",
+            "stderr_truncated": False,
+            "raw_stdout": "x" * 1_000_000,
+        },
+    ],
+)
+def test_scorer_rejects_missing_or_unbounded_diagnostics(diagnostics):
+    row = _raw_row()
+    row["diagnostics"] = diagnostics
+
+    scored = score_result(row)
+
+    assert scored["row_valid"] is False
 
 
 def test_parse_event_stream_rejects_incomplete_tool_call():

@@ -18,6 +18,7 @@ Models:
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -91,6 +92,25 @@ KNOWN_TOOL_PREFIXES = tuple(
         key=len,
         reverse=True,
     )
+)
+MAX_DIAGNOSTIC_EVENTS = 20
+MAX_DIAGNOSTIC_EVENTS_CHARS = 50_000
+MAX_DIAGNOSTIC_TEXT = 2_000
+MAX_STDOUT_EXCERPT = 12_000
+MAX_STDERR_EXCERPT = 4_000
+_SECRET_KEY_PATTERN = re.compile(r"(?:api[_-]?key|authorization|credential|password|secret|token)", re.I)
+_SECRET_VALUE_PATTERNS = (
+    re.compile(r"\b(?:github_pat_|gh[pousr]_)[A-Za-z0-9_]+\b"),
+    re.compile(r"(?i)(bearer\s+)[A-Za-z0-9._~+/=-]+"),
+    re.compile(
+        r"(?i)([\"']?[A-Z0-9_-]{0,128}(?:api[_-]?key|authorization|credential|password|secret|token)"
+        r"[\"']?\s*[:=]\s*)(?:\"[^\"]*\"|'[^']*'|[^\s,;}]+)"
+    ),
+)
+_ABSOLUTE_PATH_PATTERNS = (
+    re.compile(r"(?i)\\\\[^\\\r\n]+\\[^,\r\n;\"']+"),
+    re.compile(r"(?i)\b[A-Z]:\\[^,\r\n;\"']+"),
+    re.compile(r"(?<![:/\w])/(?:[^/\s]+/)+[^,\s;\"']+"),
 )
 
 
@@ -184,6 +204,142 @@ def _is_search_tool(tool_name: str) -> bool:
     return "search_docs" in normalized or normalized.endswith("_search")
 
 
+def _coerce_process_text(value: str | bytes | None) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    return value
+
+
+def _sanitize_text(value: str, max_chars: int = MAX_DIAGNOSTIC_TEXT) -> tuple[str, bool]:
+    """Redact common secrets and local paths, then bound diagnostic text."""
+    pre_redaction_limit = max_chars * 4
+    truncated = len(value) > pre_redaction_limit
+    sanitized = value[:pre_redaction_limit]
+    path_replacements = (
+        (str(PROJECT_ROOT), "<PROJECT_ROOT>"),
+        (str(Path.home()), "<HOME>"),
+        (tempfile.gettempdir(), "<TEMP>"),
+    )
+    for path, replacement in path_replacements:
+        if path:
+            sanitized = re.sub(re.escape(path), replacement, sanitized, flags=re.I)
+
+    sanitized = _SECRET_VALUE_PATTERNS[0].sub("[REDACTED]", sanitized)
+    sanitized = _SECRET_VALUE_PATTERNS[1].sub(r"\1[REDACTED]", sanitized)
+    sanitized = _SECRET_VALUE_PATTERNS[2].sub(r"\1[REDACTED]", sanitized)
+    for pattern in _ABSOLUTE_PATH_PATTERNS:
+        sanitized = pattern.sub("<PATH>", sanitized)
+
+    if len(sanitized) > max_chars:
+        truncated = True
+        sanitized = sanitized[:max_chars] + "...[truncated]"
+    return sanitized, truncated
+
+
+def _sanitize_diagnostic_value(value: object, *, depth: int = 0) -> object:
+    if depth >= 4:
+        return "[truncated-depth]"
+    if isinstance(value, dict):
+        sanitized = {}
+        for index, (key, child) in enumerate(value.items()):
+            if index >= 20:
+                sanitized["_truncated_fields"] = True
+                break
+            raw_key_text = str(key)
+            key_text = _sanitize_text(raw_key_text)[0]
+            lowered_key = key_text.casefold()
+            if lowered_key in {"arguments", "input", "request", "headers", "env", "environment"}:
+                sanitized[key_text] = "[OMITTED]"
+                continue
+            sanitized[key_text] = (
+                "[REDACTED]"
+                if _SECRET_KEY_PATTERN.search(raw_key_text)
+                else _sanitize_diagnostic_value(child, depth=depth + 1)
+            )
+        return sanitized
+    if isinstance(value, list):
+        sanitized_items = [_sanitize_diagnostic_value(item, depth=depth + 1) for item in value[:20]]
+        if len(value) > 20:
+            sanitized_items.append("[truncated-items]")
+        return sanitized_items
+    if isinstance(value, str):
+        return _sanitize_text(value)[0]
+    if value is None or isinstance(value, (bool, int, float)):
+        return value
+    return _sanitize_text(str(value))[0]
+
+
+def _bounded_excerpt(value: str | bytes | None, max_chars: int) -> tuple[str, bool]:
+    return _sanitize_text(_coerce_process_text(value), max_chars=max_chars)
+
+
+def _bounded_stdout_excerpt(value: str | bytes | None) -> tuple[str, bool]:
+    sanitized_lines = []
+    per_line_truncated = False
+    for line in _coerce_process_text(value).splitlines():
+        try:
+            parsed_line = json.loads(line)
+        except (json.JSONDecodeError, ValueError):
+            sanitized_line, truncated = _sanitize_text(line)
+            sanitized_lines.append(sanitized_line)
+            per_line_truncated = per_line_truncated or truncated
+        else:
+            per_line_truncated = per_line_truncated or _contains_oversized_diagnostic_value(parsed_line)
+            sanitized_lines.append(json.dumps(_sanitize_diagnostic_value(parsed_line), ensure_ascii=True))
+    excerpt, final_truncated = _sanitize_text("\n".join(sanitized_lines), max_chars=MAX_STDOUT_EXCERPT)
+    return excerpt, per_line_truncated or final_truncated
+
+
+def _contains_oversized_diagnostic_value(value: object, *, depth: int = 0) -> bool:
+    if depth >= 4:
+        return True
+    if isinstance(value, dict):
+        return len(value) > 20 or any(
+            len(str(key)) > MAX_DIAGNOSTIC_TEXT
+            or _contains_oversized_diagnostic_value(child, depth=depth + 1)
+            for key, child in value.items()
+        )
+    if isinstance(value, list):
+        return len(value) > 20 or any(
+            _contains_oversized_diagnostic_value(item, depth=depth + 1)
+            for item in value
+        )
+    return isinstance(value, str) and len(value) > MAX_DIAGNOSTIC_TEXT
+
+
+def _empty_diagnostics() -> dict:
+    return {
+        "events": [],
+        "events_truncated": False,
+        "stdout_excerpt": "",
+        "stdout_truncated": False,
+        "stderr_excerpt": "",
+        "stderr_truncated": False,
+    }
+
+
+def _build_diagnostics(
+    parsed: dict | None,
+    stdout: str | bytes | None,
+    stderr: str | bytes | None,
+    *,
+    preserve_stdout: bool,
+) -> dict:
+    diagnostics = _empty_diagnostics()
+    if parsed is not None:
+        diagnostics["events"] = parsed["diagnostic_events"]
+        diagnostics["events_truncated"] = parsed["diagnostic_events_truncated"]
+    if preserve_stdout:
+        diagnostics["stdout_excerpt"], diagnostics["stdout_truncated"] = _bounded_stdout_excerpt(stdout)
+    diagnostics["stderr_excerpt"], diagnostics["stderr_truncated"] = _bounded_excerpt(
+        stderr,
+        MAX_STDERR_EXCERPT,
+    )
+    return diagnostics
+
+
 def parse_event_stream(stdout: str) -> dict:
     """Parse `copilot --output-format json` JSONL output into operational metrics.
 
@@ -204,6 +360,9 @@ def parse_event_stream(stdout: str) -> dict:
         "parse_error": None,
         "observed_tools": [],
         "successful_tools": [],
+        "diagnostic_events": [],
+        "diagnostic_events_truncated": False,
+        "mcp_failure": None,
     }
 
     last_message_content = ""
@@ -215,6 +374,23 @@ def parse_event_stream(stdout: str) -> dict:
     completed_tool_calls: set[str] = set()
     final_response_line: int | None = None
     last_successful_tool_line: int | None = None
+    diagnostic_event_chars = 0
+
+    def add_diagnostic(event_type: str, data: dict) -> None:
+        nonlocal diagnostic_event_chars
+        if len(metrics["diagnostic_events"]) >= MAX_DIAGNOSTIC_EVENTS:
+            metrics["diagnostic_events_truncated"] = True
+            return
+        diagnostic = {
+            "event_type": event_type,
+            "data": _sanitize_diagnostic_value(data),
+        }
+        diagnostic_chars = len(json.dumps(diagnostic, ensure_ascii=True))
+        if diagnostic_event_chars + diagnostic_chars > MAX_DIAGNOSTIC_EVENTS_CHARS:
+            metrics["diagnostic_events_truncated"] = True
+            return
+        metrics["diagnostic_events"].append(diagnostic)
+        diagnostic_event_chars += diagnostic_chars
 
     for line_number, line in enumerate(stdout.splitlines(), start=1):
         line = line.strip()
@@ -296,6 +472,25 @@ def parse_event_stream(stdout: str) -> dict:
                     last_successful_tool_line = line_number
             if data.get("success") is False:
                 metrics["tool_errors"] += 1
+                add_diagnostic(
+                    etype,
+                    {
+                        "toolName": tool_name,
+                        "success": False,
+                        "error": data.get("error"),
+                        "result": data.get("result"),
+                    },
+                )
+        elif etype == "session.mcp_server_status_changed":
+            add_diagnostic(etype, data)
+            status = str(data.get("status") or data.get("state") or "").casefold()
+            error = data.get("error") or data.get("message")
+            if error or status in {"error", "failed", "failure", "stopped", "unavailable", "disconnected"}:
+                raw_server = data.get("serverName") or data.get("server") or data.get("name") or "selected MCP server"
+                server = _sanitize_text(str(raw_server))[0]
+                detail = error or f"status changed to {status or 'unknown'}"
+                sanitized_detail = _sanitize_text(str(detail))[0]
+                metrics["mcp_failure"] = f"{server}: {sanitized_detail}"
         elif etype == "result":
             if result_seen:
                 parse_errors.append(f"line {line_number}: duplicate terminal result")
@@ -335,6 +530,8 @@ def parse_event_stream(stdout: str) -> dict:
 
 def validate_row_evidence(parsed: dict, tool_prefix: str, azure_required: bool) -> tuple[bool, str | None, bool]:
     """Validate selected-source and optional Azure evidence for one row."""
+    if parsed["mcp_failure"]:
+        return False, f"mcp_initialization_failure: {parsed['mcp_failure']}", False
     if parsed["parse_error"]:
         return False, f"event_parse_failure: {parsed['parse_error']}", False
     if parsed["tool_errors"]:
@@ -395,6 +592,7 @@ def run_single_eval(
         "source_validated": False,
         "azure_required": False,
         "azure_live_query_proven": False,
+        "diagnostics": _empty_diagnostics(),
     }
 
     start_time = time.monotonic()
@@ -422,6 +620,7 @@ def run_single_eval(
             "api_duration_ms": None,
             "session_duration_ms": None,
             "event_parse_error": None,
+            "diagnostics": _build_diagnostics(None, None, str(exc), preserve_stdout=False),
         })
         return result
 
@@ -457,7 +656,7 @@ def run_single_eval(
             )
 
         elapsed = time.monotonic() - start_time
-        parsed = parse_event_stream(proc.stdout)
+        parsed = parse_event_stream(_coerce_process_text(proc.stdout))
         response = parsed["response"]
         evidence_valid, failure_reason, azure_live_query_proven = validate_row_evidence(
             parsed,
@@ -466,16 +665,18 @@ def run_single_eval(
         )
         if proc.returncode != 0:
             status = "error"
-            failure_reason = f"process_exit_code: {proc.returncode}"
+            process_failure = f"process_exit_code: {proc.returncode}"
+            failure_reason = f"{failure_reason}; {process_failure}" if failure_reason else process_failure
         elif parsed["result_exit_code"] not in (0, None):
             status = "invalid"
-            failure_reason = f"event_result_exit_code: {parsed['result_exit_code']}"
+            event_failure = f"event_result_exit_code: {parsed['result_exit_code']}"
+            failure_reason = f"{failure_reason}; {event_failure}" if failure_reason else event_failure
         else:
             status = "success" if evidence_valid else "invalid"
 
         result.update({
             "response": response,
-            "stderr": proc.stderr.strip() if proc.stderr else "",
+            "stderr": _bounded_excerpt(proc.stderr, MAX_STDERR_EXCERPT)[0],
             "exit_code": proc.returncode,
             "response_time_seconds": round(elapsed, 2),
             "status": status,
@@ -494,26 +695,47 @@ def run_single_eval(
             "api_duration_ms": parsed["api_duration_ms"],
             "session_duration_ms": parsed["session_duration_ms"],
             "event_parse_error": parsed["parse_error"],
+            "diagnostics": _build_diagnostics(
+                parsed,
+                proc.stdout,
+                proc.stderr,
+                preserve_stdout=not evidence_valid,
+            ),
         })
 
-    except subprocess.TimeoutExpired:
+    except subprocess.TimeoutExpired as exc:
         elapsed = time.monotonic() - start_time
+        partial_stdout = _coerce_process_text(exc.stdout)
+        partial_stderr = _coerce_process_text(exc.stderr)
+        parsed = parse_event_stream(partial_stdout) if partial_stdout else None
         result.update({
             "response": "",
-            "stderr": f"Timed out after {timeout}s",
+            "stderr": _bounded_excerpt(
+                partial_stderr or f"Timed out after {timeout}s",
+                MAX_STDERR_EXCERPT,
+            )[0],
             "exit_code": -1,
             "response_time_seconds": round(elapsed, 2),
             "status": "timeout",
             "passed": False,
+            "response_present": False,
             "failure_reason": f"timeout: exceeded {timeout}s",
-            "turns": 0,
-            "tool_calls": 0,
-            "tool_errors": 0,
-            "output_tokens": 0,
-            "premium_requests": None,
-            "api_duration_ms": None,
-            "session_duration_ms": None,
-            "event_parse_error": None,
+            "observed_tools": parsed["observed_tools"] if parsed else [],
+            "successful_tools": parsed["successful_tools"] if parsed else [],
+            "turns": parsed["turns"] if parsed else 0,
+            "tool_calls": parsed["tool_calls"] if parsed else 0,
+            "tool_errors": parsed["tool_errors"] if parsed else 0,
+            "output_tokens": parsed["output_tokens"] if parsed else 0,
+            "premium_requests": parsed["premium_requests"] if parsed else None,
+            "api_duration_ms": parsed["api_duration_ms"] if parsed else None,
+            "session_duration_ms": parsed["session_duration_ms"] if parsed else None,
+            "event_parse_error": parsed["parse_error"] if parsed else None,
+            "diagnostics": _build_diagnostics(
+                parsed,
+                partial_stdout,
+                partial_stderr,
+                preserve_stdout=True,
+            ),
         })
     except OSError as exc:
         elapsed = time.monotonic() - start_time
@@ -533,6 +755,7 @@ def run_single_eval(
             "api_duration_ms": None,
             "session_duration_ms": None,
             "event_parse_error": None,
+            "diagnostics": _build_diagnostics(None, None, str(exc), preserve_stdout=False),
         })
 
     return result

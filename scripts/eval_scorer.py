@@ -16,7 +16,15 @@ from collections import defaultdict
 from itertools import product
 from pathlib import Path
 
-from run_docs_eval import MCP_SERVERS, _is_search_tool, _source_for_tool
+from run_docs_eval import (
+    MAX_DIAGNOSTIC_EVENTS,
+    MAX_DIAGNOSTIC_EVENTS_CHARS,
+    MAX_STDERR_EXCERPT,
+    MAX_STDOUT_EXCERPT,
+    MCP_SERVERS,
+    _is_search_tool,
+    _source_for_tool,
+)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 RESULTS_DIR = PROJECT_ROOT / "tests" / "eval_results"
@@ -39,6 +47,7 @@ REQUIRED_ROW_FIELDS = (
     "azure_live_query_proven",
     "failure_reason",
     "event_parse_error",
+    "diagnostics",
     "exit_code",
     "tool_errors",
     "response_time_seconds",
@@ -86,6 +95,46 @@ def validate_row_schema(result: object) -> list[str]:
         result["event_parse_error"], str
     ):
         errors.append("event_parse_error must be a string or null")
+    diagnostics = result.get("diagnostics")
+    required_diagnostic_fields = {
+        "events",
+        "events_truncated",
+        "stdout_excerpt",
+        "stdout_truncated",
+        "stderr_excerpt",
+        "stderr_truncated",
+    }
+    if not isinstance(diagnostics, dict):
+        errors.append("diagnostics must be a JSON object")
+    elif set(diagnostics) != required_diagnostic_fields:
+        errors.append("diagnostics must contain exactly the required bounded-output fields")
+    else:
+        events = diagnostics["events"]
+        if not isinstance(events, list):
+            errors.append("diagnostics.events must be a list")
+        elif len(events) > MAX_DIAGNOSTIC_EVENTS:
+            errors.append(f"diagnostics.events must contain at most {MAX_DIAGNOSTIC_EVENTS} entries")
+        else:
+            try:
+                serialized_event_chars = len(json.dumps(events, ensure_ascii=True))
+            except (TypeError, ValueError):
+                errors.append("diagnostics.events must contain JSON-serializable values")
+            else:
+                if serialized_event_chars > MAX_DIAGNOSTIC_EVENTS_CHARS:
+                    errors.append("diagnostics.events exceeds its total serialized size limit")
+        for field in ("events_truncated", "stdout_truncated", "stderr_truncated"):
+            if type(diagnostics[field]) is not bool:
+                errors.append(f"diagnostics.{field} must be a Boolean")
+        excerpt_limits = {
+            "stdout_excerpt": MAX_STDOUT_EXCERPT + len("...[truncated]"),
+            "stderr_excerpt": MAX_STDERR_EXCERPT + len("...[truncated]"),
+        }
+        for field, max_length in excerpt_limits.items():
+            excerpt = diagnostics[field]
+            if not isinstance(excerpt, str):
+                errors.append(f"diagnostics.{field} must be a string")
+            elif len(excerpt) > max_length:
+                errors.append(f"diagnostics.{field} exceeds its maximum length")
     for field in ("exit_code", "tool_errors"):
         if field in result and type(result[field]) is not int:
             errors.append(f"{field} must be an integer")
