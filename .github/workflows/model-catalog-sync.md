@@ -45,16 +45,7 @@ tools:
   edit:
   playwright:
     mode: cli
-  bash:
-    - "python3 scripts/*"
-    - "python3 -m playwright *"
-    - "git *"
-    - "cat *"
-    - "cp *"
-    - "diff *"
-    - "wc *"
-    - "ls *"
-    - "pip *"
+  bash: ["*"]
 
 imports:
   - shared/mood.md
@@ -79,7 +70,7 @@ You are an automation agent that regenerates the model catalog data files for th
 First install the local Python tooling and run the signed-out API/UI watchdog:
 
 ```bash
-pip install -e ".[dev]"
+python3 -m pip install "playwright>=1.57.0"
 python3 -m playwright install chromium
 python3 scripts/check_model_catalog_watchdog.py --output /tmp/gh-aw/agent/model-catalog-watchdog.json
 ```
