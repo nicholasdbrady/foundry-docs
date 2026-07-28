@@ -101,7 +101,8 @@ MAX_STDOUT_EXCERPT = 12_000
 MAX_STDERR_EXCERPT = 4_000
 MAX_STDOUT_PARSE_BYTES = 128_000
 MAX_STDOUT_PARSE_LINES = 500
-MAX_STDOUT_LINE_BYTES = 32_000
+MAX_STDOUT_LINE_BYTES = 64_000
+MAX_IDENTIFIER_TEXT = 256
 _SECRET_KEY_PATTERN = re.compile(r"(?:api[_-]?key|authorization|credential|password|secret|token)", re.I)
 _AUTHORIZATION_HEADER_PATTERN = re.compile(r"(?im)(authorization\s*:\s*)[^\r\n]+")
 _SERIALIZED_AUTHORIZATION_KEY_PATTERN = re.compile(
@@ -319,6 +320,10 @@ def _sanitize_diagnostic_value(value: object, *, depth: int = 0) -> object:
     return _sanitize_text(str(value))[0]
 
 
+def _sanitize_identifier(value: object) -> str:
+    return _sanitize_text(str(value), max_chars=MAX_IDENTIFIER_TEXT)[0]
+
+
 def _bounded_excerpt(value: str | bytes | None, max_chars: int) -> tuple[str, bool]:
     return _sanitize_text(_coerce_process_text(value), max_chars=max_chars)
 
@@ -461,6 +466,8 @@ def parse_event_stream(stdout: str | bytes) -> dict:
         "parse_error": None,
         "observed_tools": [],
         "successful_tools": [],
+        "_observed_tools_raw": [],
+        "_successful_tools_raw": [],
         "diagnostic_events": [],
         "diagnostic_events_truncated": False,
         "mcp_failure": None,
@@ -542,11 +549,14 @@ def parse_event_stream(stdout: str | bytes) -> dict:
                 parse_errors.append(f"line {line_number}: tool start missing identity")
                 continue
             if tool_call_id in started_tools:
-                parse_errors.append(f"line {line_number}: duplicate tool start for {tool_call_id}")
+                parse_errors.append(
+                    f"line {line_number}: duplicate tool start for {_sanitize_identifier(tool_call_id)}"
+                )
                 continue
             started_tools[tool_call_id] = tool_name
-            if tool_name not in metrics["observed_tools"]:
-                metrics["observed_tools"].append(tool_name)
+            if tool_name not in metrics["_observed_tools_raw"]:
+                metrics["_observed_tools_raw"].append(tool_name)
+                metrics["observed_tools"].append(_sanitize_identifier(tool_name))
         elif etype == "tool.execution_complete":
             metrics["tool_calls"] += 1
             tool_call_id = data.get("toolCallId")
@@ -558,20 +568,24 @@ def parse_event_stream(stdout: str | bytes) -> dict:
             ):
                 parse_errors.append(f"line {line_number}: tool completion missing matching start")
             elif tool_call_id in completed_tool_calls:
-                parse_errors.append(f"line {line_number}: duplicate tool completion for {tool_call_id}")
+                parse_errors.append(
+                    f"line {line_number}: duplicate tool completion for {_sanitize_identifier(tool_call_id)}"
+                )
             elif tool_name != started_tools[tool_call_id]:
                 parse_errors.append(
-                    f"line {line_number}: tool completion name {tool_name} does not match "
-                    f"start name {started_tools[tool_call_id]}"
+                    f"line {line_number}: tool completion name {_sanitize_identifier(tool_name)} does not match "
+                    f"start name {_sanitize_identifier(started_tools[tool_call_id])}"
                 )
             else:
                 completed_tool_calls.add(tool_call_id)
-                if tool_name not in metrics["observed_tools"]:
-                    metrics["observed_tools"].append(tool_name)
+                if tool_name not in metrics["_observed_tools_raw"]:
+                    metrics["_observed_tools_raw"].append(tool_name)
+                    metrics["observed_tools"].append(_sanitize_identifier(tool_name))
                 if type(data.get("success")) is not bool:
                     parse_errors.append(f"line {line_number}: tool completion missing Boolean success")
-                elif data["success"] is True and tool_name not in metrics["successful_tools"]:
-                    metrics["successful_tools"].append(tool_name)
+                elif data["success"] is True and tool_name not in metrics["_successful_tools_raw"]:
+                    metrics["_successful_tools_raw"].append(tool_name)
+                    metrics["successful_tools"].append(_sanitize_identifier(tool_name))
                     last_successful_tool_line = line_number
             if data.get("success") is False:
                 metrics["tool_errors"] += 1
@@ -689,13 +703,14 @@ def validate_row_evidence(parsed: dict, tool_prefix: str, azure_required: bool) 
     if parsed["tool_errors"]:
         return False, f"tool_error: {parsed['tool_errors']} tool execution(s) failed", False
 
-    observed_tools = parsed["observed_tools"]
+    observed_tools = parsed["_observed_tools_raw"]
     cross_source_tools = [name for name in observed_tools if _source_for_tool(name) != tool_prefix]
     if cross_source_tools:
-        return False, f"cross_source_tool_call: {', '.join(cross_source_tools)}", False
+        sanitized_tools = [_sanitize_identifier(name) for name in cross_source_tools]
+        return False, f"cross_source_tool_call: {', '.join(sanitized_tools)}", False
     if not observed_tools:
         return False, "source_selection_unproven: no documentation tool calls observed", False
-    if not any(_source_for_tool(name) == tool_prefix for name in parsed["successful_tools"]):
+    if not any(_source_for_tool(name) == tool_prefix for name in parsed["_successful_tools_raw"]):
         return False, "source_selection_unproven: no selected-source tool completed successfully", False
     if not parsed["response"]:
         return False, "missing_response: no assistant response event contained content", False
@@ -704,7 +719,7 @@ def validate_row_evidence(parsed: dict, tool_prefix: str, azure_required: bool) 
         azure_required
         and any(
             _tool_matches_source(name, tool_prefix) and _is_search_tool(name)
-            for name in parsed["successful_tools"]
+            for name in parsed["_successful_tools_raw"]
         )
     )
     if azure_required and not azure_live_query_proven:

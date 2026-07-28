@@ -55,6 +55,29 @@ REQUIRED_ROW_FIELDS = (
 )
 
 
+def _invalid_scores() -> dict:
+    return {
+        "completeness": 0.0,
+        "quality": 0.0,
+        "doc_retrieval": 0.0,
+        "response_length": 0,
+        "has_response": False,
+    }
+
+
+def _invalidate_scored_row(row: dict, failure_reason: str) -> None:
+    row["response"] = ""
+    row["response_present"] = False
+    row["status"] = "invalid"
+    row["passed"] = False
+    row["row_valid"] = False
+    row["scores"] = _invalid_scores()
+    if isinstance(row.get("operational"), dict):
+        row["operational"]["passed"] = False
+    if not row.get("failure_reason"):
+        row["failure_reason"] = failure_reason
+
+
 def validate_row_schema(result: object) -> list[str]:
     """Return schema errors without throwing so malformed rows remain diagnostic."""
     if not isinstance(result, dict):
@@ -273,6 +296,7 @@ def score_result(result: object) -> dict:
         ),
     }
     if schema_errors:
+        operational["passed"] = False
         existing_failure = result.get("failure_reason")
         schema_failure = "row_schema_invalid: " + "; ".join(schema_errors)
         failure_reason = f"{existing_failure}; {schema_failure}" if existing_failure else schema_failure
@@ -285,13 +309,7 @@ def score_result(result: object) -> dict:
             "source_validated": False,
             "failure_reason": failure_reason,
             "row_valid": False,
-            "scores": {
-                "completeness": 0.0,
-                "quality": 0.0,
-                "doc_retrieval": 0.0,
-                "response_length": len(response),
-                "has_response": bool(response),
-            },
+            "scores": _invalid_scores(),
             "operational": operational,
         }
 
@@ -349,18 +367,17 @@ def score_result(result: object) -> dict:
     )
 
     if not row_valid:
+        operational["passed"] = False
+        normalized_status = status if status in {"error", "timeout"} else "invalid"
         return {
             **result,
             "response": "",
             "response_present": False,
+            "status": normalized_status,
+            "passed": False,
+            "failure_reason": result.get("failure_reason") or "scoring_evidence_invalid",
             "row_valid": False,
-            "scores": {
-                "completeness": 0.0,
-                "quality": 0.0,
-                "doc_retrieval": 0.0,
-                "response_length": len(response),
-                "has_response": bool(response),
-            },
+            "scores": _invalid_scores(),
             "operational": operational,
         }
 
@@ -526,6 +543,22 @@ def validate_required_matrix(
     else:
         expected_keys = set(rows_by_key)
 
+    for key, rows in rows_by_key.items():
+        if len(rows) > 1:
+            for row in rows:
+                _invalidate_scored_row(row, "duplicate_required_row")
+        if key not in expected_keys:
+            for row in rows:
+                _invalidate_scored_row(row, "unexpected_matrix_row")
+        for row in rows:
+            if row["server"] in azure_required_servers and row.get("row_valid") is True and not (
+                row.get("azure_required") is True
+                and row.get("azure_live_query_proven") is True
+                and all(isinstance(tool_name, str) for tool_name in row.get("successful_tools", []))
+                and any(_is_search_tool(tool_name) for tool_name in row.get("successful_tools", []))
+            ):
+                _invalidate_scored_row(row, "azure_required_evidence_missing")
+
     status_counts = {"success": 0, "invalid": 0, "error": 0, "timeout": 0, "missing": 0}
     response_counts = {"present": 0, "missing": 0}
     invalid_rows: list[dict] = []
@@ -543,14 +576,6 @@ def validate_required_matrix(
             duplicate_rows.append(row_id)
 
         row = rows[0]
-        if row["server"] in azure_required_servers and not (
-            row.get("azure_required") is True
-            and row.get("azure_live_query_proven") is True
-            and any(_is_search_tool(tool_name) for tool_name in row.get("successful_tools", []))
-        ):
-            row["row_valid"] = False
-            if not row.get("failure_reason"):
-                row["failure_reason"] = "azure_required_evidence_missing"
         response_counts["present" if row.get("response_present", bool(row.get("response"))) else "missing"] += 1
         status = row.get("status", "invalid")
         outcome = status if status in {"error", "timeout"} else ("success" if row.get("row_valid") else "invalid")
@@ -660,7 +685,6 @@ def main():
     print(f"Scoring {len(all_results)} evaluation results from {len(args.input)} file(s)...")
 
     scored_results = [score_result(r) for r in all_results]
-    aggregates = aggregate_scores(scored_results)
     scenario_ids = None
     if args.required_scenarios:
         with open(args.required_scenarios) as f:
@@ -672,6 +696,7 @@ def main():
         models=args.required_models,
         azure_required_servers=set(args.azure_required_servers or []),
     )
+    aggregates = aggregate_scores(scored_results)
     aggregates["denominators"] = {
         "required_rows": publication["required_rows"],
         "observed_rows": publication["observed_rows"],

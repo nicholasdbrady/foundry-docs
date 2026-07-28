@@ -839,6 +839,12 @@ def test_scorer_clears_response_for_every_non_success_status(status):
     scored = score_result(row)
 
     assert scored["row_valid"] is False
+    assert scored["status"] == "invalid"
+    assert scored["passed"] is False
+    assert scored["operational"]["passed"] is False
+    aggregates = aggregate_scores([scored])
+    assert aggregates["operational_metrics"]["foundry-docs"]["pass_rate"] == 0.0
+    assert aggregates["operational_metrics"]["foundry-docs"]["status_counts"] == {"invalid": 1}
     assert scored["response"] == ""
     assert scored["response_present"] is False
 
@@ -1083,6 +1089,48 @@ def test_large_event_is_stopped_before_json_parse_and_remains_bounded():
     assert parsed["response"] == ""
 
 
+def test_real_size_57kb_tool_result_parses_and_validates_selected_source(monkeypatch):
+    completion = {
+        "type": "tool.execution_complete",
+        "data": {
+            "toolCallId": "call-1",
+            "success": True,
+            "result": {"content": [{"type": "text", "text": ""}]},
+        },
+    }
+    base_size = len(json.dumps(completion, separators=(",", ":")).encode())
+    completion["data"]["result"]["content"][0]["text"] = "x" * (57_000 - base_size)
+    completion_line = json.dumps(completion, separators=(",", ":"))
+    assert len(completion_line.encode()) == 57_000
+
+    stdout = "\n".join([
+        json.dumps({
+            "type": "tool.execution_start",
+            "data": {"toolCallId": "call-1", "toolName": "foundry_docs-search_docs"},
+        }),
+        completion_line,
+        json.dumps({"type": "assistant.message", "data": {"content": "trusted answer"}}),
+        json.dumps({"type": "result", "exitCode": 0}),
+    ])
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda cmd, **kwargs: subprocess.CompletedProcess(cmd, 0, stdout=stdout, stderr=""),
+    )
+
+    result = run_single_eval(
+        SCENARIO,
+        "foundry-docs",
+        MCP_SERVERS["foundry-docs"],
+        "model-1",
+    )
+
+    assert result["status"] == "success"
+    assert result["source_validated"] is True
+    assert result["response"] == "trusted answer"
+    assert result["event_parse_error"] is None
+
+
 def test_deeply_nested_bounded_json_fails_closed_without_recursion_crash():
     nested = "[" * 5_000 + "null" + "]" * 5_000
     stdout = f'{{"type":"session.error","data":{{"message":{nested}}}}}'
@@ -1126,6 +1174,81 @@ def test_diagnostic_path_keys_are_sanitized(monkeypatch):
     serialized = json.dumps(result["diagnostics"])
     assert "private.txt" not in serialized
     assert "<PATH>" in serialized
+
+
+def test_tool_name_is_validated_raw_but_persisted_sanitized(monkeypatch):
+    tool_name = r"foundry_docs-search_docs token=LEAKME C:\Users\Alice\private"
+    stdout = _event_stream(tool_name=tool_name, response="trusted answer")
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda cmd, **kwargs: subprocess.CompletedProcess(cmd, 0, stdout=stdout, stderr=""),
+    )
+
+    raw_row = run_single_eval(
+        SCENARIO,
+        "foundry-docs",
+        MCP_SERVERS["foundry-docs"],
+        "model-1",
+    )
+    scored_row = score_result(raw_row)
+
+    assert raw_row["source_validated"] is True
+    assert scored_row["row_valid"] is True
+    assert raw_row["observed_tools"] == ["foundry_docs-search_docs token=[REDACTED] <PATH>"]
+    for row in (raw_row, scored_row):
+        persisted = json.dumps(row)
+        assert "LEAKME" not in persisted
+        assert "Alice" not in persisted
+        assert "private" not in persisted
+
+
+def test_cross_source_failure_reason_sanitizes_tool_identifier(monkeypatch):
+    tool_name = r"evil-search token=LEAKME C:\Users\Alice\private"
+    stdout = _event_stream(tool_name=tool_name, response="untrusted answer")
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda cmd, **kwargs: subprocess.CompletedProcess(cmd, 0, stdout=stdout, stderr=""),
+    )
+
+    result = run_single_eval(
+        SCENARIO,
+        "foundry-docs",
+        MCP_SERVERS["foundry-docs"],
+        "model-1",
+    )
+
+    assert result["status"] == "invalid"
+    assert result["failure_reason"].startswith("cross_source_tool_call:")
+    assert "LEAKME" not in result["failure_reason"]
+    assert "Alice" not in result["failure_reason"]
+    assert "private" not in result["failure_reason"]
+    assert "token=[REDACTED]" in result["failure_reason"]
+    assert "<PATH>" in result["failure_reason"]
+
+
+def test_parse_error_sanitizes_tool_call_identifier():
+    tool_call_id = r"call token=CALLSECRET C:\Users\Alice\private"
+    stdout = "\n".join([
+        json.dumps({
+            "type": "tool.execution_start",
+            "data": {"toolCallId": tool_call_id, "toolName": "foundry_docs-search_docs"},
+        }),
+        json.dumps({
+            "type": "tool.execution_start",
+            "data": {"toolCallId": tool_call_id, "toolName": "foundry_docs-search_docs"},
+        }),
+        json.dumps({"type": "result", "exitCode": 0}),
+    ])
+
+    parsed = parse_event_stream(stdout)
+
+    assert "CALLSECRET" not in parsed["parse_error"]
+    assert "Alice" not in parsed["parse_error"]
+    assert "private" not in parsed["parse_error"]
+    assert "token=[REDACTED]" in parsed["parse_error"]
+    assert "<PATH>" in parsed["parse_error"]
 
 
 @pytest.mark.parametrize(
@@ -1268,7 +1391,7 @@ def test_scorer_rejects_success_row_missing_required_evidence_fields():
     scored = score_result(fabricated)
 
     assert scored["row_valid"] is False
-    assert scored["scores"]["has_response"] is True
+    assert scored["scores"]["has_response"] is False
 
 
 @pytest.mark.parametrize(
@@ -1313,6 +1436,88 @@ def test_required_matrix_enforces_azure_server_policy():
 
     assert publication["allowed"] is False
     assert publication["invalid_rows"][0]["failure_reason"] == "azure_required_evidence_missing"
+    assert row["status"] == "invalid"
+    assert row["passed"] is False
+    assert row["response"] == ""
+    assert row["response_present"] is False
+    assert row["row_valid"] is False
+    assert row["scores"] == {
+        "completeness": 0.0,
+        "quality": 0.0,
+        "doc_retrieval": 0.0,
+        "response_length": 0,
+        "has_response": False,
+    }
+    aggregates = aggregate_scores([row])
+    assert aggregates["server_model_matrix"] == {}
+    assert aggregates["server_averages"] == {}
+
+
+def test_malformed_azure_tool_evidence_fails_closed_without_crashing():
+    malformed = _raw_row(model="unexpected-model")
+    malformed["successful_tools"] = [None]
+    scored = score_result(malformed)
+
+    publication = validate_required_matrix(
+        [scored],
+        scenario_ids=["scenario-1"],
+        servers=["foundry-docs"],
+        models=["model-1"],
+        azure_required_servers={"foundry-docs"},
+    )
+
+    assert scored["row_valid"] is False
+    assert scored["status"] == "invalid"
+    assert scored["response"] == ""
+    assert publication["allowed"] is False
+
+
+def test_duplicate_azure_rows_are_all_excluded_from_aggregates():
+    missing_azure = score_result(_raw_row())
+    valid_azure_raw = _raw_row()
+    valid_azure_raw["azure_required"] = True
+    valid_azure_raw["azure_live_query_proven"] = True
+    valid_azure_raw["selected_source_config"]["azure_required"] = True
+    valid_azure = score_result(valid_azure_raw)
+    assert valid_azure["row_valid"] is True
+
+    publication = validate_required_matrix(
+        [missing_azure, valid_azure],
+        scenario_ids=["scenario-1"],
+        servers=["foundry-docs"],
+        models=["model-1"],
+        azure_required_servers={"foundry-docs"},
+    )
+    aggregates = aggregate_scores([missing_azure, valid_azure])
+
+    assert publication["allowed"] is False
+    assert publication["duplicate_rows"] == ["scenario-1 / foundry-docs / model-1"]
+    assert all(row["row_valid"] is False for row in (missing_azure, valid_azure))
+    assert all(row["response"] == "" for row in (missing_azure, valid_azure))
+    assert aggregates["server_model_matrix"] == {}
+    assert aggregates["server_averages"] == {}
+
+
+def test_unexpected_rows_are_invalidated_before_aggregation():
+    unexpected = score_result(_raw_row(model="unexpected-model"))
+    assert unexpected["row_valid"] is True
+
+    publication = validate_required_matrix(
+        [unexpected],
+        scenario_ids=["scenario-1"],
+        servers=["foundry-docs"],
+        models=["model-1"],
+        azure_required_servers={"foundry-docs"},
+    )
+    aggregates = aggregate_scores([unexpected])
+
+    assert publication["allowed"] is False
+    assert publication["unexpected_rows"] == ["scenario-1 / foundry-docs / unexpected-model"]
+    assert unexpected["row_valid"] is False
+    assert unexpected["response"] == ""
+    assert unexpected["scores"]["has_response"] is False
+    assert aggregates["server_model_matrix"] == {}
+    assert aggregates["server_averages"] == {}
 
 
 def test_scorer_rejects_contradictory_source_descriptor_and_tool_evidence():
