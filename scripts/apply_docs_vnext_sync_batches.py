@@ -27,6 +27,11 @@ PR_MARKER_PATTERN = re.compile(
     rf"<!-- {re.escape(PR_MARKER_NAME)}\s*\n(?P<payload>\{{.*?\}})\s*\n-->",
     re.DOTALL,
 )
+COMMIT_IDENTITY_FIELDS = {
+    "Manifest-SHA256": "manifest_digest",
+    "Manifest-Run-ID": "manifest_run_id",
+    "Batch-ID": "batch_id",
+}
 SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 OPERATION_ID_PATTERN = re.compile(r"^sha256:[0-9a-f]{64}$")
 DECISIONS = {"add", "modify", "remove", "preserve"}
@@ -97,8 +102,20 @@ class PullRequest:
         return self.state in {"OPEN", "CLOSED"}
 
 
+@dataclass(frozen=True, slots=True)
+class OrphanBranch:
+    head_ref: str
+    manifest_digest: str
+    manifest_run_id: int
+    batch_id: str
+
+
 class AutomationBackend(Protocol):
     def list_pull_requests(self) -> list[PullRequest]: ...
+
+    def list_orphan_branches(
+        self, pull_requests: Sequence[PullRequest]
+    ) -> list[OrphanBranch]: ...
 
     def download_manifest(self, run_id: int) -> Path: ...
 
@@ -265,6 +282,66 @@ def _batch_id(manifest_digest: str, number: int, operations: Sequence[Operation]
     return f"sha256:{hashlib.sha256(value.encode('utf-8')).hexdigest()}"
 
 
+def _strict_path_prefix(parent: str, child: str) -> bool:
+    return child.startswith(f"{parent}/")
+
+
+def _minimal_pathspecs(paths: set[str]) -> tuple[str, ...]:
+    selected: list[str] = []
+    for path in sorted(paths, key=lambda item: (len(PurePosixPath(item).parts), item)):
+        if not any(path == parent or _strict_path_prefix(parent, path) for parent in selected):
+            selected.append(path)
+    return tuple(selected)
+
+
+def _atomic_operation_groups(operations: Sequence[Operation]) -> tuple[tuple[Operation, ...], ...]:
+    parent = list(range(len(operations)))
+
+    def find(index: int) -> int:
+        while parent[index] != index:
+            parent[index] = parent[parent[index]]
+            index = parent[index]
+        return index
+
+    def union(left: int, right: int) -> None:
+        left_root = find(left)
+        right_root = find(right)
+        if left_root != right_root:
+            parent[right_root] = left_root
+
+    for left_index, left in enumerate(operations):
+        for right_index in range(left_index + 1, len(operations)):
+            right = operations[right_index]
+            if _strict_path_prefix(left.path, right.path) or _strict_path_prefix(
+                right.path, left.path
+            ):
+                union(left_index, right_index)
+
+    grouped_indices: dict[int, list[int]] = {}
+    for index in range(len(operations)):
+        grouped_indices.setdefault(find(index), []).append(index)
+
+    groups: list[tuple[int, tuple[Operation, ...]]] = []
+    for indices in grouped_indices.values():
+        group = tuple(operations[index] for index in sorted(indices))
+        if len(group) > 1:
+            decisions = {operation.decision for operation in group}
+            paths = [operation.path for operation in group]
+            if "preserve" in decisions:
+                raise BatchSyncError(
+                    "Path dependency collides with a preserved operation and cannot be applied "
+                    f"safely: {paths}"
+                )
+            if not {"add", "remove"} <= decisions or not decisions <= {"add", "remove"}:
+                raise BatchSyncError(
+                    "Path dependency must be a file/directory remove-and-create replacement: "
+                    f"{paths}"
+                )
+        groups.append((min(indices), group))
+    groups.sort(key=lambda item: item[0])
+    return tuple(group for _, group in groups)
+
+
 def plan_batches(
     manifest: Manifest,
     max_files: int,
@@ -276,33 +353,44 @@ def plan_batches(
     if max_payload_bytes <= 0:
         raise BatchSyncError("max_payload_bytes must be greater than zero")
 
+    atomic_groups = _atomic_operation_groups(manifest.operations)
     partitions: list[tuple[Operation, ...]] = []
     current: list[Operation] = []
     current_files = 0
     current_payload = 0
-    for operation in manifest.operations:
-        if operation.file_count > max_files:
-            raise BatchSyncError(
-                f"Operation {operation.path!r} requires {operation.file_count} files, "
-                f"above the {max_files}-file ceiling"
-            )
-        if operation.payload_bytes > max_payload_bytes:
+    for group in atomic_groups:
+        group_files = sum(operation.file_count for operation in group)
+        group_payload = sum(operation.payload_bytes for operation in group)
+        if group_files > max_files or group_payload > max_payload_bytes:
+            paths = [operation.path for operation in group]
+            if len(group) > 1:
+                raise BatchSyncError(
+                    f"Atomic path dependency {paths} requires {group_files} files and "
+                    f"{group_payload} payload bytes, exceeding ceilings of {max_files} files "
+                    f"and {max_payload_bytes} bytes"
+                )
+            operation = group[0]
+            if operation.file_count > max_files:
+                raise BatchSyncError(
+                    f"Operation {operation.path!r} requires {operation.file_count} files, "
+                    f"above the {max_files}-file ceiling"
+                )
             raise BatchSyncError(
                 f"Operation {operation.path!r} requires {operation.payload_bytes} payload bytes, "
                 f"above the {max_payload_bytes}-byte ceiling"
             )
         exceeds_batch = current and (
-            current_files + operation.file_count > max_files
-            or current_payload + operation.payload_bytes > max_payload_bytes
+            current_files + group_files > max_files
+            or current_payload + group_payload > max_payload_bytes
         )
         if exceeds_batch:
             partitions.append(tuple(current))
             current = []
             current_files = 0
             current_payload = 0
-        current.append(operation)
-        current_files += operation.file_count
-        current_payload += operation.payload_bytes
+        current.extend(group)
+        current_files += group_files
+        current_payload += group_payload
     if current:
         partitions.append(tuple(current))
 
@@ -317,8 +405,9 @@ def plan_batches(
         for number, operations in enumerate(partitions, start=1)
     )
     planned_ids = [operation.id for batch in batches for operation in batch.operations]
-    if planned_ids != [operation.id for operation in manifest.operations]:
-        raise BatchSyncError("Batch planning did not preserve the complete manifest operation order")
+    manifest_ids = [operation.id for operation in manifest.operations]
+    if len(planned_ids) != len(set(planned_ids)) or set(planned_ids) != set(manifest_ids):
+        raise BatchSyncError("Batch planning did not assign every manifest operation exactly once")
     return batches
 
 
@@ -407,27 +496,67 @@ def parse_pull_request_marker(body: str | None) -> dict[str, Any] | None:
     return payload
 
 
+def parse_commit_identity(message: str, head_ref: str) -> OrphanBranch:
+    values: dict[str, str] = {}
+    for line in message.splitlines():
+        key, separator, value = line.partition(":")
+        if separator and key in COMMIT_IDENTITY_FIELDS:
+            values[COMMIT_IDENTITY_FIELDS[key]] = value.strip()
+    if set(values) != set(COMMIT_IDENTITY_FIELDS.values()):
+        raise BatchSyncError(
+            f"Orphan automation branch {head_ref!r} is missing campaign identity trailers"
+        )
+    manifest_digest = values["manifest_digest"]
+    batch_id = values["batch_id"]
+    try:
+        manifest_run_id = int(values["manifest_run_id"])
+    except ValueError as exc:
+        raise BatchSyncError(
+            f"Orphan automation branch {head_ref!r} has an invalid manifest run ID"
+        ) from exc
+    if not SHA256_PATTERN.fullmatch(manifest_digest):
+        raise BatchSyncError(
+            f"Orphan automation branch {head_ref!r} has an invalid manifest digest"
+        )
+    if not OPERATION_ID_PATTERN.fullmatch(batch_id):
+        raise BatchSyncError(f"Orphan automation branch {head_ref!r} has an invalid batch ID")
+    if manifest_run_id <= 0:
+        raise BatchSyncError(
+            f"Orphan automation branch {head_ref!r} has a non-positive manifest run ID"
+        )
+    return OrphanBranch(
+        head_ref=head_ref,
+        manifest_digest=manifest_digest,
+        manifest_run_id=manifest_run_id,
+        batch_id=batch_id,
+    )
+
+
 def select_active_manifest(
     current_manifest: Manifest,
     backend: AutomationBackend,
     pull_requests: Sequence[PullRequest],
+    orphan_branches: Sequence[OrphanBranch] = (),
 ) -> Manifest:
     """Resume the single unfinished campaign, downloading its original retained artifact."""
-    active_markers = [
-        pull_request.marker
+    active_identities = [
+        (pull_request.marker["manifestSha256"], pull_request.marker["manifestRunId"])
         for pull_request in pull_requests
         if pull_request.incomplete and pull_request.marker is not None
     ]
-    if not active_markers:
+    active_identities.extend(
+        (branch.manifest_digest, branch.manifest_run_id) for branch in orphan_branches
+    )
+    if not active_identities:
         return current_manifest
 
-    digests = {marker["manifestSha256"] for marker in active_markers}
+    digests = {digest for digest, _ in active_identities}
     if len(digests) != 1:
         raise BatchSyncError(
             "Multiple unfinished docs-vnext sync campaigns exist; close or merge one campaign "
             f"before retrying: {sorted(digests)}"
         )
-    run_ids = {marker["manifestRunId"] for marker in active_markers}
+    run_ids = {run_id for _, run_id in active_identities}
     if len(run_ids) != 1:
         raise BatchSyncError(
             "Unfinished campaign pull requests disagree on the retained manifest workflow run"
@@ -482,6 +611,18 @@ def _verify_metadata(path: Path, expected: dict[str, int | str] | None, label: s
         raise BatchSyncError(f"{label} metadata changed since manifest generation: {path}")
 
 
+def _directory_files(root: Path, relative_to: Path) -> set[str]:
+    files: set[str] = set()
+    for candidate in root.rglob("*"):
+        if candidate.is_symlink():
+            raise BatchSyncError(
+                f"Replacement directory must not contain symbolic links: {candidate}"
+            )
+        if candidate.is_file():
+            files.add(candidate.relative_to(relative_to).as_posix())
+    return files
+
+
 def apply_batch(repository_root: Path, manifest: Manifest, batch: Batch) -> tuple[str, ...]:
     """Verify all preconditions, then apply only the mutating operations in one batch."""
     source_root = _path_under(repository_root, manifest.source_root)
@@ -489,29 +630,77 @@ def apply_batch(repository_root: Path, manifest: Manifest, batch: Batch) -> tupl
     if not source_root.is_dir() or not target_root.is_dir():
         raise BatchSyncError("Manifest source and target roots must exist in the batch worktree")
 
+    removal_paths = {
+        operation.path for operation in batch.operations if operation.decision == "remove"
+    }
+    addition_paths = {
+        operation.path for operation in batch.operations if operation.decision == "add"
+    }
+    replacement_directories: set[Path] = set()
     resolved: list[tuple[Operation, Path, Path]] = []
     for operation in batch.operations:
         source_path = _path_under(source_root, operation.path)
         target_path = _path_under(target_root, operation.path)
-        _verify_metadata(source_path, operation.source, f"Source for {operation.id}")
-        _verify_metadata(target_path, operation.target, f"Target for {operation.id}")
+        if operation.decision == "remove" and source_path.is_dir():
+            expected_additions = {
+                path for path in addition_paths if _strict_path_prefix(operation.path, path)
+            }
+            actual_files = _directory_files(source_path, source_root)
+            if not expected_additions or actual_files != expected_additions:
+                raise BatchSyncError(
+                    f"File replaced by directory {operation.path!r} contains source files outside "
+                    f"its atomic creation dependency: actual={sorted(actual_files)}, "
+                    f"expected={sorted(expected_additions)}"
+                )
+        else:
+            _verify_metadata(source_path, operation.source, f"Source for {operation.id}")
+        if operation.decision == "add" and target_path.is_dir():
+            expected_removals = {
+                path for path in removal_paths if _strict_path_prefix(operation.path, path)
+            }
+            actual_files = _directory_files(target_path, target_root)
+            if not expected_removals or actual_files != expected_removals:
+                raise BatchSyncError(
+                    f"Directory replaced by file {operation.path!r} contains files outside its "
+                    f"atomic removal dependency: actual={sorted(actual_files)}, "
+                    f"expected={sorted(expected_removals)}"
+                )
+            replacement_directories.add(target_path)
+        else:
+            _verify_metadata(target_path, operation.target, f"Target for {operation.id}")
         resolved.append((operation, source_path, target_path))
 
     changed_paths: list[str] = []
+    removal_operations = sorted(
+        (item for item in resolved if item[0].decision == "remove"),
+        key=lambda item: len(PurePosixPath(item[0].path).parts),
+        reverse=True,
+    )
+    for operation, _, target_path in removal_operations:
+        target_path.unlink()
+        changed_paths.append(f"{manifest.target_root}/{operation.path}")
+    for directory in sorted(
+        replacement_directories,
+        key=lambda path: len(path.parts),
+        reverse=True,
+    ):
+        shutil.rmtree(directory)
+
     for operation, source_path, target_path in resolved:
         if operation.decision in {"add", "modify"}:
             target_path.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(source_path, target_path)
-            changed_paths.append(f"{manifest.target_root}/{operation.path}")
-        elif operation.decision == "remove":
-            target_path.unlink()
             changed_paths.append(f"{manifest.target_root}/{operation.path}")
 
     for operation, source_path, target_path in resolved:
         if operation.decision in {"add", "modify"}:
             _verify_metadata(target_path, _metadata(source_path), f"Applied target for {operation.id}")
         elif operation.decision == "remove":
-            _verify_metadata(target_path, None, f"Applied target for {operation.id}")
+            replacement_children = {
+                path for path in addition_paths if _strict_path_prefix(operation.path, path)
+            }
+            if not (replacement_children and target_path.is_dir()):
+                _verify_metadata(target_path, None, f"Applied target for {operation.id}")
     return tuple(changed_paths)
 
 
@@ -603,6 +792,7 @@ def execute_batches(
                         f"Pull request #{pull_request.number} uses {branch!r} with mismatched metadata"
                     )
                 if pull_request.state == "CLOSED":
+                    backend.publish_batch(manifest, batch, branch)
                     pull_request = backend.reopen_pull_request(pull_request)
                     result = "reopened-pull-request"
                 elif pull_request.merged:
@@ -746,6 +936,41 @@ class GitHubGitBackend:
                     pull_requests.append(self._pull_request_from_api(payload))
         return pull_requests
 
+    def list_orphan_branches(
+        self, pull_requests: Sequence[PullRequest]
+    ) -> list[OrphanBranch]:
+        result = self._run(
+            [
+                "git",
+                "ls-remote",
+                "--heads",
+                "origin",
+                f"refs/heads/{BRANCH_PREFIX}/*",
+            ]
+        )
+        pull_request_heads = {pull_request.head_ref for pull_request in pull_requests}
+        orphan_branches: list[OrphanBranch] = []
+        for line in result.stdout.splitlines():
+            _, separator, ref = line.partition("\t")
+            if not separator or not ref.startswith("refs/heads/"):
+                raise BatchSyncError(f"Cannot parse automation branch reference: {line!r}")
+            head_ref = ref.removeprefix("refs/heads/")
+            if head_ref in pull_request_heads:
+                continue
+            remote_ref = f"refs/remotes/origin/{head_ref}"
+            self._run(
+                [
+                    "git",
+                    "fetch",
+                    "--no-tags",
+                    "origin",
+                    f"+{ref}:{remote_ref}",
+                ]
+            )
+            commit = self._run(["git", "show", "--no-patch", "--format=%B", remote_ref])
+            orphan_branches.append(parse_commit_identity(commit.stdout, head_ref))
+        return orphan_branches
+
     def download_manifest(self, run_id: int) -> Path:
         destination = self.runner_temp / f"resume-manifest-{run_id}"
         destination.mkdir(parents=True, exist_ok=True)
@@ -813,7 +1038,8 @@ class GitHubGitBackend:
             expected_names = set(changed_paths)
             if not expected_names:
                 raise BatchSyncError(f"Batch {batch.number} has no mutating paths to publish")
-            self._run(["git", "add", "--", *sorted(expected_names)], cwd=worktree)
+            pathspecs = _minimal_pathspecs(expected_names)
+            self._run(["git", "add", "--all", "--", *pathspecs], cwd=worktree)
             staged_names = self._changed_names(worktree, "--cached")
             if staged_names != expected_names:
                 raise BatchSyncError(
@@ -835,7 +1061,7 @@ class GitHubGitBackend:
                         "--quiet",
                         remote_ref,
                         "--",
-                        *sorted(expected_names),
+                        *pathspecs,
                     ],
                     cwd=worktree,
                     check=False,
@@ -865,6 +1091,7 @@ class GitHubGitBackend:
                     (
                         f"Sync docs-vnext baseline batch {batch.number}/{batch.total}\n\n"
                         f"Manifest-SHA256: {manifest.digest}\n"
+                        f"Manifest-Run-ID: {manifest.run_id}\n"
                         f"Batch-ID: {batch.id}"
                     ),
                 ],
@@ -1006,7 +1233,13 @@ def main(
             runner_temp=args.runner_temp,
         )
         pull_requests = active_backend.list_pull_requests()
-        manifest = select_active_manifest(current_manifest, active_backend, pull_requests)
+        orphan_branches = active_backend.list_orphan_branches(pull_requests)
+        manifest = select_active_manifest(
+            current_manifest,
+            active_backend,
+            pull_requests,
+            orphan_branches,
+        )
         batches = plan_batches(manifest, args.max_files, args.max_payload_bytes)
         succeeded = execute_batches(
             manifest,

@@ -20,6 +20,7 @@ from apply_docs_vnext_sync_batches import (  # noqa: E402
     BatchSyncError,
     GitHubGitBackend,
     Manifest,
+    OrphanBranch,
     PullRequest,
     apply_batch,
     branch_name,
@@ -108,6 +109,35 @@ def _write(root: Path, relative_path: str, content: bytes | str) -> None:
         path.write_text(content, encoding="utf-8")
 
 
+def _tree_manifest(
+    root: Path,
+    source_files: dict[str, str],
+    target_files: dict[str, str],
+    *,
+    run_id: int = 100,
+) -> Manifest:
+    source = root / "docs"
+    target = root / "docs-vnext"
+    source.mkdir(parents=True)
+    target.mkdir(parents=True)
+    for path, content in source_files.items():
+        _write(source, path, content)
+    for path, content in target_files.items():
+        _write(target, path, content)
+    allowlist = root / "preserve.json"
+    allowlist.write_text(
+        json.dumps({"schemaVersion": 1, "preserve": []}),
+        encoding="utf-8",
+    )
+    manifest_path = root / "manifest.json"
+    manifest_path.write_text(
+        serialize_manifest(build_manifest(source, target, allowlist, root)),
+        encoding="utf-8",
+        newline="\n",
+    )
+    return load_manifest(manifest_path, run_id)
+
+
 def _git(cwd: Path, *args: str) -> None:
     subprocess.run(
         ["git", *args],
@@ -141,6 +171,7 @@ class FakeBackend:
         pull_requests: list[PullRequest] | None = None,
         downloaded_manifests: dict[int, Path] | None = None,
         fail_create_batch: int | None = None,
+        remote_branches: set[str] | None = None,
     ) -> None:
         self.pull_requests = list(pull_requests or [])
         self.downloaded_manifests = downloaded_manifests or {}
@@ -148,15 +179,40 @@ class FakeBackend:
         self.published: list[int] = []
         self.created: list[int] = []
         self.reopened: list[int] = []
+        self.remote_branches = set(remote_branches or set())
+        self.branch_identities: dict[str, OrphanBranch] = {}
+        self.verified_branches: list[int] = []
+        self.reconstructed_branches: list[int] = []
 
     def list_pull_requests(self) -> list[PullRequest]:
         return list(self.pull_requests)
+
+    def list_orphan_branches(
+        self, pull_requests: list[PullRequest]
+    ) -> list[OrphanBranch]:
+        pull_request_heads = {pull_request.head_ref for pull_request in pull_requests}
+        return [
+            identity
+            for branch, identity in self.branch_identities.items()
+            if branch in self.remote_branches and branch not in pull_request_heads
+        ]
 
     def download_manifest(self, run_id: int) -> Path:
         return self.downloaded_manifests[run_id]
 
     def publish_batch(self, manifest: Manifest, batch: Batch, branch: str) -> None:
         assert branch == branch_name(manifest, batch)
+        if branch in self.remote_branches:
+            self.verified_branches.append(batch.number)
+        else:
+            self.remote_branches.add(branch)
+            self.reconstructed_branches.append(batch.number)
+        self.branch_identities[branch] = OrphanBranch(
+            head_ref=branch,
+            manifest_digest=manifest.digest,
+            manifest_run_id=manifest.run_id,
+            batch_id=batch.id,
+        )
         self.published.append(batch.number)
 
     def create_pull_request(
@@ -218,6 +274,56 @@ def test_manifest_consumer_rejects_underreported_payload_accounting(tmp_path):
 
     with pytest.raises(BatchSyncError, match="conservative accounting"):
         _write_manifest(tmp_path, [operation])
+
+
+def test_file_replaces_directory_atomically_under_batch_boundary_pressure(tmp_path):
+    root = tmp_path / "file-replaces-directory"
+    manifest = _tree_manifest(
+        root,
+        {"a.mdx": "independent", "swap": "replacement-file"},
+        {"swap/child.mdx": "old-child"},
+    )
+
+    batches = plan_batches(manifest, max_files=2, max_payload_bytes=1000)
+
+    assert [[operation.path for operation in batch.operations] for batch in batches] == [
+        ["a.mdx"],
+        ["swap", "swap/child.mdx"],
+    ]
+    apply_batch(root, manifest, batches[1])
+    assert (root / "docs-vnext" / "swap").read_text(encoding="utf-8") == "replacement-file"
+
+
+def test_directory_replaces_file_atomically_under_batch_boundary_pressure(tmp_path):
+    root = tmp_path / "directory-replaces-file"
+    manifest = _tree_manifest(
+        root,
+        {"a.mdx": "independent", "swap/child.mdx": "replacement-child"},
+        {"swap": "old-file"},
+    )
+
+    batches = plan_batches(manifest, max_files=2, max_payload_bytes=1000)
+
+    assert [[operation.path for operation in batch.operations] for batch in batches] == [
+        ["a.mdx"],
+        ["swap/child.mdx", "swap"],
+    ]
+    apply_batch(root, manifest, batches[1])
+    assert (root / "docs-vnext" / "swap" / "child.mdx").read_text(
+        encoding="utf-8"
+    ) == "replacement-child"
+
+
+def test_atomic_path_dependency_fails_closed_when_group_exceeds_ceiling(tmp_path):
+    root = tmp_path / "oversize-replacement"
+    manifest = _tree_manifest(
+        root,
+        {"swap": "replacement-file"},
+        {"swap/child.mdx": "old-child"},
+    )
+
+    with pytest.raises(BatchSyncError, match="Atomic path dependency.*exceeding ceilings"):
+        plan_batches(manifest, max_files=1, max_payload_bytes=1000)
 
 
 def test_apply_batch_copies_adds_and_modifications_removes_and_preserves(tmp_path):
@@ -335,7 +441,7 @@ def test_resume_skips_merged_batch_and_creates_only_pending_batch(tmp_path):
     ]
 
 
-def test_closed_pull_request_is_reopened_instead_of_duplicated(tmp_path):
+def test_closed_pull_request_with_missing_branch_is_reconstructed_before_reopen(tmp_path):
     manifest = _write_manifest(tmp_path, [_operation(1, 1)])
     batch = plan_batches(manifest, max_files=1, max_payload_bytes=10)[0]
     closed = _pull_request(manifest, batch, number=9, state="CLOSED")
@@ -353,11 +459,38 @@ def test_closed_pull_request_is_reopened_instead_of_duplicated(tmp_path):
 
     assert succeeded is True
     assert backend.reopened == [9]
-    assert backend.published == []
+    assert backend.published == [1]
+    assert backend.reconstructed_branches == [1]
+    assert backend.verified_branches == []
     assert backend.created == []
 
 
-def test_real_git_backend_recovers_existing_branch_with_added_file(tmp_path):
+def test_closed_pull_request_with_existing_branch_is_verified_before_reopen(tmp_path):
+    manifest = _write_manifest(tmp_path, [_operation(1, 1)])
+    batch = plan_batches(manifest, max_files=1, max_payload_bytes=10)[0]
+    branch = branch_name(manifest, batch)
+    closed = _pull_request(manifest, batch, number=9, state="CLOSED")
+    backend = FakeBackend([closed], remote_branches={branch})
+
+    succeeded = execute_batches(
+        manifest,
+        [batch],
+        backend,
+        [closed],
+        tmp_path / "checkpoint.json",
+        max_files=1,
+        max_payload_bytes=10,
+    )
+
+    assert succeeded is True
+    assert backend.reopened == [9]
+    assert backend.published == [1]
+    assert backend.reconstructed_branches == []
+    assert backend.verified_branches == [1]
+    assert backend.created == []
+
+
+def test_real_git_backend_recovers_branch_with_add_and_path_replacements(tmp_path):
     remote = tmp_path / "remote.git"
     repository = tmp_path / "repository"
     runner_temp = tmp_path / "runner"
@@ -368,7 +501,11 @@ def test_real_git_backend_recovers_existing_branch_with_added_file(tmp_path):
     _git(repository, "config", "user.name", "Test User")
     _git(repository, "config", "user.email", "test@example.com")
     _write(repository / "docs", "page.mdx", "canonical")
+    _write(repository / "docs", "file-replacement", "replacement-file")
+    _write(repository / "docs", "directory-replacement/child.mdx", "replacement-child")
     _write(repository / "docs-vnext", ".gitkeep", "")
+    _write(repository / "docs-vnext", "file-replacement/old-child.mdx", "old-child")
+    _write(repository / "docs-vnext", "directory-replacement", "old-file")
     allowlist = repository / ".github" / "preserve.json"
     allowlist.parent.mkdir(parents=True)
     allowlist.write_text(
@@ -408,8 +545,17 @@ def test_real_git_backend_recovers_existing_branch_with_added_file(tmp_path):
     )
 
     backend.publish_batch(manifest, batch, branch)
+    orphans = backend.list_orphan_branches([])
     backend.publish_batch(manifest, batch, branch)
 
+    assert orphans == [
+        OrphanBranch(
+            head_ref=branch,
+            manifest_digest=manifest.digest,
+            manifest_run_id=manifest.run_id,
+            batch_id=batch.id,
+        )
+    ]
     result = subprocess.run(
         ["git", "--git-dir", str(remote), "show", f"{branch}:docs-vnext/page.mdx"],
         check=True,
@@ -418,6 +564,28 @@ def test_real_git_backend_recovers_existing_branch_with_added_file(tmp_path):
         encoding="utf-8",
     )
     assert result.stdout == "canonical"
+    file_replacement = subprocess.run(
+        ["git", "--git-dir", str(remote), "show", f"{branch}:docs-vnext/file-replacement"],
+        check=True,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+    )
+    assert file_replacement.stdout == "replacement-file"
+    directory_replacement = subprocess.run(
+        [
+            "git",
+            "--git-dir",
+            str(remote),
+            "show",
+            f"{branch}:docs-vnext/directory-replacement/child.mdx",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+    )
+    assert directory_replacement.stdout == "replacement-child"
 
 
 def test_partial_failure_records_completed_failed_and_pending_batches(tmp_path):
@@ -451,6 +619,60 @@ def test_partial_failure_records_completed_failed_and_pending_batches(tmp_path):
         "pending",
     ]
     assert "simulated pull-request failure" in state["batches"][1]["diagnostic"]
+
+
+def test_new_manifest_recovers_orphan_branch_from_failed_pr_creation(tmp_path):
+    original = _write_manifest(
+        tmp_path,
+        [_operation(1, 1), _operation(2, 1)],
+        name="original-orphan.json",
+        run_id=200,
+    )
+    backend = FakeBackend(
+        downloaded_manifests={200: original.path},
+        fail_create_batch=1,
+    )
+    original_batches = plan_batches(original, max_files=1, max_payload_bytes=10)
+
+    first_succeeded = execute_batches(
+        original,
+        original_batches,
+        backend,
+        [],
+        tmp_path / "first-checkpoint.json",
+        max_files=1,
+        max_payload_bytes=10,
+    )
+
+    assert first_succeeded is False
+    orphans = backend.list_orphan_branches([])
+    assert [orphan.head_ref for orphan in orphans] == [
+        branch_name(original, original_batches[0])
+    ]
+    current = _write_manifest(
+        tmp_path,
+        [_operation(2, 1)],
+        name="newer-manifest.json",
+        run_id=300,
+    )
+
+    selected = select_active_manifest(current, backend, [], orphans)
+
+    assert selected.digest == original.digest
+    assert selected.run_id == 200
+    backend.fail_create_batch = None
+    resumed_succeeded = execute_batches(
+        selected,
+        plan_batches(selected, max_files=1, max_payload_bytes=10),
+        backend,
+        [],
+        tmp_path / "resumed-checkpoint.json",
+        max_files=1,
+        max_payload_bytes=10,
+    )
+    assert resumed_succeeded is True
+    assert backend.verified_branches == [1]
+    assert backend.created == [1, 2]
 
 
 def test_active_campaign_resumes_original_retained_manifest(tmp_path):
