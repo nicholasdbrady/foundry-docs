@@ -24,6 +24,7 @@ DEFAULT_MAX_FILES = 50
 DEFAULT_MAX_PAYLOAD_BYTES = 40 * 1024 * 1024
 MAX_AUTOMATION_BRANCHES = 100
 MAX_COMMIT_MESSAGE_BYTES = 4096
+MAX_REMOTE_DISCOVERY_BYTES = 32 * 1024
 DISCOVERY_COMMAND_TIMEOUT_SECONDS = 30
 BRANCH_PREFIX = "automation/docs-vnext-sync"
 PR_MARKER_NAME = "docs-vnext-sync-state"
@@ -39,6 +40,7 @@ COMMIT_IDENTITY_FIELDS = {
 TRAILER_PATTERN = re.compile(r"^(?P<key>[A-Za-z][A-Za-z0-9-]*): (?P<value>\S.*)$")
 SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 OPERATION_ID_PATTERN = re.compile(r"^sha256:[0-9a-f]{64}$")
+POSITIVE_DECIMAL_PATTERN = re.compile(r"^[1-9][0-9]*$")
 DECISIONS = {"add", "modify", "remove", "preserve"}
 MUTATING_DECISIONS = {"add", "modify", "remove"}
 
@@ -113,12 +115,13 @@ class OrphanBranch:
     manifest_digest: str
     manifest_run_id: int
     batch_id: str
+    pull_request_number: int | None = None
 
 
 class AutomationBackend(Protocol):
     def list_pull_requests(self) -> list[PullRequest]: ...
 
-    def list_orphan_branches(
+    def discover_campaign_branches(
         self, pull_requests: Sequence[PullRequest]
     ) -> list[OrphanBranch]: ...
 
@@ -546,22 +549,18 @@ def parse_commit_identity(message: str, head_ref: str) -> OrphanBranch:
         )
     manifest_digest = values["manifest_digest"]
     batch_id = values["batch_id"]
-    try:
-        manifest_run_id = int(values["manifest_run_id"])
-    except ValueError as exc:
+    manifest_run_id_text = values["manifest_run_id"]
+    if not POSITIVE_DECIMAL_PATTERN.fullmatch(manifest_run_id_text):
         raise BatchSyncError(
-            f"Orphan automation branch {head_ref!r} has an invalid manifest run ID"
-        ) from exc
+            f"Automation branch {head_ref!r} manifest run ID must be a canonical positive decimal"
+        )
+    manifest_run_id = int(manifest_run_id_text)
     if not SHA256_PATTERN.fullmatch(manifest_digest):
         raise BatchSyncError(
             f"Orphan automation branch {head_ref!r} has an invalid manifest digest"
         )
     if not OPERATION_ID_PATTERN.fullmatch(batch_id):
         raise BatchSyncError(f"Orphan automation branch {head_ref!r} has an invalid batch ID")
-    if manifest_run_id <= 0:
-        raise BatchSyncError(
-            f"Orphan automation branch {head_ref!r} has a non-positive manifest run ID"
-        )
     return OrphanBranch(
         head_ref=head_ref,
         manifest_digest=manifest_digest,
@@ -589,21 +588,51 @@ def parse_remote_branch_refs(output: str) -> tuple[str, ...]:
     return tuple(head_refs)
 
 
+def enforce_campaign_candidate_limit(
+    remote_heads: set[str],
+    incomplete_pull_request_heads: set[str],
+) -> None:
+    candidate_count = len(remote_heads | incomplete_pull_request_heads)
+    if candidate_count > MAX_AUTOMATION_BRANCHES:
+        raise BatchSyncError(
+            f"Found {candidate_count} active automation identity candidates, above the "
+            f"{MAX_AUTOMATION_BRANCHES}-branch discovery limit"
+        )
+
+
+def validate_marker_claim(
+    pull_request: PullRequest,
+    identity: OrphanBranch,
+) -> None:
+    marker = pull_request.marker
+    if marker is None:
+        return
+    claimed = (
+        marker["manifestSha256"],
+        marker["manifestRunId"],
+        marker["batchId"],
+    )
+    verified = (
+        identity.manifest_digest,
+        identity.manifest_run_id,
+        identity.batch_id,
+    )
+    if claimed != verified:
+        raise BatchSyncError(
+            f"Pull request #{pull_request.number} body identity conflicts with its verified "
+            "head commit"
+        )
+
+
 def select_active_manifest(
     current_manifest: Manifest,
     backend: AutomationBackend,
-    pull_requests: Sequence[PullRequest],
-    orphan_branches: Sequence[OrphanBranch] = (),
+    campaign_branches: Sequence[OrphanBranch],
 ) -> Manifest:
     """Resume the single unfinished campaign, downloading its original retained artifact."""
     active_identities = [
-        (pull_request.marker["manifestSha256"], pull_request.marker["manifestRunId"])
-        for pull_request in pull_requests
-        if pull_request.incomplete and pull_request.marker is not None
+        (branch.manifest_digest, branch.manifest_run_id) for branch in campaign_branches
     ]
-    active_identities.extend(
-        (branch.manifest_digest, branch.manifest_run_id) for branch in orphan_branches
-    )
     if not active_identities:
         return current_manifest
 
@@ -637,24 +666,42 @@ def validate_campaign_identities(
     batches: Sequence[Batch],
     backend: AutomationBackend,
     pull_requests: Sequence[PullRequest],
-    orphan_branches: Sequence[OrphanBranch],
+    campaign_branches: Sequence[OrphanBranch],
 ) -> frozenset[str]:
     """Bind every unfinished identity to one exact planned batch and verified branch."""
     batches_by_id = {batch.id: batch for batch in batches}
     claimed_batches: dict[str, str] = {}
 
     for pull_request in pull_requests:
-        if not pull_request.incomplete or pull_request.marker is None:
+        if not pull_request.incomplete or not pull_request.head_ref.startswith(
+            f"{BRANCH_PREFIX}/"
+        ):
             continue
-        marker = pull_request.marker
-        batch = batches_by_id.get(marker["batchId"])
-        if batch is None or marker != _marker_payload(manifest, batch):
+        matching_identities = [
+            identity
+            for identity in campaign_branches
+            if identity.pull_request_number == pull_request.number
+        ]
+        if len(matching_identities) != 1:
+            raise BatchSyncError(
+                f"Pull request #{pull_request.number} has {len(matching_identities)} "
+                "verified head identities"
+            )
+        identity = matching_identities[0]
+        batch = batches_by_id.get(identity.batch_id)
+        if batch is None:
             raise BatchSyncError(
                 f"Pull request #{pull_request.number} does not match an exact planned batch "
                 f"for manifest {manifest.digest}"
             )
+        if pull_request.marker is not None and pull_request.marker != _marker_payload(
+            manifest, batch
+        ):
+            raise BatchSyncError(
+                f"Pull request #{pull_request.number} body conflicts with its verified head identity"
+            )
         expected_head = branch_name(manifest, batch)
-        if pull_request.head_ref != expected_head:
+        if identity.head_ref != pull_request.head_ref or pull_request.head_ref != expected_head:
             raise BatchSyncError(
                 f"Pull request #{pull_request.number} head {pull_request.head_ref!r} does not "
                 f"match deterministic branch {expected_head!r}"
@@ -664,7 +711,9 @@ def validate_campaign_identities(
             raise BatchSyncError(f"Batch {batch.id} is claimed by both {prior} and a pull request")
         backend.publish_batch(manifest, batch, expected_head)
 
-    for orphan in orphan_branches:
+    for orphan in campaign_branches:
+        if orphan.pull_request_number is not None:
+            continue
         batch = batches_by_id.get(orphan.batch_id)
         if (
             batch is None
@@ -901,7 +950,10 @@ def execute_batches(
                 raise BatchSyncError(f"Multiple pull requests use deterministic branch {branch!r}")
             if branch_pull_requests:
                 pull_request = branch_pull_requests[0]
-                if not _matching_marker(manifest, batch, pull_request.marker):
+                if (
+                    batch.id not in preverified_batch_ids
+                    and not _matching_marker(manifest, batch, pull_request.marker)
+                ):
                     raise BatchSyncError(
                         f"Pull request #{pull_request.number} uses {branch!r} with mismatched metadata"
                     )
@@ -1022,6 +1074,7 @@ class GitHubGitBackend:
         *,
         max_bytes: int,
         cwd: Path | None = None,
+        timeout_seconds: int = DISCOVERY_COMMAND_TIMEOUT_SECONDS,
     ) -> str:
         process = subprocess.Popen(
             list(args),
@@ -1059,7 +1112,7 @@ class GitHubGitBackend:
         stdout_thread.start()
         stderr_thread.start()
         try:
-            process.wait(timeout=DISCOVERY_COMMAND_TIMEOUT_SECONDS)
+            process.wait(timeout=timeout_seconds)
         except subprocess.TimeoutExpired as exc:
             process.kill()
             process.wait()
@@ -1067,7 +1120,7 @@ class GitHubGitBackend:
             stderr_thread.join()
             raise BatchSyncError(
                 f"{args[0]} {args[1] if len(args) > 1 else ''} exceeded the "
-                f"{DISCOVERY_COMMAND_TIMEOUT_SECONDS}-second discovery timeout"
+                f"{timeout_seconds}-second discovery timeout"
             ) from exc
         stdout_thread.join()
         stderr_thread.join()
@@ -1127,40 +1180,89 @@ class GitHubGitBackend:
                     pull_requests.append(self._pull_request_from_api(payload))
         return pull_requests
 
-    def list_orphan_branches(
+    def _fetch_campaign_identity(
+        self,
+        source_ref: str,
+        remote_ref: str,
+        head_ref: str,
+        pull_request_number: int | None = None,
+    ) -> OrphanBranch:
+        self._run_bounded_stdout(
+            [
+                "git",
+                "fetch",
+                "--no-tags",
+                "origin",
+                f"+{source_ref}:{remote_ref}",
+            ],
+            max_bytes=MAX_COMMIT_MESSAGE_BYTES,
+        )
+        commit_message = self._run_bounded_stdout(
+            ["git", "show", "--no-patch", "--format=%B", remote_ref],
+            max_bytes=MAX_COMMIT_MESSAGE_BYTES,
+        )
+        return replace(
+            parse_commit_identity(commit_message, head_ref),
+            pull_request_number=pull_request_number,
+        )
+
+    def discover_campaign_branches(
         self, pull_requests: Sequence[PullRequest]
     ) -> list[OrphanBranch]:
-        result = self._run(
+        output = self._run_bounded_stdout(
             [
                 "git",
                 "ls-remote",
                 "--heads",
                 "origin",
                 f"refs/heads/{BRANCH_PREFIX}/*",
-            ]
+            ],
+            max_bytes=MAX_REMOTE_DISCOVERY_BYTES,
         )
-        pull_request_heads = {pull_request.head_ref for pull_request in pull_requests}
-        orphan_branches: list[OrphanBranch] = []
-        for head_ref in parse_remote_branch_refs(result.stdout):
-            if head_ref in pull_request_heads:
+        remote_heads = set(parse_remote_branch_refs(output))
+        all_pull_request_heads = {pull_request.head_ref for pull_request in pull_requests}
+        incomplete_by_head: dict[str, PullRequest] = {}
+        for pull_request in pull_requests:
+            if not pull_request.incomplete or not pull_request.head_ref.startswith(
+                f"{BRANCH_PREFIX}/"
+            ):
                 continue
-            ref = f"refs/heads/{head_ref}"
-            remote_ref = f"refs/remotes/origin/{head_ref}"
-            self._run(
-                [
-                    "git",
-                    "fetch",
-                    "--no-tags",
-                    "origin",
-                    f"+{ref}:{remote_ref}",
-                ]
+            if pull_request.head_ref in incomplete_by_head:
+                raise BatchSyncError(
+                    f"Multiple unmerged pull requests use automation head "
+                    f"{pull_request.head_ref!r}"
+                )
+            incomplete_by_head[pull_request.head_ref] = pull_request
+
+        enforce_campaign_candidate_limit(remote_heads, set(incomplete_by_head))
+        campaign_branches: list[OrphanBranch] = []
+        for head_ref in sorted(remote_heads):
+            pull_request = incomplete_by_head.get(head_ref)
+            if head_ref in all_pull_request_heads and pull_request is None:
+                continue
+            identity = self._fetch_campaign_identity(
+                f"refs/heads/{head_ref}",
+                f"refs/remotes/origin/{head_ref}",
+                head_ref,
+                pull_request.number if pull_request is not None else None,
             )
-            commit_message = self._run_bounded_stdout(
-                ["git", "show", "--no-patch", "--format=%B", remote_ref],
-                max_bytes=MAX_COMMIT_MESSAGE_BYTES,
+            if pull_request is not None:
+                validate_marker_claim(pull_request, identity)
+            campaign_branches.append(identity)
+
+        for head_ref, pull_request in incomplete_by_head.items():
+            if head_ref in remote_heads:
+                continue
+            identity = self._fetch_campaign_identity(
+                f"refs/pull/{pull_request.number}/head",
+                f"refs/remotes/origin/pull-{pull_request.number}-head",
+                head_ref,
+                pull_request.number,
             )
-            orphan_branches.append(parse_commit_identity(commit_message, head_ref))
-        return orphan_branches
+            validate_marker_claim(pull_request, identity)
+            campaign_branches.append(identity)
+
+        return campaign_branches
 
     def download_manifest(self, run_id: int) -> Path:
         destination = self.runner_temp / f"resume-manifest-{run_id}"
@@ -1424,12 +1526,11 @@ def main(
             runner_temp=args.runner_temp,
         )
         pull_requests = active_backend.list_pull_requests()
-        orphan_branches = active_backend.list_orphan_branches(pull_requests)
+        campaign_branches = active_backend.discover_campaign_branches(pull_requests)
         manifest = select_active_manifest(
             current_manifest,
             active_backend,
-            pull_requests,
-            orphan_branches,
+            campaign_branches,
         )
         batches = plan_batches(manifest, args.max_files, args.max_payload_bytes)
         preverified_batch_ids = validate_campaign_identities(
@@ -1437,7 +1538,7 @@ def main(
             batches,
             active_backend,
             pull_requests,
-            orphan_branches,
+            campaign_branches,
         )
         succeeded = execute_batches(
             manifest,

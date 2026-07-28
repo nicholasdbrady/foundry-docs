@@ -25,6 +25,7 @@ from apply_docs_vnext_sync_batches import (  # noqa: E402
     apply_batch,
     branch_name,
     build_pull_request_body,
+    enforce_campaign_candidate_limit,
     execute_batches,
     load_manifest,
     parse_commit_identity,
@@ -33,6 +34,7 @@ from apply_docs_vnext_sync_batches import (  # noqa: E402
     plan_batches,
     select_active_manifest,
     validate_campaign_identities,
+    validate_marker_claim,
 )
 from generate_docs_vnext_sync_manifest import build_manifest, serialize_manifest  # noqa: E402
 
@@ -175,6 +177,7 @@ class FakeBackend:
         downloaded_manifests: dict[int, Path] | None = None,
         fail_create_batch: int | None = None,
         remote_branches: set[str] | None = None,
+        pull_request_identities: dict[int, OrphanBranch] | None = None,
     ) -> None:
         self.pull_requests = list(pull_requests or [])
         self.downloaded_manifests = downloaded_manifests or {}
@@ -184,23 +187,49 @@ class FakeBackend:
         self.reopened: list[int] = []
         self.remote_branches = set(remote_branches or set())
         self.branch_identities: dict[str, OrphanBranch] = {}
+        self.pull_request_identities = dict(pull_request_identities or {})
+        for pull_request in self.pull_requests:
+            marker = pull_request.marker
+            if marker is not None and pull_request.number not in self.pull_request_identities:
+                self.pull_request_identities[pull_request.number] = OrphanBranch(
+                    head_ref=pull_request.head_ref,
+                    manifest_digest=marker["manifestSha256"],
+                    manifest_run_id=marker["manifestRunId"],
+                    batch_id=marker["batchId"],
+                    pull_request_number=pull_request.number,
+                )
         self.verified_branches: list[int] = []
         self.reconstructed_branches: list[int] = []
+        self.downloaded_run_ids: list[int] = []
 
     def list_pull_requests(self) -> list[PullRequest]:
         return list(self.pull_requests)
 
-    def list_orphan_branches(
+    def discover_campaign_branches(
         self, pull_requests: list[PullRequest]
     ) -> list[OrphanBranch]:
         pull_request_heads = {pull_request.head_ref for pull_request in pull_requests}
-        return [
+        identities = [
             identity
             for branch, identity in self.branch_identities.items()
             if branch in self.remote_branches and branch not in pull_request_heads
         ]
+        for pull_request in pull_requests:
+            if not pull_request.incomplete or not pull_request.head_ref.startswith(
+                "automation/docs-vnext-sync/"
+            ):
+                continue
+            identity = self.pull_request_identities.get(pull_request.number)
+            if identity is None:
+                raise BatchSyncError(
+                    f"Pull request #{pull_request.number} has no recoverable head identity"
+                )
+            validate_marker_claim(pull_request, identity)
+            identities.append(identity)
+        return identities
 
     def download_manifest(self, run_id: int) -> Path:
+        self.downloaded_run_ids.append(run_id)
         return self.downloaded_manifests[run_id]
 
     def publish_batch(self, manifest: Manifest, batch: Batch, branch: str) -> None:
@@ -574,7 +603,7 @@ def test_real_git_backend_recovers_branch_with_add_and_path_replacements(tmp_pat
     )
 
     backend.publish_batch(manifest, batch, branch)
-    orphans = backend.list_orphan_branches([])
+    orphans = backend.discover_campaign_branches([])
     backend.publish_batch(manifest, batch, branch)
 
     assert orphans == [
@@ -671,12 +700,30 @@ def test_real_git_backend_rejects_force_pushed_open_pr_branch(tmp_path):
     _git(repository, "switch", "--create", "forged", "FETCH_HEAD")
     _write(repository / "docs-vnext", "page.mdx", "forged")
     _git(repository, "add", "docs-vnext/page.mdx")
-    _git(repository, "commit", "-m", "forge deterministic branch")
+    _git(
+        repository,
+        "commit",
+        "-m",
+        "forge deterministic branch",
+        "-m",
+        (
+            f"Manifest-SHA256: {manifest.digest}\n"
+            f"Manifest-Run-ID: {manifest.run_id}\n"
+            f"Batch-ID: {batch.id}"
+        ),
+    )
     _git(repository, "push", "--force", "origin", f"HEAD:refs/heads/{branch}")
     forged_pr = _pull_request(manifest, batch)
+    campaign_branches = backend.discover_campaign_branches([forged_pr])
 
     with pytest.raises(BatchSyncError, match="does not match the reconstructed batch"):
-        validate_campaign_identities(manifest, [batch], backend, [forged_pr], [])
+        validate_campaign_identities(
+            manifest,
+            [batch],
+            backend,
+            [forged_pr],
+            campaign_branches,
+        )
 
 
 def test_partial_failure_records_completed_failed_and_pending_batches(tmp_path):
@@ -736,7 +783,7 @@ def test_new_manifest_recovers_orphan_branch_from_failed_pr_creation(tmp_path):
     )
 
     assert first_succeeded is False
-    orphans = backend.list_orphan_branches([])
+    orphans = backend.discover_campaign_branches([])
     assert [orphan.head_ref for orphan in orphans] == [
         branch_name(original, original_batches[0])
     ]
@@ -747,7 +794,7 @@ def test_new_manifest_recovers_orphan_branch_from_failed_pr_creation(tmp_path):
         run_id=300,
     )
 
-    selected = select_active_manifest(current, backend, [], orphans)
+    selected = select_active_manifest(current, backend, orphans)
 
     assert selected.digest == original.digest
     assert selected.run_id == 200
@@ -838,6 +885,35 @@ def test_backend_bounds_commit_message_output_before_parsing(tmp_path):
         )
 
 
+def test_backend_bounds_hanging_discovery_command(tmp_path):
+    backend = GitHubGitBackend(
+        repository_root=tmp_path,
+        repository="example/repository",
+        base_branch="main",
+        runner_temp=tmp_path / "runner",
+    )
+
+    with pytest.raises(BatchSyncError, match="exceeded the 1-second discovery timeout"):
+        backend._run_bounded_stdout(
+            [sys.executable, "-c", "import time; time.sleep(5)"],
+            max_bytes=4096,
+            timeout_seconds=1,
+        )
+
+
+@pytest.mark.parametrize("run_id", ["+1", "01", "1_0", "1 ", "0", "-1"])
+def test_commit_identity_rejects_noncanonical_run_ids(run_id):
+    message = (
+        "Subject\n\n"
+        f"Manifest-SHA256: {'a' * 64}\n"
+        f"Manifest-Run-ID: {run_id}\n"
+        f"Batch-ID: sha256:{'b' * 64}"
+    )
+
+    with pytest.raises(BatchSyncError, match="canonical positive decimal"):
+        parse_commit_identity(message, "automation/docs-vnext-sync/noncanonical")
+
+
 def test_remote_branch_discovery_rejects_excessive_branch_count():
     output = "\n".join(
         f"{'a' * 40}\trefs/heads/automation/docs-vnext-sync/campaign/batch-{index}"
@@ -857,15 +933,33 @@ def test_remote_branch_discovery_rejects_duplicate_refs():
         parse_remote_branch_refs(f"{line}\n{line}\n")
 
 
+def test_combined_remote_and_deleted_pr_candidates_are_capped_before_fetch():
+    remote_heads = {
+        f"automation/docs-vnext-sync/campaign/batch-{index:03d}"
+        for index in range(100)
+    }
+    deleted_pr_heads = {"automation/docs-vnext-sync/campaign/deleted-pr-head"}
+
+    with pytest.raises(BatchSyncError, match="101 active automation identity candidates"):
+        enforce_campaign_candidate_limit(remote_heads, deleted_pr_heads)
+
+
 def test_forged_pr_and_orphan_identities_cannot_bind_to_campaign(tmp_path):
     manifest = _write_manifest(tmp_path, [_operation(1, 1)])
     batch = plan_batches(manifest, max_files=1, max_payload_bytes=10)[0]
     valid_pr = _pull_request(manifest, batch)
     forged_pr = replace(valid_pr, head_ref=f"{branch_name(manifest, batch)}-forged")
     backend = FakeBackend([forged_pr])
+    forged_pr_identity = backend.discover_campaign_branches([forged_pr])
 
     with pytest.raises(BatchSyncError, match="does not match deterministic branch"):
-        validate_campaign_identities(manifest, [batch], backend, [forged_pr], [])
+        validate_campaign_identities(
+            manifest,
+            [batch],
+            backend,
+            [forged_pr],
+            forged_pr_identity,
+        )
 
     forged_orphan = OrphanBranch(
         head_ref=branch_name(manifest, batch),
@@ -875,6 +969,89 @@ def test_forged_pr_and_orphan_identities_cannot_bind_to_campaign(tmp_path):
     )
     with pytest.raises(BatchSyncError, match="does not match an exact planned batch"):
         validate_campaign_identities(manifest, [batch], backend, [], [forged_orphan])
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        None,
+        "<!-- docs-vnext-sync-state\n{malformed-json}\n-->",
+    ],
+)
+def test_missing_or_malformed_pr_marker_recovers_from_verified_head(tmp_path, body):
+    manifest = _write_manifest(tmp_path, [_operation(1, 1)])
+    batch = plan_batches(manifest, max_files=1, max_payload_bytes=10)[0]
+    valid = _pull_request(manifest, batch)
+    pull_request = replace(valid, marker=parse_pull_request_marker(body))
+    identity = OrphanBranch(
+        head_ref=pull_request.head_ref,
+        manifest_digest=manifest.digest,
+        manifest_run_id=manifest.run_id,
+        batch_id=batch.id,
+        pull_request_number=pull_request.number,
+    )
+    backend = FakeBackend(
+        [pull_request],
+        remote_branches={pull_request.head_ref},
+        pull_request_identities={pull_request.number: identity},
+    )
+
+    campaign_branches = backend.discover_campaign_branches([pull_request])
+    selected = select_active_manifest(manifest, backend, campaign_branches)
+    preverified = validate_campaign_identities(
+        selected,
+        [batch],
+        backend,
+        [pull_request],
+        campaign_branches,
+    )
+    succeeded = execute_batches(
+        selected,
+        [batch],
+        backend,
+        [pull_request],
+        tmp_path / "recovered-checkpoint.json",
+        max_files=1,
+        max_payload_bytes=10,
+        preverified_batch_ids=preverified,
+    )
+
+    assert succeeded is True
+    assert backend.downloaded_run_ids == []
+
+
+def test_forged_marker_cannot_pin_manifest_before_head_authentication(tmp_path):
+    current = _write_manifest(
+        tmp_path,
+        [_operation(1, 1)],
+        name="current-authenticated.json",
+        run_id=300,
+    )
+    current_batch = plan_batches(current, max_files=1, max_payload_bytes=10)[0]
+    old = _write_manifest(
+        tmp_path,
+        [_operation(2, 1)],
+        name="forged-old.json",
+        run_id=200,
+    )
+    old_batch = plan_batches(old, max_files=1, max_payload_bytes=10)[0]
+    forged_marker_pr = _pull_request(old, old_batch)
+    authenticated_identity = OrphanBranch(
+        head_ref=forged_marker_pr.head_ref,
+        manifest_digest=current.digest,
+        manifest_run_id=current.run_id,
+        batch_id=current_batch.id,
+        pull_request_number=forged_marker_pr.number,
+    )
+    backend = FakeBackend(
+        [forged_marker_pr],
+        downloaded_manifests={200: old.path},
+        pull_request_identities={forged_marker_pr.number: authenticated_identity},
+    )
+
+    with pytest.raises(BatchSyncError, match="conflicts with its verified head commit"):
+        backend.discover_campaign_branches([forged_marker_pr])
+    assert backend.downloaded_run_ids == []
 
 
 def test_pr_and_orphan_cannot_claim_the_same_derived_batch(tmp_path):
@@ -889,6 +1066,7 @@ def test_pr_and_orphan_cannot_claim_the_same_derived_batch(tmp_path):
         batch_id=batch.id,
     )
     backend = FakeBackend([pull_request], remote_branches={branch})
+    pull_request_identity = backend.discover_campaign_branches([pull_request])
 
     with pytest.raises(BatchSyncError, match="claimed by both"):
         validate_campaign_identities(
@@ -896,7 +1074,7 @@ def test_pr_and_orphan_cannot_claim_the_same_derived_batch(tmp_path):
             [batch],
             backend,
             [pull_request],
-            [orphan],
+            [*pull_request_identity, orphan],
         )
 
 
@@ -917,7 +1095,11 @@ def test_active_campaign_resumes_original_retained_manifest(tmp_path):
     active = _pull_request(original, original_batch)
     backend = FakeBackend([active], downloaded_manifests={200: original.path})
 
-    selected = select_active_manifest(current, backend, [active])
+    selected = select_active_manifest(
+        current,
+        backend,
+        backend.discover_campaign_branches([active]),
+    )
 
     assert selected.digest == original.digest
     assert selected.run_id == 200
