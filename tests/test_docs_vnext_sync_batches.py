@@ -27,9 +27,12 @@ from apply_docs_vnext_sync_batches import (  # noqa: E402
     build_pull_request_body,
     execute_batches,
     load_manifest,
+    parse_commit_identity,
     parse_pull_request_marker,
+    parse_remote_branch_refs,
     plan_batches,
     select_active_manifest,
+    validate_campaign_identities,
 )
 from generate_docs_vnext_sync_manifest import build_manifest, serialize_manifest  # noqa: E402
 
@@ -371,7 +374,7 @@ def test_existing_open_pull_request_prevents_duplicate_publish_and_creation(tmp_
     manifest = _write_manifest(tmp_path, [_operation(1, 1)])
     batch = plan_batches(manifest, max_files=1, max_payload_bytes=10)[0]
     pull_request = _pull_request(manifest, batch)
-    backend = FakeBackend([pull_request])
+    backend = FakeBackend([pull_request], remote_branches={branch_name(manifest, batch)})
     checkpoint = tmp_path / "checkpoint.json"
 
     succeeded = execute_batches(
@@ -385,7 +388,8 @@ def test_existing_open_pull_request_prevents_duplicate_publish_and_creation(tmp_
     )
 
     assert succeeded is True
-    assert backend.published == []
+    assert backend.published == [1]
+    assert backend.verified_branches == [1]
     assert backend.created == []
     state = json.loads(checkpoint.read_text(encoding="utf-8"))
     assert state["batches"][0]["result"] == "existing-open-pull-request"
@@ -588,6 +592,68 @@ def test_real_git_backend_recovers_branch_with_add_and_path_replacements(tmp_pat
     assert directory_replacement.stdout == "replacement-child"
 
 
+def test_real_git_backend_rejects_force_pushed_open_pr_branch(tmp_path):
+    remote = tmp_path / "forged-remote.git"
+    repository = tmp_path / "forged-repository"
+    runner_temp = tmp_path / "forged-runner"
+    remote.mkdir()
+    repository.mkdir()
+    _git(remote, "init", "--bare")
+    _git(repository, "init", "--initial-branch=main")
+    _git(repository, "config", "user.name", "Test User")
+    _git(repository, "config", "user.email", "test@example.com")
+    _write(repository / "docs", "page.mdx", "canonical")
+    _write(repository / "docs-vnext", ".gitkeep", "")
+    allowlist = repository / "preserve.json"
+    allowlist.write_text(
+        json.dumps(
+            {
+                "schemaVersion": 1,
+                "preserve": [{"kind": "file", "path": ".gitkeep"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    _git(repository, "add", ".")
+    _git(repository, "commit", "-m", "base")
+    _git(repository, "remote", "add", "origin", str(remote))
+    _git(repository, "push", "--set-upstream", "origin", "main")
+    manifest_path = tmp_path / "forged-manifest.json"
+    manifest_path.write_text(
+        serialize_manifest(
+            build_manifest(
+                repository / "docs",
+                repository / "docs-vnext",
+                allowlist,
+                repository,
+            )
+        ),
+        encoding="utf-8",
+        newline="\n",
+    )
+    manifest = load_manifest(manifest_path, 789)
+    batch = plan_batches(manifest, max_files=10, max_payload_bytes=1000)[0]
+    branch = branch_name(manifest, batch)
+    backend = GitHubGitBackend(
+        repository_root=repository,
+        repository="example/repository",
+        base_branch="main",
+        runner_temp=runner_temp,
+    )
+    backend.publish_batch(manifest, batch, branch)
+
+    _git(repository, "fetch", "origin", branch)
+    _git(repository, "switch", "--create", "forged", "FETCH_HEAD")
+    _write(repository / "docs-vnext", "page.mdx", "forged")
+    _git(repository, "add", "docs-vnext/page.mdx")
+    _git(repository, "commit", "-m", "forge deterministic branch")
+    _git(repository, "push", "--force", "origin", f"HEAD:refs/heads/{branch}")
+    forged_pr = _pull_request(manifest, batch)
+
+    with pytest.raises(BatchSyncError, match="does not match the reconstructed batch"):
+        validate_campaign_identities(manifest, [batch], backend, [forged_pr], [])
+
+
 def test_partial_failure_records_completed_failed_and_pending_batches(tmp_path):
     manifest = _write_manifest(
         tmp_path,
@@ -673,6 +739,108 @@ def test_new_manifest_recovers_orphan_branch_from_failed_pr_creation(tmp_path):
     assert resumed_succeeded is True
     assert backend.verified_branches == [1]
     assert backend.created == [1, 2]
+
+
+@pytest.mark.parametrize(
+    ("message", "error"),
+    [
+        (
+            "Subject\n\nManifest-SHA256: "
+            + "a" * 64
+            + "\nManifest-Run-ID: 1\nManifest-Run-ID: 2",
+            "duplicate campaign trailer",
+        ),
+        (
+            "Subject\n\nManifest-SHA256: "
+            + "a" * 64
+            + "\nUnknown-ID: 1\nBatch-ID: sha256:"
+            + "b" * 64,
+            "unknown campaign trailer",
+        ),
+        (
+            "Subject\n\nManifest-SHA256: "
+            + "a" * 64
+            + "\nManifest-Run-ID: 1",
+            "exactly 3 trailers",
+        ),
+        (        "Subject without trailers", "missing a final campaign trailer block"),
+        (
+        "Subject\n\nManifest-SHA256: "
+        + "a" * 64
+        + "\nManifest-Run-ID 1\nBatch-ID: sha256:"
+        + "b" * 64,
+        "malformed campaign trailer",
+        ),
+    ],
+)
+def test_commit_identity_rejects_malformed_duplicate_missing_and_unknown_trailers(
+    message,
+    error,
+):
+    with pytest.raises(BatchSyncError, match=error):
+        parse_commit_identity(message, "automation/docs-vnext-sync/forged")
+
+
+def test_commit_identity_rejects_oversize_message():
+    message = "x" * 4097 + "\n\nManifest-SHA256: " + "a" * 64
+
+    with pytest.raises(BatchSyncError, match="above the 4096-byte discovery limit"):
+        parse_commit_identity(message, "automation/docs-vnext-sync/oversize")
+
+
+def test_backend_bounds_commit_message_output_before_parsing(tmp_path):
+    backend = GitHubGitBackend(
+        repository_root=tmp_path,
+        repository="example/repository",
+        base_branch="main",
+        runner_temp=tmp_path / "runner",
+    )
+
+    with pytest.raises(BatchSyncError, match="stdout exceeds the 4096-byte discovery limit"):
+        backend._run_bounded_stdout(
+            [sys.executable, "-c", "print('x' * 5000)"],
+            max_bytes=4096,
+        )
+
+    with pytest.raises(BatchSyncError, match="stderr exceeds the 4096-byte discovery limit"):
+        backend._run_bounded_stdout(
+            [
+                sys.executable,
+                "-c",
+                "import sys; sys.stderr.write('e' * 200000); sys.stderr.flush(); print('ok')",
+            ],
+            max_bytes=4096,
+        )
+
+
+def test_remote_branch_discovery_rejects_excessive_branch_count():
+    output = "\n".join(
+        f"{'a' * 40}\trefs/heads/automation/docs-vnext-sync/campaign/batch-{index}"
+        for index in range(101)
+    )
+
+    with pytest.raises(BatchSyncError, match="above the 100-branch discovery limit"):
+        parse_remote_branch_refs(output)
+
+
+def test_forged_pr_and_orphan_identities_cannot_bind_to_campaign(tmp_path):
+    manifest = _write_manifest(tmp_path, [_operation(1, 1)])
+    batch = plan_batches(manifest, max_files=1, max_payload_bytes=10)[0]
+    valid_pr = _pull_request(manifest, batch)
+    forged_pr = replace(valid_pr, head_ref=f"{branch_name(manifest, batch)}-forged")
+    backend = FakeBackend([forged_pr])
+
+    with pytest.raises(BatchSyncError, match="does not match deterministic branch"):
+        validate_campaign_identities(manifest, [batch], backend, [forged_pr], [])
+
+    forged_orphan = OrphanBranch(
+        head_ref=branch_name(manifest, batch),
+        manifest_digest=manifest.digest,
+        manifest_run_id=manifest.run_id,
+        batch_id=f"sha256:{'f' * 64}",
+    )
+    with pytest.raises(BatchSyncError, match="does not match an exact planned batch"):
+        validate_campaign_identities(manifest, [batch], backend, [], [forged_orphan])
 
 
 def test_active_campaign_resumes_original_retained_manifest(tmp_path):

@@ -11,6 +11,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 from dataclasses import dataclass, replace
 from pathlib import Path, PurePosixPath
 from typing import Any, Protocol, Sequence
@@ -21,6 +22,9 @@ BATCH_SCHEMA_VERSION = 1
 CHECKPOINT_SCHEMA_VERSION = 1
 DEFAULT_MAX_FILES = 50
 DEFAULT_MAX_PAYLOAD_BYTES = 40 * 1024 * 1024
+MAX_AUTOMATION_BRANCHES = 100
+MAX_COMMIT_MESSAGE_BYTES = 4096
+DISCOVERY_COMMAND_TIMEOUT_SECONDS = 30
 BRANCH_PREFIX = "automation/docs-vnext-sync"
 PR_MARKER_NAME = "docs-vnext-sync-state"
 PR_MARKER_PATTERN = re.compile(
@@ -32,6 +36,7 @@ COMMIT_IDENTITY_FIELDS = {
     "Manifest-Run-ID": "manifest_run_id",
     "Batch-ID": "batch_id",
 }
+TRAILER_PATTERN = re.compile(r"^(?P<key>[A-Za-z][A-Za-z0-9-]*): (?P<value>\S.*)$")
 SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 OPERATION_ID_PATTERN = re.compile(r"^sha256:[0-9a-f]{64}$")
 DECISIONS = {"add", "modify", "remove", "preserve"}
@@ -497,14 +502,47 @@ def parse_pull_request_marker(body: str | None) -> dict[str, Any] | None:
 
 
 def parse_commit_identity(message: str, head_ref: str) -> OrphanBranch:
+    message_bytes = len(message.encode("utf-8"))
+    if message_bytes > MAX_COMMIT_MESSAGE_BYTES:
+        raise BatchSyncError(
+            f"Automation branch {head_ref!r} commit message is {message_bytes} bytes, "
+            f"above the {MAX_COMMIT_MESSAGE_BYTES}-byte discovery limit"
+        )
+    lines = message.rstrip("\n").splitlines()
+    separator_indices = [index for index, line in enumerate(lines) if not line]
+    if not separator_indices:
+        raise BatchSyncError(
+            f"Automation branch {head_ref!r} is missing a final campaign trailer block"
+        )
+    trailer_lines = lines[separator_indices[-1] + 1 :]
+    if len(trailer_lines) != len(COMMIT_IDENTITY_FIELDS):
+        raise BatchSyncError(
+            f"Automation branch {head_ref!r} campaign trailer block must contain exactly "
+            f"{len(COMMIT_IDENTITY_FIELDS)} trailers"
+        )
+
     values: dict[str, str] = {}
-    for line in message.splitlines():
-        key, separator, value = line.partition(":")
-        if separator and key in COMMIT_IDENTITY_FIELDS:
-            values[COMMIT_IDENTITY_FIELDS[key]] = value.strip()
+    seen_keys: set[str] = set()
+    for line in trailer_lines:
+        match = TRAILER_PATTERN.fullmatch(line)
+        if match is None:
+            raise BatchSyncError(
+                f"Automation branch {head_ref!r} has a malformed campaign trailer: {line!r}"
+            )
+        key = match.group("key")
+        if key not in COMMIT_IDENTITY_FIELDS:
+            raise BatchSyncError(
+                f"Automation branch {head_ref!r} has an unknown campaign trailer {key!r}"
+            )
+        if key in seen_keys:
+            raise BatchSyncError(
+                f"Automation branch {head_ref!r} has duplicate campaign trailer {key!r}"
+            )
+        seen_keys.add(key)
+        values[COMMIT_IDENTITY_FIELDS[key]] = match.group("value")
     if set(values) != set(COMMIT_IDENTITY_FIELDS.values()):
         raise BatchSyncError(
-            f"Orphan automation branch {head_ref!r} is missing campaign identity trailers"
+            f"Automation branch {head_ref!r} is missing required campaign identity trailers"
         )
     manifest_digest = values["manifest_digest"]
     batch_id = values["batch_id"]
@@ -530,6 +568,25 @@ def parse_commit_identity(message: str, head_ref: str) -> OrphanBranch:
         manifest_run_id=manifest_run_id,
         batch_id=batch_id,
     )
+
+
+def parse_remote_branch_refs(output: str) -> tuple[str, ...]:
+    lines = [line for line in output.splitlines() if line]
+    if len(lines) > MAX_AUTOMATION_BRANCHES:
+        raise BatchSyncError(
+            f"Found {len(lines)} automation branches, above the "
+            f"{MAX_AUTOMATION_BRANCHES}-branch discovery limit"
+        )
+    head_refs: list[str] = []
+    for line in lines:
+        _, separator, ref = line.partition("\t")
+        expected_prefix = f"refs/heads/{BRANCH_PREFIX}/"
+        if not separator or not ref.startswith(expected_prefix):
+            raise BatchSyncError(f"Cannot parse automation branch reference: {line!r}")
+        head_refs.append(ref.removeprefix("refs/heads/"))
+    if len(head_refs) != len(set(head_refs)):
+        raise BatchSyncError("Remote automation branch discovery returned duplicate references")
+    return tuple(head_refs)
 
 
 def select_active_manifest(
@@ -573,6 +630,62 @@ def select_active_manifest(
             f"Retained manifest from run {run_id} has digest {resumed.digest}, expected {digest}"
         )
     return resumed
+
+
+def validate_campaign_identities(
+    manifest: Manifest,
+    batches: Sequence[Batch],
+    backend: AutomationBackend,
+    pull_requests: Sequence[PullRequest],
+    orphan_branches: Sequence[OrphanBranch],
+) -> frozenset[str]:
+    """Bind every unfinished identity to one exact planned batch and verified branch."""
+    batches_by_id = {batch.id: batch for batch in batches}
+    claimed_batches: dict[str, str] = {}
+
+    for pull_request in pull_requests:
+        if not pull_request.incomplete or pull_request.marker is None:
+            continue
+        marker = pull_request.marker
+        batch = batches_by_id.get(marker["batchId"])
+        if batch is None or marker != _marker_payload(manifest, batch):
+            raise BatchSyncError(
+                f"Pull request #{pull_request.number} does not match an exact planned batch "
+                f"for manifest {manifest.digest}"
+            )
+        expected_head = branch_name(manifest, batch)
+        if pull_request.head_ref != expected_head:
+            raise BatchSyncError(
+                f"Pull request #{pull_request.number} head {pull_request.head_ref!r} does not "
+                f"match deterministic branch {expected_head!r}"
+            )
+        prior = claimed_batches.setdefault(batch.id, f"pull request #{pull_request.number}")
+        if prior != f"pull request #{pull_request.number}":
+            raise BatchSyncError(f"Batch {batch.id} is claimed by both {prior} and a pull request")
+        backend.publish_batch(manifest, batch, expected_head)
+
+    for orphan in orphan_branches:
+        batch = batches_by_id.get(orphan.batch_id)
+        if (
+            batch is None
+            or orphan.manifest_digest != manifest.digest
+            or orphan.manifest_run_id != manifest.run_id
+        ):
+            raise BatchSyncError(
+                f"Orphan branch {orphan.head_ref!r} does not match an exact planned batch "
+                f"for manifest {manifest.digest}"
+            )
+        expected_head = branch_name(manifest, batch)
+        if orphan.head_ref != expected_head:
+            raise BatchSyncError(
+                f"Orphan branch {orphan.head_ref!r} does not match deterministic branch "
+                f"{expected_head!r}"
+            )
+        prior = claimed_batches.setdefault(batch.id, f"orphan branch {orphan.head_ref}")
+        if prior != f"orphan branch {orphan.head_ref}":
+            raise BatchSyncError(f"Batch {batch.id} is claimed by both {prior} and an orphan branch")
+        backend.publish_batch(manifest, batch, expected_head)
+    return frozenset(claimed_batches)
 
 
 def _metadata(path: Path) -> dict[str, int | str] | None:
@@ -763,6 +876,7 @@ def execute_batches(
     checkpoint_path: Path,
     max_files: int,
     max_payload_bytes: int,
+    preverified_batch_ids: frozenset[str] = frozenset(),
 ) -> bool:
     """Resume or publish batches sequentially and stop after the first partial failure."""
     checkpoint = _initial_checkpoint(manifest, batches, max_files, max_payload_bytes)
@@ -791,16 +905,18 @@ def execute_batches(
                     raise BatchSyncError(
                         f"Pull request #{pull_request.number} uses {branch!r} with mismatched metadata"
                     )
-                if pull_request.state == "CLOSED":
+                if pull_request.merged:
+                    result = "existing-merged-pull-request"
+                elif batch.id not in preverified_batch_ids:
                     backend.publish_batch(manifest, batch, branch)
+                if pull_request.state == "CLOSED":
                     pull_request = backend.reopen_pull_request(pull_request)
                     result = "reopened-pull-request"
-                elif pull_request.merged:
-                    result = "existing-merged-pull-request"
-                else:
+                elif not pull_request.merged:
                     result = "existing-open-pull-request"
             else:
-                backend.publish_batch(manifest, batch, branch)
+                if batch.id not in preverified_batch_ids:
+                    backend.publish_batch(manifest, batch, branch)
                 title = (
                     f"[docs-vnext-sync] Baseline {manifest.digest[:12]} "
                     f"batch {batch.number}/{batch.total}"
@@ -900,6 +1016,81 @@ class GitHubGitBackend:
             raise BatchSyncError(f"{args[0]} {args[1] if len(args) > 1 else ''} failed: {detail}")
         return result
 
+    def _run_bounded_stdout(
+        self,
+        args: Sequence[str],
+        *,
+        max_bytes: int,
+        cwd: Path | None = None,
+    ) -> str:
+        process = subprocess.Popen(
+            list(args),
+            cwd=cwd or self.repository_root,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        assert process.stdout is not None
+        assert process.stderr is not None
+        stdout = bytearray()
+        stderr = bytearray()
+        overflow_streams: set[str] = set()
+
+        def drain(stream: Any, destination: bytearray, name: str) -> None:
+            while block := stream.read(1024):
+                destination.extend(block)
+                if len(destination) > max_bytes:
+                    overflow_streams.add(name)
+                    try:
+                        process.kill()
+                    except OSError:
+                        pass
+                    return
+
+        stdout_thread = threading.Thread(
+            target=drain,
+            args=(process.stdout, stdout, "stdout"),
+            daemon=True,
+        )
+        stderr_thread = threading.Thread(
+            target=drain,
+            args=(process.stderr, stderr, "stderr"),
+            daemon=True,
+        )
+        stdout_thread.start()
+        stderr_thread.start()
+        try:
+            process.wait(timeout=DISCOVERY_COMMAND_TIMEOUT_SECONDS)
+        except subprocess.TimeoutExpired as exc:
+            process.kill()
+            process.wait()
+            stdout_thread.join()
+            stderr_thread.join()
+            raise BatchSyncError(
+                f"{args[0]} {args[1] if len(args) > 1 else ''} exceeded the "
+                f"{DISCOVERY_COMMAND_TIMEOUT_SECONDS}-second discovery timeout"
+            ) from exc
+        stdout_thread.join()
+        stderr_thread.join()
+        if overflow_streams:
+            raise BatchSyncError(
+                f"{args[0]} {args[1] if len(args) > 1 else ''} "
+                f"{'/'.join(sorted(overflow_streams))} exceeds the "
+                f"{max_bytes}-byte discovery limit"
+            )
+        try:
+            stdout_text = bytes(stdout).decode("utf-8")
+            stderr_text = bytes(stderr).decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise BatchSyncError(f"{args[0]} output is not valid UTF-8") from exc
+        if process.returncode != 0:
+            detail = (
+                stderr_text.strip()
+                or stdout_text.strip()
+                or f"exit code {process.returncode}"
+            )
+            raise BatchSyncError(f"{args[0]} {args[1] if len(args) > 1 else ''} failed: {detail}")
+        return stdout_text
+
     def _pull_request_from_api(self, payload: dict[str, Any]) -> PullRequest:
         merged = payload.get("merged_at") is not None
         state = "MERGED" if merged else str(payload["state"]).upper()
@@ -950,13 +1141,10 @@ class GitHubGitBackend:
         )
         pull_request_heads = {pull_request.head_ref for pull_request in pull_requests}
         orphan_branches: list[OrphanBranch] = []
-        for line in result.stdout.splitlines():
-            _, separator, ref = line.partition("\t")
-            if not separator or not ref.startswith("refs/heads/"):
-                raise BatchSyncError(f"Cannot parse automation branch reference: {line!r}")
-            head_ref = ref.removeprefix("refs/heads/")
+        for head_ref in parse_remote_branch_refs(result.stdout):
             if head_ref in pull_request_heads:
                 continue
+            ref = f"refs/heads/{head_ref}"
             remote_ref = f"refs/remotes/origin/{head_ref}"
             self._run(
                 [
@@ -967,8 +1155,11 @@ class GitHubGitBackend:
                     f"+{ref}:{remote_ref}",
                 ]
             )
-            commit = self._run(["git", "show", "--no-patch", "--format=%B", remote_ref])
-            orphan_branches.append(parse_commit_identity(commit.stdout, head_ref))
+            commit_message = self._run_bounded_stdout(
+                ["git", "show", "--no-patch", "--format=%B", remote_ref],
+                max_bytes=MAX_COMMIT_MESSAGE_BYTES,
+            )
+            orphan_branches.append(parse_commit_identity(commit_message, head_ref))
         return orphan_branches
 
     def download_manifest(self, run_id: int) -> Path:
@@ -1026,7 +1217,7 @@ class GitHubGitBackend:
                     "fetch",
                     "--no-tags",
                     "origin",
-                    f"refs/heads/{branch}:{remote_ref}",
+                    f"+refs/heads/{branch}:{remote_ref}",
                 ]
             )
 
@@ -1241,6 +1432,13 @@ def main(
             orphan_branches,
         )
         batches = plan_batches(manifest, args.max_files, args.max_payload_bytes)
+        preverified_batch_ids = validate_campaign_identities(
+            manifest,
+            batches,
+            active_backend,
+            pull_requests,
+            orphan_branches,
+        )
         succeeded = execute_batches(
             manifest,
             batches,
@@ -1249,6 +1447,7 @@ def main(
             args.checkpoint,
             args.max_files,
             args.max_payload_bytes,
+            preverified_batch_ids,
         )
         _write_summary(args.summary, args.checkpoint)
         if not succeeded:
