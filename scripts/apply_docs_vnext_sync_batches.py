@@ -43,6 +43,7 @@ COMMIT_IDENTITY_FIELDS = {
 TRAILER_PATTERN = re.compile(r"^(?P<key>[A-Za-z][A-Za-z0-9-]*): (?P<value>\S.*)$")
 SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 OPERATION_ID_PATTERN = re.compile(r"^sha256:[0-9a-f]{64}$")
+GIT_COMMIT_PATTERN = re.compile(r"^[0-9a-f]{40,64}$")
 POSITIVE_DECIMAL_PATTERN = re.compile(r"^[1-9][0-9]*$")
 DECISIONS = {"add", "modify", "remove", "preserve"}
 MUTATING_DECISIONS = {"add", "modify", "remove"}
@@ -119,6 +120,7 @@ class OrphanBranch:
     manifest_run_id: int
     batch_id: str
     pull_request_number: int | None = None
+    commit_sha: str = "0000000000000000000000000000000000000000"
 
 
 class AutomationBackend(Protocol):
@@ -130,7 +132,13 @@ class AutomationBackend(Protocol):
 
     def download_manifest(self, run_id: int) -> Path: ...
 
-    def publish_batch(self, manifest: Manifest, batch: Batch, branch: str) -> None: ...
+    def publish_batch(
+        self,
+        manifest: Manifest,
+        batch: Batch,
+        branch: str,
+        expected_commit_sha: str | None = None,
+    ) -> None: ...
 
     def create_pull_request(
         self,
@@ -572,23 +580,28 @@ def parse_commit_identity(message: str, head_ref: str) -> OrphanBranch:
     )
 
 
-def parse_remote_branch_refs(output: str) -> tuple[str, ...]:
+def parse_remote_branch_refs(output: str) -> dict[str, str]:
     lines = [line for line in output.splitlines() if line]
     if len(lines) > MAX_AUTOMATION_BRANCHES:
         raise BatchSyncError(
             f"Found {len(lines)} automation branches, above the "
             f"{MAX_AUTOMATION_BRANCHES}-branch discovery limit"
         )
-    head_refs: list[str] = []
+    head_refs: dict[str, str] = {}
     for line in lines:
-        _, separator, ref = line.partition("\t")
+        commit_sha, separator, ref = line.partition("\t")
         expected_prefix = f"refs/heads/{BRANCH_PREFIX}/"
-        if not separator or not ref.startswith(expected_prefix):
+        if (
+            not separator
+            or not GIT_COMMIT_PATTERN.fullmatch(commit_sha)
+            or not ref.startswith(expected_prefix)
+        ):
             raise BatchSyncError(f"Cannot parse automation branch reference: {line!r}")
-        head_refs.append(ref.removeprefix("refs/heads/"))
-    if len(head_refs) != len(set(head_refs)):
-        raise BatchSyncError("Remote automation branch discovery returned duplicate references")
-    return tuple(head_refs)
+        head_ref = ref.removeprefix("refs/heads/")
+        if head_ref in head_refs:
+            raise BatchSyncError("Remote automation branch discovery returned duplicate references")
+        head_refs[head_ref] = commit_sha
+    return head_refs
 
 
 def enforce_campaign_candidate_limit(
@@ -709,7 +722,12 @@ def validate_campaign_identities(
         prior = claimed_batches.setdefault(batch.id, f"pull request #{pull_request.number}")
         if prior != f"pull request #{pull_request.number}":
             raise BatchSyncError(f"Batch {batch.id} is claimed by both {prior} and a pull request")
-        backend.publish_batch(manifest, batch, expected_head)
+        backend.publish_batch(
+            manifest,
+            batch,
+            expected_head,
+            expected_commit_sha=identity.commit_sha,
+        )
 
     for orphan in campaign_branches:
         if orphan.pull_request_number is not None:
@@ -733,7 +751,12 @@ def validate_campaign_identities(
         prior = claimed_batches.setdefault(batch.id, f"orphan branch {orphan.head_ref}")
         if prior != f"orphan branch {orphan.head_ref}":
             raise BatchSyncError(f"Batch {batch.id} is claimed by both {prior} and an orphan branch")
-        backend.publish_batch(manifest, batch, expected_head)
+        backend.publish_batch(
+            manifest,
+            batch,
+            expected_head,
+            expected_commit_sha=orphan.commit_sha,
+        )
     return frozenset(claimed_batches)
 
 
@@ -1088,6 +1111,70 @@ class GitHubGitBackend:
                 else 0
             ),
         )
+        windows_job: int | None = None
+        windows_kernel32: Any | None = None
+        if os.name == "nt":
+            import ctypes
+
+            class IoCounters(ctypes.Structure):
+                _fields_ = [
+                    ("ReadOperationCount", ctypes.c_ulonglong),
+                    ("WriteOperationCount", ctypes.c_ulonglong),
+                    ("OtherOperationCount", ctypes.c_ulonglong),
+                    ("ReadTransferCount", ctypes.c_ulonglong),
+                    ("WriteTransferCount", ctypes.c_ulonglong),
+                    ("OtherTransferCount", ctypes.c_ulonglong),
+                ]
+
+            class BasicLimitInformation(ctypes.Structure):
+                _fields_ = [
+                    ("PerProcessUserTimeLimit", ctypes.c_longlong),
+                    ("PerJobUserTimeLimit", ctypes.c_longlong),
+                    ("LimitFlags", ctypes.c_uint32),
+                    ("MinimumWorkingSetSize", ctypes.c_size_t),
+                    ("MaximumWorkingSetSize", ctypes.c_size_t),
+                    ("ActiveProcessLimit", ctypes.c_uint32),
+                    ("Affinity", ctypes.c_size_t),
+                    ("PriorityClass", ctypes.c_uint32),
+                    ("SchedulingClass", ctypes.c_uint32),
+                ]
+
+            class ExtendedLimitInformation(ctypes.Structure):
+                _fields_ = [
+                    ("BasicLimitInformation", BasicLimitInformation),
+                    ("IoInfo", IoCounters),
+                    ("ProcessMemoryLimit", ctypes.c_size_t),
+                    ("JobMemoryLimit", ctypes.c_size_t),
+                    ("PeakProcessMemoryUsed", ctypes.c_size_t),
+                    ("PeakJobMemoryUsed", ctypes.c_size_t),
+                ]
+
+            windows_kernel32 = ctypes.windll.kernel32
+            windows_kernel32.CreateJobObjectW.restype = ctypes.c_void_p
+            windows_job = windows_kernel32.CreateJobObjectW(None, None)
+            limits = ExtendedLimitInformation()
+            limits.BasicLimitInformation.LimitFlags = 0x00002000
+            configured = bool(
+                windows_job
+                and windows_kernel32.SetInformationJobObject(
+                    windows_job,
+                    9,
+                    ctypes.byref(limits),
+                    ctypes.sizeof(limits),
+                )
+            )
+            assigned = bool(
+                configured
+                and windows_kernel32.AssignProcessToJobObject(
+                    windows_job,
+                    int(process._handle),  # type: ignore[attr-defined]
+                )
+            )
+            if not assigned:
+                if windows_job:
+                    windows_kernel32.CloseHandle(windows_job)
+                process.kill()
+                raise BatchSyncError("Cannot assign discovery command to a Windows Job Object")
         assert process.stdout is not None
         assert process.stderr is not None
         stdout = bytearray()
@@ -1098,16 +1185,40 @@ class GitHubGitBackend:
         process_group_id = process.pid
         deadline = time.monotonic() + timeout_seconds
 
+        def close_windows_job() -> None:
+            nonlocal windows_job
+            if windows_job and windows_kernel32 is not None:
+                windows_kernel32.CloseHandle(windows_job)
+                windows_job = None
+
         def terminate_process_group() -> None:
             with termination_lock:
-                try:
-                    if os.name == "posix":
+                remaining = max(0.0, deadline - time.monotonic())
+                if os.name == "posix":
+                    try:
+                        os.killpg(process_group_id, signal.SIGTERM)
+                    except (OSError, ProcessLookupError):
+                        pass
+                    if remaining > 0:
+                        time.sleep(min(0.02, remaining))
+                    try:
                         os.killpg(process_group_id, signal.SIGKILL)
-                    elif os.name == "nt":
-                        os.kill(process_group_id, signal.CTRL_BREAK_EVENT)
-                    else:
+                    except (OSError, ProcessLookupError):
+                        pass
+                elif os.name == "nt":
+                    terminated_job = bool(
+                        windows_job
+                        and windows_kernel32 is not None
+                        and windows_kernel32.TerminateJobObject(windows_job, 1)
+                    )
+                    if not terminated_job:
+                        close_windows_job()
+                else:
+                    try:
                         process.kill()
-                except (OSError, ProcessLookupError):
+                    except OSError:
+                        pass
+                if process.poll() is None:
                     try:
                         process.kill()
                     except OSError:
@@ -1141,6 +1252,7 @@ class GitHubGitBackend:
         while True:
             if overflow_event.is_set():
                 terminate_process_group()
+                close_windows_job()
                 raise BatchSyncError(
                     f"{args[0]} {args[1] if len(args) > 1 else ''} "
                     f"{'/'.join(sorted(overflow_streams))} exceeds the "
@@ -1149,8 +1261,9 @@ class GitHubGitBackend:
 
             now = time.monotonic()
             remaining = deadline - now
-            if remaining <= 0:
+            if remaining <= DISCOVERY_TERMINATION_GRACE_SECONDS:
                 terminate_process_group()
+                close_windows_job()
                 raise BatchSyncError(
                     f"{args[0]} {args[1] if len(args) > 1 else ''} exceeded the "
                     f"{timeout_seconds}-second discovery timeout"
@@ -1167,6 +1280,7 @@ class GitHubGitBackend:
             time.sleep(min(0.01, remaining))
         if overflow_event.is_set() or overflow_streams:
             terminate_process_group()
+            close_windows_job()
             raise BatchSyncError(
                 f"{args[0]} {args[1] if len(args) > 1 else ''} "
                 f"{'/'.join(sorted(overflow_streams))} exceeds the "
@@ -1176,6 +1290,7 @@ class GitHubGitBackend:
             stdout_text = bytes(stdout).decode("utf-8")
             stderr_text = bytes(stderr).decode("utf-8")
         except UnicodeDecodeError as exc:
+            close_windows_job()
             raise BatchSyncError(f"{args[0]} output is not valid UTF-8") from exc
         if process.returncode != 0:
             detail = (
@@ -1183,7 +1298,9 @@ class GitHubGitBackend:
                 or stdout_text.strip()
                 or f"exit code {process.returncode}"
             )
+            close_windows_job()
             raise BatchSyncError(f"{args[0]} {args[1] if len(args) > 1 else ''} failed: {detail}")
+        close_windows_job()
         return stdout_text
 
     def _pull_request_from_api(self, payload: dict[str, Any]) -> PullRequest:
@@ -1228,6 +1345,7 @@ class GitHubGitBackend:
         remote_ref: str,
         head_ref: str,
         pull_request_number: int | None = None,
+        expected_commit_sha: str | None = None,
     ) -> OrphanBranch:
         self._run_bounded_stdout(
             [
@@ -1239,13 +1357,27 @@ class GitHubGitBackend:
             ],
             max_bytes=MAX_COMMIT_MESSAGE_BYTES,
         )
+        commit_sha = self._run_bounded_stdout(
+            ["git", "rev-parse", remote_ref],
+            max_bytes=MAX_COMMIT_MESSAGE_BYTES,
+        ).strip()
+        if not GIT_COMMIT_PATTERN.fullmatch(commit_sha):
+            raise BatchSyncError(
+                f"Fetched automation branch {head_ref!r} has invalid commit ID {commit_sha!r}"
+            )
+        if expected_commit_sha is not None and commit_sha != expected_commit_sha:
+            raise BatchSyncError(
+                f"Automation branch {head_ref!r} moved from discovered commit "
+                f"{expected_commit_sha} to {commit_sha} before authentication"
+            )
         commit_message = self._run_bounded_stdout(
-            ["git", "show", "--no-patch", "--format=%B", remote_ref],
+            ["git", "show", "--no-patch", "--format=%B", commit_sha],
             max_bytes=MAX_COMMIT_MESSAGE_BYTES,
         )
         return replace(
             parse_commit_identity(commit_message, head_ref),
             pull_request_number=pull_request_number,
+            commit_sha=commit_sha,
         )
 
     def discover_campaign_branches(
@@ -1261,7 +1393,8 @@ class GitHubGitBackend:
             ],
             max_bytes=MAX_REMOTE_DISCOVERY_BYTES,
         )
-        remote_heads = set(parse_remote_branch_refs(output))
+        remote_head_commits = parse_remote_branch_refs(output)
+        remote_heads = set(remote_head_commits)
         all_pull_request_heads = {pull_request.head_ref for pull_request in pull_requests}
         incomplete_by_head: dict[str, PullRequest] = {}
         for pull_request in pull_requests:
@@ -1287,6 +1420,7 @@ class GitHubGitBackend:
                 f"refs/remotes/origin/{head_ref}",
                 head_ref,
                 pull_request.number if pull_request is not None else None,
+                expected_commit_sha=remote_head_commits[head_ref],
             )
             if pull_request is not None:
                 validate_marker_claim(pull_request, identity)
@@ -1349,7 +1483,13 @@ class GitHubGitBackend:
         )
         return {line for line in result.stdout.splitlines() if line}
 
-    def publish_batch(self, manifest: Manifest, batch: Batch, branch: str) -> None:
+    def publish_batch(
+        self,
+        manifest: Manifest,
+        batch: Batch,
+        branch: str,
+        expected_commit_sha: str | None = None,
+    ) -> None:
         self._run(["git", "fetch", "--no-tags", "origin", self.base_branch])
         base_ref = f"refs/remotes/origin/{self.base_branch}"
         remote_exists = self._remote_branch_exists(branch)
@@ -1364,6 +1504,17 @@ class GitHubGitBackend:
                     f"+refs/heads/{branch}:{remote_ref}",
                 ]
             )
+            final_commit_sha = self._run(
+                ["git", "rev-parse", remote_ref]
+            ).stdout.strip()
+            if (
+                expected_commit_sha is not None
+                and final_commit_sha != expected_commit_sha
+            ):
+                raise BatchSyncError(
+                    f"Automation branch {branch!r} moved from authenticated commit "
+                    f"{expected_commit_sha} to {final_commit_sha} before final verification"
+                )
 
         worktree = Path(tempfile.mkdtemp(prefix="docs-vnext-sync-", dir=self.runner_temp))
         worktree.rmdir()

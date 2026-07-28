@@ -238,7 +238,13 @@ class FakeBackend:
                 f"Manifest artifact for workflow run {run_id} is unavailable"
             ) from exc
 
-    def publish_batch(self, manifest: Manifest, batch: Batch, branch: str) -> None:
+    def publish_batch(
+        self,
+        manifest: Manifest,
+        batch: Batch,
+        branch: str,
+        expected_commit_sha: str | None = None,
+    ) -> None:
         assert branch == branch_name(manifest, batch)
         if branch in self.remote_branches:
             self.verified_branches.append(batch.number)
@@ -612,14 +618,12 @@ def test_real_git_backend_recovers_branch_with_add_and_path_replacements(tmp_pat
     orphans = backend.discover_campaign_branches([])
     backend.publish_batch(manifest, batch, branch)
 
-    assert orphans == [
-        OrphanBranch(
-            head_ref=branch,
-            manifest_digest=manifest.digest,
-            manifest_run_id=manifest.run_id,
-            batch_id=batch.id,
-        )
-    ]
+    assert len(orphans) == 1
+    assert orphans[0].head_ref == branch
+    assert orphans[0].manifest_digest == manifest.digest
+    assert orphans[0].manifest_run_id == manifest.run_id
+    assert orphans[0].batch_id == batch.id
+    assert len(orphans[0].commit_sha) == 40
     result = subprocess.run(
         ["git", "--git-dir", str(remote), "show", f"{branch}:docs-vnext/page.mdx"],
         check=True,
@@ -652,7 +656,7 @@ def test_real_git_backend_recovers_branch_with_add_and_path_replacements(tmp_pat
     assert directory_replacement.stdout == "replacement-child"
 
 
-def test_real_git_backend_rejects_force_pushed_open_pr_branch(tmp_path):
+def test_real_git_backend_rejects_same_tree_force_push_after_identity_authentication(tmp_path):
     remote = tmp_path / "forged-remote.git"
     repository = tmp_path / "forged-repository"
     runner_temp = tmp_path / "forged-runner"
@@ -701,28 +705,21 @@ def test_real_git_backend_rejects_force_pushed_open_pr_branch(tmp_path):
         runner_temp=runner_temp,
     )
     backend.publish_batch(manifest, batch, branch)
-
-    _git(repository, "fetch", "origin", branch)
-    _git(repository, "switch", "--create", "forged", "FETCH_HEAD")
-    _write(repository / "docs-vnext", "page.mdx", "forged")
-    _git(repository, "add", "docs-vnext/page.mdx")
-    _git(
-        repository,
-        "commit",
-        "-m",
-        "forge deterministic branch",
-        "-m",
-        (
-            f"Manifest-SHA256: {manifest.digest}\n"
-            f"Manifest-Run-ID: {manifest.run_id}\n"
-            f"Batch-ID: {batch.id}"
-        ),
-    )
-    _git(repository, "push", "--force", "origin", f"HEAD:refs/heads/{branch}")
     forged_pr = _pull_request(manifest, batch)
     campaign_branches = backend.discover_campaign_branches([forged_pr])
 
-    with pytest.raises(BatchSyncError, match="does not match the reconstructed batch"):
+    _git(repository, "fetch", "origin", branch)
+    _git(repository, "switch", "--create", "forged", "FETCH_HEAD")
+    _git(
+        repository,
+        "commit",
+        "--allow-empty",
+        "-m",
+        "same tree with malformed identity",
+    )
+    _git(repository, "push", "--force", "origin", f"HEAD:refs/heads/{branch}")
+
+    with pytest.raises(BatchSyncError, match="moved from authenticated commit"):
         validate_campaign_identities(
             manifest,
             [batch],
@@ -1018,6 +1015,51 @@ def test_exited_parent_child_holding_both_streams_uses_one_deadline(tmp_path):
     assert time.monotonic() - started < 1.5
 
 
+@pytest.mark.skipif(os.name != "nt", reason="Windows process-tree escalation")
+def test_windows_job_terminates_child_ignoring_ctrl_break(tmp_path):
+    import ctypes
+
+    backend = GitHubGitBackend(
+        repository_root=tmp_path,
+        repository="example/repository",
+        base_branch="main",
+        runner_temp=tmp_path / "runner",
+    )
+    pid_file = tmp_path / "break-ignoring-child.pid"
+    child_code = (
+        "import os, pathlib, signal, time; "
+        "signal.signal(signal.SIGBREAK, signal.SIG_IGN); "
+        f"pathlib.Path({str(pid_file)!r}).write_text(str(os.getpid())); "
+        "time.sleep(10)"
+    )
+    parent_code = (
+        "import pathlib, subprocess, sys, time; "
+        f"subprocess.Popen([sys.executable, '-c', {child_code!r}]); "
+        f"pid_file = pathlib.Path({str(pid_file)!r}); "
+        "deadline = time.monotonic() + 2; "
+        "exec(\"while not pid_file.exists() and time.monotonic() < deadline:\\n time.sleep(0.01)\"); "
+        "time.sleep(10)"
+    )
+
+    with pytest.raises(BatchSyncError, match="exceeded the 1-second discovery timeout"):
+        backend._run_bounded_stdout(
+            [sys.executable, "-c", parent_code],
+            max_bytes=4096,
+            timeout_seconds=1,
+        )
+
+    child_pid = int(pid_file.read_text(encoding="utf-8"))
+    process_handle = ctypes.windll.kernel32.OpenProcess(0x1000, False, child_pid)
+    if process_handle:
+        exit_code = ctypes.c_ulong()
+        ctypes.windll.kernel32.GetExitCodeProcess(
+            process_handle,
+            ctypes.byref(exit_code),
+        )
+        ctypes.windll.kernel32.CloseHandle(process_handle)
+        assert exit_code.value != 259
+
+
 def test_overflow_terminates_grandchild_holding_discovery_pipes(tmp_path):
     backend = GitHubGitBackend(
         repository_root=tmp_path,
@@ -1073,6 +1115,8 @@ def test_campaign_discovery_routes_ls_remote_fetch_and_show_through_bounded_runn
                 return f"{'a' * 40}\trefs/heads/{branch}\n"
             if args[1] == "fetch":
                 return ""
+            if args[1] == "rev-parse":
+                return f"{'a' * 40}\n"
             return (
                 "Sync batch\n\n"
                 f"Manifest-SHA256: {manifest.digest}\n"
@@ -1092,6 +1136,7 @@ def test_campaign_discovery_routes_ls_remote_fetch_and_show_through_bounded_runn
     assert [(call[0][1], call[1], call[2]) for call in backend.calls] == [
         ("ls-remote", 32 * 1024, 30),
         ("fetch", 4096, 30),
+        ("rev-parse", 4096, 30),
         ("show", 4096, 30),
     ]
 
@@ -1122,6 +1167,8 @@ def test_deleted_pr_head_with_missing_marker_recovers_via_bounded_pull_ref(tmp_p
             self.calls.append((tuple(args), max_bytes, timeout_seconds))
             if args[1] in {"ls-remote", "fetch"}:
                 return ""
+            if args[1] == "rev-parse":
+                return f"{'a' * 40}\n"
             return (
                 "Sync batch\n\n"
                 f"Manifest-SHA256: {manifest.digest}\n"
