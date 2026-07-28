@@ -261,16 +261,73 @@ def generate_operational_metrics(aggregates: dict) -> str:
         )
 
     lines.append(
-        "\n_Pass = process exited 0, produced a non-empty response, and no tool "
-        "execution reported a failure. \"n/a\" means this run's raw results predate "
-        "operational-metrics capture._"
+        "\n_Pass = process exited 0, produced a non-empty response, proved the selected "
+        "documentation source through successful tool evidence, reported no tool errors, "
+        "and proved a live Azure query when required. \"n/a\" means this run's raw results "
+        "predate operational-metrics capture._"
     )
 
     return "\n".join(lines) + "\n"
 
 
+def generate_blocked_report(scored_data: dict) -> str:
+    """Generate diagnostics without comparative claims when evidence is invalid."""
+    metadata = scored_data.get("metadata", {})
+    publication = scored_data.get("publication", {})
+    denominators = scored_data.get("aggregates", {}).get("denominators", {})
+    status_counts = denominators.get("status_counts", {})
+    response_counts = denominators.get("response_counts", {})
+
+    reasons = publication.get("failure_reasons") or ["publication evidence was not validated"]
+    lines = [
+        "# Documentation Evaluation Diagnostics",
+        "",
+        "**Comparative publication blocked.** No scoreboard, ranking, hypothesis result, or comparative score is published.",
+        "",
+        f"**Run ID**: {metadata.get('run_id', 'unknown')}",
+        f"**Timestamp**: {metadata.get('timestamp', 'unknown')}",
+        "",
+        "## Validation summary",
+        "",
+        "| Required | Observed | Unique observed | Valid | Invalid | Errors | Timeouts | Missing rows | Missing responses |",
+        "|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
+        (
+            f"| {denominators.get('required_rows', 0)} | {denominators.get('observed_rows', 0)} | "
+            f"{denominators.get('unique_observed_rows', 0)} | {status_counts.get('success', 0)} | "
+            f"{status_counts.get('invalid', 0)} | {status_counts.get('error', 0)} | "
+            f"{status_counts.get('timeout', 0)} | {status_counts.get('missing', 0)} | "
+            f"{response_counts.get('missing', 0)} |"
+        ),
+        "",
+        "## Blocking reasons",
+        "",
+        *[f"- {reason}" for reason in reasons],
+        "",
+        "## Invalid or missing required rows",
+        "",
+        "| Row | Status | Failure reason |",
+        "|---|---|---|",
+    ]
+    invalid_rows = publication.get("invalid_rows", [])
+    for row in invalid_rows:
+        reason = str(row.get("failure_reason", "unknown")).replace("|", "\\|")
+        lines.append(f"| {row.get('row', 'unknown')} | {row.get('status', 'invalid')} | {reason} |")
+    if not invalid_rows:
+        lines.append("| n/a | invalid | Matrix-level validation failed; inspect scored JSON diagnostics. |")
+
+    lines.extend([
+        "",
+        "Raw and scored JSON artifacts retain the row-level evidence for diagnosis.",
+        "",
+    ])
+    return "\n".join(lines)
+
+
 def generate_report(scored_data: dict, discovery: dict[str, Any] | None = None) -> str:
     """Generate the full markdown report."""
+    if scored_data.get("publication", {}).get("allowed") is not True:
+        return generate_blocked_report(scored_data)
+
     metadata = scored_data.get("metadata", {})
     aggregates = scored_data.get("aggregates", {})
 

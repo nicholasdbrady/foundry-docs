@@ -1,0 +1,577 @@
+"""Process-boundary and publication-gate tests for documentation evaluation evidence."""
+
+from __future__ import annotations
+
+import asyncio
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+import pytest
+from fastmcp import Client
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
+
+from eval_report import generate_report  # noqa: E402
+from eval_scorer import aggregate_scores, score_result, validate_required_matrix  # noqa: E402
+from foundry_docs_mcp._server_factory import DOCS_CONFIG, build_server  # noqa: E402
+from run_docs_eval import MCP_SERVERS, build_mcp_config, parse_event_stream, run_single_eval  # noqa: E402
+
+
+SCENARIO = {
+    "id": "scenario-1",
+    "category": "getting-started",
+    "question": "How do I create an agent?",
+    "rubric": {
+        "must_mention": ["agent"],
+        "quality_criteria": [],
+        "expected_docs": [],
+    },
+}
+
+
+def _event_stream(
+    tool_name: str = "foundry_docs-search_docs",
+    *,
+    tool_success: bool = True,
+    response: str | None = "Use an agent.",
+) -> str:
+    events = [
+        {
+            "type": "assistant.turn_start",
+            "data": {"turnId": "turn-1"},
+        },
+        {
+            "type": "tool.execution_start",
+            "data": {"toolCallId": "call-1", "toolName": tool_name, "arguments": {"query": "agent"}},
+        },
+        {
+            "type": "tool.execution_complete",
+            "data": {"toolCallId": "call-1", "success": tool_success, "result": {"content": "result"}},
+        },
+    ]
+    if response is not None:
+        events.append({"type": "assistant.message", "data": {"content": response, "outputTokens": 12}})
+    events.append({"type": "result", "exitCode": 0, "usage": {"sessionDurationMs": 25}})
+    return "\n".join(json.dumps(event) for event in events)
+
+
+def _raw_row(
+    *,
+    scenario_id: str = "scenario-1",
+    server: str = "foundry-docs",
+    model: str = "model-1",
+    status: str = "success",
+    response: str = "Use an agent.",
+    failure_reason: str | None = None,
+) -> dict:
+    valid = status == "success"
+    config = MCP_SERVERS[server]["config"]
+    return {
+        "scenario_id": scenario_id,
+        "server": server,
+        "model": model,
+        "category": "getting-started",
+        "response": response,
+        "response_present": bool(response),
+        "status": status,
+        "passed": valid,
+        "selected_source": server,
+        "selected_source_config": {
+            "name": config["name"],
+            "type": "local" if MCP_SERVERS[server]["type"] == "stdio" else "http",
+            "endpoint": config.get("url"),
+            "command": config.get("command"),
+            "tool_prefix": config["tool_prefix"],
+            "azure_required": False,
+        },
+        "source_config_count": 1,
+        "observed_tools": [f"{config['tool_prefix']}-search_docs"],
+        "successful_tools": [f"{config['tool_prefix']}-search_docs"],
+        "source_validated": valid,
+        "azure_required": False,
+        "azure_live_query_proven": False,
+        "failure_reason": failure_reason,
+        "event_parse_error": None,
+        "exit_code": 0 if valid else -1,
+        "rubric": SCENARIO["rubric"],
+        "turns": 1,
+        "tool_calls": 1,
+        "tool_errors": 0,
+        "output_tokens": 12,
+        "response_time_seconds": 0.1,
+    }
+
+
+def test_build_mcp_config_contains_exactly_one_selected_source(monkeypatch):
+    monkeypatch.setenv("AZURE_SEARCH_ENDPOINT", "https://search.example")
+    monkeypatch.setenv("AZURE_AI_PROJECT_ENDPOINT", "https://project.example")
+    monkeypatch.setenv("AZURE_SEARCH_API_KEY", "secret")
+
+    payload, descriptor = build_mcp_config(MCP_SERVERS["foundry-docs"], require_azure=True)
+
+    assert list(payload["mcpServers"]) == ["foundry_docs"]
+    assert payload["mcpServers"]["foundry_docs"]["command"] == "foundry-docs"
+    assert payload["mcpServers"]["foundry_docs"]["env"]["FOUNDRY_EVAL_REQUIRE_AZURE"] == "true"
+    assert descriptor == {
+        "name": "foundry_docs",
+        "type": "local",
+        "endpoint": None,
+        "command": "foundry-docs",
+        "tool_prefix": "foundry_docs",
+        "azure_required": True,
+    }
+
+
+def test_azure_required_config_fails_fast_with_setup_diagnostics(monkeypatch):
+    monkeypatch.delenv("AZURE_SEARCH_ENDPOINT", raising=False)
+    monkeypatch.delenv("AZURE_AI_PROJECT_ENDPOINT", raising=False)
+
+    result = run_single_eval(
+        SCENARIO,
+        "foundry-docs",
+        MCP_SERVERS["foundry-docs"],
+        "model-1",
+        require_azure=True,
+    )
+
+    assert result["status"] == "error"
+    assert result["passed"] is False
+    assert result["failure_reason"].startswith("setup_error:")
+    assert "AZURE_SEARCH_ENDPOINT" in result["failure_reason"]
+    assert result["response_present"] is False
+
+
+def test_mcp_server_refuses_local_fallback_in_azure_required_mode(monkeypatch):
+    monkeypatch.setenv("FOUNDRY_EVAL_REQUIRE_AZURE", "true")
+    monkeypatch.delenv("AZURE_SEARCH_ENDPOINT", raising=False)
+    server = build_server(DOCS_CONFIG)
+
+    async def connect() -> None:
+        async with Client(server):
+            pass
+
+    with pytest.raises(RuntimeError, match="AZURE_SEARCH_ENDPOINT"):
+        asyncio.run(connect())
+
+
+def test_run_single_eval_passes_only_selected_config_across_process_boundary(monkeypatch):
+    captured: dict = {}
+
+    def fake_run(cmd, **kwargs):
+        config_arg = cmd[cmd.index("--additional-mcp-config") + 1]
+        config_path = Path(config_arg.removeprefix("@"))
+        captured["config"] = json.loads(config_path.read_text(encoding="utf-8"))
+        captured["cmd"] = cmd
+        captured["cwd"] = kwargs["cwd"]
+        captured["copilot_home"] = kwargs["env"]["COPILOT_HOME"]
+        return subprocess.CompletedProcess(cmd, 0, stdout=_event_stream(), stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    result = run_single_eval(
+        SCENARIO,
+        "foundry-docs",
+        MCP_SERVERS["foundry-docs"],
+        "model-1",
+    )
+
+    assert list(captured["config"]["mcpServers"]) == ["foundry_docs"]
+    assert "--disable-builtin-mcps" in captured["cmd"]
+    assert "--available-tools=foundry_docs" in captured["cmd"]
+    assert "--allow-tool=foundry_docs" in captured["cmd"]
+    assert captured["cwd"] == captured["copilot_home"]
+    assert result["selected_source"] == "foundry-docs"
+    assert result["source_config_count"] == 1
+    assert result["observed_tools"] == ["foundry_docs-search_docs"]
+    assert result["successful_tools"] == ["foundry_docs-search_docs"]
+    assert result["source_validated"] is True
+    assert result["response_present"] is True
+    assert result["status"] == "success"
+    assert result["failure_reason"] is None
+
+
+@pytest.mark.parametrize(
+    ("stdout", "failure_prefix"),
+    [
+        (_event_stream(tool_name="mintlify-search"), "cross_source_tool_call:"),
+        (_event_stream(tool_name="foundry_docs_vnext-search_docs"), "cross_source_tool_call:"),
+        (_event_stream(tool_success=False), "tool_error:"),
+        (_event_stream(response=None), "missing_response:"),
+        ("not-json", "event_parse_failure:"),
+    ],
+)
+def test_invalid_event_evidence_fails_closed(monkeypatch, stdout, failure_prefix):
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda cmd, **kwargs: subprocess.CompletedProcess(cmd, 0, stdout=stdout, stderr=""),
+    )
+
+    result = run_single_eval(
+        SCENARIO,
+        "foundry-docs",
+        MCP_SERVERS["foundry-docs"],
+        "model-1",
+    )
+
+    assert result["status"] == "invalid"
+    assert result["passed"] is False
+    assert result["failure_reason"].startswith(failure_prefix)
+
+
+def test_azure_required_row_needs_successful_selected_search(monkeypatch):
+    monkeypatch.setenv("AZURE_SEARCH_ENDPOINT", "https://search.example")
+    monkeypatch.setenv("AZURE_AI_PROJECT_ENDPOINT", "https://project.example")
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda cmd, **kwargs: subprocess.CompletedProcess(
+            cmd,
+            0,
+            stdout=_event_stream(tool_name="foundry_docs-get_doc"),
+            stderr="",
+        ),
+    )
+
+    result = run_single_eval(
+        SCENARIO,
+        "foundry-docs",
+        MCP_SERVERS["foundry-docs"],
+        "model-1",
+        require_azure=True,
+    )
+
+    assert result["azure_required"] is True
+    assert result["azure_live_query_proven"] is False
+    assert result["status"] == "invalid"
+    assert result["failure_reason"].startswith("azure_live_query_unproven:")
+
+
+def test_timeout_is_preserved_as_invalid_row_diagnostics(monkeypatch):
+    def time_out(cmd, **kwargs):
+        raise subprocess.TimeoutExpired(cmd=cmd, timeout=kwargs["timeout"])
+
+    monkeypatch.setattr(subprocess, "run", time_out)
+
+    result = run_single_eval(
+        SCENARIO,
+        "foundry-docs",
+        MCP_SERVERS["foundry-docs"],
+        "model-1",
+        timeout=3,
+    )
+
+    assert result["status"] == "timeout"
+    assert result["response_present"] is False
+    assert result["failure_reason"] == "timeout: exceeded 3s"
+    assert result["response_time_seconds"] >= 0
+
+
+def test_parse_event_stream_rejects_incomplete_tool_call():
+    stdout = "\n".join(
+        [
+            json.dumps({
+                "type": "tool.execution_start",
+                "data": {"toolCallId": "call-1", "toolName": "foundry_docs-search_docs"},
+            }),
+            json.dumps({"type": "result", "exitCode": 0}),
+        ]
+    )
+
+    parsed = parse_event_stream(stdout)
+
+    assert parsed["observed_tools"] == ["foundry_docs-search_docs"]
+    assert "missing completion evidence" in parsed["parse_error"]
+
+
+def test_parse_event_stream_rejects_non_object_events_and_unknown_tool_outcomes():
+    stdout = "\n".join(
+        [
+            "[]",
+            json.dumps({
+                "type": "tool.execution_start",
+                "data": {"toolCallId": "call-1", "toolName": "foundry_docs-search_docs"},
+            }),
+            json.dumps({
+                "type": "tool.execution_complete",
+                "data": {"toolCallId": "call-1"},
+            }),
+            json.dumps({"type": "assistant.message", "data": {"content": "answer"}}),
+            json.dumps({"type": "result", "exitCode": 0}),
+        ]
+    )
+
+    parsed = parse_event_stream(stdout)
+
+    assert "event must be a JSON object" in parsed["parse_error"]
+    assert "tool completion missing Boolean success" in parsed["parse_error"]
+
+
+@pytest.mark.parametrize(
+    "events",
+    [
+        [
+            {"type": "tool.execution_start", "data": {"toolCallId": "call-1", "toolName": "foundry_docs-search_docs"}},
+            {"type": "tool.execution_start", "data": {"toolCallId": "call-1", "toolName": "foundry_docs-search_docs"}},
+        ],
+        [
+            {"type": "tool.execution_start", "data": {"toolCallId": "call-1", "toolName": "foundry_docs-search_docs"}},
+            {"type": "tool.execution_complete", "data": {"toolCallId": "call-1", "success": True}},
+            {"type": "tool.execution_complete", "data": {"toolCallId": "call-1", "success": True}},
+        ],
+        [
+            {"type": "tool.execution_start", "data": {"toolCallId": "call-1", "toolName": "foundry_docs-search_docs"}},
+            {
+                "type": "tool.execution_complete",
+                "data": {
+                    "toolCallId": "call-1",
+                    "toolName": "foundry_docs-get_doc",
+                    "success": True,
+                },
+            },
+        ],
+    ],
+)
+def test_parse_event_stream_rejects_malformed_tool_lifecycles(events):
+    events.extend([
+        {"type": "assistant.message", "data": {"content": "answer"}},
+        {"type": "result", "exitCode": 0},
+    ])
+
+    parsed = parse_event_stream("\n".join(json.dumps(event) for event in events))
+
+    assert parsed["parse_error"] is not None
+
+
+def test_scorer_rejects_success_row_missing_required_evidence_fields():
+    fabricated = {
+        "scenario_id": "scenario-1",
+        "server": "foundry-docs",
+        "model": "model-1",
+        "category": "getting-started",
+        "response": "Use an agent.",
+        "status": "success",
+        "passed": True,
+        "source_validated": True,
+        "rubric": SCENARIO["rubric"],
+    }
+
+    scored = score_result(fabricated)
+
+    assert scored["row_valid"] is False
+    assert scored["scores"]["has_response"] is True
+
+
+@pytest.mark.parametrize(
+    "malformed",
+    [
+        None,
+        {"server": "foundry-docs", "response": "answer"},
+        {**_raw_row(), "response": ["not", "text"]},
+        {**_raw_row(), "category": None},
+        {**_raw_row(), "status": ["success"]},
+        {**_raw_row(), "rubric": {"must_mention": [None]}},
+        {**_raw_row(), "tool_errors": "bad"},
+        {**_raw_row(), "turns": []},
+        {**_raw_row(), "response_time_seconds": "bad"},
+    ],
+)
+def test_malformed_rows_become_invalid_diagnostics_without_crashing(malformed):
+    scored = score_result(malformed)
+    aggregates = aggregate_scores([scored])
+    publication = validate_required_matrix(
+        [scored],
+        scenario_ids=["scenario-1"],
+        servers=["foundry-docs"],
+        models=["model-1"],
+    )
+
+    assert scored["row_valid"] is False
+    assert aggregates["operational_metrics"]
+    assert publication["allowed"] is False
+
+
+def test_required_matrix_enforces_azure_server_policy():
+    row = score_result(_raw_row())
+
+    publication = validate_required_matrix(
+        [row],
+        scenario_ids=["scenario-1"],
+        servers=["foundry-docs"],
+        models=["model-1"],
+        azure_required_servers={"foundry-docs"},
+    )
+
+    assert publication["allowed"] is False
+    assert publication["invalid_rows"][0]["failure_reason"] == "azure_required_evidence_missing"
+
+
+def test_scorer_rejects_contradictory_source_descriptor_and_tool_evidence():
+    row = _raw_row()
+    row["selected_source_config"]["command"] = "different-command"
+    row["observed_tools"] = ["foundry_docs-get_doc"]
+    row["successful_tools"] = ["foundry_docs-search_docs"]
+
+    scored = score_result(row)
+
+    assert scored["row_valid"] is False
+
+
+def test_scorer_rejects_contradictory_azure_descriptor():
+    row = _raw_row()
+    row["azure_required"] = True
+    row["azure_live_query_proven"] = True
+    row["selected_source_config"]["azure_required"] = False
+
+    scored = score_result(row)
+
+    assert scored["row_valid"] is False
+
+
+@pytest.mark.parametrize(
+    "events",
+    [
+        [
+            {"type": "assistant.message", "data": {"content": "answer"}},
+            {"type": "tool.execution_start", "data": {"toolCallId": "call-1", "toolName": "foundry_docs-search_docs"}},
+            {"type": "tool.execution_complete", "data": {"toolCallId": "call-1", "success": True}},
+            {"type": "result", "exitCode": 0},
+        ],
+        [
+            {"type": "tool.execution_start", "data": {"toolCallId": "call-1", "toolName": "foundry_docs-search_docs"}},
+            {"type": "tool.execution_complete", "data": {"toolCallId": "call-1", "success": True}},
+            {"type": "assistant.message", "data": {"content": "answer"}},
+            {"type": "result", "exitCode": 0},
+            {"type": "assistant.message", "data": {"content": "late answer"}},
+        ],
+        [
+            {"type": "tool.execution_start", "data": {"toolCallId": "call-1", "toolName": "foundry_docs-search_docs"}},
+            {"type": "tool.execution_complete", "data": {"toolCallId": "call-1", "success": True}},
+            {"type": "assistant.message", "data": {"content": "answer"}},
+            {"type": "result", "exitCode": 0},
+            {"type": "result", "exitCode": 0},
+        ],
+        [
+            {"type": "tool.execution_start", "data": {"toolCallId": "call-1", "toolName": "foundry_docs-get_doc"}},
+            {"type": "tool.execution_complete", "data": {"toolCallId": "call-1", "success": True}},
+            {"type": "assistant.message", "data": {"content": "answer"}},
+            {"type": "tool.execution_start", "data": {"toolCallId": "call-2", "toolName": "foundry_docs-search_docs"}},
+            {"type": "tool.execution_complete", "data": {"toolCallId": "call-2", "success": True}},
+            {"type": "result", "exitCode": 0},
+        ],
+    ],
+)
+def test_parse_event_stream_rejects_causally_invalid_sequences(events):
+    parsed = parse_event_stream("\n".join(json.dumps(event) for event in events))
+
+    assert parsed["parse_error"] is not None
+
+
+def test_required_matrix_denominators_include_every_outcome():
+    rows = [
+        score_result(_raw_row(scenario_id="success", status="success")),
+        score_result(_raw_row(scenario_id="invalid", status="invalid", response="", failure_reason="bad evidence")),
+        score_result(_raw_row(scenario_id="error", status="error", response="", failure_reason="process failed")),
+        score_result(_raw_row(scenario_id="timeout", status="timeout", response="", failure_reason="timed out")),
+    ]
+
+    publication = validate_required_matrix(
+        rows,
+        scenario_ids=["success", "invalid", "error", "timeout", "missing"],
+        servers=["foundry-docs"],
+        models=["model-1"],
+    )
+
+    assert publication["allowed"] is False
+    assert publication["required_rows"] == 5
+    assert publication["status_counts"] == {
+        "success": 1,
+        "invalid": 1,
+        "error": 1,
+        "timeout": 1,
+        "missing": 1,
+    }
+    assert publication["response_counts"] == {"present": 1, "missing": 3}
+
+
+def test_invalid_matrix_generates_diagnostics_without_comparative_scores():
+    rows = [
+        score_result(_raw_row()),
+        score_result(_raw_row(scenario_id="scenario-2", status="invalid", failure_reason="unproven source")),
+    ]
+    publication = validate_required_matrix(
+        rows,
+        scenario_ids=["scenario-1", "scenario-2"],
+        servers=["foundry-docs"],
+        models=["model-1"],
+    )
+    aggregates = aggregate_scores(rows)
+    aggregates["denominators"] = {
+        "required_rows": publication["required_rows"],
+        "observed_rows": publication["observed_rows"],
+        "unique_observed_rows": publication["unique_observed_rows"],
+        "status_counts": publication["status_counts"],
+        "response_counts": publication["response_counts"],
+    }
+
+    report = generate_report({
+        "metadata": {"run_id": "run-1", "timestamp": "2026-07-28T00:00:00Z"},
+        "aggregates": aggregates,
+        "publication": publication,
+        "results": rows,
+    })
+
+    assert "Comparative publication blocked" in report
+    assert "unproven source" in report
+    assert "Scoreboard" not in report
+    assert "Hypothesis Testing" not in report
+
+
+def test_scorer_cli_writes_blocked_diagnostics_before_failing(tmp_path):
+    raw_path = tmp_path / "raw.json"
+    scenarios_path = tmp_path / "scenarios.json"
+    output_path = tmp_path / "scored.json"
+    raw_path.write_text(
+        json.dumps({
+            "metadata": {
+                "run_id": "run-1",
+                "servers": ["foundry-docs"],
+                "models": ["model-1"],
+            },
+            "results": [_raw_row()],
+        }),
+        encoding="utf-8",
+    )
+    scenarios_path.write_text(
+        json.dumps([{"id": "scenario-1"}, {"id": "scenario-2"}]),
+        encoding="utf-8",
+    )
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(Path(__file__).parents[1] / "scripts" / "eval_scorer.py"),
+            str(raw_path),
+            "--output",
+            str(output_path),
+            "--required-scenarios",
+            str(scenarios_path),
+            "--required-servers",
+            "foundry-docs",
+            "--required-models",
+            "model-1",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert proc.returncode == 1
+    assert "=== Server Averages ===" not in proc.stdout
+    assert "=== Server × Model Matrix ===" not in proc.stdout
+    scored = json.loads(output_path.read_text(encoding="utf-8"))
+    assert scored["publication"]["allowed"] is False
+    assert scored["aggregates"]["denominators"]["status_counts"]["missing"] == 1
