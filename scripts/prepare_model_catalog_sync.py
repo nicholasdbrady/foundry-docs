@@ -9,7 +9,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-CATALOG_FILENAMES = ("models-core.json", "models-huggingface.json", "models.json")
+CATALOG_FILENAMES = ("models-core.json", "models-huggingface.json")
 SUMMARY_MODEL_LIMIT = 100
 
 
@@ -40,10 +40,16 @@ def _catalogs_match(left_dir: Path, right_dir: Path) -> bool:
     )
 
 
-def _copy_catalog(source_dir: Path, target_dir: Path) -> None:
+def _copy_changed_catalogs(source_dir: Path, target_dir: Path) -> list[str]:
     target_dir.mkdir(parents=True, exist_ok=True)
+    changed_filenames = []
     for filename in CATALOG_FILENAMES:
-        shutil.copyfile(source_dir / filename, target_dir / filename)
+        source_path = source_dir / filename
+        target_path = target_dir / filename
+        if _meaningful_catalog(source_path) != _meaningful_catalog(target_path):
+            shutil.copyfile(source_path, target_path)
+            changed_filenames.append(filename)
+    return changed_filenames
 
 
 def _models_by_key(catalog: dict[str, Any], source: Path) -> dict[tuple[str, str], dict[str, Any]]:
@@ -61,24 +67,33 @@ def _models_by_key(catalog: dict[str, Any], source: Path) -> dict[tuple[str, str
     return models_by_key
 
 
+def _models_by_directory(directory: Path) -> dict[tuple[str, str], dict[str, Any]]:
+    models_by_key: dict[tuple[str, str], dict[str, Any]] = {}
+    for filename in CATALOG_FILENAMES:
+        path = directory / filename
+        for model_key, model in _models_by_key(_read_catalog(path), path).items():
+            if model_key in models_by_key:
+                raise CatalogSyncError(
+                    f"Catalog shards contain duplicate publisher/id pair {model_key!r}: {directory}"
+                )
+            models_by_key[model_key] = model
+    return models_by_key
+
+
 def _model_label(model_key: tuple[str, str]) -> str:
     publisher, model_id = model_key
     return f"{publisher}/{model_id}" if publisher else model_id
 
 
 def _catalog_counts(directory: Path) -> dict[str, int]:
-    return {
-        "core": len(_read_catalog(directory / "models-core.json")["models"]),
-        "huggingFace": len(_read_catalog(directory / "models-huggingface.json")["models"]),
-        "combined": len(_read_catalog(directory / "models.json")["models"]),
-    }
+    core = len(_read_catalog(directory / "models-core.json")["models"])
+    hugging_face = len(_read_catalog(directory / "models-huggingface.json")["models"])
+    return {"core": core, "huggingFace": hugging_face, "total": core + hugging_face}
 
 
 def _summarize_changes(before_dir: Path, after_dir: Path) -> dict[str, Any]:
-    before_path = before_dir / "models.json"
-    after_path = after_dir / "models.json"
-    before_models = _models_by_key(_read_catalog(before_path), before_path)
-    after_models = _models_by_key(_read_catalog(after_path), after_path)
+    before_models = _models_by_directory(before_dir)
+    after_models = _models_by_directory(after_dir)
 
     before_keys = set(before_models)
     after_keys = set(after_models)
@@ -153,7 +168,7 @@ def prepare_sync(
         }
 
     summary = _summarize_changes(target_dir, source_dir)
-    _copy_catalog(source_dir, target_dir)
+    changed_filenames = _copy_changed_catalogs(source_dir, target_dir)
     summary.update(
         {
             "status": "changes",
@@ -164,7 +179,9 @@ def prepare_sync(
                 else "Synchronized the primary model catalog to docs-vnext."
             ),
             "targetDirectory": target_dir.as_posix(),
-            "targetFiles": [str((target_dir / filename).as_posix()) for filename in CATALOG_FILENAMES],
+            "targetFiles": [
+                str((target_dir / filename).as_posix()) for filename in changed_filenames
+            ],
         }
     )
     return summary

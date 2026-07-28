@@ -37,8 +37,8 @@ The Azure AI Model Catalog at `https://ai.azure.com/catalog` is powered by a **p
 │                          │                                          │
 │                          ▼                                          │
 │  ┌──────────────────────────────────────────────────────┐          │
-│  │              OUTPUT: models.json                      │          │
-│  │  Array of enriched model objects with:                │          │
+│  │              OUTPUT: JSON shards                      │          │
+│  │  Arrays of enriched model objects with:               │          │
 │  │  - All catalog metadata                               │          │
 │  │  - Region availability per deployment type            │          │
 │  │  - Facet-friendly tags                                │          │
@@ -57,7 +57,8 @@ The Azure AI Model Catalog at `https://ai.azure.com/catalog` is powered by a **p
 │  │       └── model-explorer.mdx  ← Page that imports component  │
 │  └── static/                                                     │
 │      └── data/                                                   │
-│          └── models.json         ← Generated catalog data        │
+│          ├── models-core.json    ← Eager-loaded catalog data     │
+│          └── models-huggingface.json ← Lazy-loaded catalog data  │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
@@ -296,7 +297,7 @@ Create `scripts/scrape_model_catalog.py` that:
 1. Paginates through the Asset Gallery API to collect all models
 2. Extracts and normalizes key fields into a flat, facet-friendly JSON structure
 3. Optionally merges with region availability data from `generate_model_availability.py`
-4. Outputs `docs-vnext/static/data/models.json`
+4. Outputs `models-core.json` and `models-huggingface.json` shards in the selected docs corpus
 
 **Scraping approach:**
 ```python
@@ -358,7 +359,8 @@ The `generate_model_availability.py` script already produces `raw_data.json`. Th
 
 Mintlify supports React components in MDX files[^10]. The approach:
 
-1. **Static data file**: `docs-vnext/static/data/models.json` — generated at build time
+1. **Static data shards**: `docs-vnext/static/data/models-core.json` and
+   `docs-vnext/static/data/models-huggingface.json` — generated at build time
 2. **React component**: `docs-vnext/snippets/model-catalog.jsx` — search/filter/faceted UI
 3. **MDX page**: `docs-vnext/models/catalog/model-explorer.mdx` — imports and renders the component
 
@@ -415,7 +417,7 @@ capabilities, and region availability.
           merge + normalize
                   │
                   ▼
-    docs-vnext/static/data/models.json
+    docs-vnext/static/data/models-*.json
                   │
                   ▼
     docs-vnext/snippets/model-catalog.jsx

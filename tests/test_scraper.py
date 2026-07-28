@@ -19,8 +19,10 @@ from scrape_model_catalog import (
     CatalogContractError,
     CatalogModel,
     _preserve_existing_regions,
+    _write_json,
     fetch_all_models,
     filter_deprecated,
+    validate_output,
 )
 
 
@@ -127,6 +129,45 @@ class TestPreserveExistingRegions:
             assert gpt41.regions == {"Standard": ["eastus"]}
         finally:
             os.unlink(tmp_path)
+
+
+class TestCatalogOutput:
+    def test_writes_one_compact_model_per_line(self, tmp_path):
+        output_path = tmp_path / "models-core.json"
+        data = {
+            "generatedAt": "2026-07-28T00:00:00Z",
+            "totalModels": 2,
+            "publisherIcons": {"Mistral AI": "https://example.test/icon.svg"},
+            "models": [
+                {"id": "model-a", "displayName": "Model A"},
+                {"id": "modèle-b", "displayName": "Modèle B"},
+            ],
+        }
+
+        _write_json(data, str(output_path))
+
+        assert json.loads(output_path.read_text(encoding="utf-8")) == data
+        model_lines = [
+            line
+            for line in output_path.read_text(encoding="utf-8").splitlines()
+            if line.startswith('{"id":')
+        ]
+        assert model_lines == [
+            '{"id":"model-a","displayName":"Model A"},',
+            '{"id":"modèle-b","displayName":"Modèle B"}',
+        ]
+
+    def test_validates_model_drop_against_both_shards(self, monkeypatch, tmp_path):
+        monkeypatch.setattr("scrape_model_catalog.MIN_AZURE_DIRECT_MODELS", 0)
+        for filename in ("models-core.json", "models-huggingface.json"):
+            (tmp_path / filename).write_text(
+                json.dumps({"models": [{"id": f"{filename}-{index}"} for index in range(5)]}),
+                encoding="utf-8",
+            )
+
+        models = [_make_model(f"model-{index}") for index in range(7)]
+
+        assert not validate_output(models, str(tmp_path))
 
 
 class TestAssetGalleryContract:
