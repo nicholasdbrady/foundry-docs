@@ -169,27 +169,36 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh issue list --repo "${{ github.repository }}" \
-            --label "eval-report" --state open --json number -q '.[].number' \
-          | while read -r num; do
-              gh issue close "$num" --repo "${{ github.repository }}" \
-                --comment "Superseded by newer evaluation run." 2>/dev/null || true
-            done
+          python scripts/generated_report_cleanup.py cleanup \
+            --repo "${{ github.repository }}" \
+            --label "eval-report" \
+            --workflow-identity "docs-eval-harness" \
+            --report-kind "docs-evaluation" \
+            --summary "$GITHUB_STEP_SUMMARY"
 
       - name: Create issue with results
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TITLE="📊 Docs Eval Report - $(date -u +%Y-%m-%d)"
+          REPORT_DATE="$(date -u +%Y-%m-%d)"
+          MARKER="$(python scripts/generated_report_cleanup.py marker \
+            --workflow-identity "docs-eval-harness" \
+            --report-kind "docs-evaluation" \
+            --report-date "$REPORT_DATE")"
+          {
+            printf '%s\n\n' "$MARKER"
+            cat tests/eval_results/report.md
+          } > tests/eval_results/issue-report.md
+          TITLE="📊 Docs Eval Report - $REPORT_DATE"
           gh issue create \
             --repo "${{ github.repository }}" \
             --title "$TITLE" \
-            --body-file tests/eval_results/report.md \
+            --body-file tests/eval_results/issue-report.md \
             --label "eval-report" --label "automation" || \
           gh issue create \
             --repo "${{ github.repository }}" \
             --title "$TITLE" \
-            --body-file tests/eval_results/report.md
+            --body-file tests/eval_results/issue-report.md
 
       - name: Check for regression
         run: |
