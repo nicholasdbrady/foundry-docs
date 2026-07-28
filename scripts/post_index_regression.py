@@ -4,18 +4,30 @@
 from __future__ import annotations
 
 import argparse
+import base64
+import binascii
 import html
 import json
 import math
+import re
 import sys
 from pathlib import Path
 from typing import Any
 
 SCHEMA_VERSION = "1.0"
+REPORT_SCHEMA_VERSION = "1.0"
 DEFAULT_THRESHOLD = 0.85
+INCIDENT_KEY = "post-index-search-quality:v1"
+INCIDENT_TITLE = "[search-quality] Search Quality Regression Detected"
+INCIDENT_MARKER = f"<!-- post-index-incident-key: {INCIDENT_KEY} -->"
+INCIDENT_STATE_PREFIX = "<!-- post-index-incident-state: "
+MAX_INCIDENT_HISTORY = 25
 EXECUTED_STATUSES = frozenset({"passed", "failed"})
 VALID_STATUSES = EXECUTED_STATUSES | {"blocked", "error"}
 VALID_DECISIONS = frozenset({"pass", "fail", "skip"})
+_INCIDENT_STATE_PATTERN = re.compile(
+    rf"{re.escape(INCIDENT_STATE_PREFIX)}(?P<payload>[A-Za-z0-9_-]+) -->"
+)
 REQUIRED_KEYS = frozenset(
     {
         "schema_version",
@@ -379,6 +391,328 @@ def write_decision_output(path: Path, result: dict[str, Any]) -> None:
     temporary.replace(path)
 
 
+def build_incident_selection(issues: object) -> dict[str, Any]:
+    """Select one canonical open incident and identify duplicate candidates."""
+    if not isinstance(issues, list):
+        raise ValueError("incident candidates must be a JSON list")
+
+    candidates: list[dict[str, Any]] = []
+    for index, issue in enumerate(issues):
+        if not isinstance(issue, dict):
+            raise ValueError(f"incident candidate {index} must be an object")
+        number = issue.get("number")
+        title = issue.get("title")
+        body = issue.get("body")
+        if not isinstance(number, int) or isinstance(number, bool) or number <= 0:
+            raise ValueError(f"incident candidate {index}.number must be a positive integer")
+        if not isinstance(title, str):
+            raise ValueError(f"incident candidate {index}.title must be a string")
+        if body is not None and not isinstance(body, str):
+            raise ValueError(f"incident candidate {index}.body must be a string or null")
+        candidates.append({"number": number, "title": title, "body": body or ""})
+
+    keyed = sorted(
+        (issue for issue in candidates if INCIDENT_MARKER in issue["body"]),
+        key=lambda issue: issue["number"],
+    )
+    legacy = sorted(
+        (
+            issue
+            for issue in candidates
+            if issue["title"] == INCIDENT_TITLE and INCIDENT_MARKER not in issue["body"]
+        ),
+        key=lambda issue: issue["number"],
+    )
+    ordered = keyed + legacy
+    if not ordered:
+        return {
+            "dedup_key": INCIDENT_KEY,
+            "canonical_number": None,
+            "duplicate_numbers": [],
+        }
+
+    return {
+        "dedup_key": INCIDENT_KEY,
+        "canonical_number": ordered[0]["number"],
+        "duplicate_numbers": [issue["number"] for issue in ordered[1:]],
+    }
+
+
+def _incident_state_marker(state: dict[str, Any]) -> str:
+    payload = json.dumps(state, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    encoded = base64.urlsafe_b64encode(payload).decode("ascii").rstrip("=")
+    return f"{INCIDENT_STATE_PREFIX}{encoded} -->"
+
+
+def _load_incident_state(existing_body: str) -> dict[str, Any] | None:
+    match = _INCIDENT_STATE_PATTERN.search(existing_body)
+    if match is None:
+        return None
+
+    encoded = match.group("payload")
+    encoded += "=" * (-len(encoded) % 4)
+    try:
+        state = json.loads(base64.urlsafe_b64decode(encoded).decode("utf-8"))
+    except (binascii.Error, ValueError, UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    if not isinstance(state, dict):
+        return None
+    if not isinstance(state.get("history"), list):
+        return None
+    current = state.get("current")
+    if current is not None and not isinstance(current, dict):
+        return None
+    return state
+
+
+def _occurrence_summary(
+    result: dict[str, Any],
+    *,
+    repository: str,
+    run_id: str,
+    artifact_name: str,
+    artifact_url: str,
+    server_url: str,
+) -> dict[str, Any]:
+    return {
+        "run_id": run_id,
+        "run_url": f"{server_url.rstrip('/')}/{repository}/actions/runs/{run_id}",
+        "artifact_name": artifact_name,
+        "artifact_url": artifact_url,
+        "pass_rate": result["pass_rate"],
+        "threshold": result["threshold"],
+        "passed_tests": result["passed_tests"],
+        "total_tests": result["total_tests"],
+        "failed_query_count": len(result["failed_queries"]),
+    }
+
+
+def _updated_incident_state(
+    existing_body: str,
+    current: dict[str, Any],
+) -> tuple[dict[str, Any], bool]:
+    previous = _load_incident_state(existing_body)
+    legacy_adopted = bool(existing_body.strip()) and previous is None
+    history: list[dict[str, Any]] = []
+    if previous is not None:
+        previous_current = previous.get("current")
+        if isinstance(previous_current, dict):
+            history.append(previous_current)
+        history.extend(item for item in previous["history"] if isinstance(item, dict))
+        legacy_adopted = bool(previous.get("legacy_adopted"))
+
+    current_run_id = current["run_id"]
+    history = [item for item in history if item.get("run_id") != current_run_id]
+    history = history[:MAX_INCIDENT_HISTORY]
+    return {
+        "current": current,
+        "history": history,
+        "legacy_adopted": legacy_adopted,
+    }, legacy_adopted
+
+
+def _render_history(history: list[dict[str, Any]], legacy_adopted: bool) -> list[str]:
+    lines = ["### Occurrence History", ""]
+    if not history and not legacy_adopted:
+        lines.append("No earlier keyed failures have been recorded.")
+        return lines
+
+    if legacy_adopted:
+        lines.extend(
+            [
+                "> [!NOTE]",
+                "> This incident adopted an earlier unkeyed report. Its run metadata was not available for the history table.",
+                "",
+            ]
+        )
+    if not history:
+        return lines
+
+    lines.extend(
+        [
+            "| Run | Pass rate | Passed | Failed queries | Evidence |",
+            "| --- | ---: | ---: | ---: | --- |",
+        ]
+    )
+    for occurrence in history:
+        run_id = html.escape(str(occurrence.get("run_id", "unknown")))
+        run_url = html.escape(str(occurrence.get("run_url", "")), quote=True)
+        artifact_name = html.escape(str(occurrence.get("artifact_name", "artifact")))
+        artifact_url = html.escape(str(occurrence.get("artifact_url", "")), quote=True)
+        pass_rate = occurrence.get("pass_rate")
+        pass_rate_text = f"{pass_rate * 100:.1f}%" if _is_number(pass_rate) else "unknown"
+        passed = occurrence.get("passed_tests", "unknown")
+        total = occurrence.get("total_tests", "unknown")
+        failed = occurrence.get("failed_query_count", "unknown")
+        lines.append(
+            f"| [§{run_id}]({run_url}) | {pass_rate_text} | {passed}/{total} | {failed} | "
+            f"[{artifact_name}]({artifact_url}) |"
+        )
+    return lines
+
+
+def _render_result_summary(
+    result: dict[str, Any],
+    current: dict[str, Any],
+    *,
+    include_failed_queries: bool,
+    history: list[dict[str, Any]] | None = None,
+    legacy_adopted: bool = False,
+) -> str:
+    status = result["status"]
+    alert = "WARNING" if result["decision"] == "fail" else "NOTE"
+    lines = [
+        "### Validated Post-Index Result",
+        "",
+        f"> [!{alert}]",
+        f"> Machine status: **{status}**; decision: **{result['decision']}**.",
+        "",
+        f"**Run**: [§{current['run_id']}]({current['run_url']})",
+        f"**Artifact**: [{current['artifact_name']}]({current['artifact_url']})",
+        f"**Threshold**: {result['threshold'] * 100:.1f}%",
+        f"**Actual pass rate**: {result['pass_rate'] * 100:.1f}%",
+        f"**Totals**: {result['passed_tests']}/{result['total_tests']} passed",
+        f"**Failed queries**: {len(result['failed_queries'])}",
+        "",
+        "### Diagnostics",
+        "",
+    ]
+    if result["diagnostics"]:
+        lines.extend(f"- {diagnostic}" for diagnostic in result["diagnostics"])
+    else:
+        lines.append("No diagnostics were emitted.")
+
+    if include_failed_queries:
+        evidence = html.escape(json.dumps(result["failed_queries"], indent=2, sort_keys=True))
+        lines.extend(
+            [
+                "",
+                "### Failed-Query Evidence",
+                "",
+                "<details>",
+                f"<summary>View all {len(result['failed_queries'])} failed queries</summary>",
+                "",
+                f"<pre>{evidence}</pre>",
+                "",
+                "</details>",
+            ]
+        )
+    if history is not None:
+        lines.extend(["", *_render_history(history, legacy_adopted)])
+    return "\n".join(lines)
+
+
+def build_report_output(
+    result: dict[str, Any],
+    *,
+    repository: str,
+    run_id: str,
+    artifact_name: str,
+    artifact_url: str,
+    server_url: str = "https://github.com",
+    existing_body: str = "",
+) -> dict[str, Any]:
+    """Build an incident upsert or concrete no-action record from a validated result."""
+    errors = validation_errors(result)
+    if errors:
+        raise ValueError("; ".join(errors))
+    for field, value in (
+        ("repository", repository),
+        ("run_id", run_id),
+        ("artifact_name", artifact_name),
+        ("artifact_url", artifact_url),
+        ("server_url", server_url),
+    ):
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(f"{field} must be a non-empty string")
+
+    current = _occurrence_summary(
+        result,
+        repository=repository,
+        run_id=run_id,
+        artifact_name=artifact_name,
+        artifact_url=artifact_url,
+        server_url=server_url,
+    )
+    if result["status"] != "failed":
+        summary = _render_result_summary(result, current, include_failed_queries=False)
+        summary += "\n\n> [!NOTE]\n> No incident was created or updated for this result."
+        return {
+            "report_schema_version": REPORT_SCHEMA_VERSION,
+            "dedup_key": INCIDENT_KEY,
+            "action": "noop",
+            "status": result["status"],
+            "decision": result["decision"],
+            "summary": summary,
+            "incident": None,
+        }
+
+    state, legacy_adopted = _updated_incident_state(existing_body, current)
+    summary = _render_result_summary(
+        result,
+        current,
+        include_failed_queries=True,
+        history=state["history"],
+        legacy_adopted=legacy_adopted,
+    )
+    body = "\n".join(
+        [
+            INCIDENT_MARKER,
+            _incident_state_marker(state),
+            "",
+            summary,
+            "",
+            "### Recommended Actions",
+            "",
+            "- Review the index sync for data issues.",
+            "- Check whether new or modified documents have correct metadata.",
+            "- Consider running a full index rebuild.",
+            "",
+            "> [!NOTE]",
+            "> The pass/fail conclusion and evidence above are machine-owned. Agent summaries cannot change them.",
+        ]
+    )
+    return {
+        "report_schema_version": REPORT_SCHEMA_VERSION,
+        "dedup_key": INCIDENT_KEY,
+        "action": "upsert_incident",
+        "status": result["status"],
+        "decision": result["decision"],
+        "summary": summary,
+        "incident": {
+            "title": INCIDENT_TITLE,
+            "body": body,
+        },
+    }
+
+
+def _write_text(path: Path, content: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(f"{path.suffix}.tmp")
+    temporary.write_text(content, encoding="utf-8")
+    temporary.replace(path)
+
+
+def write_report_output(
+    path: Path,
+    report: dict[str, Any],
+    *,
+    summary_path: Path,
+    incident_title_path: Path | None = None,
+    incident_body_path: Path | None = None,
+) -> None:
+    """Write the validated report contract and materialized Markdown outputs."""
+    _write_text(path, json.dumps(report, indent=2, sort_keys=True) + "\n")
+    _write_text(summary_path, str(report["summary"]).rstrip() + "\n")
+    incident = report["incident"]
+    if incident is None:
+        return
+    if incident_title_path is None or incident_body_path is None:
+        raise ValueError("incident output paths are required for a failed result")
+    _write_text(incident_title_path, str(incident["title"]))
+    _write_text(incident_body_path, str(incident["body"]).rstrip() + "\n")
+
+
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -405,6 +739,23 @@ def _parse_args() -> argparse.Namespace:
     render = subparsers.add_parser("render-decision-output")
     render.add_argument("--input", type=Path, required=True)
     render.add_argument("--output", type=Path, required=True)
+
+    select = subparsers.add_parser("select-incident")
+    select.add_argument("--input", type=Path, required=True)
+    select.add_argument("--output", type=Path, required=True)
+
+    report = subparsers.add_parser("render-report")
+    report.add_argument("--input", type=Path, required=True)
+    report.add_argument("--repository", required=True)
+    report.add_argument("--run-id", required=True)
+    report.add_argument("--artifact-name", required=True)
+    report.add_argument("--artifact-url", required=True)
+    report.add_argument("--server-url", default="https://github.com")
+    report.add_argument("--existing-body", type=Path)
+    report.add_argument("--output", type=Path, required=True)
+    report.add_argument("--summary-output", type=Path, required=True)
+    report.add_argument("--incident-title-output", type=Path)
+    report.add_argument("--incident-body-output", type=Path)
     return parser.parse_args()
 
 
@@ -415,6 +766,15 @@ def main() -> int:
         return 0
     if args.command == "write-error":
         write_result(args.output, build_error_result(args.stage, args.message, threshold=args.threshold))
+        return 0
+    if args.command == "select-incident":
+        try:
+            issues = json.loads(args.input.read_text(encoding="utf-8"))
+            selection = build_incident_selection(issues)
+            _write_text(args.output, json.dumps(selection, indent=2, sort_keys=True) + "\n")
+        except (OSError, json.JSONDecodeError, ValueError) as exc:
+            print(f"Cannot select post-index incident: {exc}", file=sys.stderr)
+            return 2
         return 0
 
     try:
@@ -440,6 +800,29 @@ def main() -> int:
             write_decision_output(args.output, result)
         except ValueError as exc:
             print(f"Cannot render post-index decision output: {exc}", file=sys.stderr)
+            return 2
+        return 0
+    if args.command == "render-report":
+        try:
+            existing_body = args.existing_body.read_text(encoding="utf-8") if args.existing_body else ""
+            report = build_report_output(
+                result,
+                repository=args.repository,
+                run_id=args.run_id,
+                artifact_name=args.artifact_name,
+                artifact_url=args.artifact_url,
+                server_url=args.server_url,
+                existing_body=existing_body,
+            )
+            write_report_output(
+                args.output,
+                report,
+                summary_path=args.summary_output,
+                incident_title_path=args.incident_title_output,
+                incident_body_path=args.incident_body_output,
+            )
+        except (OSError, ValueError) as exc:
+            print(f"Cannot render post-index report: {exc}", file=sys.stderr)
             return 2
         return 0
 
