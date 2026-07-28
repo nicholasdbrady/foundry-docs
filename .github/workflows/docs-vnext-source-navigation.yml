@@ -12,7 +12,8 @@ concurrency:
 
 jobs:
   validate-source-navigation:
-    name: Validate source navigation
+    name: Run source navigation validation
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -27,14 +28,23 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           relevant=false
+          changed_paths="$RUNNER_TEMP/source-navigation-changed-paths"
+          if ! merge_base="$(git merge-base "$BASE_SHA" "$HEAD_SHA")"; then
+            echo "::error::Unable to determine the pull request merge base."
+            exit 1
+          fi
+          if ! git diff --no-renames --name-only -z "$merge_base" "$HEAD_SHA" -- > "$changed_paths"; then
+            echo "::error::Unable to enumerate pull request paths."
+            exit 1
+          fi
           while IFS= read -r -d '' path; do
             case "$path" in
-              docs-vnext/*|scripts/validate_docs_vnext_navigation.py|tests/test_validate_docs_vnext_navigation.py|.github/workflows/docs-vnext-source-navigation.yml)
+              docs-vnext/*|scripts/validate_docs_vnext_navigation.py|tests/test_validate_docs_vnext_navigation.py|.github/workflows/docs-vnext-source-navigation.yml|.github/workflows/docs-vnext-source-navigation-required.yml)
                 relevant=true
                 break
                 ;;
             esac
-          done < <(git diff --no-renames --name-only -z "$BASE_SHA" "$HEAD_SHA" --)
+          done < "$changed_paths"
           echo "relevant=$relevant" >> "$GITHUB_OUTPUT"
 
       - name: No relevant source navigation changes

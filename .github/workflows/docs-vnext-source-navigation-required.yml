@@ -1,0 +1,55 @@
+name: docs-vnext source navigation required check
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  require-source-navigation:
+    name: Validate source navigation
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Require successful pull request validation
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          WORKFLOW_FILE: docs-vnext-source-navigation.yml
+        run: |
+          for attempt in {1..132}; do
+            if ! run="$(
+              gh api \
+                "/repos/$REPOSITORY/actions/workflows/$WORKFLOW_FILE/runs?event=pull_request&head_sha=$HEAD_SHA&per_page=100" \
+                --jq ".workflow_runs | map(select(any(.pull_requests[]?; .number == $PR_NUMBER))) | .[0] // empty | [.id, .status, (.conclusion // \"\")] | @tsv"
+            )"; then
+              echo "::error::Unable to query source navigation workflow runs."
+              exit 1
+            fi
+
+            if [[ -n "$run" ]]; then
+              IFS=$'\t' read -r run_id status conclusion <<< "$run"
+              if [[ "$status" == "completed" ]]; then
+                if [[ "$conclusion" == "success" ]]; then
+                  echo "Source navigation validation run $run_id succeeded."
+                  exit 0
+                fi
+                echo "::error::Source navigation validation run $run_id concluded with: $conclusion"
+                exit 1
+              fi
+            fi
+            sleep 5
+          done
+
+          echo "::error::No completed source navigation validation run was found for $HEAD_SHA."
+          echo "::error::Remove any [skip ci] directive or resolve merge conflicts, then push a new commit."
+          exit 1
