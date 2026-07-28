@@ -1,56 +1,76 @@
 ---
-name: Docs-vnext Baseline Sync
-description: Refreshes docs-vnext from canonical docs as a weekly baseline
+name: Docs-vnext Baseline Sync Summary
+description: Optionally summarizes the latest independently retained docs-vnext sync manifest
 on:
-  schedule: weekly on sunday
   workflow_dispatch:
-  skip-if-match: 'is:pr is:open in:title "[docs-vnext-sync]"'
 
 permissions:
   contents: read
+  actions: read
 
 tools:
   bash:
-    - "cp *"
-    - "find *"
-    - "diff *"
-    - "git"
+    - "gh run list *"
+    - "gh run download *"
+    - "mkdir *"
+    - "cat /tmp/gh-aw/agent/docs-vnext-sync-manifest.json"
+  github:
+    mode: gh-proxy
+    toolsets: [actions]
+
+network:
+  allowed:
+    - defaults
+    - github
 
 safe-outputs:
-  max-patch-files: 500
-  max-patch-size: 10240
-  create-pull-request:
-    title-prefix: "[docs-vnext-sync] "
-    labels: [documentation, docs-vnext, sync]
-    auto-merge: true
-    draft: false
-    expires: 7d
   report-incomplete:
   noop:
     report-as-issue: false
 
 engine: copilot
-imports:
-  - shared/mcp/mintlify-docs.md
 concurrency:
   group: "gh-aw-${{ github.workflow }}"
   cancel-in-progress: true
-timeout-minutes: 30
+timeout-minutes: 10
 ---
 
-# Docs-vnext Baseline Sync
+# Docs-vnext Baseline Sync Summary
 
-Synchronize `docs-vnext/` from the canonical `docs/` directory as a weekly baseline refresh.
+Summarize the latest dry-run manifest retained by the independent
+`docs-vnext-sync-manifest.yml` workflow.
 
 ## Process
 
-1. Copy all MDX files from `docs/` to `docs-vnext/`, preserving directory structure
-2. Preserve any files unique to `docs-vnext/` (glossary, slides, README)
-3. Commit changes if any upstream updates were detected
+1. Find the latest successful `docs-vnext-sync-manifest.yml` run:
+
+   ```bash
+   run_id=$(gh run list \
+     --workflow docs-vnext-sync-manifest.yml \
+     --status success \
+     --limit 1 \
+     --json databaseId \
+     --jq '.[0].databaseId')
+   ```
+
+2. If no run exists, call `report_incomplete` and stop.
+3. Download its retained artifact:
+
+   ```bash
+   mkdir -p /tmp/gh-aw/agent
+   gh run download "$run_id" \
+     --name "docs-vnext-sync-manifest-$run_id" \
+     --dir /tmp/gh-aw/agent
+   ```
+
+4. Read `/tmp/gh-aw/agent/docs-vnext-sync-manifest.json` once.
+5. Verify that it is valid JSON with `schemaVersion: 2`.
+6. Call `noop` with the aggregate add, modify, remove, preserve, and conservative payload-byte totals.
 
 ## Important
 
-- This workflow refreshes the baseline content only
-- Agent-created improvements (glossary, unbloated prose) in files unique to docs-vnext/ are preserved
-- Files that exist in both directories are overwritten from the canonical source
-- The `docs-vnext/README.md`, `docs-vnext/reference/glossary.mdx`, and `docs-vnext/slides/` are NOT overwritten
+- This optional workflow does not generate or retain the manifest.
+- The independent host workflow remains durable even when gh-aw activation is skipped for daily AI-credit limits.
+- Do not walk, hash, compare, or recalculate the documentation trees.
+- The retained manifest is the complete source of truth for downstream synchronization work.
+- If the manifest is missing, unreadable, or invalid, call `report_incomplete` and stop.
