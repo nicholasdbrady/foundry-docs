@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 
 import pytest
+import yaml
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 from generate_docs_vnext_sync_manifest import (  # noqa: E402
@@ -71,6 +72,7 @@ def test_plans_all_decisions_with_canonical_payloads_and_stable_order(tmp_path):
 
     manifest = build_manifest(source, target, allowlist, tmp_path)
 
+    assert manifest["schemaVersion"] == 2
     assert [(item["decision"], item["path"]) for item in manifest["operations"]] == [
         ("add", "z-add.mdx"),
         ("modify", "a-modify.mdx"),
@@ -80,10 +82,10 @@ def test_plans_all_decisions_with_canonical_payloads_and_stable_order(tmp_path):
         ("preserve", "preserved/shared.mdx"),
     ]
     operations = {item["path"]: item for item in manifest["operations"]}
-    assert operations["a-modify.mdx"]["payloadBytes"] == len("canonical")
+    assert operations["a-modify.mdx"]["payloadBytes"] == len("canonical") + len("vnext")
     assert operations["a-modify.mdx"]["source"]["bytes"] == len("canonical")
     assert operations["a-modify.mdx"]["target"]["bytes"] == len("vnext")
-    assert operations["m-remove.png"]["payloadBytes"] == 0
+    assert operations["m-remove.png"]["payloadBytes"] == len(b"old-image")
     assert operations["docs.json"]["preserveRule"] == {"kind": "file", "path": "docs.json"}
     assert all(item["fileCount"] == 1 for item in manifest["operations"])
     assert all(item["id"].startswith("sha256:") for item in manifest["operations"])
@@ -104,11 +106,18 @@ def test_summary_has_file_counts_and_payload_estimates(tmp_path):
 
     assert summary == {
         "operationCount": 4,
-        "payloadBytes": 10,
+        "payloadBytes": 18,
+        "payloadEstimation": {
+            "method": "conservative-file-bytes-v1",
+            "add": "sourceBytes",
+            "modify": "sourceBytes + targetBytes",
+            "remove": "targetBytes",
+            "preserve": "0",
+        },
         "decisions": {
             "add": {"fileCount": 1, "payloadBytes": 4},
-            "modify": {"fileCount": 1, "payloadBytes": 6},
-            "remove": {"fileCount": 1, "payloadBytes": 0},
+            "modify": {"fileCount": 1, "payloadBytes": 7},
+            "remove": {"fileCount": 1, "payloadBytes": 7},
             "preserve": {"fileCount": 1, "payloadBytes": 0},
         },
     }
@@ -301,3 +310,26 @@ def test_json_schema_path_pattern_matches_runtime_normalization_contract():
         assert re.fullmatch(pattern, valid_path)
     for invalid_path in ["/absolute", "bad\\path", "../escape", "a/../b", "a/./b", "a//b", "a/"]:
         assert re.fullmatch(pattern, invalid_path) is None
+
+
+def test_manifest_artifact_workflow_is_independent_of_gh_aw_activation():
+    host_workflow = yaml.load(
+        (REPO_ROOT / ".github" / "workflows" / "docs-vnext-sync-manifest.yml").read_text(encoding="utf-8"),
+        Loader=yaml.BaseLoader,
+    )
+    manifest_job = host_workflow["jobs"]["manifest"]
+
+    assert set(host_workflow["on"]) == {"schedule", "workflow_dispatch"}
+    assert manifest_job["runs-on"] == "ubuntu-latest"
+    assert [step["name"] for step in manifest_job["steps"]] == [
+        "Checkout repository",
+        "Generate deterministic docs-vnext sync manifest",
+        "Retain docs-vnext sync manifest",
+    ]
+
+    agent_source = (REPO_ROOT / ".github" / "workflows" / "docs-vnext-sync.md").read_text(encoding="utf-8")
+    agent_frontmatter = yaml.load(agent_source.split("---", 2)[1], Loader=yaml.BaseLoader)
+
+    assert set(agent_frontmatter["on"]) == {"workflow_dispatch"}
+    assert "steps" not in agent_frontmatter
+    assert "generate_docs_vnext_sync_manifest.py" not in agent_source
