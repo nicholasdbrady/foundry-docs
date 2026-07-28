@@ -23,6 +23,9 @@ from run_docs_eval import (
     MAX_STDOUT_EXCERPT,
     MCP_SERVERS,
     _is_search_tool,
+    _sanitize_diagnostic_value,
+    _sanitize_identifier,
+    _sanitize_text,
     _source_for_tool,
     serialized_diagnostic_events_size,
 )
@@ -53,6 +56,24 @@ REQUIRED_ROW_FIELDS = (
     "tool_errors",
     "response_time_seconds",
 )
+SCORED_ROW_FIELDS = {
+    *REQUIRED_ROW_FIELDS,
+    "question",
+    "rubric",
+    "timestamp",
+    "stderr",
+    "turns",
+    "tool_calls",
+    "output_tokens",
+    "premium_requests",
+    "api_duration_ms",
+    "session_duration_ms",
+}
+RUBRIC_FIELDS = {"must_mention", "quality_criteria", "expected_docs"}
+SOURCE_CONFIG_FIELDS = {"name", "type", "endpoint", "command", "tool_prefix", "azure_required"}
+METADATA_IDENTIFIER_FIELDS = {"run_id", "timestamp"}
+METADATA_COUNT_FIELDS = {"scenarios_count", "total_evaluations", "completed", "input_files"}
+METADATA_LIST_FIELDS = {"servers", "models"}
 
 
 def _invalid_scores() -> dict:
@@ -78,6 +99,164 @@ def _invalidate_scored_row(row: dict, failure_reason: str) -> None:
         row["failure_reason"] = failure_reason
 
 
+def _identifier_errors(value: object, field: str) -> list[str]:
+    if not isinstance(value, str):
+        return [f"{field} must be a string identifier"]
+    if value != _sanitize_identifier(value):
+        return [f"{field} must equal its bounded sanitized canonical form"]
+    return []
+
+
+def _diagnostic_identifier_errors(value: object, path: str = "diagnostics") -> list[str]:
+    errors = []
+    if isinstance(value, dict):
+        for key, child in value.items():
+            child_path = f"{path}.{key}"
+            if key in {
+                "toolName",
+                "toolCallId",
+                "serverName",
+                "providerCallId",
+                "serviceRequestId",
+                "turnId",
+                "name",
+            }:
+                errors.extend(_identifier_errors(child, child_path))
+            errors.extend(_diagnostic_identifier_errors(child, child_path))
+    elif isinstance(value, list):
+        for index, child in enumerate(value):
+            errors.extend(_diagnostic_identifier_errors(child, f"{path}[{index}]"))
+    return errors
+
+
+def _sanitize_invalid_result_fields(result: dict) -> dict:
+    sanitized = {
+        field: result[field]
+        for field in SCORED_ROW_FIELDS
+        if field in result
+    }
+    for field in ("scenario_id", "server", "model", "category", "selected_source"):
+        if field in sanitized:
+            sanitized[field] = _sanitize_identifier(sanitized[field])
+    if "question" in sanitized:
+        sanitized["question"] = (
+            _sanitize_text(sanitized["question"])[0]
+            if isinstance(sanitized["question"], str)
+            else _sanitize_diagnostic_value(sanitized["question"])
+        )
+    if "timestamp" in sanitized:
+        sanitized["timestamp"] = _sanitize_identifier(sanitized["timestamp"])
+    for field in ("observed_tools", "successful_tools"):
+        value = sanitized.get(field)
+        if isinstance(value, list):
+            sanitized[field] = [_sanitize_identifier(item) for item in value]
+        elif field in sanitized:
+            sanitized[field] = []
+    for field in ("failure_reason", "event_parse_error"):
+        value = sanitized.get(field)
+        if isinstance(value, str):
+            sanitized[field] = _sanitize_text(value)[0]
+        elif field in sanitized and value is not None:
+            sanitized[field] = _sanitize_diagnostic_value(value)
+    if "stderr" in sanitized:
+        sanitized["stderr"] = (
+            _sanitize_text(sanitized["stderr"], max_chars=MAX_STDERR_EXCERPT)[0]
+            if isinstance(sanitized["stderr"], str)
+            else _sanitize_diagnostic_value(sanitized["stderr"])
+        )
+    if "selected_source_config" in sanitized:
+        config = sanitized["selected_source_config"]
+        sanitized["selected_source_config"] = (
+            {
+                field: _sanitize_diagnostic_value(config[field])
+                for field in SOURCE_CONFIG_FIELDS
+                if field in config
+            }
+            if isinstance(config, dict)
+            else _sanitize_diagnostic_value(config)
+        )
+    if "rubric" in sanitized:
+        rubric = sanitized["rubric"]
+        sanitized["rubric"] = (
+            {
+                field: _sanitize_diagnostic_value(rubric[field])
+                for field in RUBRIC_FIELDS
+                if field in rubric
+            }
+            if isinstance(rubric, dict)
+            else _sanitize_diagnostic_value(rubric)
+        )
+    for field in ("premium_requests", "api_duration_ms", "session_duration_ms"):
+        value = sanitized.get(field)
+        if value is not None and (
+            not isinstance(value, (int, float))
+            or isinstance(value, bool)
+            or value < 0
+        ):
+            sanitized[field] = None
+    if "diagnostics" in sanitized:
+        sanitized["diagnostics"] = _canonical_diagnostics(sanitized["diagnostics"])
+    return sanitized
+
+
+def _canonical_diagnostics(value: object) -> object:
+    if not isinstance(value, dict):
+        return _sanitize_diagnostic_value(value)
+    return {
+        "events": _sanitize_diagnostic_value(value.get("events", [])),
+        "events_truncated": value.get("events_truncated") if type(value.get("events_truncated")) is bool else False,
+        "stdout_excerpt": _sanitize_text(str(value.get("stdout_excerpt", "")), max_chars=MAX_STDOUT_EXCERPT)[0],
+        "stdout_truncated": value.get("stdout_truncated") if type(value.get("stdout_truncated")) is bool else False,
+        "stderr_excerpt": _sanitize_text(str(value.get("stderr_excerpt", "")), max_chars=MAX_STDERR_EXCERPT)[0],
+        "stderr_truncated": value.get("stderr_truncated") if type(value.get("stderr_truncated")) is bool else False,
+    }
+
+
+def _project_result_fields(result: dict) -> dict:
+    projected = {
+        field: result[field]
+        for field in SCORED_ROW_FIELDS
+        if field in result
+    }
+    if isinstance(projected.get("rubric"), dict):
+        projected["rubric"] = {
+            field: projected["rubric"][field]
+            for field in RUBRIC_FIELDS
+            if field in projected["rubric"]
+        }
+    if isinstance(projected.get("selected_source_config"), dict):
+        projected["selected_source_config"] = {
+            field: projected["selected_source_config"][field]
+            for field in SOURCE_CONFIG_FIELDS
+            if field in projected["selected_source_config"]
+        }
+    if "diagnostics" in projected:
+        projected["diagnostics"] = _canonical_diagnostics(projected["diagnostics"])
+    return projected
+
+
+def _sanitize_metadata(metadata: object) -> dict:
+    if not isinstance(metadata, dict):
+        return {"servers": [], "models": []}
+    sanitized = {
+        field: _sanitize_identifier(metadata[field])
+        for field in METADATA_IDENTIFIER_FIELDS
+        if field in metadata
+    }
+    for field in METADATA_COUNT_FIELDS:
+        value = metadata.get(field)
+        if type(value) is int and value >= 0:
+            sanitized[field] = value
+    for field in METADATA_LIST_FIELDS:
+        value = metadata.get(field)
+        sanitized[field] = (
+            [_sanitize_identifier(item) for item in value]
+            if isinstance(value, list)
+            else []
+        )
+    return sanitized
+
+
 def validate_row_schema(result: object) -> list[str]:
     """Return schema errors without throwing so malformed rows remain diagnostic."""
     if not isinstance(result, dict):
@@ -87,6 +266,10 @@ def validate_row_schema(result: object) -> list[str]:
     for field in ("scenario_id", "server", "model", "category", "response", "selected_source"):
         if field in result and not isinstance(result[field], str):
             errors.append(f"{field} must be a string")
+    if isinstance(result.get("server"), str) and result["server"] not in MCP_SERVERS:
+        errors.append(f"unknown server: {_sanitize_identifier(result['server'])}")
+    for field in ("scenario_id", "server", "model", "category", "selected_source"):
+        errors.extend(_identifier_errors(result.get(field), field))
     if "status" in result and (
         not isinstance(result["status"], str)
         or result["status"] not in {"success", "invalid", "error", "timeout"}
@@ -114,6 +297,10 @@ def validate_row_schema(result: object) -> list[str]:
             errors.append(f"{field} must be a Boolean")
     if "selected_source_config" in result and not isinstance(result["selected_source_config"], dict):
         errors.append("selected_source_config must be a JSON object")
+    elif isinstance(result.get("selected_source_config"), dict) and set(
+        result["selected_source_config"]
+    ) != SOURCE_CONFIG_FIELDS:
+        errors.append("selected_source_config must contain exactly the required fields")
     if "source_config_count" in result and type(result["source_config_count"]) is not int:
         errors.append("source_config_count must be an integer")
     for field in ("observed_tools", "successful_tools"):
@@ -122,14 +309,25 @@ def validate_row_schema(result: object) -> list[str]:
             not isinstance(value, list) or not all(isinstance(tool_name, str) for tool_name in value)
         ):
             errors.append(f"{field} must be a list of strings")
+        elif isinstance(value, list):
+            for index, identifier in enumerate(value):
+                errors.extend(_identifier_errors(identifier, f"{field}[{index}]"))
     if "failure_reason" in result and result["failure_reason"] is not None and not isinstance(
         result["failure_reason"], str
     ):
         errors.append("failure_reason must be a string or null")
+    elif isinstance(result.get("failure_reason"), str) and result["failure_reason"] != _sanitize_text(
+        result["failure_reason"]
+    )[0]:
+        errors.append("failure_reason must equal its bounded sanitized canonical form")
     if "event_parse_error" in result and result["event_parse_error"] is not None and not isinstance(
         result["event_parse_error"], str
     ):
         errors.append("event_parse_error must be a string or null")
+    elif isinstance(result.get("event_parse_error"), str) and result["event_parse_error"] != _sanitize_text(
+        result["event_parse_error"]
+    )[0]:
+        errors.append("event_parse_error must equal its bounded sanitized canonical form")
     diagnostics = result.get("diagnostics")
     required_diagnostic_fields = {
         "events",
@@ -144,7 +342,10 @@ def validate_row_schema(result: object) -> list[str]:
     elif set(diagnostics) != required_diagnostic_fields:
         errors.append("diagnostics must contain exactly the required bounded-output fields")
     else:
+        errors.extend(_diagnostic_identifier_errors(diagnostics))
         events = diagnostics["events"]
+        if events != _sanitize_diagnostic_value(events):
+            errors.append("diagnostics.events must equal its sanitized canonical form")
         if not isinstance(events, list):
             errors.append("diagnostics.events must be a list")
         elif len(events) > MAX_DIAGNOSTIC_EVENTS:
@@ -170,6 +371,20 @@ def validate_row_schema(result: object) -> list[str]:
                 errors.append(f"diagnostics.{field} must be a string")
             elif len(excerpt) > max_length:
                 errors.append(f"diagnostics.{field} exceeds its maximum length")
+        if isinstance(diagnostics["stdout_excerpt"], str) and diagnostics["stdout_excerpt"] != _sanitize_text(
+            diagnostics["stdout_excerpt"], max_chars=MAX_STDOUT_EXCERPT
+        )[0]:
+            errors.append("diagnostics.stdout_excerpt must equal its sanitized canonical form")
+        if isinstance(diagnostics["stderr_excerpt"], str) and diagnostics["stderr_excerpt"] != _sanitize_text(
+            diagnostics["stderr_excerpt"], max_chars=MAX_STDERR_EXCERPT
+        )[0]:
+            errors.append("diagnostics.stderr_excerpt must equal its sanitized canonical form")
+    stderr = result.get("stderr")
+    if stderr is not None:
+        if not isinstance(stderr, str):
+            errors.append("stderr must be a string")
+        elif stderr != _sanitize_text(stderr, max_chars=MAX_STDERR_EXCERPT)[0]:
+            errors.append("stderr must equal its bounded sanitized canonical form")
     for field in ("exit_code", "tool_errors"):
         if field in result and type(result[field]) is not int:
             errors.append(f"{field} must be an integer")
@@ -188,10 +403,31 @@ def validate_row_schema(result: object) -> list[str]:
         if not isinstance(rubric, dict):
             errors.append("rubric must be a JSON object")
         else:
+            if set(rubric) != RUBRIC_FIELDS:
+                errors.append("rubric must contain exactly the required fields")
             for field in ("must_mention", "quality_criteria", "expected_docs"):
                 value = rubric.get(field, [])
                 if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
                     errors.append(f"rubric.{field} must be a list of strings")
+                elif any(item != _sanitize_text(item)[0] for item in value):
+                    errors.append(f"rubric.{field} must contain sanitized bounded strings")
+    question = result.get("question")
+    if question is not None:
+        if not isinstance(question, str):
+            errors.append("question must be a string")
+        elif question != _sanitize_text(question)[0]:
+            errors.append("question must equal its bounded sanitized canonical form")
+    timestamp = result.get("timestamp")
+    if timestamp is not None:
+        errors.extend(_identifier_errors(timestamp, "timestamp"))
+    for field in ("premium_requests", "api_duration_ms", "session_duration_ms"):
+        value = result.get(field)
+        if value is not None and (
+            not isinstance(value, (int, float))
+            or isinstance(value, bool)
+            or value < 0
+        ):
+            errors.append(f"{field} must be a non-negative number or null")
     return errors
 
 
@@ -300,8 +536,10 @@ def score_result(result: object) -> dict:
         existing_failure = result.get("failure_reason")
         schema_failure = "row_schema_invalid: " + "; ".join(schema_errors)
         failure_reason = f"{existing_failure}; {schema_failure}" if existing_failure else schema_failure
+        failure_reason = _sanitize_text(failure_reason)[0]
+        sanitized_result = _sanitize_invalid_result_fields(result)
         return {
-            **result,
+            **sanitized_result,
             "response": "",
             "response_present": False,
             "status": "invalid",
@@ -370,7 +608,7 @@ def score_result(result: object) -> dict:
         operational["passed"] = False
         normalized_status = status if status in {"error", "timeout"} else "invalid"
         return {
-            **result,
+            **_sanitize_invalid_result_fields(result),
             "response": "",
             "response_present": False,
             "status": normalized_status,
@@ -402,7 +640,7 @@ def score_result(result: object) -> dict:
         + scores["doc_retrieval"] * 0.3
     )
 
-    return {**result, "row_valid": True, "scores": scores, "operational": operational}
+    return {**_project_result_fields(result), "row_valid": True, "scores": scores, "operational": operational}
 
 
 def aggregate_scores(scored_results: list[dict]) -> dict:
@@ -524,6 +762,10 @@ def validate_required_matrix(
 ) -> dict:
     """Validate required scenario/server/model rows and produce complete denominators."""
     azure_required_servers = azure_required_servers or set()
+    scenario_ids = [_sanitize_identifier(value) for value in scenario_ids] if scenario_ids is not None else None
+    servers = [_sanitize_identifier(value) for value in servers] if servers is not None else None
+    models = [_sanitize_identifier(value) for value in models] if models is not None else None
+    azure_required_servers = {_sanitize_identifier(value) for value in azure_required_servers}
     rows_by_key: dict[tuple[str, str, str], list[dict]] = defaultdict(list)
     malformed_rows: list[dict] = []
     for index, row in enumerate(scored_results):
@@ -542,6 +784,10 @@ def validate_required_matrix(
         expected_keys = set(product(scenario_ids, servers, models))
     else:
         expected_keys = set(rows_by_key)
+    unknown_required_servers = sorted(
+        _sanitize_identifier(server)
+        for server in (set(servers or []) | azure_required_servers) - set(MCP_SERVERS)
+    )
 
     for key, rows in rows_by_key.items():
         if len(rows) > 1:
@@ -591,7 +837,7 @@ def validate_required_matrix(
     unexpected_rows = sorted(" / ".join(key) for key in set(rows_by_key) - expected_keys)
     invalid_rows.extend(malformed_rows)
     status_counts["invalid"] += len(malformed_rows)
-    allowed = not invalid_rows and not duplicate_rows and not unexpected_rows
+    allowed = not invalid_rows and not duplicate_rows and not unexpected_rows and not unknown_required_servers
     failure_reasons = []
     if invalid_rows:
         failure_reasons.append(f"{len(invalid_rows)} required row(s) are invalid or missing")
@@ -599,6 +845,10 @@ def validate_required_matrix(
         failure_reasons.append(f"{len(duplicate_rows)} required row(s) are duplicated")
     if unexpected_rows:
         failure_reasons.append(f"{len(unexpected_rows)} unexpected row(s) were supplied")
+    if unknown_required_servers:
+        failure_reasons.append(
+            "unknown required server(s): " + ", ".join(_sanitize_identifier(server) for server in unknown_required_servers)
+        )
 
     return {
         "allowed": allowed,
@@ -611,6 +861,7 @@ def validate_required_matrix(
         "invalid_rows": invalid_rows,
         "duplicate_rows": duplicate_rows,
         "unexpected_rows": unexpected_rows,
+        "unknown_required_servers": unknown_required_servers,
     }
 
 
@@ -661,17 +912,16 @@ def main():
 
         file_meta = data.get("metadata", {})
         all_results.extend(data.get("results", []))
+        sanitized_meta = _sanitize_metadata(file_meta)
 
         # Merge metadata: keep first run_id, union servers/models, sum counts
         if not merged_metadata:
-            merged_metadata = dict(file_meta)
-            merged_metadata["servers"] = list(file_meta.get("servers", []))
-            merged_metadata["models"] = list(file_meta.get("models", []))
+            merged_metadata = sanitized_meta
         else:
-            for s in file_meta.get("servers", []):
+            for s in sanitized_meta.get("servers", []):
                 if s not in merged_metadata["servers"]:
                     merged_metadata["servers"].append(s)
-            for m in file_meta.get("models", []):
+            for m in sanitized_meta.get("models", []):
                 if m not in merged_metadata["models"]:
                     merged_metadata["models"].append(m)
 

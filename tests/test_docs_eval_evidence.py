@@ -845,6 +845,21 @@ def test_scorer_clears_response_for_every_non_success_status(status):
     aggregates = aggregate_scores([scored])
     assert aggregates["operational_metrics"]["foundry-docs"]["pass_rate"] == 0.0
     assert aggregates["operational_metrics"]["foundry-docs"]["status_counts"] == {"invalid": 1}
+
+
+def test_invalid_source_config_is_sanitized_in_scored_output():
+    row = _raw_row()
+    row["selected_source_config"]["command"] = r"token=CONFIGSECRET C:\Users\Victim\private"
+
+    scored = score_result(row)
+    persisted = json.dumps(scored)
+
+    assert scored["row_valid"] is False
+    assert "CONFIGSECRET" not in persisted
+    assert "Victim" not in persisted
+    assert "private" not in persisted
+    assert "token=[REDACTED]" in persisted
+    assert "<PATH>" in persisted
     assert scored["response"] == ""
     assert scored["response_present"] is False
 
@@ -881,7 +896,11 @@ def test_mcp_failure_server_name_is_sanitized_and_bounded(monkeypatch):
 
 def test_size_based_event_truncation_is_schema_valid():
     row = _raw_row()
-    row["diagnostics"]["events"] = [{"event_type": "status", "data": {"message": "x" * 40_000}}]
+    source_events = _session_error_events_at_serialized_size(40_000)
+    row["diagnostics"]["events"] = [
+        {"event_type": "session.error", "data": event["data"]}
+        for event in source_events
+    ]
     row["diagnostics"]["events_truncated"] = True
 
     assert validate_row_schema(row) == []
@@ -983,37 +1002,37 @@ def test_runner_truncates_event_envelope_at_50_002():
 
 
 def test_scorer_accepts_exact_event_envelope_limit_and_rejects_one_byte_over():
-    event = {"event_type": "boundary", "data": {"message": ""}}
-    overhead = serialized_diagnostic_events_size([event])
-    event["data"]["message"] = "x" * (50_000 - overhead)
-    assert serialized_diagnostic_events_size([event]) == 50_000
-
     at_limit = _raw_row()
-    at_limit["diagnostics"]["events"] = [event]
+    at_limit["diagnostics"]["events"] = [
+        {"event_type": "session.error", "data": event["data"]}
+        for event in _session_error_events_at_serialized_size(50_000)
+    ]
+    assert serialized_diagnostic_events_size(at_limit["diagnostics"]["events"]) == 50_000
     assert validate_row_schema(at_limit) == []
 
     over_limit = _raw_row()
-    over_limit["diagnostics"]["events"] = [{
-        "event_type": "boundary",
-        "data": {"message": event["data"]["message"] + "x"},
-    }]
+    over_limit["diagnostics"]["events"] = [
+        {"event_type": "session.error", "data": event["data"]}
+        for event in _session_error_events_at_serialized_size(50_001)
+    ]
     assert serialized_diagnostic_events_size(over_limit["diagnostics"]["events"]) == 50_001
     assert "diagnostics.events exceeds its total serialized size limit" in validate_row_schema(over_limit)
 
 
 def test_scorer_accepts_49_998_event_envelope_and_rejects_50_002():
-    event = {"event_type": "boundary", "data": {"message": ""}}
-    overhead = serialized_diagnostic_events_size([event])
-
     below_limit = _raw_row()
-    below_event = {"event_type": "boundary", "data": {"message": "x" * (49_998 - overhead)}}
-    below_limit["diagnostics"]["events"] = [below_event]
+    below_limit["diagnostics"]["events"] = [
+        {"event_type": "session.error", "data": event["data"]}
+        for event in _session_error_events_at_serialized_size(49_998)
+    ]
     assert serialized_diagnostic_events_size(below_limit["diagnostics"]["events"]) == 49_998
     assert validate_row_schema(below_limit) == []
 
     above_limit = _raw_row()
-    above_event = {"event_type": "boundary", "data": {"message": "x" * (50_002 - overhead)}}
-    above_limit["diagnostics"]["events"] = [above_event]
+    above_limit["diagnostics"]["events"] = [
+        {"event_type": "session.error", "data": event["data"]}
+        for event in _session_error_events_at_serialized_size(50_002)
+    ]
     assert serialized_diagnostic_events_size(above_limit["diagnostics"]["events"]) == 50_002
     assert "diagnostics.events exceeds its total serialized size limit" in validate_row_schema(above_limit)
 
@@ -1394,6 +1413,79 @@ def test_scorer_rejects_success_row_missing_required_evidence_fields():
     assert scored["scores"]["has_response"] is False
 
 
+def test_scorer_rejects_and_sanitizes_malicious_persisted_identifiers():
+    row = _raw_row()
+    malicious = r"foundry_docs-search_docs token=LEAKME C:\Users\Alice\private " + ("x" * 500)
+    row["observed_tools"] = [malicious]
+    row["successful_tools"] = [malicious]
+    row["event_parse_error"] = r"duplicate call token=PARSESECRET C:\Users\Bob\private"
+    row["diagnostics"]["events"] = [{
+        "event_type": "tool.execution_complete",
+        "data": {
+            "toolName": malicious,
+            "toolCallId": r"call token=CALLSECRET C:\Users\Carol\private",
+        },
+    }]
+
+    scored = score_result(row)
+    persisted = json.dumps(scored)
+
+    assert scored["row_valid"] is False
+    assert scored["status"] == "invalid"
+    for leaked in ("LEAKME", "Alice", "PARSESECRET", "Bob", "CALLSECRET", "Carol", "private"):
+        assert leaked not in persisted
+    assert all(len(identifier) <= 270 for identifier in scored["observed_tools"])
+    assert "token=[REDACTED]" in persisted
+    assert "<PATH>" in persisted
+
+
+def test_scorer_projects_known_fields_and_rejects_unsanitized_diagnostics():
+    row = _raw_row()
+    row["extra_secret"] = r"token=TOPSECRET C:\Users\Victim\private"
+    row["diagnostics"]["stdout_excerpt"] = r"token=DIAGSECRET C:\Users\Victim\private"
+
+    scored = score_result(row)
+    persisted = json.dumps(scored)
+
+    assert scored["row_valid"] is False
+    assert "extra_secret" not in scored
+    for leaked in ("TOPSECRET", "DIAGSECRET", "Victim", "private"):
+        assert leaked not in persisted
+    assert "token=[REDACTED]" in persisted
+    assert "<PATH>" in persisted
+
+
+def test_scorer_sanitizes_malformed_nested_retained_fields():
+    row = _raw_row()
+    row["question"] = {"nested": r"token=LEAKME C:\Users\Alice\private"}
+    row["event_parse_error"] = {"nested": r"token=PARSELEAK C:\Users\Bob\private"}
+    row["observed_tools"] = {"nested": r"token=TOOLLEAK C:\Users\Carol\private"}
+
+    scored = score_result(row)
+    persisted = json.dumps(scored)
+
+    assert scored["row_valid"] is False
+    for leaked in ("LEAKME", "Alice", "PARSELEAK", "Bob", "TOOLLEAK", "Carol", "private"):
+        assert leaked not in persisted
+    assert "token=[REDACTED]" in persisted
+    assert "<PATH>" in persisted
+    assert scored["observed_tools"] == []
+
+
+def test_scorer_rejects_non_string_diagnostic_identifier():
+    row = _raw_row()
+    row["diagnostics"]["events"] = [{
+        "event_type": "tool.execution_complete",
+        "data": {"toolCallId": 123, "toolName": "foundry_docs-search_docs"},
+    }]
+
+    scored = score_result(row)
+
+    assert scored["row_valid"] is False
+    assert scored["status"] == "invalid"
+    assert "diagnostics.events[0].data.toolCallId must be a string identifier" in scored["failure_reason"]
+
+
 @pytest.mark.parametrize(
     "malformed",
     [
@@ -1518,6 +1610,76 @@ def test_unexpected_rows_are_invalidated_before_aggregation():
     assert unexpected["scores"]["has_response"] is False
     assert aggregates["server_model_matrix"] == {}
     assert aggregates["server_averages"] == {}
+
+
+def test_unknown_server_row_and_required_matrix_fail_closed():
+    unknown = _raw_row()
+    unknown["server"] = "unknown-server"
+    unknown["selected_source"] = "unknown-server"
+    unknown["selected_source_config"] = {
+        "name": "unknown",
+        "type": "local",
+        "endpoint": None,
+        "command": "unknown",
+        "tool_prefix": None,
+        "azure_required": False,
+    }
+    unknown["observed_tools"] = ["unknown-search"]
+    unknown["successful_tools"] = ["unknown-search"]
+
+    scored = score_result(unknown)
+    publication = validate_required_matrix(
+        [scored],
+        scenario_ids=["scenario-1"],
+        servers=["unknown-server"],
+        models=["model-1"],
+    )
+    aggregates = aggregate_scores([scored])
+
+    assert scored["row_valid"] is False
+    assert scored["status"] == "invalid"
+    assert scored["response"] == ""
+    assert publication["allowed"] is False
+    assert publication["unknown_required_servers"] == ["unknown-server"]
+    assert "unknown required server(s): unknown-server" in publication["failure_reasons"]
+    assert aggregates["server_model_matrix"] == {}
+    assert aggregates["server_averages"] == {}
+
+
+def test_unknown_azure_required_server_blocks_otherwise_valid_matrix():
+    valid = score_result(_raw_row())
+
+    publication = validate_required_matrix(
+        [valid],
+        scenario_ids=["scenario-1"],
+        servers=["foundry-docs"],
+        models=["model-1"],
+        azure_required_servers={"typo-server"},
+    )
+
+    assert publication["allowed"] is False
+    assert publication["unknown_required_servers"] == ["typo-server"]
+    assert "unknown required server(s): typo-server" in publication["failure_reasons"]
+
+
+def test_required_matrix_sanitizes_unknown_selector_row_labels():
+    selector = r"token=SERVERLEAK C:\Users\Alice\private"
+
+    publication = validate_required_matrix(
+        [],
+        scenario_ids=["scenario-1"],
+        servers=[selector],
+        models=["model-1"],
+        azure_required_servers={selector},
+    )
+    persisted = json.dumps(publication)
+
+    assert publication["allowed"] is False
+    assert "SERVERLEAK" not in persisted
+    assert "Alice" not in persisted
+    assert "private" not in persisted
+    assert "token=[REDACTED]" in persisted
+    assert "<PATH>" in persisted
 
 
 def test_scorer_rejects_contradictory_source_descriptor_and_tool_evidence():
@@ -1648,9 +1810,10 @@ def test_scorer_cli_writes_blocked_diagnostics_before_failing(tmp_path):
     raw_path.write_text(
         json.dumps({
             "metadata": {
-                "run_id": "run-1",
-                "servers": ["foundry-docs"],
-                "models": ["model-1"],
+                "run_id": r"run-1 token=RUNSECRET C:\Users\Alice\private",
+                "servers": [r"foundry-docs token=SERVERSECRET C:\Users\Bob\private"],
+                "models": [r"model-1 token=MODELSECRET C:\Users\Carol\private"],
+                "extra_secret": r"token=EXTRASECRET C:\Users\Dana\private",
             },
             "results": [_raw_row()],
         }),
@@ -1686,3 +1849,19 @@ def test_scorer_cli_writes_blocked_diagnostics_before_failing(tmp_path):
     scored = json.loads(output_path.read_text(encoding="utf-8"))
     assert scored["publication"]["allowed"] is False
     assert scored["aggregates"]["denominators"]["status_counts"]["missing"] == 1
+    persisted = json.dumps(scored["metadata"])
+    for leaked in (
+        "RUNSECRET",
+        "Alice",
+        "SERVERSECRET",
+        "Bob",
+        "MODELSECRET",
+        "Carol",
+        "EXTRASECRET",
+        "Dana",
+        "private",
+    ):
+        assert leaked not in persisted
+    assert "extra_secret" not in scored["metadata"]
+    assert "token=[REDACTED]" in persisted
+    assert "<PATH>" in persisted
