@@ -1,0 +1,64 @@
+name: docs-vnext source navigation gate
+
+on:
+  pull_request:
+    paths:
+      - "docs-vnext/**"
+      - "scripts/validate_docs_vnext_navigation.py"
+      - "tests/test_validate_docs_vnext_navigation.py"
+      - ".github/workflows/docs-vnext-source-navigation.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate-source-navigation:
+    name: Validate source navigation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install test dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Run navigation validator tests
+        run: python -m pytest tests/test_validate_docs_vnext_navigation.py -q
+
+      - name: Prepare incremental validation inputs
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          mkdir -p tests/eval_results
+          git diff --name-only "$BASE_SHA" "$HEAD_SHA" -- docs-vnext \
+            > "$RUNNER_TEMP/docs-vnext-changed-files.txt"
+          git show "$BASE_SHA:docs-vnext/docs.json" \
+            > "$RUNNER_TEMP/base-docs-vnext-docs.json"
+
+      - name: Validate docs-vnext source navigation
+        run: |
+          python scripts/validate_docs_vnext_navigation.py \
+            --changed-files-file "$RUNNER_TEMP/docs-vnext-changed-files.txt" \
+            --base-navigation "$RUNNER_TEMP/base-docs-vnext-docs.json" \
+            --output tests/eval_results/docs-vnext-route-inventory.json
+
+      - name: Upload route inventory
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        with:
+          name: docs-vnext-route-inventory
+          path: tests/eval_results/docs-vnext-route-inventory.json
+          if-no-files-found: error
+          retention-days: 30
