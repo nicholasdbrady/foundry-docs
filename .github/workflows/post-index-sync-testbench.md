@@ -315,8 +315,9 @@ concurrency:
 
 Deterministic custom jobs execute and validate the regression suite, upsert one durable incident for a failed quality result,
 record a concrete no-action summary for every other validated result, and enforce the final conclusion. Copilot is activated
-only after an executed result passes schema validation. It receives one isolated copy of that bounded result and can publish
-only a workflow job summary; it cannot create or update incidents or alter the machine-owned conclusion.
+only after a failed quality result passes schema validation, so optional summarization cannot turn a passing result into a
+failed workflow. It receives one isolated copy of that bounded result and can publish only a workflow job summary; it cannot
+create or update incidents or alter the machine-owned conclusion.
 
 ## Context
 

@@ -328,6 +328,14 @@ def phase_exit_code(result: dict[str, Any], phase: str) -> int:
     raise ValueError(f"Unknown validation phase: {phase}")
 
 
+def should_invoke_agent(result: dict[str, Any]) -> bool:
+    """Return whether optional summarization can run without changing a passing workflow."""
+    errors = validation_errors(result)
+    if errors:
+        raise ValueError("; ".join(errors))
+    return result["status"] == "failed"
+
+
 def build_safe_output(result: dict[str, Any]) -> dict[str, Any]:
     """Build the only safe output permitted by the machine decision."""
     errors = validation_errors(result)
@@ -793,7 +801,7 @@ def main() -> int:
         with args.github_output.open("a", encoding="utf-8") as output:
             output.write(f"status={result['status']}\n")
             output.write(f"decision={result['decision']}\n")
-            output.write(f"invoke_agent={'true' if result['status'] in EXECUTED_STATUSES else 'false'}\n")
+            output.write(f"invoke_agent={'true' if should_invoke_agent(result) else 'false'}\n")
         return 0
     if args.command == "render-decision-output":
         try:

@@ -22,6 +22,7 @@ from post_index_regression import (  # noqa: E402
     build_report_output,
     build_safe_output,
     phase_exit_code,
+    should_invoke_agent,
     validation_errors,
     write_decision_output,
 )
@@ -137,6 +138,13 @@ def test_safe_output_is_derived_only_from_machine_decision() -> None:
     assert failed["items"][0]["title"] == "Search Quality Regression Detected"
     assert "query-16" in failed["items"][0]["body"]
     assert "80.0% (machine threshold: 85.0%)" in failed["items"][0]["body"]
+
+
+def test_optional_agent_summary_runs_only_after_a_failed_quality_decision() -> None:
+    assert should_invoke_agent(_result(20, 16)) is True
+    assert should_invoke_agent(_result(20, 17)) is False
+    assert should_invoke_agent(build_blocked_result("cancelled")) is False
+    assert should_invoke_agent(build_error_result("setup", "failed")) is False
 
 
 def test_decision_output_preserves_deterministic_issue_rendering(tmp_path) -> None:
