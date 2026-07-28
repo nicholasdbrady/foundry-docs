@@ -354,6 +354,31 @@ def test_process_launch_error_sanitizes_every_persisted_field(monkeypatch):
     assert result["diagnostics"]["stderr_excerpt"] == result["stderr"]
 
 
+def test_exact_process_launch_error_leaks_neither_token_nor_path_in_raw_or_scored_row(monkeypatch):
+    leaked = r"token=LEAKME at C:\Users\Alice\private"
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda cmd, **kwargs: (_ for _ in ()).throw(OSError(leaked)),
+    )
+
+    raw_row = run_single_eval(
+        SCENARIO,
+        "foundry-docs",
+        MCP_SERVERS["foundry-docs"],
+        "model-1",
+    )
+    scored_row = score_result(raw_row)
+
+    for row in (raw_row, scored_row):
+        persisted = json.dumps(row)
+        assert "LEAKME" not in persisted
+        assert "Alice" not in persisted
+        assert "private" not in persisted
+        assert "token=[REDACTED]" in persisted
+        assert "<PATH>" in persisted
+
+
 def test_mcp_initialization_failure_preserves_sanitized_lifecycle_diagnostics(monkeypatch):
     stdout = "\n".join([
         json.dumps({
