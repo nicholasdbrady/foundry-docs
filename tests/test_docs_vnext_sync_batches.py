@@ -707,6 +707,7 @@ def test_real_git_backend_rejects_same_tree_force_push_after_identity_authentica
     backend.publish_batch(manifest, batch, branch)
     forged_pr = _pull_request(manifest, batch)
     campaign_branches = backend.discover_campaign_branches([forged_pr])
+    authenticated_sha = campaign_branches[0].commit_sha
 
     _git(repository, "fetch", "origin", branch)
     _git(repository, "switch", "--create", "forged", "FETCH_HEAD")
@@ -718,6 +719,15 @@ def test_real_git_backend_rejects_same_tree_force_push_after_identity_authentica
         "same tree with malformed identity",
     )
     _git(repository, "push", "--force", "origin", f"HEAD:refs/heads/{branch}")
+    forged_sha = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=repository,
+        check=True,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+    ).stdout.strip()
+    assert forged_sha != authenticated_sha
 
     with pytest.raises(BatchSyncError, match="moved from authenticated commit"):
         validate_campaign_identities(
@@ -1058,6 +1068,18 @@ def test_windows_job_terminates_child_ignoring_ctrl_break(tmp_path):
         )
         ctypes.windll.kernel32.CloseHandle(process_handle)
         assert exit_code.value != 259
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows Job Object configuration")
+def test_windows_job_object_uses_kill_on_close_limit():
+    source = (REPO_ROOT / "scripts" / "apply_docs_vnext_sync_batches.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert "SetInformationJobObject" in source
+    assert "LimitFlags = 0x00002000" in source
+    assert "TerminateJobObject" in source
+    assert "CTRL_BREAK_EVENT" not in source
 
 
 def test_overflow_terminates_grandchild_holding_discovery_pipes(tmp_path):
