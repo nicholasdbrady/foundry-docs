@@ -25,6 +25,41 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Initialize failure inventory
+        run: |
+          mkdir -p tests/eval_results
+          cat > tests/eval_results/docs-vnext-route-inventory.json <<'JSON'
+          {
+            "schemaVersion": 1,
+            "status": "failed",
+            "navigationSource": "docs-vnext/docs.json",
+            "routes": [],
+            "openapi": [],
+            "aliases": [],
+            "externalNavigation": [],
+            "linkSummary": {
+              "currentStale": 0,
+              "baselineStale": 0,
+              "grandfathered": 0,
+              "introduced": 0
+            },
+            "diagnosticSummary": {
+              "total": 1,
+              "counts": {"workflow_incomplete": 1},
+              "truncated": false
+            },
+            "diagnostics": [
+              {
+                "sourceNavigationEntry": "navigation",
+                "route": null,
+                "failureClass": "workflow_incomplete",
+                "candidateSourcePath": "docs-vnext/docs.json",
+                "detail": "Workflow did not reach successful navigation validation."
+              }
+            ]
+          }
+          JSON
+
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
           python-version: "3.12"
@@ -36,22 +71,17 @@ jobs:
       - name: Run navigation validator tests
         run: python -m pytest tests/test_validate_docs_vnext_navigation.py -q
 
-      - name: Prepare incremental validation inputs
+      - name: Prepare baseline validation inputs
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          mkdir -p tests/eval_results
-          git diff --name-only "$BASE_SHA" "$HEAD_SHA" -- docs-vnext \
-            > "$RUNNER_TEMP/docs-vnext-changed-files.txt"
-          git show "$BASE_SHA:docs-vnext/docs.json" \
-            > "$RUNNER_TEMP/base-docs-vnext-docs.json"
+          mkdir -p "$RUNNER_TEMP/base"
+          git archive "$BASE_SHA" docs-vnext | tar -x -C "$RUNNER_TEMP/base"
 
       - name: Validate docs-vnext source navigation
         run: |
           python scripts/validate_docs_vnext_navigation.py \
-            --changed-files-file "$RUNNER_TEMP/docs-vnext-changed-files.txt" \
-            --base-navigation "$RUNNER_TEMP/base-docs-vnext-docs.json" \
+            --base-docs-dir "$RUNNER_TEMP/base/docs-vnext" \
             --output tests/eval_results/docs-vnext-route-inventory.json
 
       - name: Upload route inventory

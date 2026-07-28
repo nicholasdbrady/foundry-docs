@@ -71,6 +71,29 @@ class RouteEntry:
         }
 
 
+@dataclass(frozen=True, slots=True)
+class LinkFailure:
+    source_navigation_entry: str
+    source_route: str
+    target_route: str
+    raw_link: str
+    candidate_source_path: str
+
+    @property
+    def fingerprint(self) -> tuple[str, str, str]:
+        return (self.source_route, self.raw_link, self.target_route)
+
+    def as_diagnostic(self) -> dict[str, str]:
+        return {
+            "sourceNavigationEntry": self.source_navigation_entry,
+            "route": f"/{self.target_route}" if self.target_route else "/",
+            "failureClass": "stale_internal_link",
+            "candidateSourcePath": self.candidate_source_path,
+            "sourcePage": f"docs-vnext/{self.source_route}.mdx",
+            "link": self.raw_link,
+        }
+
+
 class NavigationCollector:
     def __init__(self, docs_dir: Path, max_diagnostics: int) -> None:
         self.docs_dir = docs_dir
@@ -268,6 +291,18 @@ class NavigationCollector:
             if isinstance(item, str):
                 self._collect_route(item, entry_path)
             elif isinstance(item, dict):
+                if "page" in item:
+                    page = item["page"]
+                    if isinstance(page, str):
+                        self._collect_route(page, f"{entry_path}.page")
+                    else:
+                        self.add_diagnostic(
+                            source_navigation_entry=f"{entry_path}.page",
+                            route=repr(page),
+                            failure_class="invalid_route_target",
+                            candidate_source_path=None,
+                            detail="named page entries require a route string in page",
+                        )
                 self._visit_container(item, entry_path)
             else:
                 self.add_diagnostic(
@@ -480,17 +515,16 @@ def _resolve_internal_link(source_route: str, raw_link: str) -> str | None:
     return "/".join(normalized_parts).rstrip("/")
 
 
-def _validate_internal_links(collector: NavigationCollector, routes_to_scan: set[str] | None = None) -> None:
+def _scan_internal_links(collector: NavigationCollector) -> list[LinkFailure]:
     route_entries: dict[str, RouteEntry] = {}
     for entry in collector.routes:
         route_entries.setdefault(entry.route, entry)
     valid_routes = set(route_entries)
     valid_routes.update(alias["route"].lstrip("/") for alias in collector.aliases)
     valid_routes.add("")
+    failures: list[LinkFailure] = []
 
     for route, entry in route_entries.items():
-        if routes_to_scan is not None and route not in routes_to_scan:
-            continue
         source_path = collector.docs_dir / f"{route}.mdx"
         if not source_path.is_file():
             continue
@@ -509,45 +543,50 @@ def _validate_internal_links(collector: NavigationCollector, routes_to_scan: set
             if key in seen:
                 continue
             seen.add(key)
-            collector.add_diagnostic(
-                source_navigation_entry=entry.source_navigation_entry,
-                route=f"/{target}" if target else "/",
-                failure_class="stale_internal_link",
-                candidate_source_path=candidate_source_path(collector.docs_dir, target),
-                sourcePage=entry.candidate_source_path,
-                link=raw_link,
+            failures.append(
+                LinkFailure(
+                    source_navigation_entry=entry.source_navigation_entry,
+                    source_route=route,
+                    target_route=target,
+                    raw_link=raw_link,
+                    candidate_source_path=candidate_source_path(collector.docs_dir, target),
+                )
             )
+    return failures
 
 
 def validate_navigation(
     docs_dir: Path,
     navigation_path: Path,
     *,
-    changed_files: set[str] | None = None,
-    base_navigation_path: Path | None = None,
+    base_docs_dir: Path | None = None,
     max_diagnostics: int = DEFAULT_MAX_DIAGNOSTICS,
 ) -> dict[str, Any]:
     config = json.loads(navigation_path.read_text(encoding="utf-8"))
     collector = NavigationCollector(docs_dir, max_diagnostics)
     collector.collect(config.get("navigation"))
     collector.collect_redirects(config.get("redirects"))
-    routes_to_scan: set[str] | None = None
-    if changed_files is not None:
-        docs_prefix = f"{docs_dir.name}/"
-        routes_to_scan = {
-            path[len(docs_prefix) : -len(".mdx")]
-            for path in changed_files
-            if path.startswith(docs_prefix) and path.endswith(".mdx")
-        }
-        if base_navigation_path is not None and base_navigation_path.is_file():
-            base_config = json.loads(base_navigation_path.read_text(encoding="utf-8"))
-            base_collector = NavigationCollector(docs_dir, 0)
-            base_collector.collect(base_config.get("navigation"))
-            base_routes = {entry.route for entry in base_collector.routes}
-            routes_to_scan.update(entry.route for entry in collector.routes if entry.route not in base_routes)
-    if collector.total_diagnostics:
-        routes_to_scan = set()
-    _validate_internal_links(collector, routes_to_scan)
+    current_stale = _scan_internal_links(collector)
+    baseline_stale: list[LinkFailure] = []
+    if base_docs_dir is not None:
+        base_navigation_path = base_docs_dir / "docs.json"
+        base_config = json.loads(base_navigation_path.read_text(encoding="utf-8"))
+        base_collector = NavigationCollector(base_docs_dir, 0)
+        base_collector.collect(base_config.get("navigation"))
+        base_collector.collect_redirects(base_config.get("redirects"))
+        baseline_stale = _scan_internal_links(base_collector)
+
+    baseline_fingerprints = {failure.fingerprint for failure in baseline_stale}
+    introduced_stale = [failure for failure in current_stale if failure.fingerprint not in baseline_fingerprints]
+    for failure in introduced_stale:
+        diagnostic = failure.as_diagnostic()
+        collector.add_diagnostic(
+            source_navigation_entry=diagnostic.pop("sourceNavigationEntry"),
+            route=diagnostic.pop("route"),
+            failure_class=diagnostic.pop("failureClass"),
+            candidate_source_path=diagnostic.pop("candidateSourcePath"),
+            **diagnostic,
+        )
     return {
         "schemaVersion": SCHEMA_VERSION,
         "status": "failed" if collector.total_diagnostics else "passed",
@@ -556,6 +595,12 @@ def validate_navigation(
         "openapi": collector.openapi,
         "aliases": collector.aliases,
         "externalNavigation": collector.external_navigation,
+        "linkSummary": {
+            "currentStale": len(current_stale),
+            "baselineStale": len(baseline_stale),
+            "grandfathered": len(current_stale) - len(introduced_stale),
+            "introduced": len(introduced_stale),
+        },
         "diagnosticSummary": {
             "total": collector.total_diagnostics,
             "counts": dict(sorted(collector.diagnostic_counts.items())),
@@ -565,41 +610,109 @@ def validate_navigation(
     }
 
 
+def build_failure_inventory(
+    docs_dir: Path,
+    navigation_path: Path,
+    *,
+    failure_class: str,
+    detail: str,
+) -> dict[str, Any]:
+    bounded_detail = bounded_diagnostic_value(detail)
+    return {
+        "schemaVersion": SCHEMA_VERSION,
+        "status": "failed",
+        "navigationSource": candidate_config_path(docs_dir, navigation_path.name),
+        "routes": [],
+        "openapi": [],
+        "aliases": [],
+        "externalNavigation": [],
+        "linkSummary": {
+            "currentStale": 0,
+            "baselineStale": 0,
+            "grandfathered": 0,
+            "introduced": 0,
+        },
+        "diagnosticSummary": {
+            "total": 1,
+            "counts": {failure_class: 1},
+            "truncated": False,
+        },
+        "diagnostics": [
+            {
+                "sourceNavigationEntry": "navigation",
+                "route": None,
+                "failureClass": failure_class,
+                "candidateSourcePath": candidate_config_path(docs_dir, navigation_path.name),
+                "detail": bounded_detail,
+            }
+        ],
+    }
+
+
+def write_inventory(output_path: Path, result: dict[str, Any]) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+
+
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--docs-dir", type=Path, default=Path("docs-vnext"))
     parser.add_argument("--navigation", type=Path)
     parser.add_argument("--output", type=Path, default=Path("tests/eval_results/docs-vnext-route-inventory.json"))
-    parser.add_argument("--changed-files-file", type=Path)
-    parser.add_argument("--base-navigation", type=Path)
+    parser.add_argument("--base-docs-dir", type=Path)
     parser.add_argument("--max-diagnostics", type=int, default=DEFAULT_MAX_DIAGNOSTICS)
+    parser.add_argument(
+        "--initialize-output",
+        action="store_true",
+        help="Write an uploadable workflow-incomplete inventory without validating",
+    )
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
     navigation_path = args.navigation or args.docs_dir / "docs.json"
+    if args.initialize_output:
+        result = build_failure_inventory(
+            args.docs_dir,
+            navigation_path,
+            failure_class="workflow_incomplete",
+            detail="Workflow did not reach successful navigation validation.",
+        )
+        try:
+            write_inventory(args.output, result)
+        except OSError as exc:
+            print(f"Failure inventory could not be written: {exc}", file=sys.stderr)
+            return 2
+        return 0
+
     try:
-        changed_files = None
-        if args.changed_files_file:
-            changed_files = {
-                line.strip().replace("\\", "/")
-                for line in args.changed_files_file.read_text(encoding="utf-8").splitlines()
-                if line.strip()
-            }
         result = validate_navigation(
             args.docs_dir,
             navigation_path,
-            changed_files=changed_files,
-            base_navigation_path=args.base_navigation,
+            base_docs_dir=args.base_docs_dir,
             max_diagnostics=args.max_diagnostics,
         )
-    except (OSError, json.JSONDecodeError) as exc:
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        result = build_failure_inventory(
+            args.docs_dir,
+            navigation_path,
+            failure_class="validator_error",
+            detail=str(exc),
+        )
+        try:
+            write_inventory(args.output, result)
+        except OSError as write_exc:
+            print(f"Failure inventory could not be written: {write_exc}", file=sys.stderr)
+            return 2
         print(f"Navigation validation could not run: {exc}", file=sys.stderr)
         return 2
 
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+    try:
+        write_inventory(args.output, result)
+    except OSError as exc:
+        print(f"Navigation inventory could not be written: {exc}", file=sys.stderr)
+        return 2
     summary = result["diagnosticSummary"]
     print(
         f"docs-vnext navigation: {result['status']} "
