@@ -836,8 +836,8 @@ def _session_error_events_at_serialized_size(target_size: int) -> list[dict]:
     return source_events
 
 
-def test_runner_accepts_exact_event_envelope_limit():
-    source_events = _session_error_events_at_serialized_size(50_000)
+def test_runner_accepts_event_envelope_at_49_998():
+    source_events = _session_error_events_at_serialized_size(49_998)
     stdout = "\n".join([
         *(json.dumps(event, separators=(",", ":")) for event in source_events),
         json.dumps({"type": "result", "exitCode": 0}),
@@ -847,11 +847,11 @@ def test_runner_accepts_exact_event_envelope_limit():
 
     assert parsed["diagnostic_events_truncated"] is False
     assert len(parsed["diagnostic_events"]) == 5
-    assert serialized_diagnostic_events_size(parsed["diagnostic_events"]) == 50_000
+    assert serialized_diagnostic_events_size(parsed["diagnostic_events"]) == 49_998
 
 
-def test_runner_truncates_event_envelope_one_byte_over_limit():
-    source_events = _session_error_events_at_serialized_size(50_001)
+def test_runner_truncates_event_envelope_at_50_002():
+    source_events = _session_error_events_at_serialized_size(50_002)
     stdout = "\n".join([
         *(json.dumps(event, separators=(",", ":")) for event in source_events),
         json.dumps({"type": "result", "exitCode": 0}),
@@ -881,6 +881,23 @@ def test_scorer_accepts_exact_event_envelope_limit_and_rejects_one_byte_over():
     }]
     assert serialized_diagnostic_events_size(over_limit["diagnostics"]["events"]) == 50_001
     assert "diagnostics.events exceeds its total serialized size limit" in validate_row_schema(over_limit)
+
+
+def test_scorer_accepts_49_998_event_envelope_and_rejects_50_002():
+    event = {"event_type": "boundary", "data": {"message": ""}}
+    overhead = serialized_diagnostic_events_size([event])
+
+    below_limit = _raw_row()
+    below_event = {"event_type": "boundary", "data": {"message": "x" * (49_998 - overhead)}}
+    below_limit["diagnostics"]["events"] = [below_event]
+    assert serialized_diagnostic_events_size(below_limit["diagnostics"]["events"]) == 49_998
+    assert validate_row_schema(below_limit) == []
+
+    above_limit = _raw_row()
+    above_event = {"event_type": "boundary", "data": {"message": "x" * (50_002 - overhead)}}
+    above_limit["diagnostics"]["events"] = [above_event]
+    assert serialized_diagnostic_events_size(above_limit["diagnostics"]["events"]) == 50_002
+    assert "diagnostics.events exceeds its total serialized size limit" in validate_row_schema(above_limit)
 
 
 def test_nested_stdout_truncation_flag_is_schema_valid():
