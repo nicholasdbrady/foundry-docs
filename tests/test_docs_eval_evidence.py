@@ -572,6 +572,32 @@ def test_escaped_authorization_does_not_leak_in_stdout_or_stderr(monkeypatch):
     assert "[REDACTED]" in result["diagnostics"]["stderr_excerpt"]
 
 
+def test_exact_custom_scheme_escaped_authorization_does_not_leak_in_excerpts(monkeypatch):
+    leaked = r'upstream={\"Authorization\":\"CustomScheme opaque-value\"}'
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda cmd, **kwargs: subprocess.CompletedProcess(
+            cmd,
+            0,
+            stdout=f"{leaked}\nnot-json",
+            stderr=leaked,
+        ),
+    )
+
+    result = run_single_eval(
+        SCENARIO,
+        "foundry-docs",
+        MCP_SERVERS["foundry-docs"],
+        "model-1",
+    )
+
+    assert "opaque-value" not in result["diagnostics"]["stdout_excerpt"]
+    assert "opaque-value" not in result["diagnostics"]["stderr_excerpt"]
+    assert "[REDACTED]" in result["diagnostics"]["stdout_excerpt"]
+    assert "[REDACTED]" in result["diagnostics"]["stderr_excerpt"]
+
+
 def test_truncated_escaped_authorization_value_fails_closed(monkeypatch):
     leaked = (
         r'upstream={\"Authorization\":\"Digest nonce=LEAKME, username=\\\"alice\\\", '
@@ -898,6 +924,55 @@ def test_scorer_accepts_49_998_event_envelope_and_rejects_50_002():
     above_limit["diagnostics"]["events"] = [above_event]
     assert serialized_diagnostic_events_size(above_limit["diagnostics"]["events"]) == 50_002
     assert "diagnostics.events exceeds its total serialized size limit" in validate_row_schema(above_limit)
+
+
+def _session_error_event_with_individual_size(target_size: int) -> tuple[dict, dict]:
+    source = {"type": "session.error", "data": {"errorType": "q", "message": "m"}}
+    source["data"].update({f"field{field_index}": "" for field_index in range(18)})
+    diagnostic = {"event_type": "session.error", "data": dict(source["data"])}
+
+    remaining = target_size - len(json.dumps(diagnostic, ensure_ascii=True, separators=(",", ":")))
+    assert remaining >= 0
+    for field_index in range(18):
+        if remaining == 0:
+            break
+        addition = min(2_000, remaining)
+        value = "x" * addition
+        source["data"][f"field{field_index}"] = value
+        diagnostic["data"][f"field{field_index}"] = value
+        remaining -= addition
+
+    assert remaining == 0
+    assert len(json.dumps(diagnostic, ensure_ascii=True, separators=(",", ":"))) == target_size
+    return source, diagnostic
+
+
+def test_list_envelope_overhead_truncates_runner_and_is_rejected_by_scorer():
+    source_events = []
+    diagnostic_events = []
+    for _ in range(3):
+        source, diagnostic = _session_error_event_with_individual_size(16_666)
+        source_events.append(source)
+        diagnostic_events.append(diagnostic)
+
+    per_event_sum = sum(
+        len(json.dumps(event, ensure_ascii=True, separators=(",", ":")))
+        for event in diagnostic_events
+    )
+    assert per_event_sum == 49_998
+    assert serialized_diagnostic_events_size(diagnostic_events) == 50_002
+
+    parsed = parse_event_stream("\n".join([
+        *(json.dumps(event, separators=(",", ":")) for event in source_events),
+        json.dumps({"type": "result", "exitCode": 0}),
+    ]))
+    assert parsed["diagnostic_events_truncated"] is True
+    assert len(parsed["diagnostic_events"]) == 2
+    assert serialized_diagnostic_events_size(parsed["diagnostic_events"]) < 50_000
+
+    row = _raw_row()
+    row["diagnostics"]["events"] = diagnostic_events
+    assert "diagnostics.events exceeds its total serialized size limit" in validate_row_schema(row)
 
 
 def test_nested_stdout_truncation_flag_is_schema_valid():
