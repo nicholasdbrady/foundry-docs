@@ -7,6 +7,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
@@ -230,7 +231,12 @@ class FakeBackend:
 
     def download_manifest(self, run_id: int) -> Path:
         self.downloaded_run_ids.append(run_id)
-        return self.downloaded_manifests[run_id]
+        try:
+            return self.downloaded_manifests[run_id]
+        except KeyError as exc:
+            raise BatchSyncError(
+                f"Manifest artifact for workflow run {run_id} is unavailable"
+            ) from exc
 
     def publish_batch(self, manifest: Manifest, batch: Batch, branch: str) -> None:
         assert branch == branch_name(manifest, batch)
@@ -901,6 +907,65 @@ def test_backend_bounds_hanging_discovery_command(tmp_path):
         )
 
 
+def test_timeout_terminates_child_holding_discovery_pipes(tmp_path):
+    backend = GitHubGitBackend(
+        repository_root=tmp_path,
+        repository="example/repository",
+        base_branch="main",
+        runner_temp=tmp_path / "runner",
+    )
+    child_code = (
+        "import time\n"
+        "while True:\n"
+        " print('holding-pipe', flush=True)\n"
+        " time.sleep(0.1)\n"
+    )
+    parent_code = (
+        "import subprocess, sys, time; "
+        f"subprocess.Popen([sys.executable, '-c', {child_code!r}]); "
+        "time.sleep(30)"
+    )
+
+    started = time.monotonic()
+    with pytest.raises(BatchSyncError, match="exceeded the 1-second discovery timeout"):
+        backend._run_bounded_stdout(
+            [sys.executable, "-c", parent_code],
+            max_bytes=4096,
+            timeout_seconds=1,
+        )
+
+    assert time.monotonic() - started < 6
+
+
+def test_exited_parent_still_terminates_grandchild_holding_discovery_pipes(tmp_path):
+    backend = GitHubGitBackend(
+        repository_root=tmp_path,
+        repository="example/repository",
+        base_branch="main",
+        runner_temp=tmp_path / "runner",
+    )
+    child_code = (
+        "import time\n"
+        "while True:\n"
+        " print('holding-pipe', flush=True)\n"
+        " time.sleep(0.1)\n"
+    )
+    parent_code = (
+        "import subprocess, sys; "
+        f"subprocess.Popen([sys.executable, '-c', {child_code!r}])"
+    )
+
+    started = time.monotonic()
+    output = backend._run_bounded_stdout(
+        [sys.executable, "-c", parent_code],
+        max_bytes=4096,
+        timeout_seconds=10,
+    )
+
+    assert "holding-pipe" in output
+    assert time.monotonic() - started < 6
+
+
 def test_campaign_discovery_routes_ls_remote_fetch_and_show_through_bounded_runner(
     tmp_path,
 ):
@@ -937,6 +1002,10 @@ def test_campaign_discovery_routes_ls_remote_fetch_and_show_through_bounded_runn
                 f"Manifest-Run-ID: {manifest.run_id}\n"
                 f"Batch-ID: {batch.id}\n"
             )
+
+        def download_manifest(self, run_id):
+            assert run_id == manifest.run_id
+            return manifest.path
 
     backend = RecordingBackend()
 
@@ -982,6 +1051,10 @@ def test_deleted_pr_head_with_missing_marker_recovers_via_bounded_pull_ref(tmp_p
                 f"Manifest-Run-ID: {manifest.run_id}\n"
                 f"Batch-ID: {batch.id}\n"
             )
+
+        def download_manifest(self, run_id):
+            assert run_id == manifest.run_id
+            return manifest.path
 
     backend = RecordingBackend()
 
@@ -1087,6 +1160,7 @@ def test_missing_or_malformed_pr_marker_recovers_from_verified_head(tmp_path, bo
     )
     backend = FakeBackend(
         [pull_request],
+        downloaded_manifests={manifest.run_id: manifest.path},
         remote_branches={pull_request.head_ref},
         pull_request_identities={pull_request.number: identity},
     )
@@ -1112,7 +1186,7 @@ def test_missing_or_malformed_pr_marker_recovers_from_verified_head(tmp_path, bo
     )
 
     assert succeeded is True
-    assert backend.downloaded_run_ids == []
+    assert backend.downloaded_run_ids == [manifest.run_id]
 
 
 def test_forged_marker_cannot_pin_manifest_before_head_authentication(tmp_path):
@@ -1171,6 +1245,67 @@ def test_pr_and_orphan_cannot_claim_the_same_derived_batch(tmp_path):
             [pull_request],
             [*pull_request_identity, orphan],
         )
+
+
+def test_same_digest_claim_cannot_adopt_nonexistent_run_id(tmp_path):
+    manifest = _write_manifest(tmp_path, [_operation(1, 1)], run_id=300)
+    batch = plan_batches(manifest, max_files=1, max_payload_bytes=10)[0]
+    claimed = OrphanBranch(
+        head_ref=branch_name(manifest, batch),
+        manifest_digest=manifest.digest,
+        manifest_run_id=999,
+        batch_id=batch.id,
+    )
+    backend = FakeBackend()
+
+    with pytest.raises(BatchSyncError, match="workflow run 999 is unavailable"):
+        select_active_manifest(manifest, backend, [claimed])
+    assert backend.downloaded_run_ids == [999]
+
+
+def test_same_digest_claim_cannot_adopt_unrelated_run_artifact(tmp_path):
+    manifest = _write_manifest(
+        tmp_path,
+        [_operation(1, 1)],
+        name="same-digest-current.json",
+        run_id=300,
+    )
+    batch = plan_batches(manifest, max_files=1, max_payload_bytes=10)[0]
+    unrelated = _write_manifest(
+        tmp_path,
+        [_operation(2, 1)],
+        name="unrelated-run.json",
+        run_id=998,
+    )
+    claimed = OrphanBranch(
+        head_ref=branch_name(manifest, batch),
+        manifest_digest=manifest.digest,
+        manifest_run_id=998,
+        batch_id=batch.id,
+    )
+    backend = FakeBackend(downloaded_manifests={998: unrelated.path})
+
+    with pytest.raises(BatchSyncError, match="has digest.*expected"):
+        select_active_manifest(manifest, backend, [claimed])
+    assert backend.downloaded_run_ids == [998]
+
+
+def test_same_digest_claim_adopts_only_verified_run_artifact(tmp_path):
+    manifest = _write_manifest(tmp_path, [_operation(1, 1)], run_id=300)
+    batch = plan_batches(manifest, max_files=1, max_payload_bytes=10)[0]
+    claimed = OrphanBranch(
+        head_ref=branch_name(manifest, batch),
+        manifest_digest=manifest.digest,
+        manifest_run_id=997,
+        batch_id=batch.id,
+    )
+    backend = FakeBackend(downloaded_manifests={997: manifest.path})
+
+    selected = select_active_manifest(manifest, backend, [claimed])
+
+    assert selected.digest == manifest.digest
+    assert selected.run_id == 997
+    assert backend.downloaded_run_ids == [997]
 
 
 def test_active_campaign_resumes_original_retained_manifest(tmp_path):

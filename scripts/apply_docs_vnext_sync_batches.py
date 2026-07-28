@@ -7,6 +7,7 @@ import hashlib
 import json
 import os
 import re
+import signal
 import shutil
 import subprocess
 import sys
@@ -26,6 +27,7 @@ MAX_AUTOMATION_BRANCHES = 100
 MAX_COMMIT_MESSAGE_BYTES = 4096
 MAX_REMOTE_DISCOVERY_BYTES = 32 * 1024
 DISCOVERY_COMMAND_TIMEOUT_SECONDS = 30
+DISCOVERY_DRAIN_JOIN_SECONDS = 2
 BRANCH_PREFIX = "automation/docs-vnext-sync"
 PR_MARKER_NAME = "docs-vnext-sync-state"
 PR_MARKER_PATTERN = re.compile(
@@ -650,9 +652,6 @@ def select_active_manifest(
 
     digest = next(iter(digests))
     run_id = next(iter(run_ids))
-    if digest == current_manifest.digest:
-        return replace(current_manifest, run_id=run_id)
-
     resumed = load_manifest(backend.download_manifest(run_id), run_id)
     if resumed.digest != digest:
         raise BatchSyncError(
@@ -1081,23 +1080,50 @@ class GitHubGitBackend:
             cwd=cwd or self.repository_root,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
+            start_new_session=os.name == "posix",
+            creationflags=(
+                getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+                if os.name == "nt"
+                else 0
+            ),
         )
         assert process.stdout is not None
         assert process.stderr is not None
         stdout = bytearray()
         stderr = bytearray()
         overflow_streams: set[str] = set()
+        termination_lock = threading.Lock()
+        terminated = False
 
-        def drain(stream: Any, destination: bytearray, name: str) -> None:
-            while block := stream.read(1024):
-                destination.extend(block)
-                if len(destination) > max_bytes:
-                    overflow_streams.add(name)
+        def terminate_process_group() -> None:
+            nonlocal terminated
+            with termination_lock:
+                if terminated:
+                    return
+                terminated = True
+                try:
+                    if os.name == "posix":
+                        os.killpg(process.pid, signal.SIGKILL)
+                    elif os.name == "nt":
+                        os.kill(process.pid, signal.CTRL_BREAK_EVENT)
+                    else:
+                        process.kill()
+                except (OSError, ProcessLookupError):
                     try:
                         process.kill()
                     except OSError:
                         pass
-                    return
+
+        def drain(stream: Any, destination: bytearray, name: str) -> None:
+            try:
+                while block := stream.read(1024):
+                    destination.extend(block)
+                    if len(destination) > max_bytes:
+                        overflow_streams.add(name)
+                        terminate_process_group()
+                        return
+            except (OSError, ValueError):
+                return
 
         stdout_thread = threading.Thread(
             target=drain,
@@ -1114,16 +1140,33 @@ class GitHubGitBackend:
         try:
             process.wait(timeout=timeout_seconds)
         except subprocess.TimeoutExpired as exc:
-            process.kill()
-            process.wait()
-            stdout_thread.join()
-            stderr_thread.join()
+            terminate_process_group()
+            try:
+                process.wait(timeout=DISCOVERY_DRAIN_JOIN_SECONDS)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait(timeout=DISCOVERY_DRAIN_JOIN_SECONDS)
+            process.stdout.close()
+            process.stderr.close()
+            stdout_thread.join(timeout=DISCOVERY_DRAIN_JOIN_SECONDS)
+            stderr_thread.join(timeout=DISCOVERY_DRAIN_JOIN_SECONDS)
             raise BatchSyncError(
                 f"{args[0]} {args[1] if len(args) > 1 else ''} exceeded the "
                 f"{timeout_seconds}-second discovery timeout"
             ) from exc
-        stdout_thread.join()
-        stderr_thread.join()
+        stdout_thread.join(timeout=DISCOVERY_DRAIN_JOIN_SECONDS)
+        stderr_thread.join(timeout=DISCOVERY_DRAIN_JOIN_SECONDS)
+        if stdout_thread.is_alive() or stderr_thread.is_alive():
+            terminate_process_group()
+            process.stdout.close()
+            process.stderr.close()
+            stdout_thread.join(timeout=DISCOVERY_DRAIN_JOIN_SECONDS)
+            stderr_thread.join(timeout=DISCOVERY_DRAIN_JOIN_SECONDS)
+            if stdout_thread.is_alive() or stderr_thread.is_alive():
+                raise BatchSyncError(
+                    f"{args[0]} discovery stream drains did not stop within "
+                    f"{DISCOVERY_DRAIN_JOIN_SECONDS} seconds"
+                )
         if overflow_streams:
             raise BatchSyncError(
                 f"{args[0]} {args[1] if len(args) > 1 else ''} "
