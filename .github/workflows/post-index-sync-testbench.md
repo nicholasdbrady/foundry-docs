@@ -7,15 +7,16 @@ on:
     types: [completed]
     branches: [main]
   workflow_dispatch:
-  needs: [post_index_regression, post_index_conclusion]
+  needs: [post_index_regression]
 
 permissions:
+  actions: read
   contents: read
 
 engine: copilot
 strict: true
 tracker-id: post-index-testbench
-if: ${{ false }}
+if: ${{ always() && needs.post_index_regression.outputs.invoke_agent == 'true' }}
 
 jobs:
   post_index_regression:
@@ -156,51 +157,153 @@ jobs:
         with:
           name: post-index-regression-${{ github.run_id }}
           path: /tmp/post-index-regression
-      - name: Publish deterministic regression incident
-        if: needs.post_index_regression.outputs.status == 'failed'
+      - name: Resolve retained artifact and incident candidates
+        id: report_context
+        env:
+          REPOSITORY: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          SERVER_URL: ${{ github.server_url }}
+          RESULT_STATUS: ${{ needs.post_index_regression.outputs.status }}
         run: |
           set -euo pipefail
-          python - <<'PY'
-          import json
-          from pathlib import Path
-
-          decision = json.loads(
-              Path("/tmp/post-index-regression/decision-output.json").read_text(encoding="utf-8")
+          artifact_name="post-index-regression-${RUN_ID}"
+          artifact_id=$(
+            gh api "repos/${REPOSITORY}/actions/runs/${RUN_ID}/artifacts" \
+              --jq ".artifacts[] | select(.name == \"${artifact_name}\") | .id" |
+              head -n 1
           )
-          issue = decision["items"][0]
-          if issue["type"] != "create_issue":
-              raise SystemExit("Expected deterministic create_issue output")
-          Path("/tmp/post-index-regression/issue-title.txt").write_text(issue["title"], encoding="utf-8")
-          Path("/tmp/post-index-regression/issue-body.md").write_text(issue["body"], encoding="utf-8")
-          PY
-          issue_number=$(
+          test -n "$artifact_id" || {
+            echo "Could not resolve retained artifact ${artifact_name}" >&2
+            exit 1
+          }
+          artifact_url="${SERVER_URL}/${REPOSITORY}/actions/runs/${RUN_ID}/artifacts/${artifact_id}"
+          echo "artifact_name=${artifact_name}" >> "$GITHUB_OUTPUT"
+          echo "artifact_url=${artifact_url}" >> "$GITHUB_OUTPUT"
+
+          printf '[]\n' > /tmp/post-index-regression/incident-candidates.json
+          if [[ "$RESULT_STATUS" == "failed" ]]; then
             gh issue list \
               --state open \
-              --search 'in:title "[search-quality] Search Quality Regression Detected" label:search label:automation' \
-              --json number \
-              --jq '.[0].number // empty'
+              --label search \
+              --label automation \
+              --limit 100 \
+              --json number,title,body \
+              > /tmp/post-index-regression/incident-candidates.json
+          fi
+          python scripts/post_index_regression.py select-incident \
+            --input /tmp/post-index-regression/incident-candidates.json \
+            --output /tmp/post-index-regression/incident-selection.json
+          canonical_number=$(
+            jq -r '.canonical_number // empty' /tmp/post-index-regression/incident-selection.json
           )
-          if [[ -n "$issue_number" ]]; then
-            gh issue edit "$issue_number" \
-              --title "[search-quality] $(cat /tmp/post-index-regression/issue-title.txt)" \
+          echo "canonical_number=${canonical_number}" >> "$GITHUB_OUTPUT"
+          : > /tmp/post-index-regression/existing-incident.md
+          if [[ -n "$canonical_number" ]]; then
+            gh issue view "$canonical_number" --json body --jq '.body' \
+              > /tmp/post-index-regression/existing-incident.md
+          fi
+      - name: Render validated result report
+        env:
+          REPOSITORY: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          SERVER_URL: ${{ github.server_url }}
+          ARTIFACT_NAME: ${{ steps.report_context.outputs.artifact_name }}
+          ARTIFACT_URL: ${{ steps.report_context.outputs.artifact_url }}
+        run: |
+          set -euo pipefail
+          python scripts/post_index_regression.py render-report \
+            --input /tmp/post-index-regression/post-index-result.json \
+            --repository "$REPOSITORY" \
+            --run-id "$RUN_ID" \
+            --artifact-name "$ARTIFACT_NAME" \
+            --artifact-url "$ARTIFACT_URL" \
+            --server-url "$SERVER_URL" \
+            --existing-body /tmp/post-index-regression/existing-incident.md \
+            --output /tmp/post-index-regression/report-output.json \
+            --summary-output /tmp/post-index-regression/report-summary.md \
+            --incident-title-output /tmp/post-index-regression/issue-title.txt \
+            --incident-body-output /tmp/post-index-regression/issue-body.md
+          cat /tmp/post-index-regression/report-summary.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Upsert one durable regression incident
+        if: needs.post_index_regression.outputs.status == 'failed'
+        env:
+          CANONICAL_NUMBER: ${{ steps.report_context.outputs.canonical_number }}
+        run: |
+          set -euo pipefail
+          if [[ -n "$CANONICAL_NUMBER" ]]; then
+            gh issue edit "$CANONICAL_NUMBER" \
+              --title "$(cat /tmp/post-index-regression/issue-title.txt)" \
               --body-file /tmp/post-index-regression/issue-body.md \
               --add-label search \
               --add-label automation
           else
             gh issue create \
-              --title "[search-quality] $(cat /tmp/post-index-regression/issue-title.txt)" \
+              --title "$(cat /tmp/post-index-regression/issue-title.txt)" \
               --body-file /tmp/post-index-regression/issue-body.md \
               --label search \
               --label automation
           fi
-      - name: Record deterministic no-op or blocked outcome
-        if: needs.post_index_regression.outputs.status != 'failed'
-        run: cat /tmp/post-index-regression/decision-output.json >> "$GITHUB_STEP_SUMMARY"
+          jq -r '.duplicate_numbers[]' /tmp/post-index-regression/incident-selection.json |
+            while read -r duplicate_number; do
+              gh issue close "$duplicate_number" --reason "not planned"
+            done
       - name: Enforce the machine-owned conclusion
         run: >-
           python scripts/post_index_regression.py validate
           --input /tmp/post-index-regression/post-index-result.json
           --phase final
+
+network:
+  allowed:
+    - defaults
+
+tools:
+  bash:
+    - "cat /tmp/gh-aw/agent/post-index-result.json"
+
+steps:
+  - name: Download bounded validated regression artifact
+    uses: actions/download-artifact@v8
+    with:
+      name: post-index-regression-${{ github.run_id }}
+      path: /tmp/post-index-agent-input
+  - name: Validate and isolate the agent input
+    run: |
+      set -euo pipefail
+      python scripts/post_index_regression.py validate \
+        --input /tmp/post-index-agent-input/post-index-result.json \
+        --phase schema
+      mkdir -p /tmp/gh-aw/agent
+      cp /tmp/post-index-agent-input/post-index-result.json /tmp/gh-aw/agent/post-index-result.json
+      find /tmp/post-index-agent-input -type f ! -name post-index-result.json -delete
+
+safe-outputs:
+  report-failure-as-issue: false
+  missing-tool: false
+  missing-data: false
+  report-incomplete: false
+  noop: false
+  jobs:
+    record-validated-summary:
+      description: Record a bounded human-readable summary of the validated post-index result
+      runs-on: ubuntu-latest
+      output: Validated post-index summary recorded in the workflow run.
+      inputs:
+        summary:
+          description: Concise summary copied only from the validated result
+          required: true
+          type: string
+      permissions:
+        contents: read
+      steps:
+        - name: Append bounded agent summary
+          run: |
+            {
+              echo "### Bounded Agent Summary"
+              echo
+              jq -r '.items[] | select(.type == "record_validated_summary") | .summary' \
+                "$GH_AW_AGENT_OUTPUT"
+            } >> "$GITHUB_STEP_SUMMARY"
 
 timeout-minutes: 10
 concurrency:
@@ -210,9 +313,11 @@ concurrency:
 
 # Post-Index Search Quality Check
 
-This workflow is fully deterministic. Custom jobs execute and validate the regression suite, render the issue/no-op contract,
-publish any regression incident, and enforce the final conclusion. The static activation condition is false, so Copilot
-activation, model credentials, model setup, and safe-output infrastructure are never part of the execution path.
+Deterministic custom jobs execute and validate the regression suite, upsert one durable incident for a failed quality result,
+record a concrete no-action summary for every other validated result, and enforce the final conclusion. Copilot is activated
+only after a failed quality result passes schema validation, so optional summarization cannot turn a passing result into a
+failed workflow. It receives one isolated copy of that bounded result and can publish only a workflow job summary; it cannot
+create or update incidents or alter the machine-owned conclusion.
 
 ## Context
 
@@ -232,41 +337,22 @@ The host steps have already validated schema version `1.0`, preserved all failed
 inclusive 85% threshold decision. If the file is missing or has a status other than `passed` or `failed`, call
 `report_incomplete` and stop.
 
-## Step 2: Report the Machine Decision
+## Step 2: Summarize the Machine Decision
 
-### If `status` is `passed`
+Call `record_validated_summary` exactly once with a concise human-readable `summary` containing:
 
-```json
-{"noop": {"message": "Search quality check passed. N/M tests passed (X%). Index update is clean."}}
-```
-
-Copy N, M, and X from the prepared result.
-
-### If `status` is `failed`
-
-Create an issue:
-
-```markdown
-### Search Quality Regression Detected
-
-**Trigger**: Post-index-sync check
-**Pass rate**: X% (machine threshold: 85%)
-
-### Failed Queries
-
-Copy every entry from `failed_queries`, including its expected paths, returned paths, and score.
-
-### Recommended Actions
-
-- Review the index sync for data issues
-- Check if new/modified documents have correct metadata
-- Consider running a full index rebuild
-```
+- status and decision
+- threshold and actual pass rate
+- passed and total test counts
+- failed-query count
+- diagnostics, if present
+- up to five failed query names when the status is `failed`
 
 ## Guidelines
 
+- Never create, edit, close, or comment on an issue
 - Never run Python, install dependencies, query Azure, or calculate a pass rate
 - Never change `status`, `decision`, `threshold`, totals, failed queries, scores, or diagnostics
 - A pass rate below 85% is a machine-owned failure; 85% and above is a machine-owned pass
-- Report every failed query so it can be investigated
+- The deterministic conclusion job publishes every failed query and owns incident deduplication
 - This is a quick sanity check, not a comprehensive evaluation

@@ -7,14 +7,22 @@ import json
 import os
 import sys
 
+import pytest
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 
 from post_index_regression import (  # noqa: E402
+    INCIDENT_KEY,
+    INCIDENT_MARKER,
+    INCIDENT_TITLE,
     build_blocked_result,
     build_error_result,
     build_execution_result,
+    build_incident_selection,
+    build_report_output,
     build_safe_output,
     phase_exit_code,
+    should_invoke_agent,
     validation_errors,
     write_decision_output,
 )
@@ -132,6 +140,13 @@ def test_safe_output_is_derived_only_from_machine_decision() -> None:
     assert "80.0% (machine threshold: 85.0%)" in failed["items"][0]["body"]
 
 
+def test_optional_agent_summary_runs_only_after_a_failed_quality_decision() -> None:
+    assert should_invoke_agent(_result(20, 16)) is True
+    assert should_invoke_agent(_result(20, 17)) is False
+    assert should_invoke_agent(build_blocked_result("cancelled")) is False
+    assert should_invoke_agent(build_error_result("setup", "failed")) is False
+
+
 def test_decision_output_preserves_deterministic_issue_rendering(tmp_path) -> None:
     output = tmp_path / "decision-output.json"
     write_decision_output(output, _result(20, 16))
@@ -189,3 +204,134 @@ def test_blocked_and_error_results_reject_execution_evidence() -> None:
         assert f"{status} results cannot contain scores" in errors
         assert f"{status} results cannot contain failed_queries" in errors
         assert phase_exit_code(result, "final") == 2
+
+
+def _report(result: dict, run_id: str, *, existing_body: str = "") -> dict:
+    return build_report_output(
+        result,
+        repository="owner/repo",
+        run_id=run_id,
+        artifact_name=f"post-index-regression-{run_id}",
+        artifact_url=f"https://github.com/owner/repo/actions/runs/{run_id}/artifacts/42",
+        existing_body=existing_body,
+    )
+
+
+def test_first_failure_builds_keyed_incident_with_complete_current_evidence() -> None:
+    result = _result(3, 2)
+    result["diagnostics"] = ["retrieval drift detected"]
+
+    report = _report(result, "100")
+
+    assert report["action"] == "upsert_incident"
+    assert report["dedup_key"] == INCIDENT_KEY
+    assert report["incident"]["title"] == INCIDENT_TITLE
+    body = report["incident"]["body"]
+    assert INCIDENT_MARKER in body
+    assert "**Threshold**: 85.0%" in body
+    assert "**Actual pass rate**: 66.7%" in body
+    assert "**Totals**: 2/3 passed" in body
+    assert "retrieval drift detected" in body
+    assert "query-2" in body
+    assert "actions/runs/100/artifacts/42" in body
+    assert "No earlier keyed failures have been recorded." in body
+
+
+def test_repeated_failure_updates_current_occurrence_and_preserves_history() -> None:
+    first = _report(_result(3, 2), "100")
+    repeated = _report(_result(4, 2), "101", existing_body=first["incident"]["body"])
+    body = repeated["incident"]["body"]
+
+    assert repeated["action"] == "upsert_incident"
+    assert "[§101](https://github.com/owner/repo/actions/runs/101)" in body
+    assert "| [§100](https://github.com/owner/repo/actions/runs/100) | 66.7% | 2/3 | 1 |" in body
+    assert "**Totals**: 2/4 passed" in body
+    assert "query-3" in body
+
+
+def test_rerendering_same_run_does_not_duplicate_history() -> None:
+    first = _report(_result(3, 2), "100")
+    rerendered = _report(_result(3, 2), "100", existing_body=first["incident"]["body"])
+
+    assert "No earlier keyed failures have been recorded." in rerendered["incident"]["body"]
+    assert "| [§100]" not in rerendered["incident"]["body"]
+
+
+def test_recovered_pass_emits_concrete_no_action_without_mutating_incident() -> None:
+    failure = _report(_result(3, 2), "100")
+
+    recovered = _report(_result(20, 17), "101", existing_body=failure["incident"]["body"])
+
+    assert recovered["action"] == "noop"
+    assert recovered["incident"] is None
+    assert "Machine status: **passed**; decision: **pass**." in recovered["summary"]
+    assert "No incident was created or updated for this result." in recovered["summary"]
+
+
+def test_blocked_and_error_reports_cannot_be_summarized_as_quality_passes() -> None:
+    blocked = _report(build_blocked_result("cancelled"), "100")
+    error = _report(build_error_result("setup", "dependency installation failed"), "101")
+
+    assert blocked["action"] == "noop"
+    assert "Machine status: **blocked**; decision: **skip**." in blocked["summary"]
+    assert "Parent index workflow conclusion" in blocked["summary"]
+    assert error["action"] == "noop"
+    assert "Machine status: **error**; decision: **fail**." in error["summary"]
+    assert "dependency installation failed" in error["summary"]
+
+
+def test_schema_invalid_result_cannot_render_report() -> None:
+    invalid = _result(3, 2)
+    del invalid["scores"]
+
+    with pytest.raises(ValueError, match="missing required fields: scores"):
+        _report(invalid, "100")
+
+
+def test_keyed_incident_wins_over_legacy_title_and_duplicates_are_reported() -> None:
+    issues = [
+        {"number": 10, "title": INCIDENT_TITLE, "body": "legacy body"},
+        {"number": 30, "title": INCIDENT_TITLE, "body": f"{INCIDENT_MARKER}\nnewer keyed"},
+        {"number": 20, "title": "Renamed incident", "body": f"{INCIDENT_MARKER}\noldest keyed"},
+        {"number": 40, "title": "Unrelated", "body": ""},
+    ]
+
+    assert build_incident_selection(issues) == {
+        "dedup_key": INCIDENT_KEY,
+        "canonical_number": 20,
+        "duplicate_numbers": [30, 10],
+    }
+
+
+def test_no_incident_candidates_returns_create_selection() -> None:
+    assert build_incident_selection([]) == {
+        "dedup_key": INCIDENT_KEY,
+        "canonical_number": None,
+        "duplicate_numbers": [],
+    }
+
+
+def test_legacy_incident_is_adopted_without_losing_deduplication() -> None:
+    report = _report(_result(3, 2), "100", existing_body="### Legacy deterministic report")
+
+    assert INCIDENT_MARKER in report["incident"]["body"]
+    assert "adopted an earlier unkeyed report" in report["incident"]["body"]
+
+
+def test_corrupted_keyed_incident_state_recovers_as_adopted_history() -> None:
+    existing_body = f"{INCIDENT_MARKER}\n<!-- post-index-incident-state: invalid -->"
+
+    report = _report(_result(3, 2), "100", existing_body=existing_body)
+
+    assert report["action"] == "upsert_incident"
+    assert "adopted an earlier unkeyed report" in report["incident"]["body"]
+
+
+def test_incident_history_is_bounded_to_recent_occurrences() -> None:
+    report = _report(_result(3, 2), "100")
+    for run_id in range(101, 131):
+        report = _report(_result(3, 2), str(run_id), existing_body=report["incident"]["body"])
+
+    body = report["incident"]["body"]
+    assert "| [§105]" in body
+    assert "| [§104]" not in body
