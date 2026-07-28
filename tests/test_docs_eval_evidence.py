@@ -321,6 +321,39 @@ def test_timeout_is_preserved_as_invalid_row_diagnostics(monkeypatch):
     assert publication["allowed"] is False
 
 
+def test_process_launch_error_sanitizes_every_persisted_field(monkeypatch):
+    leaked = (
+        "failed to launch with GITHUB_TOKEN=github_pat_launchsecret "
+        "Authorization: Basic dXNlcjpwYXNz\n"
+        "failed at C:/Users/Jane Doe/private/copilot.exe"
+    )
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda cmd, **kwargs: (_ for _ in ()).throw(OSError(leaked)),
+    )
+
+    result = run_single_eval(
+        SCENARIO,
+        "foundry-docs",
+        MCP_SERVERS["foundry-docs"],
+        "model-1",
+    )
+
+    persisted = json.dumps({
+        "stderr": result["stderr"],
+        "failure_reason": result["failure_reason"],
+        "diagnostics": result["diagnostics"],
+    })
+    for secret in ("github_pat_launchsecret", "dXNlcjpwYXNz", "Jane Doe", "copilot.exe"):
+        assert secret not in persisted
+    assert "GITHUB_TOKEN=[REDACTED]" in result["stderr"]
+    assert "Authorization: [REDACTED]" in result["stderr"]
+    assert "<PATH>" in result["stderr"]
+    assert result["failure_reason"] == f"process_launch_error: {result['stderr']}"
+    assert result["diagnostics"]["stderr_excerpt"] == result["stderr"]
+
+
 def test_mcp_initialization_failure_preserves_sanitized_lifecycle_diagnostics(monkeypatch):
     stdout = "\n".join([
         json.dumps({
@@ -874,6 +907,34 @@ def test_runner_accepts_event_envelope_at_49_998():
     assert parsed["diagnostic_events_truncated"] is False
     assert len(parsed["diagnostic_events"]) == 5
     assert serialized_diagnostic_events_size(parsed["diagnostic_events"]) == 49_998
+
+
+def test_runner_accepts_event_envelope_at_50_000():
+    source_events = _session_error_events_at_serialized_size(50_000)
+    stdout = "\n".join([
+        *(json.dumps(event, separators=(",", ":")) for event in source_events),
+        json.dumps({"type": "result", "exitCode": 0}),
+    ])
+
+    parsed = parse_event_stream(stdout)
+
+    assert parsed["diagnostic_events_truncated"] is False
+    assert len(parsed["diagnostic_events"]) == 5
+    assert serialized_diagnostic_events_size(parsed["diagnostic_events"]) == 50_000
+
+
+def test_runner_truncates_event_envelope_at_50_001():
+    source_events = _session_error_events_at_serialized_size(50_001)
+    stdout = "\n".join([
+        *(json.dumps(event, separators=(",", ":")) for event in source_events),
+        json.dumps({"type": "result", "exitCode": 0}),
+    ])
+
+    parsed = parse_event_stream(stdout)
+
+    assert parsed["diagnostic_events_truncated"] is True
+    assert len(parsed["diagnostic_events"]) == 4
+    assert serialized_diagnostic_events_size(parsed["diagnostic_events"]) < 50_000
 
 
 def test_runner_truncates_event_envelope_at_50_002():

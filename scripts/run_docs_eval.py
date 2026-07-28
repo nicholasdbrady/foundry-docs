@@ -893,14 +893,15 @@ def run_single_eval(
         })
     except OSError as exc:
         elapsed = time.monotonic() - start_time
+        sanitized_error = _sanitize_text(str(exc), max_chars=MAX_STDERR_EXCERPT)[0]
         result.update({
             "response": "",
-            "stderr": str(exc),
+            "stderr": sanitized_error,
             "exit_code": -1,
             "response_time_seconds": round(elapsed, 2),
             "status": "error",
             "passed": False,
-            "failure_reason": f"process_launch_error: {exc}",
+            "failure_reason": f"process_launch_error: {sanitized_error}",
             "turns": 0,
             "tool_calls": 0,
             "tool_errors": 0,
@@ -909,7 +910,7 @@ def run_single_eval(
             "api_duration_ms": None,
             "session_duration_ms": None,
             "event_parse_error": None,
-            "diagnostics": _build_diagnostics(None, None, str(exc), preserve_stdout=False),
+            "diagnostics": _build_diagnostics(None, None, sanitized_error, preserve_stdout=False),
         })
 
     return result
