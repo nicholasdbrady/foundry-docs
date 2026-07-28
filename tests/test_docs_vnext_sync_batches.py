@@ -823,6 +823,15 @@ def test_remote_branch_discovery_rejects_excessive_branch_count():
         parse_remote_branch_refs(output)
 
 
+def test_remote_branch_discovery_rejects_duplicate_refs():
+    line = (
+        f"{'a' * 40}\trefs/heads/automation/docs-vnext-sync/campaign/batch-001"
+    )
+
+    with pytest.raises(BatchSyncError, match="duplicate references"):
+        parse_remote_branch_refs(f"{line}\n{line}\n")
+
+
 def test_forged_pr_and_orphan_identities_cannot_bind_to_campaign(tmp_path):
     manifest = _write_manifest(tmp_path, [_operation(1, 1)])
     batch = plan_batches(manifest, max_files=1, max_payload_bytes=10)[0]
@@ -841,6 +850,29 @@ def test_forged_pr_and_orphan_identities_cannot_bind_to_campaign(tmp_path):
     )
     with pytest.raises(BatchSyncError, match="does not match an exact planned batch"):
         validate_campaign_identities(manifest, [batch], backend, [], [forged_orphan])
+
+
+def test_pr_and_orphan_cannot_claim_the_same_derived_batch(tmp_path):
+    manifest = _write_manifest(tmp_path, [_operation(1, 1)])
+    batch = plan_batches(manifest, max_files=1, max_payload_bytes=10)[0]
+    branch = branch_name(manifest, batch)
+    pull_request = _pull_request(manifest, batch)
+    orphan = OrphanBranch(
+        head_ref=branch,
+        manifest_digest=manifest.digest,
+        manifest_run_id=manifest.run_id,
+        batch_id=batch.id,
+    )
+    backend = FakeBackend([pull_request], remote_branches={branch})
+
+    with pytest.raises(BatchSyncError, match="claimed by both"):
+        validate_campaign_identities(
+            manifest,
+            [batch],
+            backend,
+            [pull_request],
+            [orphan],
+        )
 
 
 def test_active_campaign_resumes_original_retained_manifest(tmp_path):
