@@ -1,12 +1,7 @@
 name: docs-vnext source navigation gate
 
 on:
-  pull_request:
-    paths:
-      - "docs-vnext/**"
-      - "scripts/validate_docs_vnext_navigation.py"
-      - "tests/test_validate_docs_vnext_navigation.py"
-      - ".github/workflows/docs-vnext-source-navigation.yml"
+  pull_request: {}
 
 permissions:
   contents: read
@@ -25,7 +20,29 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Detect relevant changes
+        id: changes
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          relevant=false
+          while IFS= read -r -d '' path; do
+            case "$path" in
+              docs-vnext/*|scripts/validate_docs_vnext_navigation.py|tests/test_validate_docs_vnext_navigation.py|.github/workflows/docs-vnext-source-navigation.yml)
+                relevant=true
+                break
+                ;;
+            esac
+          done < <(git diff --no-renames --name-only -z "$BASE_SHA" "$HEAD_SHA" --)
+          echo "relevant=$relevant" >> "$GITHUB_OUTPUT"
+
+      - name: No relevant source navigation changes
+        if: steps.changes.outputs.relevant != 'true'
+        run: echo "No docs-vnext source navigation changes require validation."
+
       - name: Initialize failure inventory
+        if: steps.changes.outputs.relevant == 'true'
         run: |
           mkdir -p tests/eval_results
           cat > tests/eval_results/docs-vnext-route-inventory.json <<'JSON'
@@ -61,17 +78,21 @@ jobs:
           JSON
 
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        if: steps.changes.outputs.relevant == 'true'
         with:
           python-version: "3.12"
           cache: "pip"
 
       - name: Install test dependencies
+        if: steps.changes.outputs.relevant == 'true'
         run: pip install -e ".[dev]"
 
       - name: Run navigation validator tests
+        if: steps.changes.outputs.relevant == 'true'
         run: python -m pytest tests/test_validate_docs_vnext_navigation.py -q
 
       - name: Prepare baseline validation inputs
+        if: steps.changes.outputs.relevant == 'true'
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
@@ -79,13 +100,14 @@ jobs:
           git archive "$BASE_SHA" docs-vnext | tar -x -C "$RUNNER_TEMP/base"
 
       - name: Validate docs-vnext source navigation
+        if: steps.changes.outputs.relevant == 'true'
         run: |
           python scripts/validate_docs_vnext_navigation.py \
             --base-docs-dir "$RUNNER_TEMP/base/docs-vnext" \
             --output tests/eval_results/docs-vnext-route-inventory.json
 
       - name: Upload route inventory
-        if: always()
+        if: always() && steps.changes.outputs.relevant == 'true'
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
         with:
           name: docs-vnext-route-inventory

@@ -6,10 +6,14 @@ import sys
 from pathlib import Path
 
 import pytest
+import yaml
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 
 from validate_docs_vnext_navigation import main, validate_navigation  # noqa: E402
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+WORKFLOW_PATH = REPO_ROOT / ".github" / "workflows" / "docs-vnext-source-navigation.yml"
 
 
 def _write_page(docs_dir: Path, route: str, body: str = "Useful documentation.\n") -> None:
@@ -321,3 +325,39 @@ def test_missing_navigation_pages_do_not_cascade_into_link_failures(tmp_path: Pa
     result = validate_navigation(docs_dir, navigation_path)
 
     assert result["diagnosticSummary"]["counts"] == {"missing_source_page": 1}
+
+
+def test_workflow_creates_stable_check_for_every_pull_request() -> None:
+    workflow = yaml.load(WORKFLOW_PATH.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
+
+    assert workflow["on"]["pull_request"] == {}
+    assert workflow["permissions"] == {"contents": "read"}
+    assert workflow["jobs"]["validate-source-navigation"]["name"] == "Validate source navigation"
+
+
+def test_workflow_noops_irrelevant_changes_and_gates_relevant_work() -> None:
+    workflow = yaml.load(WORKFLOW_PATH.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
+    steps = workflow["jobs"]["validate-source-navigation"]["steps"]
+    by_name = {step["name"]: step for step in steps if "name" in step}
+
+    detector = by_name["Detect relevant changes"]
+    assert detector["id"] == "changes"
+    assert "git diff --no-renames --name-only -z" in detector["run"]
+    for relevant_path in (
+        "docs-vnext/*",
+        "scripts/validate_docs_vnext_navigation.py",
+        "tests/test_validate_docs_vnext_navigation.py",
+        ".github/workflows/docs-vnext-source-navigation.yml",
+    ):
+        assert relevant_path in detector["run"]
+
+    assert by_name["No relevant source navigation changes"]["if"] == "steps.changes.outputs.relevant != 'true'"
+    for step_name in (
+        "Initialize failure inventory",
+        "Install test dependencies",
+        "Run navigation validator tests",
+        "Prepare baseline validation inputs",
+        "Validate docs-vnext source navigation",
+    ):
+        assert by_name[step_name]["if"] == "steps.changes.outputs.relevant == 'true'"
+    assert by_name["Upload route inventory"]["if"] == "always() && steps.changes.outputs.relevant == 'true'"
