@@ -7,6 +7,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -17,7 +18,13 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 from eval_report import generate_report  # noqa: E402
 from eval_scorer import aggregate_scores, score_result, validate_required_matrix, validate_row_schema  # noqa: E402
 from foundry_docs_mcp._server_factory import DOCS_CONFIG, build_server  # noqa: E402
-from run_docs_eval import MCP_SERVERS, build_mcp_config, parse_event_stream, run_single_eval  # noqa: E402
+from run_docs_eval import (  # noqa: E402
+    MCP_SERVERS,
+    _sanitize_text,
+    build_mcp_config,
+    parse_event_stream,
+    run_single_eval,
+)
 
 
 SCENARIO = {
@@ -350,6 +357,98 @@ def test_mcp_initialization_failure_preserves_sanitized_lifecycle_diagnostics(mo
     assert diagnostic["data"]["authorization"] == "[REDACTED]"
 
 
+def test_real_mcp_servers_loaded_schema_preserves_statuses_and_selected_failure(monkeypatch):
+    stdout = "\n".join([
+        json.dumps({
+            "type": "session.mcp_servers_loaded",
+            "ephemeral": True,
+            "data": {
+                "servers": [
+                    {
+                        "name": "foundry_docs",
+                        "status": "failed",
+                        "error": "Authorization: Digest username=alice response=secret",
+                        "source": "user",
+                        "transport": "stdio",
+                    },
+                    {
+                        "name": "disabled_builtin",
+                        "status": "disabled",
+                        "source": "builtin",
+                        "transport": "memory",
+                    },
+                ]
+            },
+        }),
+        json.dumps({"type": "assistant.message", "data": {"content": "untrusted answer"}}),
+        json.dumps({"type": "result", "exitCode": 0}),
+    ])
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda cmd, **kwargs: subprocess.CompletedProcess(cmd, 0, stdout=stdout, stderr=""),
+    )
+
+    result = run_single_eval(
+        SCENARIO,
+        "foundry-docs",
+        MCP_SERVERS["foundry-docs"],
+        "model-1",
+    )
+
+    assert result["status"] == "invalid"
+    assert result["response"] == ""
+    assert result["response_present"] is False
+    assert result["failure_reason"].startswith("mcp_initialization_failure:")
+    assert "secret" not in result["failure_reason"]
+    diagnostic = result["diagnostics"]["events"][0]
+    assert diagnostic["event_type"] == "session.mcp_servers_loaded"
+    assert diagnostic["data"]["servers"][0]["status"] == "failed"
+    assert "[REDACTED]" in diagnostic["data"]["servers"][0]["error"]
+
+
+def test_real_session_error_schema_preserves_diagnostics_and_invalidates_answer(monkeypatch):
+    stdout = "\n".join([
+        json.dumps({
+            "type": "session.error",
+            "data": {
+                "errorType": "authentication",
+                "errorCode": "invalid_token",
+                "message": "Authorization: Custom opaque-secret",
+                "providerCallId": "request-123",
+                "serviceRequestId": "service-456",
+                "stack": "at C:/Users/Jane Doe/private/module.js",
+                "statusCode": 401,
+                "url": "https://example.invalid/login",
+            },
+        }),
+        json.dumps({"type": "assistant.message", "data": {"content": "untrusted answer"}}),
+        json.dumps({"type": "result", "exitCode": 0}),
+    ])
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda cmd, **kwargs: subprocess.CompletedProcess(cmd, 0, stdout=stdout, stderr=""),
+    )
+
+    result = run_single_eval(
+        SCENARIO,
+        "foundry-docs",
+        MCP_SERVERS["foundry-docs"],
+        "model-1",
+    )
+
+    assert result["status"] == "invalid"
+    assert result["response"] == ""
+    assert result["response_present"] is False
+    assert result["failure_reason"].startswith("session_error: authentication:")
+    assert "opaque-secret" not in result["failure_reason"]
+    diagnostic = result["diagnostics"]["events"][0]
+    assert diagnostic["event_type"] == "session.error"
+    assert diagnostic["data"]["statusCode"] == 401
+    assert diagnostic["data"]["stack"] == "at <PATH>"
+
+
 def test_diagnostic_output_is_bounded(monkeypatch):
     long_error = "failure " + ("x" * 20_000)
     stdout = "\n".join([
@@ -407,6 +506,39 @@ def test_sanitizer_redacts_prefixed_secrets_and_windows_paths(monkeypatch):
     assert "Jane Doe" not in excerpt
     assert "server\\share" not in excerpt
     assert "<PATH>" in excerpt
+
+
+@pytest.mark.parametrize(
+    ("raw", "secret"),
+    [
+        ("Authorization: Basic dXNlcjpwYXNz", "dXNlcjpwYXNz"),
+        ('Authorization: Digest username="alice", response="digest-secret"', "digest-secret"),
+        ("Authorization: CustomScheme opaque custom value", "opaque custom value"),
+    ],
+)
+def test_authorization_header_redacts_entire_value_for_every_scheme(raw, secret):
+    sanitized, _truncated = _sanitize_text(raw)
+
+    assert sanitized == "Authorization: [REDACTED]"
+    assert secret not in sanitized
+
+
+@pytest.mark.parametrize(
+    "raw_path",
+    [
+        "C:/Users/Jane Doe/private/file.txt",
+        "C:\\Users\\Jane Doe\\private\\file.txt",
+        "\\\\server\\share\\Jane Doe\\private.txt",
+        "//server/share/Jane Doe/private.txt",
+        "/root",
+        "/var/lib/My App/private.txt",
+    ],
+)
+def test_absolute_path_leak_probes_cover_windows_unc_and_unix(raw_path):
+    sanitized, _truncated = _sanitize_text(f"failed at {raw_path}")
+
+    assert raw_path not in sanitized
+    assert sanitized == "failed at <PATH>"
 
 
 def test_sanitizer_redacts_json_style_secret_keys(monkeypatch):
@@ -491,6 +623,61 @@ def test_process_exit_preserves_specific_mcp_failure_reason(monkeypatch):
     assert "process_exit_code: 1" in result["failure_reason"]
 
 
+def test_non_success_preserves_stdout_even_when_tool_evidence_was_valid(monkeypatch):
+    stdout = _event_stream(response="untrusted answer")
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda cmd, **kwargs: subprocess.CompletedProcess(cmd, 1, stdout=stdout, stderr=""),
+    )
+
+    result = run_single_eval(
+        SCENARIO,
+        "foundry-docs",
+        MCP_SERVERS["foundry-docs"],
+        "model-1",
+    )
+
+    assert result["status"] == "error"
+    assert result["response"] == ""
+    assert result["response_present"] is False
+    assert "untrusted answer" in result["diagnostics"]["stdout_excerpt"]
+
+
+def test_failed_tool_clears_untrusted_answer_and_preserves_diagnostics(monkeypatch):
+    stdout = _event_stream(tool_success=False, response="untrusted answer")
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda cmd, **kwargs: subprocess.CompletedProcess(cmd, 0, stdout=stdout, stderr=""),
+    )
+
+    result = run_single_eval(
+        SCENARIO,
+        "foundry-docs",
+        MCP_SERVERS["foundry-docs"],
+        "model-1",
+    )
+
+    assert result["status"] == "invalid"
+    assert result["response"] == ""
+    assert result["response_present"] is False
+    assert result["failure_reason"].startswith("tool_error:")
+    assert "untrusted answer" in result["diagnostics"]["stdout_excerpt"]
+    assert result["diagnostics"]["events"][0]["event_type"] == "tool.execution_complete"
+
+
+@pytest.mark.parametrize("status", ["invalid", "error", "timeout"])
+def test_scorer_clears_response_for_every_non_success_status(status):
+    row = _raw_row(status=status, response="untrusted answer", failure_reason="failed")
+
+    scored = score_result(row)
+
+    assert scored["row_valid"] is False
+    assert scored["response"] == ""
+    assert scored["response_present"] is False
+
+
 def test_mcp_failure_server_name_is_sanitized_and_bounded(monkeypatch):
     stdout = "\n".join([
         json.dumps({
@@ -535,6 +722,31 @@ def test_nested_stdout_truncation_flag_is_schema_valid():
     row["diagnostics"]["stdout_truncated"] = True
 
     assert validate_row_schema(row) == []
+
+
+def test_large_event_is_stopped_before_json_parse_and_remains_bounded():
+    huge_event = b'{"type":"session.error","data":{"message":"' + (b"x" * 5_000_000) + b'"}}'
+
+    started = time.perf_counter()
+    parsed = parse_event_stream(huge_event)
+    elapsed = time.perf_counter() - started
+
+    assert elapsed < 1.0
+    assert parsed["stdout_input_truncated"] is True
+    assert "pre-parse limit" in parsed["parse_error"]
+    assert parsed["diagnostic_events"] == []
+    assert parsed["response"] == ""
+
+
+def test_deeply_nested_bounded_json_fails_closed_without_recursion_crash():
+    nested = "[" * 5_000 + "null" + "]" * 5_000
+    stdout = f'{{"type":"session.error","data":{{"message":{nested}}}}}'
+
+    parsed = parse_event_stream(stdout)
+
+    assert "invalid JSON event" in parsed["parse_error"]
+    assert parsed["diagnostic_events"] == []
+    assert parsed["response"] == ""
 
 
 def test_diagnostic_path_keys_are_sanitized(monkeypatch):

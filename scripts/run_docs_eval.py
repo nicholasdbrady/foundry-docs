@@ -16,6 +16,7 @@ Models:
 """
 
 import argparse
+import io
 import json
 import os
 import re
@@ -98,7 +99,11 @@ MAX_DIAGNOSTIC_EVENTS_CHARS = 50_000
 MAX_DIAGNOSTIC_TEXT = 2_000
 MAX_STDOUT_EXCERPT = 12_000
 MAX_STDERR_EXCERPT = 4_000
+MAX_STDOUT_PARSE_BYTES = 128_000
+MAX_STDOUT_PARSE_LINES = 500
+MAX_STDOUT_LINE_BYTES = 32_000
 _SECRET_KEY_PATTERN = re.compile(r"(?:api[_-]?key|authorization|credential|password|secret|token)", re.I)
+_AUTHORIZATION_HEADER_PATTERN = re.compile(r"(?im)(authorization\s*:\s*)[^\r\n]+")
 _SECRET_VALUE_PATTERNS = (
     re.compile(r"\b(?:github_pat_|gh[pousr]_)[A-Za-z0-9_]+\b"),
     re.compile(r"(?i)(bearer\s+)[A-Za-z0-9._~+/=-]+"),
@@ -108,9 +113,9 @@ _SECRET_VALUE_PATTERNS = (
     ),
 )
 _ABSOLUTE_PATH_PATTERNS = (
-    re.compile(r"(?i)\\\\[^\\\r\n]+\\[^,\r\n;\"']+"),
-    re.compile(r"(?i)\b[A-Z]:\\[^,\r\n;\"']+"),
-    re.compile(r"(?<![:/\w])/(?:[^/\s]+/)+[^,\s;\"']+"),
+    re.compile(r"(?i)(?:\\\\|//)[^\\/\r\n]+[\\/][^,\r\n;\"']+"),
+    re.compile(r"(?i)\b[A-Z]:[\\/][^,\r\n;\"']+"),
+    re.compile(r"(?<![:/\w])/(?!/)[^,\r\n;\"']+"),
 )
 
 
@@ -226,6 +231,7 @@ def _sanitize_text(value: str, max_chars: int = MAX_DIAGNOSTIC_TEXT) -> tuple[st
         if path:
             sanitized = re.sub(re.escape(path), replacement, sanitized, flags=re.I)
 
+    sanitized = _AUTHORIZATION_HEADER_PATTERN.sub(r"\1[REDACTED]", sanitized)
     sanitized = _SECRET_VALUE_PATTERNS[0].sub("[REDACTED]", sanitized)
     sanitized = _SECRET_VALUE_PATTERNS[1].sub(r"\1[REDACTED]", sanitized)
     sanitized = _SECRET_VALUE_PATTERNS[2].sub(r"\1[REDACTED]", sanitized)
@@ -277,11 +283,12 @@ def _bounded_excerpt(value: str | bytes | None, max_chars: int) -> tuple[str, bo
 
 def _bounded_stdout_excerpt(value: str | bytes | None) -> tuple[str, bool]:
     sanitized_lines = []
-    per_line_truncated = False
-    for line in _coerce_process_text(value).splitlines():
+    lines, boundary_errors, boundary_truncated = _bounded_event_lines(value)
+    per_line_truncated = boundary_truncated
+    for _line_number, line in lines:
         try:
             parsed_line = json.loads(line)
-        except (json.JSONDecodeError, ValueError):
+        except (json.JSONDecodeError, ValueError, RecursionError):
             sanitized_line, truncated = _sanitize_text(line)
             sanitized_lines.append(sanitized_line)
             per_line_truncated = per_line_truncated or truncated
@@ -290,6 +297,53 @@ def _bounded_stdout_excerpt(value: str | bytes | None) -> tuple[str, bool]:
             sanitized_lines.append(json.dumps(_sanitize_diagnostic_value(parsed_line), ensure_ascii=True))
     excerpt, final_truncated = _sanitize_text("\n".join(sanitized_lines), max_chars=MAX_STDOUT_EXCERPT)
     return excerpt, per_line_truncated or final_truncated
+
+
+def _bounded_event_lines(value: str | bytes | None) -> tuple[list[tuple[int, str]], list[str], bool]:
+    """Bound bytes, lines, and per-line size before any JSON parsing."""
+    is_bytes = isinstance(value, bytes)
+    reader = io.BytesIO(value) if is_bytes else io.StringIO(value or "")
+    accepted: list[tuple[int, str]] = []
+    errors: list[str] = []
+    total_bytes = 0
+    truncated = False
+
+    for line_number in range(1, MAX_STDOUT_PARSE_LINES + 1):
+        line = reader.readline(MAX_STDOUT_LINE_BYTES + 1)
+        if not line:
+            break
+        newline_markers = (b"\n", b"\r") if is_bytes else ("\n", "\r")
+        if len(line) > MAX_STDOUT_LINE_BYTES and not line.endswith(newline_markers):
+            errors.append(
+                f"line {line_number}: event exceeds {MAX_STDOUT_LINE_BYTES} byte pre-parse limit"
+            )
+            truncated = True
+            break
+        line_bytes = len(line) if is_bytes else len(line.encode("utf-8", errors="replace"))
+        if line_bytes > MAX_STDOUT_LINE_BYTES:
+            errors.append(
+                f"line {line_number}: event exceeds {MAX_STDOUT_LINE_BYTES} byte pre-parse limit"
+            )
+            truncated = True
+            break
+        if total_bytes + line_bytes > MAX_STDOUT_PARSE_BYTES:
+            errors.append(f"stdout exceeds {MAX_STDOUT_PARSE_BYTES} byte pre-parse limit")
+            truncated = True
+            break
+        total_bytes += line_bytes
+        text_line = line.decode("utf-8", errors="replace") if is_bytes else line
+        stripped = text_line.strip()
+        if stripped:
+            accepted.append((line_number, stripped))
+    else:
+        if reader.read(1):
+            errors.append(f"stdout exceeds {MAX_STDOUT_PARSE_LINES} line pre-parse limit")
+            truncated = True
+
+    if not truncated and reader.read(1):
+        errors.append("stdout contains data beyond the pre-parse budget")
+        truncated = True
+    return accepted, errors, truncated
 
 
 def _contains_oversized_diagnostic_value(value: object, *, depth: int = 0) -> bool:
@@ -340,7 +394,7 @@ def _build_diagnostics(
     return diagnostics
 
 
-def parse_event_stream(stdout: str) -> dict:
+def parse_event_stream(stdout: str | bytes) -> dict:
     """Parse `copilot --output-format json` JSONL output into operational metrics.
 
     Extracts the final assistant response text plus turn count, tool-call count,
@@ -363,6 +417,9 @@ def parse_event_stream(stdout: str) -> dict:
         "diagnostic_events": [],
         "diagnostic_events_truncated": False,
         "mcp_failure": None,
+        "mcp_statuses": {},
+        "session_failure": None,
+        "stdout_input_truncated": False,
     }
 
     last_message_content = ""
@@ -375,6 +432,7 @@ def parse_event_stream(stdout: str) -> dict:
     final_response_line: int | None = None
     last_successful_tool_line: int | None = None
     diagnostic_event_chars = 0
+    mcp_statuses: dict[str, tuple[str, str | None]] = {}
 
     def add_diagnostic(event_type: str, data: dict) -> None:
         nonlocal diagnostic_event_chars
@@ -392,13 +450,14 @@ def parse_event_stream(stdout: str) -> dict:
         metrics["diagnostic_events"].append(diagnostic)
         diagnostic_event_chars += diagnostic_chars
 
-    for line_number, line in enumerate(stdout.splitlines(), start=1):
-        line = line.strip()
-        if not line:
-            continue
+    lines, boundary_errors, boundary_truncated = _bounded_event_lines(stdout)
+    parse_errors.extend(boundary_errors)
+    metrics["stdout_input_truncated"] = boundary_truncated
+
+    for line_number, line in lines:
         try:
             event = json.loads(line)
-        except (json.JSONDecodeError, ValueError):
+        except (json.JSONDecodeError, ValueError, RecursionError):
             parse_errors.append(f"line {line_number}: invalid JSON event")
             continue
         if not isinstance(event, dict):
@@ -485,12 +544,38 @@ def parse_event_stream(stdout: str) -> dict:
             add_diagnostic(etype, data)
             status = str(data.get("status") or data.get("state") or "").casefold()
             error = data.get("error") or data.get("message")
-            if error or status in {"error", "failed", "failure", "stopped", "unavailable", "disconnected"}:
-                raw_server = data.get("serverName") or data.get("server") or data.get("name") or "selected MCP server"
-                server = _sanitize_text(str(raw_server))[0]
-                detail = error or f"status changed to {status or 'unknown'}"
-                sanitized_detail = _sanitize_text(str(detail))[0]
-                metrics["mcp_failure"] = f"{server}: {sanitized_detail}"
+            raw_server = data.get("serverName") or data.get("server") or data.get("name") or "selected MCP server"
+            server = _sanitize_text(str(raw_server))[0]
+            mcp_statuses[server] = (status, _sanitize_text(str(error))[0] if error else None)
+        elif etype == "session.mcp_servers_loaded":
+            add_diagnostic(etype, data)
+            servers = data.get("servers")
+            if not isinstance(servers, list):
+                parse_errors.append(f"line {line_number}: mcp_servers_loaded servers must be a list")
+            else:
+                for server_data in servers[:MAX_DIAGNOSTIC_EVENTS]:
+                    if not isinstance(server_data, dict):
+                        parse_errors.append(f"line {line_number}: MCP server summary must be an object")
+                        continue
+                    raw_name = server_data.get("name")
+                    raw_status = server_data.get("status")
+                    if not isinstance(raw_name, str) or not isinstance(raw_status, str):
+                        parse_errors.append(f"line {line_number}: MCP server summary missing name or status")
+                        continue
+                    server = _sanitize_text(raw_name)[0]
+                    status = raw_status.casefold()
+                    error = server_data.get("error")
+                    mcp_statuses[server] = (status, _sanitize_text(str(error))[0] if error else None)
+        elif etype == "session.error":
+            add_diagnostic(etype, data)
+            error_type = data.get("errorType")
+            message = data.get("message")
+            if not isinstance(error_type, str) or not isinstance(message, str):
+                parse_errors.append(f"line {line_number}: session.error missing errorType or message")
+            else:
+                metrics["session_failure"] = (
+                    f"{_sanitize_text(error_type)[0]}: {_sanitize_text(message)[0]}"
+                )
         elif etype == "result":
             if result_seen:
                 parse_errors.append(f"line {line_number}: duplicate terminal result")
@@ -523,6 +608,18 @@ def parse_event_stream(stdout: str) -> dict:
     ):
         parse_errors.append("assistant response preceded the final successful documentation tool")
 
+    failing_mcp_statuses = []
+    for server, (status, error) in mcp_statuses.items():
+        if status != "connected":
+            detail = error or f"status is {status or 'unknown'}"
+            failing_mcp_statuses.append(f"{server}: {detail}")
+    if failing_mcp_statuses:
+        metrics["mcp_failure"] = "; ".join(failing_mcp_statuses)
+    metrics["mcp_statuses"] = {
+        server: {"status": status, "error": error}
+        for server, (status, error) in mcp_statuses.items()
+    }
+
     metrics["parse_error"] = "; ".join(dict.fromkeys(parse_errors)) or None
 
     return {"response": last_message_content, **metrics}
@@ -530,8 +627,19 @@ def parse_event_stream(stdout: str) -> dict:
 
 def validate_row_evidence(parsed: dict, tool_prefix: str, azure_required: bool) -> tuple[bool, str | None, bool]:
     """Validate selected-source and optional Azure evidence for one row."""
-    if parsed["mcp_failure"]:
-        return False, f"mcp_initialization_failure: {parsed['mcp_failure']}", False
+    if parsed["session_failure"]:
+        return False, f"session_error: {parsed['session_failure']}", False
+    selected_mcp_status = next(
+        (
+            status
+            for server, status in parsed["mcp_statuses"].items()
+            if server.casefold() == tool_prefix.casefold()
+        ),
+        None,
+    )
+    if selected_mcp_status and selected_mcp_status["status"] != "connected":
+        detail = selected_mcp_status["error"] or f"status is {selected_mcp_status['status'] or 'unknown'}"
+        return False, f"mcp_initialization_failure: {tool_prefix}: {detail}", False
     if parsed["parse_error"]:
         return False, f"event_parse_failure: {parsed['parse_error']}", False
     if parsed["tool_errors"]:
@@ -673,6 +781,8 @@ def run_single_eval(
             failure_reason = f"{failure_reason}; {event_failure}" if failure_reason else event_failure
         else:
             status = "success" if evidence_valid else "invalid"
+        if status != "success":
+            response = ""
 
         result.update({
             "response": response,
@@ -681,7 +791,7 @@ def run_single_eval(
             "response_time_seconds": round(elapsed, 2),
             "status": status,
             "passed": status == "success",
-            "response_present": bool(response),
+            "response_present": status == "success" and bool(response),
             "failure_reason": failure_reason,
             "source_validated": evidence_valid,
             "azure_live_query_proven": azure_live_query_proven,
@@ -699,14 +809,14 @@ def run_single_eval(
                 parsed,
                 proc.stdout,
                 proc.stderr,
-                preserve_stdout=not evidence_valid,
+                preserve_stdout=status != "success",
             ),
         })
 
     except subprocess.TimeoutExpired as exc:
         elapsed = time.monotonic() - start_time
-        partial_stdout = _coerce_process_text(exc.stdout)
-        partial_stderr = _coerce_process_text(exc.stderr)
+        partial_stdout = exc.stdout
+        partial_stderr = exc.stderr
         parsed = parse_event_stream(partial_stdout) if partial_stdout else None
         result.update({
             "response": "",

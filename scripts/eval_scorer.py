@@ -68,6 +68,17 @@ def validate_row_schema(result: object) -> list[str]:
         or result["status"] not in {"success", "invalid", "error", "timeout"}
     ):
         errors.append("status must be success, invalid, error, or timeout")
+    status = result.get("status")
+    if isinstance(status, str) and status in {"invalid", "error", "timeout"} and (
+        result.get("response") != "" or result.get("response_present") is not False
+    ):
+        errors.append("non-success rows must clear response and set response_present=false")
+    if status == "success" and (
+        not isinstance(result.get("response"), str)
+        or not result.get("response")
+        or result.get("response_present") is not True
+    ):
+        errors.append("success rows must contain a response and set response_present=true")
     for field in (
         "response_present",
         "passed",
@@ -266,8 +277,8 @@ def score_result(result: object) -> dict:
         failure_reason = f"{existing_failure}; {schema_failure}" if existing_failure else schema_failure
         return {
             **result,
-            "response": response,
-            "response_present": bool(response),
+            "response": "",
+            "response_present": False,
             "status": "invalid",
             "passed": False,
             "source_validated": False,
@@ -339,6 +350,8 @@ def score_result(result: object) -> dict:
     if not row_valid:
         return {
             **result,
+            "response": "",
+            "response_present": False,
             "row_valid": False,
             "scores": {
                 "completeness": 0.0,
