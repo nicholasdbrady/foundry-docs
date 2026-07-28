@@ -2,10 +2,9 @@ name: docs-vnext source navigation required check
 
 on:
   pull_request_target:
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review, edited]
 
 permissions:
-  actions: read
   contents: read
 
 concurrency:
@@ -18,38 +17,141 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
-      - name: Require successful pull request validation
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          fetch-depth: 0
+
+      - name: Fetch and classify proposed changes
+        id: changes
         env:
-          GH_TOKEN: ${{ github.token }}
-          REPOSITORY: ${{ github.repository }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-          WORKFLOW_FILE: docs-vnext-source-navigation.yml
         run: |
-          for attempt in {1..132}; do
-            if ! run="$(
-              gh api \
-                "/repos/$REPOSITORY/actions/workflows/$WORKFLOW_FILE/runs?event=pull_request&head_sha=$HEAD_SHA&per_page=100" \
-                --jq ".workflow_runs | map(select(any(.pull_requests[]?; .number == $PR_NUMBER))) | .[0] // empty | [.id, .status, (.conclusion // \"\")] | @tsv"
-            )"; then
-              echo "::error::Unable to query source navigation workflow runs."
-              exit 1
-            fi
+          if [[ "$(git rev-parse HEAD)" != "$BASE_SHA" ]]; then
+            echo "::error::Trusted checkout does not match the current pull request base."
+            exit 1
+          fi
+          if ! git fetch --no-tags origin "refs/pull/$PR_NUMBER/head"; then
+            echo "::error::Unable to fetch the current pull request head object."
+            exit 1
+          fi
+          if [[ "$(git rev-parse FETCH_HEAD)" != "$HEAD_SHA" ]]; then
+            echo "::error::Fetched pull request head does not match the current event."
+            exit 1
+          fi
+          if ! merge_base="$(git merge-base "$BASE_SHA" "$HEAD_SHA")"; then
+            echo "::error::Unable to determine the current pull request merge base."
+            exit 1
+          fi
 
-            if [[ -n "$run" ]]; then
-              IFS=$'\t' read -r run_id status conclusion <<< "$run"
-              if [[ "$status" == "completed" ]]; then
-                if [[ "$conclusion" == "success" ]]; then
-                  echo "Source navigation validation run $run_id succeeded."
-                  exit 0
-                fi
-                echo "::error::Source navigation validation run $run_id concluded with: $conclusion"
-                exit 1
-              fi
-            fi
-            sleep 5
-          done
+          changed_paths="$RUNNER_TEMP/source-navigation-required-changed-paths"
+          if ! git diff --no-renames --name-only -z "$merge_base" "$HEAD_SHA" -- > "$changed_paths"; then
+            echo "::error::Unable to enumerate current pull request paths."
+            exit 1
+          fi
 
-          echo "::error::No completed source navigation validation run was found for $HEAD_SHA."
-          echo "::error::Remove any [skip ci] directive or resolve merge conflicts, then push a new commit."
-          exit 1
+          relevant=false
+          while IFS= read -r -d '' path; do
+            case "$path" in
+              docs-vnext/*|scripts/validate_docs_vnext_navigation.py|tests/test_validate_docs_vnext_navigation.py|.github/workflows/docs-vnext-source-navigation.yml|.github/workflows/docs-vnext-source-navigation-required.yml)
+                relevant=true
+                break
+                ;;
+            esac
+          done < "$changed_paths"
+          echo "relevant=$relevant" >> "$GITHUB_OUTPUT"
+
+      - name: No relevant source navigation changes
+        if: steps.changes.outputs.relevant != 'true'
+        run: echo "No docs-vnext source navigation changes require validation."
+
+      - name: Initialize failure inventory
+        if: steps.changes.outputs.relevant == 'true'
+        run: |
+          mkdir -p tests/eval_results
+          cat > tests/eval_results/docs-vnext-route-inventory.json <<'JSON'
+          {
+            "schemaVersion": 1,
+            "status": "failed",
+            "navigationSource": "docs-vnext/docs.json",
+            "routes": [],
+            "openapi": [],
+            "aliases": [],
+            "externalNavigation": [],
+            "linkSummary": {
+              "currentStale": 0,
+              "baselineStale": 0,
+              "grandfathered": 0,
+              "introduced": 0
+            },
+            "diagnosticSummary": {
+              "total": 1,
+              "counts": {"workflow_incomplete": 1},
+              "truncated": false
+            },
+            "diagnostics": [
+              {
+                "sourceNavigationEntry": "navigation",
+                "route": null,
+                "failureClass": "workflow_incomplete",
+                "candidateSourcePath": "docs-vnext/docs.json",
+                "detail": "Trusted validation did not complete."
+              }
+            ]
+          }
+          JSON
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        if: steps.changes.outputs.relevant == 'true'
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install trusted test dependencies
+        if: steps.changes.outputs.relevant == 'true'
+        run: pip install -e ".[dev]"
+
+      - name: Run trusted navigation validator tests
+        if: steps.changes.outputs.relevant == 'true'
+        run: python -m pytest tests/test_validate_docs_vnext_navigation.py -q
+
+      - name: Extract proposed documentation as data
+        if: steps.changes.outputs.relevant == 'true'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          base_dir="$RUNNER_TEMP/source-navigation-base"
+          head_dir="$RUNNER_TEMP/source-navigation-head"
+          mkdir -p "$base_dir" "$head_dir"
+          if ! git archive "$BASE_SHA" docs-vnext | tar -x -C "$base_dir"; then
+            echo "::error::Unable to extract the current base documentation tree."
+            exit 1
+          fi
+          if ! git archive "$HEAD_SHA" docs-vnext | tar -x -C "$head_dir"; then
+            echo "::error::Unable to extract the proposed documentation tree."
+            exit 1
+          fi
+          if find "$head_dir/docs-vnext" -type l -print -quit | grep -q .; then
+            echo "::error::Proposed docs-vnext tree contains symbolic links."
+            exit 1
+          fi
+
+      - name: Validate proposed docs-vnext source navigation
+        if: steps.changes.outputs.relevant == 'true'
+        run: |
+          python scripts/validate_docs_vnext_navigation.py \
+            --docs-dir "$RUNNER_TEMP/source-navigation-head/docs-vnext" \
+            --base-docs-dir "$RUNNER_TEMP/source-navigation-base/docs-vnext" \
+            --output tests/eval_results/docs-vnext-route-inventory.json
+
+      - name: Upload trusted route inventory
+        if: always() && steps.changes.outputs.relevant == 'true'
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        with:
+          name: docs-vnext-required-route-inventory
+          path: tests/eval_results/docs-vnext-route-inventory.json
+          if-no-files-found: error
+          retention-days: 30

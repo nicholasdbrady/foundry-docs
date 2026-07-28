@@ -379,7 +379,7 @@ def test_workflow_fails_closed_when_path_diff_generation_fails() -> None:
     assert detector["run"].count("exit 1") >= 2
 
 
-def test_required_context_is_trusted_read_only_and_skip_ci_resistant() -> None:
+def test_required_context_uses_current_trusted_base_and_head_objects() -> None:
     workflow = yaml.load(REQUIRED_WORKFLOW_PATH.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
     sentinel = workflow["jobs"]["require-source-navigation"]
 
@@ -388,15 +388,60 @@ def test_required_context_is_trusted_read_only_and_skip_ci_resistant() -> None:
         "synchronize",
         "reopened",
         "ready_for_review",
+        "edited",
     ]
-    assert workflow["permissions"] == {"actions": "read", "contents": "read"}
+    assert workflow["permissions"] == {"contents": "read"}
     assert sentinel["name"] == "Validate source navigation"
-    assert all("uses" not in step for step in sentinel["steps"])
-    script = sentinel["steps"][0]["run"]
-    assert "event=pull_request" in script
-    assert "head_sha=$HEAD_SHA" in script
-    assert ".pull_requests[]?" in script
-    assert ".number == $PR_NUMBER" in script
-    assert "No completed source navigation validation run was found" in script
-    assert "Remove any [skip ci] directive or resolve merge conflicts" in script
-    assert script.count("exit 1") >= 3
+    checkout = sentinel["steps"][0]
+    assert checkout["with"]["ref"] == "${{ github.event.pull_request.base.sha }}"
+    assert checkout["with"]["fetch-depth"] == "0"
+
+    by_name = {step["name"]: step for step in sentinel["steps"] if "name" in step}
+    classifier = by_name["Fetch and classify proposed changes"]["run"]
+    assert '$(git rev-parse HEAD)" != "$BASE_SHA"' in classifier
+    assert 'git fetch --no-tags origin "refs/pull/$PR_NUMBER/head"' in classifier
+    assert '$(git rev-parse FETCH_HEAD)" != "$HEAD_SHA"' in classifier
+    assert 'git merge-base "$BASE_SHA" "$HEAD_SHA"' in classifier
+    assert 'git diff --no-renames --name-only -z "$merge_base" "$HEAD_SHA"' in classifier
+    assert '> "$changed_paths"' in classifier
+    assert 'done < "$changed_paths"' in classifier
+    assert classifier.count("exit 1") >= 4
+
+
+def test_required_context_never_checks_out_or_executes_untrusted_pr_code() -> None:
+    workflow = yaml.load(REQUIRED_WORKFLOW_PATH.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
+    steps = workflow["jobs"]["require-source-navigation"]["steps"]
+    by_name = {step["name"]: step for step in steps if "name" in step}
+
+    checkout_steps = [step for step in steps if str(step.get("uses", "")).startswith("actions/checkout@")]
+    assert len(checkout_steps) == 1
+    assert checkout_steps[0]["with"]["ref"] == "${{ github.event.pull_request.base.sha }}"
+    assert "GH_TOKEN" not in str(workflow)
+    assert "github.event.pull_request.head.repo" not in str(workflow)
+
+    extraction = by_name["Extract proposed documentation as data"]["run"]
+    assert 'git archive "$BASE_SHA" docs-vnext' in extraction
+    assert 'git archive "$HEAD_SHA" docs-vnext' in extraction
+    assert 'find "$head_dir/docs-vnext" -type l' in extraction
+    validation = by_name["Validate proposed docs-vnext source navigation"]["run"]
+    assert "python scripts/validate_docs_vnext_navigation.py" in validation
+    assert '--docs-dir "$RUNNER_TEMP/source-navigation-head/docs-vnext"' in validation
+    assert '--base-docs-dir "$RUNNER_TEMP/source-navigation-base/docs-vnext"' in validation
+    assert "source-navigation-head/scripts" not in str(workflow)
+
+
+def test_required_context_noops_irrelevant_and_runs_trusted_gate_for_relevant_changes() -> None:
+    workflow = yaml.load(REQUIRED_WORKFLOW_PATH.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
+    steps = workflow["jobs"]["require-source-navigation"]["steps"]
+    by_name = {step["name"]: step for step in steps if "name" in step}
+
+    assert by_name["No relevant source navigation changes"]["if"] == "steps.changes.outputs.relevant != 'true'"
+    for step_name in (
+        "Initialize failure inventory",
+        "Install trusted test dependencies",
+        "Run trusted navigation validator tests",
+        "Extract proposed documentation as data",
+        "Validate proposed docs-vnext source navigation",
+    ):
+        assert by_name[step_name]["if"] == "steps.changes.outputs.relevant == 'true'"
+    assert by_name["Upload trusted route inventory"]["if"] == "always() && steps.changes.outputs.relevant == 'true'"
