@@ -17,7 +17,7 @@ concurrency:
 env:
   DOCS_VNEXT_ENVIRONMENT: staging - docs-vnext
   DOCS_PRIMARY_ENVIRONMENT: staging - docs
-  DOCS_VNEXT_BASE_URL: https://hobbyist-e43fa225.mintlify.app
+  DOCS_VNEXT_BASE_URL: ${{ vars.DOCS_VNEXT_BASE_URL }}
 
 jobs:
   hosted-route-readiness:
@@ -105,14 +105,15 @@ jobs:
               fi
             fi
 
-            deployed_sha=""
-            if [[ -n "$deployed_commit_sha" ]]; then
-              if ! git cat-file -e "$deployed_commit_sha^{commit}" 2>/dev/null; then
-                git fetch --no-tags --depth=1 origin "$deployed_commit_sha"
-              fi
-              if git cat-file -e "$deployed_commit_sha:docs-vnext" 2>/dev/null; then
-                deployed_sha="$(git rev-parse "$deployed_commit_sha:docs-vnext")"
-              fi
+          fi
+
+          deployed_sha=""
+          if [[ -n "$deployed_commit_sha" ]]; then
+            if ! git cat-file -e "$deployed_commit_sha^{commit}" 2>/dev/null; then
+              git fetch --no-tags --depth=1 origin "$deployed_commit_sha"
+            fi
+            if git cat-file -e "$deployed_commit_sha:docs-vnext" 2>/dev/null; then
+              deployed_sha="$(git rev-parse "$deployed_commit_sha:docs-vnext")"
             fi
           fi
 
