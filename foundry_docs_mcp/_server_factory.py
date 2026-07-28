@@ -119,6 +119,7 @@ def build_server(cfg: ServerConfig) -> FastMCP:
         embed_query = None
         rewrite_query = None
         foundry_client = None
+        require_azure = os.environ.get("FOUNDRY_EVAL_REQUIRE_AZURE", "").casefold() in {"1", "true", "yes"}
 
         if os.environ.get("AZURE_SEARCH_ENDPOINT"):
             try:
@@ -140,7 +141,11 @@ def build_server(cfg: ServerConfig) -> FastMCP:
                 rewrite_query = foundry_client.rewrite_query_for_search
                 logger.info("Azure AI Search hybrid mode enabled for %s", cfg.name)
             except Exception as exc:
+                if require_azure:
+                    raise RuntimeError(f"Azure-required mode failed to initialize for {cfg.name}: {exc}") from exc
                 logger.warning("Failed to initialize Azure hybrid mode; using local search fallback: %s", exc)
+        elif require_azure:
+            raise RuntimeError(f"Azure-required mode needs AZURE_SEARCH_ENDPOINT for {cfg.name}")
 
         telemetry = setup_telemetry(cfg.telemetry_service)
 
@@ -261,6 +266,8 @@ def build_server(cfg: ServerConfig) -> FastMCP:
                 results = azure_index.search(query=effective_query, limit=limit, embedding_fn=embed_query_fn)
                 backend = "azure-hybrid"
             except Exception as exc:
+                if os.environ.get("FOUNDRY_EVAL_REQUIRE_AZURE", "").casefold() in {"1", "true", "yes"}:
+                    raise RuntimeError(f"Azure-required search failed for {cfg.name}: {exc}") from exc
                 await _log(ctx, "warning", f"Azure search failed, falling back to local index: {exc}")
                 index: SearchIndex = _get_index(ctx)
                 results = index.search(query, limit=limit)

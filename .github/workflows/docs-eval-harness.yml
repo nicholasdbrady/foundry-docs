@@ -38,6 +38,7 @@ env:
   AZURE_SEARCH_ENDPOINT: ${{ secrets.AZURE_SEARCH_ENDPOINT }}
   AZURE_SEARCH_API_KEY: ${{ secrets.AZURE_SEARCH_API_KEY }}
   AZURE_SEARCH_INDEX_NAME: ${{ secrets.AZURE_SEARCH_INDEX_NAME }}
+  AZURE_SEARCH_VNEXT_INDEX_NAME: ${{ secrets.AZURE_SEARCH_VNEXT_INDEX_NAME }}
   AZURE_AI_PROJECT_ENDPOINT: ${{ secrets.AZURE_AI_PROJECT_ENDPOINT }}
   AZURE_AI_PROJECT_API_KEY: ${{ secrets.AZURE_AI_PROJECT_API_KEY }}
   AZURE_OPENAI_EMBEDDING_DEPLOYMENT: ${{ secrets.AZURE_OPENAI_EMBEDDING_DEPLOYMENT }}
@@ -90,9 +91,14 @@ jobs:
 
       - name: Run evaluation for ${{ matrix.server }}
         run: |
+          AZURE_ARGS=()
+          if [[ "${{ matrix.server }}" == foundry-docs* ]]; then
+            AZURE_ARGS+=(--require-azure)
+          fi
           python scripts/run_docs_eval.py \
             --server ${{ matrix.server }} \
             ${{ steps.inputs.outputs.model_args }} \
+            "${AZURE_ARGS[@]}" \
             --output-dir tests/eval_results
 
       - name: Upload partial results
@@ -139,11 +145,23 @@ jobs:
           echo "Found $(echo $FILES | wc -w) result files"
 
       - name: Score merged results
+        id: score
+        continue-on-error: true
         run: |
           mkdir -p tests/eval_results
+          MODELS="${{ inputs.models || 'all' }}"
+          if [ "$MODELS" = "all" ]; then
+            REQUIRED_MODELS=(claude-sonnet-4.6 gpt-5.4)
+          else
+            IFS=',' read -ra REQUIRED_MODELS <<< "$MODELS"
+          fi
           python scripts/eval_scorer.py \
             ${{ steps.collect.outputs.files }} \
-            --output tests/eval_results/scored-merged.json
+            --output tests/eval_results/scored-merged.json \
+            --required-scenarios tests/docs_eval_scenarios.json \
+            --required-servers microsoft-learn mintlify-hosted foundry-docs foundry-docs-vnext \
+            --required-models "${REQUIRED_MODELS[@]}" \
+            --azure-required-servers foundry-docs foundry-docs-vnext
 
       - name: Check MCP/tool discovery state
         run: |
@@ -152,6 +170,7 @@ jobs:
             --skip-hosted || true
 
       - name: Generate report
+        if: always()
         run: |
           python scripts/eval_report.py tests/eval_results/scored-merged.json \
             --mcp-discovery tests/eval_results/mcp_discovery.json \
@@ -159,6 +178,7 @@ jobs:
           cat tests/eval_results/report.md
 
       - name: Upload combined results
+        if: always()
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
         with:
           name: eval-results-${{ github.run_id }}
@@ -166,6 +186,7 @@ jobs:
           retention-days: 90
 
       - name: Close previous eval report issues
+        if: steps.score.outcome == 'success'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -177,6 +198,7 @@ jobs:
             --summary "$GITHUB_STEP_SUMMARY"
 
       - name: Create issue with results
+        if: steps.score.outcome == 'success'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -201,6 +223,7 @@ jobs:
             --body-file tests/eval_results/issue-report.md
 
       - name: Check for regression
+        if: steps.score.outcome == 'success'
         run: |
           python3 -c "
           import json, sys
@@ -213,3 +236,9 @@ jobs:
               sys.exit(1)
           print('✅ No regressions detected')
           " || echo "regression_detected=true" >> "$GITHUB_OUTPUT"
+
+      - name: Fail invalid evaluation evidence
+        if: steps.score.outcome != 'success'
+        run: |
+          echo "Comparative publication blocked because required evaluation evidence is invalid or incomplete."
+          exit 1

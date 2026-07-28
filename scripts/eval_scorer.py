@@ -13,10 +13,102 @@ import json
 import re
 import sys
 from collections import defaultdict
+from itertools import product
 from pathlib import Path
+
+from run_docs_eval import MCP_SERVERS, _is_search_tool, _source_for_tool
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 RESULTS_DIR = PROJECT_ROOT / "tests" / "eval_results"
+REQUIRED_ROW_FIELDS = (
+    "scenario_id",
+    "server",
+    "model",
+    "category",
+    "response",
+    "response_present",
+    "status",
+    "passed",
+    "selected_source",
+    "selected_source_config",
+    "source_config_count",
+    "observed_tools",
+    "successful_tools",
+    "source_validated",
+    "azure_required",
+    "azure_live_query_proven",
+    "failure_reason",
+    "event_parse_error",
+    "exit_code",
+    "tool_errors",
+    "response_time_seconds",
+)
+
+
+def validate_row_schema(result: object) -> list[str]:
+    """Return schema errors without throwing so malformed rows remain diagnostic."""
+    if not isinstance(result, dict):
+        return ["row must be a JSON object"]
+
+    errors = [f"missing field: {field}" for field in REQUIRED_ROW_FIELDS if field not in result]
+    for field in ("scenario_id", "server", "model", "category", "response", "selected_source"):
+        if field in result and not isinstance(result[field], str):
+            errors.append(f"{field} must be a string")
+    if "status" in result and (
+        not isinstance(result["status"], str)
+        or result["status"] not in {"success", "invalid", "error", "timeout"}
+    ):
+        errors.append("status must be success, invalid, error, or timeout")
+    for field in (
+        "response_present",
+        "passed",
+        "source_validated",
+        "azure_required",
+        "azure_live_query_proven",
+    ):
+        if field in result and type(result[field]) is not bool:
+            errors.append(f"{field} must be a Boolean")
+    if "selected_source_config" in result and not isinstance(result["selected_source_config"], dict):
+        errors.append("selected_source_config must be a JSON object")
+    if "source_config_count" in result and type(result["source_config_count"]) is not int:
+        errors.append("source_config_count must be an integer")
+    for field in ("observed_tools", "successful_tools"):
+        value = result.get(field)
+        if field in result and (
+            not isinstance(value, list) or not all(isinstance(tool_name, str) for tool_name in value)
+        ):
+            errors.append(f"{field} must be a list of strings")
+    if "failure_reason" in result and result["failure_reason"] is not None and not isinstance(
+        result["failure_reason"], str
+    ):
+        errors.append("failure_reason must be a string or null")
+    if "event_parse_error" in result and result["event_parse_error"] is not None and not isinstance(
+        result["event_parse_error"], str
+    ):
+        errors.append("event_parse_error must be a string or null")
+    for field in ("exit_code", "tool_errors"):
+        if field in result and type(result[field]) is not int:
+            errors.append(f"{field} must be an integer")
+    for field in ("turns", "tool_calls", "output_tokens"):
+        if field in result and (type(result[field]) is not int or result[field] < 0):
+            errors.append(f"{field} must be a non-negative integer")
+    response_time = result.get("response_time_seconds")
+    if "response_time_seconds" in result and (
+        not isinstance(response_time, (int, float))
+        or isinstance(response_time, bool)
+        or response_time < 0
+    ):
+        errors.append("response_time_seconds must be a non-negative number")
+    rubric = result.get("rubric")
+    if rubric is not None:
+        if not isinstance(rubric, dict):
+            errors.append("rubric must be a JSON object")
+        else:
+            for field in ("must_mention", "quality_criteria", "expected_docs"):
+                value = rubric.get(field, [])
+                if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
+                    errors.append(f"rubric.{field} must be a list of strings")
+    return errors
 
 
 def score_completeness(response: str, must_mention: list[str]) -> float:
@@ -76,33 +168,135 @@ def score_doc_retrieval(response: str, expected_docs: list[str]) -> float:
     return hits / len(expected_docs)
 
 
-def score_result(result: dict) -> dict:
+def score_result(result: object) -> dict:
     """Score a single evaluation result."""
+    schema_errors = validate_row_schema(result)
+    if not isinstance(result, dict):
+        result = {"raw_row": result}
+
     response = result.get("response", "")
+    if not isinstance(response, str):
+        response = ""
     rubric = result.get("rubric", {})
+    if not isinstance(rubric, dict):
+        rubric = {}
     status = result.get("status", "error")
 
     # Operational metrics captured by run_docs_eval.py's structured event-stream
     # parsing. Older raw result files won't have these -- default to None/0 so
     # aggregation can distinguish "known zero" from "not captured".
     operational = {
-        "passed": result.get("passed"),
-        "turns": result.get("turns"),
-        "tool_calls": result.get("tool_calls"),
-        "tool_errors": result.get("tool_errors"),
-        "output_tokens": result.get("output_tokens"),
-        "response_time_seconds": result.get("response_time_seconds"),
+        "passed": result.get("passed") if type(result.get("passed")) is bool else None,
+        "turns": result.get("turns") if type(result.get("turns")) is int and result.get("turns") >= 0 else None,
+        "tool_calls": (
+            result.get("tool_calls")
+            if type(result.get("tool_calls")) is int and result.get("tool_calls") >= 0
+            else None
+        ),
+        "tool_errors": (
+            result.get("tool_errors")
+            if type(result.get("tool_errors")) is int and result.get("tool_errors") >= 0
+            else None
+        ),
+        "output_tokens": (
+            result.get("output_tokens")
+            if type(result.get("output_tokens")) is int and result.get("output_tokens") >= 0
+            else None
+        ),
+        "response_time_seconds": (
+            result.get("response_time_seconds")
+            if isinstance(result.get("response_time_seconds"), (int, float))
+            and not isinstance(result.get("response_time_seconds"), bool)
+            and result.get("response_time_seconds") >= 0
+            else None
+        ),
     }
-
-    if status != "success" or not response:
+    if schema_errors:
+        existing_failure = result.get("failure_reason")
+        schema_failure = "row_schema_invalid: " + "; ".join(schema_errors)
+        failure_reason = f"{existing_failure}; {schema_failure}" if existing_failure else schema_failure
         return {
             **result,
+            "response": response,
+            "response_present": bool(response),
+            "status": "invalid",
+            "passed": False,
+            "source_validated": False,
+            "failure_reason": failure_reason,
+            "row_valid": False,
             "scores": {
                 "completeness": 0.0,
                 "quality": 0.0,
                 "doc_retrieval": 0.0,
-                "response_length": 0,
-                "has_response": False,
+                "response_length": len(response),
+                "has_response": bool(response),
+            },
+            "operational": operational,
+        }
+
+    server = result.get("server")
+    expected_server = MCP_SERVERS.get(server, {})
+    expected_config = expected_server.get("config", {})
+    selected_config = result.get("selected_source_config")
+    observed_tools = result.get("observed_tools")
+    successful_tools = result.get("successful_tools")
+    response_time = result.get("response_time_seconds")
+    expected_type = "local" if expected_server.get("type") == "stdio" else "http"
+    source_schema_valid = (
+        result.get("selected_source") == server
+        and result.get("source_config_count") == 1
+        and isinstance(selected_config, dict)
+        and selected_config.get("name") == expected_config.get("name")
+        and selected_config.get("type") == expected_type
+        and selected_config.get("endpoint") == expected_config.get("url")
+        and selected_config.get("command") == expected_config.get("command")
+        and selected_config.get("tool_prefix") == expected_config.get("tool_prefix")
+        and selected_config.get("azure_required") is result.get("azure_required")
+        and isinstance(observed_tools, list)
+        and bool(observed_tools)
+        and isinstance(successful_tools, list)
+        and bool(successful_tools)
+        and set(successful_tools).issubset(observed_tools)
+        and all(
+            isinstance(tool_name, str) and _source_for_tool(tool_name) == expected_config.get("tool_prefix")
+            for tool_name in observed_tools
+        )
+        and result.get("response_present") is True
+        and bool(response)
+        and isinstance(response_time, (int, float))
+        and not isinstance(response_time, bool)
+        and response_time >= 0
+        and result.get("failure_reason") is None
+        and result.get("event_parse_error") is None
+        and result.get("exit_code") == 0
+        and result.get("tool_errors") == 0
+    )
+    azure_evidence_valid = not result.get("azure_required") or (
+        result.get("azure_live_query_proven") is True
+        and isinstance(successful_tools, list)
+        and any(
+            _source_for_tool(tool_name) == expected_config.get("tool_prefix") and _is_search_tool(tool_name)
+            for tool_name in successful_tools
+        )
+    )
+    row_valid = (
+        status == "success"
+        and result.get("passed") is True
+        and result.get("source_validated") is True
+        and source_schema_valid
+        and azure_evidence_valid
+    )
+
+    if not row_valid:
+        return {
+            **result,
+            "row_valid": False,
+            "scores": {
+                "completeness": 0.0,
+                "quality": 0.0,
+                "doc_retrieval": 0.0,
+                "response_length": len(response),
+                "has_response": bool(response),
             },
             "operational": operational,
         }
@@ -128,7 +322,7 @@ def score_result(result: dict) -> dict:
         + scores["doc_retrieval"] * 0.3
     )
 
-    return {**result, "scores": scores, "operational": operational}
+    return {**result, "row_valid": True, "scores": scores, "operational": operational}
 
 
 def aggregate_scores(scored_results: list[dict]) -> dict:
@@ -151,16 +345,24 @@ def aggregate_scores(scored_results: list[dict]) -> dict:
         "tool_errors_known": False,
         "output_tokens": [],
         "response_time_seconds": [],
+        "status_counts": defaultdict(int),
+        "response_present": 0,
+        "response_missing": 0,
     })
 
     for r in scored_results:
-        server = r["server"]
-        model = r["model"]
-        category = r["category"]
+        server = r.get("server") if isinstance(r.get("server"), str) else "<invalid-server>"
+        model = r.get("model") if isinstance(r.get("model"), str) else "<invalid-model>"
+        category = r.get("category") if isinstance(r.get("category"), str) else "<invalid-category>"
 
         ops = r.get("operational", {})
         agg = server_ops[server]
         agg["total"] += 1
+        agg["status_counts"][r.get("status", "invalid")] += 1
+        if r.get("response_present", bool(r.get("response"))):
+            agg["response_present"] += 1
+        else:
+            agg["response_missing"] += 1
         if ops.get("passed") is not None:
             agg["passed_known"] += 1
             if ops["passed"]:
@@ -177,7 +379,7 @@ def aggregate_scores(scored_results: list[dict]) -> dict:
         if ops.get("response_time_seconds") is not None:
             agg["response_time_seconds"].append(ops["response_time_seconds"])
 
-        if not r.get("scores", {}).get("has_response", False):
+        if not r.get("row_valid"):
             continue
 
         composite = r["scores"]["composite"]
@@ -218,6 +420,11 @@ def aggregate_scores(scored_results: list[dict]) -> dict:
             "avg_response_time_seconds": (
                 avg(agg["response_time_seconds"]) if agg["response_time_seconds"] else None
             ),
+            "status_counts": dict(agg["status_counts"]),
+            "response_counts": {
+                "present": agg["response_present"],
+                "missing": agg["response_missing"],
+            },
         }
 
     return {
@@ -225,6 +432,97 @@ def aggregate_scores(scored_results: list[dict]) -> dict:
         "category_breakdown": category_avg,
         "server_averages": server_avg,
         "operational_metrics": operational_avg,
+    }
+
+
+def validate_required_matrix(
+    scored_results: list[dict],
+    scenario_ids: list[str] | None = None,
+    servers: list[str] | None = None,
+    models: list[str] | None = None,
+    azure_required_servers: set[str] | None = None,
+) -> dict:
+    """Validate required scenario/server/model rows and produce complete denominators."""
+    azure_required_servers = azure_required_servers or set()
+    rows_by_key: dict[tuple[str, str, str], list[dict]] = defaultdict(list)
+    malformed_rows: list[dict] = []
+    for index, row in enumerate(scored_results):
+        identity = (row.get("scenario_id"), row.get("server"), row.get("model"))
+        if not all(isinstance(value, str) for value in identity):
+            malformed_rows.append({
+                "row": f"input-index-{index}",
+                "status": "invalid",
+                "failure_reason": row.get("failure_reason") or "row identity is missing or invalid",
+            })
+            continue
+        key = identity
+        rows_by_key[key].append(row)
+
+    if scenario_ids is not None and servers is not None and models is not None:
+        expected_keys = set(product(scenario_ids, servers, models))
+    else:
+        expected_keys = set(rows_by_key)
+
+    status_counts = {"success": 0, "invalid": 0, "error": 0, "timeout": 0, "missing": 0}
+    response_counts = {"present": 0, "missing": 0}
+    invalid_rows: list[dict] = []
+    duplicate_rows: list[str] = []
+
+    for key in sorted(expected_keys):
+        row_id = " / ".join(key)
+        rows = rows_by_key.get(key, [])
+        if not rows:
+            status_counts["missing"] += 1
+            invalid_rows.append({"row": row_id, "status": "missing", "failure_reason": "required row missing"})
+            continue
+
+        if len(rows) > 1:
+            duplicate_rows.append(row_id)
+
+        row = rows[0]
+        if row["server"] in azure_required_servers and not (
+            row.get("azure_required") is True
+            and row.get("azure_live_query_proven") is True
+            and any(_is_search_tool(tool_name) for tool_name in row.get("successful_tools", []))
+        ):
+            row["row_valid"] = False
+            if not row.get("failure_reason"):
+                row["failure_reason"] = "azure_required_evidence_missing"
+        response_counts["present" if row.get("response_present", bool(row.get("response"))) else "missing"] += 1
+        status = row.get("status", "invalid")
+        outcome = status if status in {"error", "timeout"} else ("success" if row.get("row_valid") else "invalid")
+        status_counts[outcome] += 1
+
+        if not row.get("row_valid"):
+            invalid_rows.append({
+                "row": row_id,
+                "status": outcome,
+                "failure_reason": row.get("failure_reason") or "row evidence invalid",
+            })
+
+    unexpected_rows = sorted(" / ".join(key) for key in set(rows_by_key) - expected_keys)
+    invalid_rows.extend(malformed_rows)
+    status_counts["invalid"] += len(malformed_rows)
+    allowed = not invalid_rows and not duplicate_rows and not unexpected_rows
+    failure_reasons = []
+    if invalid_rows:
+        failure_reasons.append(f"{len(invalid_rows)} required row(s) are invalid or missing")
+    if duplicate_rows:
+        failure_reasons.append(f"{len(duplicate_rows)} required row(s) are duplicated")
+    if unexpected_rows:
+        failure_reasons.append(f"{len(unexpected_rows)} unexpected row(s) were supplied")
+
+    return {
+        "allowed": allowed,
+        "failure_reasons": failure_reasons,
+        "required_rows": len(expected_keys),
+        "observed_rows": len(scored_results),
+        "unique_observed_rows": len(rows_by_key),
+        "status_counts": status_counts,
+        "response_counts": response_counts,
+        "invalid_rows": invalid_rows,
+        "duplicate_rows": duplicate_rows,
+        "unexpected_rows": unexpected_rows,
     }
 
 
@@ -238,6 +536,22 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output", default=None,
         help="Path to save scored results (default: scored-{run_id}.json)"
+    )
+    parser.add_argument(
+        "--required-scenarios", default=None,
+        help="Scenario JSON whose IDs define the required matrix rows"
+    )
+    parser.add_argument(
+        "--required-servers", nargs="+", default=None,
+        help="Servers required for comparative publication"
+    )
+    parser.add_argument(
+        "--required-models", nargs="+", default=None,
+        help="Models required for comparative publication"
+    )
+    parser.add_argument(
+        "--azure-required-servers", nargs="*", default=None,
+        help="Required servers whose rows must prove a live Azure search"
     )
     return parser.parse_args()
 
@@ -284,6 +598,24 @@ def main():
 
     scored_results = [score_result(r) for r in all_results]
     aggregates = aggregate_scores(scored_results)
+    scenario_ids = None
+    if args.required_scenarios:
+        with open(args.required_scenarios) as f:
+            scenario_ids = [scenario["id"] for scenario in json.load(f)]
+    publication = validate_required_matrix(
+        scored_results,
+        scenario_ids=scenario_ids,
+        servers=args.required_servers,
+        models=args.required_models,
+        azure_required_servers=set(args.azure_required_servers or []),
+    )
+    aggregates["denominators"] = {
+        "required_rows": publication["required_rows"],
+        "observed_rows": publication["observed_rows"],
+        "unique_observed_rows": publication["unique_observed_rows"],
+        "status_counts": publication["status_counts"],
+        "response_counts": publication["response_counts"],
+    }
 
     output_data = {
         "metadata": {
@@ -291,6 +623,7 @@ def main():
             "scoring_version": "1.0",
         },
         "aggregates": aggregates,
+        "publication": publication,
         "results": scored_results,
     }
 
@@ -304,8 +637,15 @@ def main():
         json.dump(output_data, f, indent=2)
 
     print(f"Scored results saved to {output_path}")
+    if not publication["allowed"]:
+        print(
+            "Comparative publication blocked: " + "; ".join(publication["failure_reasons"]),
+            file=sys.stderr,
+        )
 
-    # Print summary
+    if not publication["allowed"]:
+        raise SystemExit(1)
+
     print("\n=== Server Averages ===")
     for server, avg_val in sorted(
         aggregates["server_averages"].items(), key=lambda x: -x[1]
