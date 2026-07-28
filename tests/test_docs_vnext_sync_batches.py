@@ -901,6 +901,55 @@ def test_backend_bounds_hanging_discovery_command(tmp_path):
         )
 
 
+def test_campaign_discovery_routes_ls_remote_fetch_and_show_through_bounded_runner(
+    tmp_path,
+):
+    manifest = _write_manifest(tmp_path, [_operation(1, 1)], run_id=321)
+    batch = plan_batches(manifest, max_files=1, max_payload_bytes=10)[0]
+    branch = branch_name(manifest, batch)
+
+    class RecordingBackend(GitHubGitBackend):
+        def __init__(self):
+            super().__init__(
+                repository_root=tmp_path,
+                repository="example/repository",
+                base_branch="main",
+                runner_temp=tmp_path / "runner",
+            )
+            self.calls = []
+
+        def _run_bounded_stdout(
+            self,
+            args,
+            *,
+            max_bytes,
+            cwd=None,
+            timeout_seconds=30,
+        ):
+            self.calls.append((tuple(args), max_bytes, timeout_seconds))
+            if args[1] == "ls-remote":
+                return f"{'a' * 40}\trefs/heads/{branch}\n"
+            if args[1] == "fetch":
+                return ""
+            return (
+                "Sync batch\n\n"
+                f"Manifest-SHA256: {manifest.digest}\n"
+                f"Manifest-Run-ID: {manifest.run_id}\n"
+                f"Batch-ID: {batch.id}\n"
+            )
+
+    backend = RecordingBackend()
+
+    identities = backend.discover_campaign_branches([])
+
+    assert identities[0].batch_id == batch.id
+    assert [(call[0][1], call[1], call[2]) for call in backend.calls] == [
+        ("ls-remote", 32 * 1024, 30),
+        ("fetch", 4096, 30),
+        ("show", 4096, 30),
+    ]
+
+
 @pytest.mark.parametrize("run_id", ["+1", "01", "1_0", "1 ", "0", "-1"])
 def test_commit_identity_rejects_noncanonical_run_ids(run_id):
     message = (
