@@ -1095,16 +1095,11 @@ class GitHubGitBackend:
         overflow_streams: set[str] = set()
         overflow_event = threading.Event()
         termination_lock = threading.Lock()
-        terminated = False
         process_group_id = process.pid
         deadline = time.monotonic() + timeout_seconds
 
         def terminate_process_group() -> None:
-            nonlocal terminated
             with termination_lock:
-                if terminated:
-                    return
-                terminated = True
                 try:
                     if os.name == "posix":
                         os.killpg(process_group_id, signal.SIGKILL)
@@ -1142,47 +1137,36 @@ class GitHubGitBackend:
         )
         stdout_thread.start()
         stderr_thread.start()
-        timed_out = False
         leader_exited_at: float | None = None
         while True:
-            readers_alive = stdout_thread.is_alive() or stderr_thread.is_alive()
-            leader_exited = process.poll() is not None
-            if overflow_event.is_set() or (leader_exited and not readers_alive):
-                break
+            if overflow_event.is_set():
+                terminate_process_group()
+                raise BatchSyncError(
+                    f"{args[0]} {args[1] if len(args) > 1 else ''} "
+                    f"{'/'.join(sorted(overflow_streams))} exceeds the "
+                    f"{max_bytes}-byte discovery limit"
+                )
 
             now = time.monotonic()
             remaining = deadline - now
-            if remaining <= DISCOVERY_TERMINATION_GRACE_SECONDS:
-                timed_out = True
+            if remaining <= 0:
                 terminate_process_group()
+                raise BatchSyncError(
+                    f"{args[0]} {args[1] if len(args) > 1 else ''} exceeded the "
+                    f"{timeout_seconds}-second discovery timeout"
+                )
+
+            readers_alive = stdout_thread.is_alive() or stderr_thread.is_alive()
+            leader_exited = process.poll() is not None
+            if leader_exited and not readers_alive:
                 break
             if leader_exited:
                 leader_exited_at = leader_exited_at or now
                 if now - leader_exited_at >= DISCOVERY_TERMINATION_GRACE_SECONDS:
                     terminate_process_group()
-                    break
             time.sleep(min(0.01, remaining))
-
-        for thread in (stdout_thread, stderr_thread):
-            remaining = max(0.0, deadline - time.monotonic())
-            thread.join(timeout=remaining)
-        if stdout_thread.is_alive() or stderr_thread.is_alive():
+        if overflow_event.is_set() or overflow_streams:
             terminate_process_group()
-            timed_out = True
-        if process.poll() is None:
-            remaining = max(0.0, deadline - time.monotonic())
-            try:
-                process.wait(timeout=remaining)
-            except subprocess.TimeoutExpired:
-                terminate_process_group()
-                timed_out = True
-
-        if timed_out:
-            raise BatchSyncError(
-                f"{args[0]} {args[1] if len(args) > 1 else ''} exceeded the "
-                f"{timeout_seconds}-second discovery timeout"
-            )
-        if overflow_streams:
             raise BatchSyncError(
                 f"{args[0]} {args[1] if len(args) > 1 else ''} "
                 f"{'/'.join(sorted(overflow_streams))} exceeds the "

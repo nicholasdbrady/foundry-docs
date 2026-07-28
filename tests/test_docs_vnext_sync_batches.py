@@ -891,6 +891,27 @@ def test_backend_bounds_commit_message_output_before_parsing(tmp_path):
         )
 
 
+def test_single_stream_overflow_cannot_race_natural_completion(tmp_path):
+    backend = GitHubGitBackend(
+        repository_root=tmp_path,
+        repository="example/repository",
+        base_branch="main",
+        runner_temp=tmp_path / "runner",
+    )
+
+    for _ in range(20):
+        with pytest.raises(BatchSyncError, match="stdout exceeds the 4096-byte discovery limit"):
+            backend._run_bounded_stdout(
+                [
+                    sys.executable,
+                    "-c",
+                    "import sys; sys.stderr.close(); sys.stdout.write('x' * 5000)",
+                ],
+                max_bytes=4096,
+                timeout_seconds=1,
+            )
+
+
 def test_backend_bounds_hanging_discovery_command(tmp_path):
     backend = GitHubGitBackend(
         repository_root=tmp_path,
@@ -899,12 +920,14 @@ def test_backend_bounds_hanging_discovery_command(tmp_path):
         runner_temp=tmp_path / "runner",
     )
 
+    started = time.monotonic()
     with pytest.raises(BatchSyncError, match="exceeded the 1-second discovery timeout"):
         backend._run_bounded_stdout(
             [sys.executable, "-c", "import time; time.sleep(5)"],
             max_bytes=4096,
             timeout_seconds=1,
         )
+    assert time.monotonic() - started < 1.5
 
 
 def test_timeout_terminates_child_holding_discovery_pipes(tmp_path):
@@ -934,7 +957,7 @@ def test_timeout_terminates_child_holding_discovery_pipes(tmp_path):
             timeout_seconds=1,
         )
 
-    assert time.monotonic() - started < 6
+    assert time.monotonic() - started < 1.5
 
 
 def test_exited_parent_still_terminates_grandchild_holding_discovery_pipes(tmp_path):
@@ -968,15 +991,20 @@ def test_exited_parent_child_holding_both_streams_uses_one_deadline(tmp_path):
         base_branch="main",
         runner_temp=tmp_path / "runner",
     )
+    started_file = tmp_path / "two-stream-child-started"
     child_code = (
-        "import sys, time; "
+        "import pathlib, sys, time; "
         "print('stdout-held', flush=True); "
         "print('stderr-held', file=sys.stderr, flush=True); "
+        f"pathlib.Path({str(started_file)!r}).write_text('started'); "
         "time.sleep(5)"
     )
     parent_code = (
-        "import subprocess, sys; "
-        f"subprocess.Popen([sys.executable, '-c', {child_code!r}])"
+        "import pathlib, subprocess, sys, time; "
+        f"subprocess.Popen([sys.executable, '-c', {child_code!r}]); "
+        f"started = pathlib.Path({str(started_file)!r}); "
+        "deadline = time.monotonic() + 2; "
+        "exec(\"while not started.exists() and time.monotonic() < deadline:\\n time.sleep(0.01)\")"
     )
 
     started = time.monotonic()
