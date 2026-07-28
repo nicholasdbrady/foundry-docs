@@ -944,12 +944,7 @@ def test_exited_parent_still_terminates_grandchild_holding_discovery_pipes(tmp_p
         base_branch="main",
         runner_temp=tmp_path / "runner",
     )
-    child_code = (
-        "import time\n"
-        "while True:\n"
-        " print('holding-pipe', flush=True)\n"
-        " time.sleep(0.1)\n"
-    )
+    child_code = "import time; time.sleep(5)"
     parent_code = (
         "import subprocess, sys; "
         f"subprocess.Popen([sys.executable, '-c', {child_code!r}])"
@@ -959,11 +954,36 @@ def test_exited_parent_still_terminates_grandchild_holding_discovery_pipes(tmp_p
     output = backend._run_bounded_stdout(
         [sys.executable, "-c", parent_code],
         max_bytes=4096,
-        timeout_seconds=10,
+        timeout_seconds=1,
     )
 
-    assert "holding-pipe" in output
-    assert time.monotonic() - started < 6
+    assert output == ""
+    assert time.monotonic() - started < 1.5
+
+
+def test_overflow_terminates_grandchild_holding_discovery_pipes(tmp_path):
+    backend = GitHubGitBackend(
+        repository_root=tmp_path,
+        repository="example/repository",
+        base_branch="main",
+        runner_temp=tmp_path / "runner",
+    )
+    child_code = "import time; time.sleep(5)"
+    parent_code = (
+        "import subprocess, sys; "
+        f"subprocess.Popen([sys.executable, '-c', {child_code!r}]); "
+        "sys.stdout.write('x' * 5000); sys.stdout.flush()"
+    )
+
+    started = time.monotonic()
+    with pytest.raises(BatchSyncError, match="stdout exceeds the 4096-byte discovery limit"):
+        backend._run_bounded_stdout(
+            [sys.executable, "-c", parent_code],
+            max_bytes=4096,
+            timeout_seconds=1,
+        )
+
+    assert time.monotonic() - started < 1.5
 
 
 def test_campaign_discovery_routes_ls_remote_fetch_and_show_through_bounded_runner(

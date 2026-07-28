@@ -13,6 +13,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 from dataclasses import dataclass, replace
 from pathlib import Path, PurePosixPath
 from typing import Any, Protocol, Sequence
@@ -27,7 +28,7 @@ MAX_AUTOMATION_BRANCHES = 100
 MAX_COMMIT_MESSAGE_BYTES = 4096
 MAX_REMOTE_DISCOVERY_BYTES = 32 * 1024
 DISCOVERY_COMMAND_TIMEOUT_SECONDS = 30
-DISCOVERY_DRAIN_JOIN_SECONDS = 2
+DISCOVERY_TERMINATION_GRACE_SECONDS = 0.1
 BRANCH_PREFIX = "automation/docs-vnext-sync"
 PR_MARKER_NAME = "docs-vnext-sync-state"
 PR_MARKER_PATTERN = re.compile(
@@ -1092,8 +1093,11 @@ class GitHubGitBackend:
         stdout = bytearray()
         stderr = bytearray()
         overflow_streams: set[str] = set()
+        overflow_event = threading.Event()
         termination_lock = threading.Lock()
         terminated = False
+        process_group_id = process.pid
+        deadline = time.monotonic() + timeout_seconds
 
         def terminate_process_group() -> None:
             nonlocal terminated
@@ -1103,9 +1107,9 @@ class GitHubGitBackend:
                 terminated = True
                 try:
                     if os.name == "posix":
-                        os.killpg(process.pid, signal.SIGKILL)
+                        os.killpg(process_group_id, signal.SIGKILL)
                     elif os.name == "nt":
-                        os.kill(process.pid, signal.CTRL_BREAK_EVENT)
+                        os.kill(process_group_id, signal.CTRL_BREAK_EVENT)
                     else:
                         process.kill()
                 except (OSError, ProcessLookupError):
@@ -1120,6 +1124,7 @@ class GitHubGitBackend:
                     destination.extend(block)
                     if len(destination) > max_bytes:
                         overflow_streams.add(name)
+                        overflow_event.set()
                         terminate_process_group()
                         return
             except (OSError, ValueError):
@@ -1137,36 +1142,46 @@ class GitHubGitBackend:
         )
         stdout_thread.start()
         stderr_thread.start()
-        try:
-            process.wait(timeout=timeout_seconds)
-        except subprocess.TimeoutExpired as exc:
+        timed_out = False
+        leader_exited_at: float | None = None
+        while True:
+            readers_alive = stdout_thread.is_alive() or stderr_thread.is_alive()
+            leader_exited = process.poll() is not None
+            if overflow_event.is_set() or (leader_exited and not readers_alive):
+                break
+
+            now = time.monotonic()
+            remaining = deadline - now
+            if remaining <= DISCOVERY_TERMINATION_GRACE_SECONDS:
+                timed_out = True
+                terminate_process_group()
+                break
+            if leader_exited:
+                leader_exited_at = leader_exited_at or now
+                if now - leader_exited_at >= DISCOVERY_TERMINATION_GRACE_SECONDS:
+                    terminate_process_group()
+                    break
+            time.sleep(min(0.01, remaining))
+
+        for thread in (stdout_thread, stderr_thread):
+            remaining = max(0.0, deadline - time.monotonic())
+            thread.join(timeout=remaining)
+        if stdout_thread.is_alive() or stderr_thread.is_alive():
             terminate_process_group()
+            timed_out = True
+        if process.poll() is None:
+            remaining = max(0.0, deadline - time.monotonic())
             try:
-                process.wait(timeout=DISCOVERY_DRAIN_JOIN_SECONDS)
+                process.wait(timeout=remaining)
             except subprocess.TimeoutExpired:
-                process.kill()
-                process.wait(timeout=DISCOVERY_DRAIN_JOIN_SECONDS)
-            process.stdout.close()
-            process.stderr.close()
-            stdout_thread.join(timeout=DISCOVERY_DRAIN_JOIN_SECONDS)
-            stderr_thread.join(timeout=DISCOVERY_DRAIN_JOIN_SECONDS)
+                terminate_process_group()
+                timed_out = True
+
+        if timed_out:
             raise BatchSyncError(
                 f"{args[0]} {args[1] if len(args) > 1 else ''} exceeded the "
                 f"{timeout_seconds}-second discovery timeout"
-            ) from exc
-        stdout_thread.join(timeout=DISCOVERY_DRAIN_JOIN_SECONDS)
-        stderr_thread.join(timeout=DISCOVERY_DRAIN_JOIN_SECONDS)
-        if stdout_thread.is_alive() or stderr_thread.is_alive():
-            terminate_process_group()
-            process.stdout.close()
-            process.stderr.close()
-            stdout_thread.join(timeout=DISCOVERY_DRAIN_JOIN_SECONDS)
-            stderr_thread.join(timeout=DISCOVERY_DRAIN_JOIN_SECONDS)
-            if stdout_thread.is_alive() or stderr_thread.is_alive():
-                raise BatchSyncError(
-                    f"{args[0]} discovery stream drains did not stop within "
-                    f"{DISCOVERY_DRAIN_JOIN_SECONDS} seconds"
-                )
+            )
         if overflow_streams:
             raise BatchSyncError(
                 f"{args[0]} {args[1] if len(args) > 1 else ''} "
