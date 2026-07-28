@@ -961,6 +961,35 @@ def test_exited_parent_still_terminates_grandchild_holding_discovery_pipes(tmp_p
     assert time.monotonic() - started < 1.5
 
 
+def test_exited_parent_child_holding_both_streams_uses_one_deadline(tmp_path):
+    backend = GitHubGitBackend(
+        repository_root=tmp_path,
+        repository="example/repository",
+        base_branch="main",
+        runner_temp=tmp_path / "runner",
+    )
+    child_code = (
+        "import sys, time; "
+        "print('stdout-held', flush=True); "
+        "print('stderr-held', file=sys.stderr, flush=True); "
+        "time.sleep(5)"
+    )
+    parent_code = (
+        "import subprocess, sys; "
+        f"subprocess.Popen([sys.executable, '-c', {child_code!r}])"
+    )
+
+    started = time.monotonic()
+    output = backend._run_bounded_stdout(
+        [sys.executable, "-c", parent_code],
+        max_bytes=4096,
+        timeout_seconds=1,
+    )
+
+    assert output.strip() == "stdout-held"
+    assert time.monotonic() - started < 1.5
+
+
 def test_overflow_terminates_grandchild_holding_discovery_pipes(tmp_path):
     backend = GitHubGitBackend(
         repository_root=tmp_path,
