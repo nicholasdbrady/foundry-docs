@@ -1,11 +1,15 @@
 name: docs-vnext source navigation required check
 
+# REQUIRED RULESET PREREQUISITE:
+# Require "Validate source navigation" and require branches to be up to date
+# before merging. Legitimate trusted-gate migrations require a dedicated
+# repository-admin ruleset bypass and independent review.
+
 on:
   pull_request_target:
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review, edited]
 
 permissions:
-  actions: read
   contents: read
 
 concurrency:
@@ -18,38 +22,186 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
-      - name: Require successful pull request validation
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          fetch-depth: 0
+
+      - name: Initialize failure inventory
+        run: |
+          mkdir -p tests/eval_results
+          cat > tests/eval_results/docs-vnext-route-inventory.json <<'JSON'
+          {
+            "schemaVersion": 1,
+            "status": "failed",
+            "navigationSource": "docs-vnext/docs.json",
+            "routes": [],
+            "openapi": [],
+            "aliases": [],
+            "externalNavigation": [],
+            "linkSummary": {
+              "currentStale": 0,
+              "baselineStale": 0,
+              "grandfathered": 0,
+              "introduced": 0
+            },
+            "diagnosticSummary": {
+              "total": 1,
+              "counts": {"workflow_incomplete": 1},
+              "truncated": false
+            },
+            "diagnostics": [
+              {
+                "sourceNavigationEntry": "navigation",
+                "route": null,
+                "failureClass": "workflow_incomplete",
+                "candidateSourcePath": "docs-vnext/docs.json",
+                "detail": "Trusted validation did not complete."
+              }
+            ]
+          }
+          JSON
+          cp tests/eval_results/docs-vnext-route-inventory.json \
+            "$RUNNER_TEMP/source-navigation-failure-inventory.json"
+
+      - name: Fetch and classify proposed changes
+        id: changes
         env:
-          GH_TOKEN: ${{ github.token }}
-          REPOSITORY: ${{ github.repository }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-          WORKFLOW_FILE: docs-vnext-source-navigation.yml
         run: |
-          for attempt in {1..132}; do
-            if ! run="$(
-              gh api \
-                "/repos/$REPOSITORY/actions/workflows/$WORKFLOW_FILE/runs?event=pull_request&head_sha=$HEAD_SHA&per_page=100" \
-                --jq ".workflow_runs | map(select(any(.pull_requests[]?; .number == $PR_NUMBER))) | .[0] // empty | [.id, .status, (.conclusion // \"\")] | @tsv"
-            )"; then
-              echo "::error::Unable to query source navigation workflow runs."
+          if [[ "$(git rev-parse HEAD)" != "$BASE_SHA" ]]; then
+            echo "::error::Trusted checkout does not match the current pull request base."
+            exit 1
+          fi
+          if ! git fetch --no-tags origin "refs/pull/$PR_NUMBER/head"; then
+            echo "::error::Unable to fetch the current pull request head object."
+            exit 1
+          fi
+          if [[ "$(git rev-parse FETCH_HEAD)" != "$HEAD_SHA" ]]; then
+            echo "::error::Fetched pull request head does not match the current event."
+            exit 1
+          fi
+          if ! merge_base="$(git merge-base "$BASE_SHA" "$HEAD_SHA")"; then
+            echo "::error::Unable to determine the current pull request merge base."
+            exit 1
+          fi
+
+          changed_paths="$RUNNER_TEMP/source-navigation-required-changed-paths"
+          if ! git diff --no-renames --name-only -z "$merge_base" "$HEAD_SHA" -- > "$changed_paths"; then
+            echo "::error::Unable to enumerate current pull request paths."
+            exit 1
+          fi
+
+          if ! merge_result="$(git merge-tree --write-tree "$BASE_SHA" "$HEAD_SHA" 2>&1)"; then
+            echo "::error::The current pull request does not produce a clean synthetic merge."
+            printf '%s\n' "$merge_result"
+            exit 1
+          fi
+          merge_tree="${merge_result%%$'\n'*}"
+          if [[ ! "$merge_tree" =~ ^[0-9a-f]{40,64}$ ]] || ! git cat-file -e "$merge_tree^{tree}"; then
+            echo "::error::Unable to verify the synthetic merge tree."
+            exit 1
+          fi
+          echo "merge_tree=$merge_tree" >> "$GITHUB_OUTPUT"
+
+          relevant=false
+          while IFS= read -r -d '' path; do
+            case "$path" in
+              .github/workflows/docs-vnext-source-navigation-required.yml|scripts/validate_docs_vnext_navigation.py)
+                echo "::error::Trusted source navigation enforcement cannot be changed in a normal pull request."
+                echo "::error::Use a dedicated gate-migration pull request with independent review and repository-admin ruleset bypass."
+                exit 1
+                ;;
+              docs-vnext/*|tests/test_validate_docs_vnext_navigation.py|.github/workflows/docs-vnext-source-navigation.yml)
+                relevant=true
+                ;;
+            esac
+          done < "$changed_paths"
+          echo "relevant=$relevant" >> "$GITHUB_OUTPUT"
+          if [[ "$relevant" == "true" ]]; then
+            echo "irrelevant=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "irrelevant=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: No relevant source navigation changes
+        if: steps.changes.outputs.irrelevant == 'true'
+        run: echo "No docs-vnext source navigation changes require validation."
+
+      - name: Extract proposed documentation as data
+        if: steps.changes.outputs.relevant == 'true'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          MERGE_TREE: ${{ steps.changes.outputs.merge_tree }}
+        run: |
+          base_dir="$RUNNER_TEMP/source-navigation-base"
+          merged_dir="$RUNNER_TEMP/source-navigation-merged"
+          base_archive="$RUNNER_TEMP/source-navigation-base.tar"
+          merged_archive="$RUNNER_TEMP/source-navigation-merged.tar"
+          mkdir -p "$base_dir" "$merged_dir"
+          if ! git archive -o "$base_archive" "$BASE_SHA" docs-vnext; then
+            echo "::error::Unable to extract the current base documentation tree."
+            exit 1
+          fi
+          if ! tar -xf "$base_archive" -C "$base_dir"; then
+            echo "::error::Unable to unpack the current base documentation tree."
+            exit 1
+          fi
+          if ! git archive -o "$merged_archive" "$MERGE_TREE" docs-vnext; then
+            echo "::error::Unable to extract the synthetic merge documentation tree."
+            exit 1
+          fi
+          if ! tar -xf "$merged_archive" -C "$merged_dir"; then
+            echo "::error::Unable to unpack the synthetic merge documentation tree."
+            exit 1
+          fi
+          if find "$merged_dir/docs-vnext" -type l -print -quit | grep -q .; then
+            echo "::error::Synthetic merge docs-vnext tree contains symbolic links."
+            exit 1
+          fi
+
+      - name: Validate merged docs-vnext source navigation
+        if: steps.changes.outputs.relevant == 'true'
+        run: |
+          python3 -I scripts/validate_docs_vnext_navigation.py \
+            --docs-dir "$RUNNER_TEMP/source-navigation-merged/docs-vnext" \
+            --base-docs-dir "$RUNNER_TEMP/source-navigation-base/docs-vnext" \
+            --output tests/eval_results/docs-vnext-route-inventory.json
+
+      - name: Confirm current base branch
+        id: freshness
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          rewrite_failure_inventory() {
+            if ! cp "$RUNNER_TEMP/source-navigation-failure-inventory.json" \
+              tests/eval_results/docs-vnext-route-inventory.json; then
+              echo "::error::Unable to rewrite the route inventory as failed."
               exit 1
             fi
+            echo "failure=true" >> "$GITHUB_OUTPUT"
+          }
 
-            if [[ -n "$run" ]]; then
-              IFS=$'\t' read -r run_id status conclusion <<< "$run"
-              if [[ "$status" == "completed" ]]; then
-                if [[ "$conclusion" == "success" ]]; then
-                  echo "Source navigation validation run $run_id succeeded."
-                  exit 0
-                fi
-                echo "::error::Source navigation validation run $run_id concluded with: $conclusion"
-                exit 1
-              fi
-            fi
-            sleep 5
-          done
+          if ! remote_base="$(git ls-remote --exit-code origin "refs/heads/$BASE_REF" | awk 'NR == 1 { print $1 }')"; then
+            rewrite_failure_inventory
+            echo "::error::Unable to resolve the current pull request base branch."
+            exit 1
+          fi
+          if [[ "$remote_base" != "$BASE_SHA" ]]; then
+            rewrite_failure_inventory
+            echo "::error::The pull request base advanced during validation."
+            echo "::error::The repository ruleset must require branches to be up to date before merging."
+            exit 1
+          fi
 
-          echo "::error::No completed source navigation validation run was found for $HEAD_SHA."
-          echo "::error::Remove any [skip ci] directive or resolve merge conflicts, then push a new commit."
-          exit 1
+      - name: Upload trusted route inventory
+        if: always() && (steps.changes.outputs.irrelevant != 'true' || steps.freshness.outputs.failure == 'true')
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        with:
+          name: docs-vnext-required-route-inventory
+          path: tests/eval_results/docs-vnext-route-inventory.json
+          if-no-files-found: error
+          retention-days: 30
