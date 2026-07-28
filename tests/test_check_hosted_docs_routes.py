@@ -368,8 +368,7 @@ def test_workflow_runs_after_deployment_and_on_schedule_with_retained_diagnostic
     assert "success" in job["if"]
     assert "failure" in job["if"]
     checkout = next(step for step in job["steps"] if step.get("uses", "").startswith("actions/checkout@"))
-    assert "github.event.deployment.sha" in checkout["with"]["ref"]
-    assert "staging - docs-vnext" in checkout["with"]["ref"]
+    assert checkout["with"]["ref"] == "main"
     assert checkout["with"]["fetch-depth"] == 0
     by_name = {step.get("name"): step for step in job["steps"] if "name" in step}
     assert "Initialize blocked diagnostics" in by_name
