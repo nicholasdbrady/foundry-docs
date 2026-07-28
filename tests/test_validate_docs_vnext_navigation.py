@@ -6,10 +6,15 @@ import sys
 from pathlib import Path
 
 import pytest
+import yaml
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 
 from validate_docs_vnext_navigation import main, validate_navigation  # noqa: E402
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+WORKFLOW_PATH = REPO_ROOT / ".github" / "workflows" / "docs-vnext-source-navigation.yml"
+REQUIRED_WORKFLOW_PATH = REPO_ROOT / ".github" / "workflows" / "docs-vnext-source-navigation-required.yml"
 
 
 def _write_page(docs_dir: Path, route: str, body: str = "Useful documentation.\n") -> None:
@@ -321,3 +326,77 @@ def test_missing_navigation_pages_do_not_cascade_into_link_failures(tmp_path: Pa
     result = validate_navigation(docs_dir, navigation_path)
 
     assert result["diagnosticSummary"]["counts"] == {"missing_source_page": 1}
+
+
+def test_workflow_creates_stable_check_for_every_pull_request() -> None:
+    workflow = yaml.load(WORKFLOW_PATH.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
+
+    assert workflow["on"]["pull_request"] == {}
+    assert workflow["permissions"] == {"contents": "read"}
+    assert workflow["jobs"]["validate-source-navigation"]["name"] == "Run source navigation validation"
+
+
+def test_workflow_noops_irrelevant_changes_and_gates_relevant_work() -> None:
+    workflow = yaml.load(WORKFLOW_PATH.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
+    steps = workflow["jobs"]["validate-source-navigation"]["steps"]
+    by_name = {step["name"]: step for step in steps if "name" in step}
+
+    detector = by_name["Detect relevant changes"]
+    assert detector["id"] == "changes"
+    assert 'if ! merge_base="$(git merge-base "$BASE_SHA" "$HEAD_SHA")"' in detector["run"]
+    assert 'if ! git diff --no-renames --name-only -z "$merge_base" "$HEAD_SHA"' in detector["run"]
+    assert '> "$changed_paths"' in detector["run"]
+    assert 'done < "$changed_paths"' in detector["run"]
+    assert "< <(" not in detector["run"]
+    for relevant_path in (
+        "docs-vnext/*",
+        "scripts/validate_docs_vnext_navigation.py",
+        "tests/test_validate_docs_vnext_navigation.py",
+        ".github/workflows/docs-vnext-source-navigation.yml",
+        ".github/workflows/docs-vnext-source-navigation-required.yml",
+    ):
+        assert relevant_path in detector["run"]
+
+    assert by_name["No relevant source navigation changes"]["if"] == "steps.changes.outputs.relevant != 'true'"
+    for step_name in (
+        "Initialize failure inventory",
+        "Install test dependencies",
+        "Run navigation validator tests",
+        "Prepare baseline validation inputs",
+        "Validate docs-vnext source navigation",
+    ):
+        assert by_name[step_name]["if"] == "steps.changes.outputs.relevant == 'true'"
+    assert by_name["Upload route inventory"]["if"] == "always() && steps.changes.outputs.relevant == 'true'"
+
+
+def test_workflow_fails_closed_when_path_diff_generation_fails() -> None:
+    workflow = yaml.load(WORKFLOW_PATH.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
+    steps = workflow["jobs"]["validate-source-navigation"]["steps"]
+    detector = next(step for step in steps if step.get("name") == "Detect relevant changes")
+
+    assert "Unable to determine the pull request merge base." in detector["run"]
+    assert "Unable to enumerate pull request paths." in detector["run"]
+    assert detector["run"].count("exit 1") >= 2
+
+
+def test_required_context_is_trusted_read_only_and_skip_ci_resistant() -> None:
+    workflow = yaml.load(REQUIRED_WORKFLOW_PATH.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
+    sentinel = workflow["jobs"]["require-source-navigation"]
+
+    assert workflow["on"]["pull_request_target"]["types"] == [
+        "opened",
+        "synchronize",
+        "reopened",
+        "ready_for_review",
+    ]
+    assert workflow["permissions"] == {"actions": "read", "contents": "read"}
+    assert sentinel["name"] == "Validate source navigation"
+    assert all("uses" not in step for step in sentinel["steps"])
+    script = sentinel["steps"][0]["run"]
+    assert "event=pull_request" in script
+    assert "head_sha=$HEAD_SHA" in script
+    assert ".pull_requests[]?" in script
+    assert ".number == $PR_NUMBER" in script
+    assert "No completed source navigation validation run was found" in script
+    assert "Remove any [skip ci] directive or resolve merge conflicts" in script
+    assert script.count("exit 1") >= 3
