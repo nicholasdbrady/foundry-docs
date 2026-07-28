@@ -950,6 +950,52 @@ def test_campaign_discovery_routes_ls_remote_fetch_and_show_through_bounded_runn
     ]
 
 
+def test_deleted_pr_head_with_missing_marker_recovers_via_bounded_pull_ref(tmp_path):
+    manifest = _write_manifest(tmp_path, [_operation(1, 1)], run_id=654)
+    batch = plan_batches(manifest, max_files=1, max_payload_bytes=10)[0]
+    pull_request = replace(_pull_request(manifest, batch), marker=None)
+
+    class RecordingBackend(GitHubGitBackend):
+        def __init__(self):
+            super().__init__(
+                repository_root=tmp_path,
+                repository="example/repository",
+                base_branch="main",
+                runner_temp=tmp_path / "runner",
+            )
+            self.calls = []
+
+        def _run_bounded_stdout(
+            self,
+            args,
+            *,
+            max_bytes,
+            cwd=None,
+            timeout_seconds=30,
+        ):
+            self.calls.append((tuple(args), max_bytes, timeout_seconds))
+            if args[1] in {"ls-remote", "fetch"}:
+                return ""
+            return (
+                "Sync batch\n\n"
+                f"Manifest-SHA256: {manifest.digest}\n"
+                f"Manifest-Run-ID: {manifest.run_id}\n"
+                f"Batch-ID: {batch.id}\n"
+            )
+
+    backend = RecordingBackend()
+
+    identities = backend.discover_campaign_branches([pull_request])
+    selected = select_active_manifest(manifest, backend, identities)
+
+    assert selected.digest == manifest.digest
+    assert identities[0].pull_request_number == pull_request.number
+    fetch_call = backend.calls[1]
+    assert fetch_call[0][1] == "fetch"
+    assert f"refs/pull/{pull_request.number}/head" in fetch_call[0][-1]
+    assert fetch_call[1:] == (4096, 30)
+
+
 @pytest.mark.parametrize("run_id", ["+1", "01", "1_0", "1 ", "0", "-1"])
 def test_commit_identity_rejects_noncanonical_run_ids(run_id):
     message = (
