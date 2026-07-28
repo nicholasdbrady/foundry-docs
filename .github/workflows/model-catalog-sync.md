@@ -23,9 +23,33 @@ network:
   allowed:
     - defaults
     - github
-    - python
-    - playwright
-    - ai.azure.com
+
+steps:
+  - name: Install model catalog browser runtime
+    run: |
+      set -euo pipefail
+      python3 -m pip install "playwright>=1.57.0"
+      python3 -m playwright install --with-deps chromium
+  - name: Run model catalog watchdog
+    run: |
+      set -euo pipefail
+      mkdir -p /tmp/gh-aw/agent
+      python3 scripts/check_model_catalog_watchdog.py \
+        --output /tmp/gh-aw/agent/model-catalog-watchdog.json
+  - name: Generate model catalog data
+    run: |
+      set -euo pipefail
+      python3 scripts/scrape_model_catalog.py --include-partners --output docs/static/data
+      cp docs/static/data/models-core.json docs-vnext/static/data/models-core.json
+      cp docs/static/data/models-huggingface.json docs-vnext/static/data/models-huggingface.json
+      cp docs/static/data/models.json docs-vnext/static/data/models.json
+  - name: Prepare model catalog diff evidence
+    run: |
+      set -euo pipefail
+      git diff --stat -- docs/static/data/ docs-vnext/static/data/ \
+        > /tmp/gh-aw/agent/model-catalog-diff-stat.txt
+      git diff --name-only -- docs/static/data/ docs-vnext/static/data/ \
+        > /tmp/gh-aw/agent/model-catalog-changed-files.txt
 
 safe-outputs:
   create-pull-request:
@@ -42,10 +66,7 @@ tools:
   cache-memory: true
   github:
     toolsets: [default]
-  edit:
-  playwright:
-    mode: cli
-  bash: ["*"]
+  bash: [cat, git, wc]
 
 imports:
   - shared/mood.md
@@ -65,41 +86,28 @@ You are an automation agent that regenerates the model catalog data files for th
 - The script scrapes the public Azure AI Asset Gallery API, normalizes model metadata, filters deprecated models, preserves existing region data, and writes JSON files
 - Uses `--include-partners` to include all providers (Azure Direct + partners), split into core and HuggingFace shards
 
-## Step 1: Run the Catalog Scraper
+## Step 1: Verify Prepared Catalog Results
 
-First install the local Python tooling and run the signed-out API/UI watchdog:
+The workflow has already installed the browser runtime, run the signed-out API/UI watchdog, generated the model catalog, and copied the bounded outputs to both docs corpora in deterministic pre-agent steps.
+
+Do not install dependencies or rerun the watchdog or scraper. Read the prepared watchdog result:
 
 ```bash
-python3 -m pip install "playwright>=1.57.0"
-python3 -m playwright install chromium
-python3 scripts/check_model_catalog_watchdog.py --output /tmp/gh-aw/agent/model-catalog-watchdog.json
+cat /tmp/gh-aw/agent/model-catalog-watchdog.json
 ```
 
-If dependency installation, browser installation, or the watchdog fails, call `report_incomplete` with the command output and `/tmp/gh-aw/agent/model-catalog-watchdog.json` contents if present, then STOP. Do not continue to scrape or create a PR.
+The watchdog must report `"status": "ok"`. If the artifact is missing or reports any other status, call `report_incomplete` with its contents, then STOP. Do not create a PR.
 
-Run the scraper for the primary docs site:
-
-```bash
-python3 scripts/scrape_model_catalog.py --include-partners --output docs/static/data
-```
-
-If the script exits with a non-zero code, call `report_incomplete` with the error output and STOP — do NOT create a PR with bad data.
-
-Then copy the output to docs-vnext:
+Read the prepared diff evidence:
 
 ```bash
-cp docs/static/data/models-core.json docs-vnext/static/data/models-core.json
-cp docs/static/data/models-huggingface.json docs-vnext/static/data/models-huggingface.json
-cp docs/static/data/models.json docs-vnext/static/data/models.json
+cat /tmp/gh-aw/agent/model-catalog-diff-stat.txt
+cat /tmp/gh-aw/agent/model-catalog-changed-files.txt
 ```
 
 ## Step 2: Check for Changes
 
-```bash
-git diff --stat docs/static/data/ docs-vnext/static/data/
-```
-
-If there are no changes, call `noop` with message "Model catalog data is up to date — no changes detected."
+If `model-catalog-changed-files.txt` is empty, call `noop` with message "Model catalog data is up to date — no changes detected."
 
 ## Step 3: Summarize Changes
 
@@ -114,10 +122,10 @@ Use this to build the PR description.
 
 ## Step 4: Protected File Guard
 
-Before creating a pull request, inspect the changed file list:
+Before creating a pull request, inspect the prepared changed file list:
 
 ```bash
-git diff --name-only
+cat /tmp/gh-aw/agent/model-catalog-changed-files.txt
 ```
 
 If any changed path is outside these data outputs, call `report_incomplete` and STOP:
@@ -140,8 +148,8 @@ Use `create_pull_request` with:
 
 ## Error Handling
 
-- If the watchdog fails: `report_incomplete` with the blocked infrastructure/API/UI contract detail
-- If the scraper fails: `report_incomplete` with error message
+- If deterministic setup, watchdog, or scraper execution fails: the workflow must stop before agent execution
+- If the watchdog artifact is missing or not `ok`: `report_incomplete` with the artifact detail
 - If unexpected files changed: `report_incomplete` with the changed path list
 - If no changes: `noop` with "up to date" message
 - Never commit or PR bad data
