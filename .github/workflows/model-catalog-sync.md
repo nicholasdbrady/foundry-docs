@@ -1,6 +1,6 @@
 ---
 name: Model Catalog Sync
-description: Scrapes Azure AI model catalog API and regenerates models.json for the interactive model explorer
+description: Scrapes Azure AI model catalog API and regenerates sharded data for the interactive model explorer
 on:
   schedule:
     - cron: daily
@@ -44,7 +44,6 @@ steps:
       mkdir -p "$generated_dir"
       cp docs/static/data/models-core.json "$generated_dir/models-core.json"
       cp docs/static/data/models-huggingface.json "$generated_dir/models-huggingface.json"
-      cp docs/static/data/models.json "$generated_dir/models.json"
       python3 scripts/scrape_model_catalog.py --include-partners --output "$generated_dir"
       python3 scripts/prepare_model_catalog_sync.py \
         --generated-dir "$generated_dir" \
@@ -60,8 +59,29 @@ steps:
         > /tmp/gh-aw/agent/model-catalog-changed-files.txt
       patch_bytes=$(git diff --binary -- docs/static/data/ docs-vnext/static/data/ | wc -c)
       printf '%s\n' "$patch_bytes" > /tmp/gh-aw/agent/model-catalog-patch-bytes.txt
+      payload_bytes=0
+      while IFS= read -r path; do
+        [[ -z "$path" ]] && continue
+        case "$path" in
+          docs/static/data/models-core.json|docs/static/data/models-huggingface.json|docs-vnext/static/data/models-core.json|docs-vnext/static/data/models-huggingface.json)
+            ;;
+          *)
+            echo "Unexpected model catalog output: $path" >&2
+            exit 1
+            ;;
+        esac
+        if [[ -f "$path" ]]; then
+          file_bytes=$(wc -c < "$path")
+          payload_bytes=$((payload_bytes + file_bytes))
+        fi
+      done < /tmp/gh-aw/agent/model-catalog-changed-files.txt
+      printf '%s\n' "$payload_bytes" > /tmp/gh-aw/agent/model-catalog-payload-bytes.txt
       if (( patch_bytes > 10485760 )); then
         echo "Model catalog patch is ${patch_bytes} bytes; maximum is 10485760 bytes." >&2
+        exit 1
+      fi
+      if (( payload_bytes > 10485760 )); then
+        echo "Model catalog signed payload is ${payload_bytes} bytes; maximum is 10485760 bytes." >&2
         exit 1
       fi
 
@@ -100,6 +120,7 @@ You are an automation agent that regenerates the model catalog data files for th
 - **Output directories**: `docs/static/data/` (live Mintlify site) and its `docs-vnext/static/data/` mirror
 - The script scrapes the public Azure AI Asset Gallery API, normalizes model metadata, filters deprecated models, preserves existing region data, and writes JSON files
 - Uses `--include-partners` to include all providers (Azure Direct + partners), split into core and HuggingFace shards
+- Each shard keeps one compact model object per line to bound full-file payloads without sacrificing diff granularity
 - To keep safe-output patches bounded, each run updates one corpus: primary data first, then its docs-vnext mirror on the next run
 
 ## Step 1: Verify Prepared Catalog Results
@@ -121,6 +142,7 @@ cat /tmp/gh-aw/agent/model-catalog-summary.json
 cat /tmp/gh-aw/agent/model-catalog-diff-stat.txt
 cat /tmp/gh-aw/agent/model-catalog-changed-files.txt
 cat /tmp/gh-aw/agent/model-catalog-patch-bytes.txt
+cat /tmp/gh-aw/agent/model-catalog-payload-bytes.txt
 ```
 
 ## Step 2: Check for Changes
@@ -152,10 +174,8 @@ If any changed path is outside these data outputs, call `report_incomplete` and 
 
 - `docs/static/data/models-core.json`
 - `docs/static/data/models-huggingface.json`
-- `docs/static/data/models.json`
 - `docs-vnext/static/data/models-core.json`
 - `docs-vnext/static/data/models-huggingface.json`
-- `docs-vnext/static/data/models.json`
 
 For a `primary` phase, only `docs/static/data/` files may change. For a `mirror` phase, only `docs-vnext/static/data/` files may change. If both corpora changed in one run, call `report_incomplete` and STOP.
 
@@ -165,13 +185,13 @@ This workflow must never attempt a safe-output PR containing `.github/workflows/
 
 Use `create_pull_request` with:
 - Title describing the phase and what changed (e.g., "Update primary model catalog: 3 new models, 1 removed" or "Sync model catalog to docs-vnext")
-- Body with the phase, prepared change summary, patch size, and a short watchdog summary
+- Body with the phase, prepared change summary, textual patch size, signed payload size, and a short watchdog summary
 - Only the changed files for the selected phase
 
 ## Error Handling
 
 - If deterministic setup, watchdog, or scraper execution fails: the workflow must stop before agent execution
-- If the selected phase exceeds the 10 MB safe-output ceiling: the workflow must stop before agent execution
+- If the selected phase's textual patch or signed payload exceeds the 10 MB safe-output ceiling: the workflow must stop before agent execution
 - If the watchdog artifact is missing or not `ok`: `report_incomplete` with the artifact detail
 - If unexpected files or both corpora changed: `report_incomplete` with the changed path list
 - If no changes: `noop` with "up to date" message

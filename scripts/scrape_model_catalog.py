@@ -414,20 +414,29 @@ def validate_output(models: list[CatalogModel], output_dir: str | None = None) -
 
     # Regression guard: if existing output exists, check for large drops
     if output_dir:
-        for fname in ("models.json", "models-core.json"):
+        previous_counts = []
+        for fname in ("models-core.json", "models-huggingface.json"):
             existing_path = os.path.join(output_dir, fname)
             if os.path.exists(existing_path):
                 with open(existing_path) as f:
                     existing = json.load(f)
-                prev_count = len(existing.get("models", []))
-                if prev_count > 0:
-                    drop_pct = (prev_count - len(models)) / prev_count * 100
-                    if drop_pct > 20:
-                        errors.append(
-                            f"Model count dropped >20%: {prev_count} → {len(models)} "
-                            f"({drop_pct:.0f}% drop vs {fname})"
-                        )
-                break  # Only check the first file found
+                previous_counts.append(len(existing.get("models", [])))
+
+        if not previous_counts:
+            existing_path = os.path.join(output_dir, "models.json")
+            if os.path.exists(existing_path):
+                with open(existing_path) as f:
+                    existing = json.load(f)
+                previous_counts.append(len(existing.get("models", [])))
+
+        prev_count = sum(previous_counts)
+        if prev_count > 0:
+            drop_pct = (prev_count - len(models)) / prev_count * 100
+            if drop_pct > 20:
+                errors.append(
+                    f"Model count dropped >20%: {prev_count} → {len(models)} "
+                    f"({drop_pct:.0f}% drop)"
+                )
 
     # Check required fields
     for m in models:
@@ -562,9 +571,25 @@ def _preserve_existing_regions(models: list[CatalogModel], output_path: str) -> 
 
 
 def _write_json(data: dict, path: str) -> None:
-    """Write JSON data to a file, log size."""
-    with open(path, "w") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+    """Write compact, line-granular JSON data and log its size."""
+    models = data.get("models")
+    if not isinstance(models, list):
+        raise ValueError("Catalog output requires a models list")
+
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
+        f.write("{\n")
+        for key, value in data.items():
+            if key == "models":
+                continue
+            json.dump(key, f, ensure_ascii=False)
+            f.write(":")
+            json.dump(value, f, ensure_ascii=False, separators=(",", ":"))
+            f.write(",\n")
+        f.write('"models":[\n')
+        for index, model in enumerate(models):
+            json.dump(model, f, ensure_ascii=False, separators=(",", ":"))
+            f.write(",\n" if index + 1 < len(models) else "\n")
+        f.write("]\n}\n")
     size_kb = os.path.getsize(path) / 1024
     count = len(data.get("models", []))
     log.info("  📦 Wrote %s (%.1f KB, %d models)", path, size_kb, count)
@@ -575,7 +600,7 @@ def main():
     parser.add_argument(
         "--output",
         default=None,
-        help="Output directory (writes models.json). If omitted, prints to stdout.",
+        help="Output directory for generated catalog JSON. If omitted, prints to stdout.",
     )
     parser.add_argument(
         "--include-partners",
@@ -637,8 +662,10 @@ def main():
 
         # Preserve existing region data for models that would otherwise lose it
         log.info("🔄 Checking for existing region data to preserve...")
-        deduped = _preserve_existing_regions(deduped, os.path.join(args.output, "models.json"))
         deduped = _preserve_existing_regions(deduped, os.path.join(args.output, "models-core.json"))
+        deduped = _preserve_existing_regions(
+            deduped, os.path.join(args.output, "models-huggingface.json")
+        )
 
         if args.include_partners:
             # Split into core (non-HF) and HuggingFace shards
@@ -663,17 +690,11 @@ def main():
             }
             _write_json(hf_data, os.path.join(args.output, "models-huggingface.json"))
 
-            # Also write the combined models.json for backward compatibility
-            combined_data = {
-                "generatedAt": generated_at,
-                "totalModels": len(deduped),
-                "publisherIcons": publisher_icons,
-                "models": [asdict(m) for m in deduped],
-            }
-            _write_json(combined_data, os.path.join(args.output, "models.json"))
-
-            log.info("✨ Done! Core: %d models, HuggingFace: %d models, Combined: %d models",
-                     len(core_models), len(hf_models), len(deduped))
+            log.info(
+                "✨ Done! Core: %d models, HuggingFace: %d models",
+                len(core_models),
+                len(hf_models),
+            )
         else:
             output_data = {
                 "generatedAt": generated_at,

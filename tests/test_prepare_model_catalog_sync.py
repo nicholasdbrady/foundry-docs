@@ -19,7 +19,6 @@ def _write_catalogs(directory: Path, model_ids: list[str], generated_at: str) ->
     payloads = {
         "models-core.json": core,
         "models-huggingface.json": hugging_face,
-        "models.json": models,
     }
     for filename, catalog_models in payloads.items():
         (directory / filename).write_text(
@@ -36,7 +35,12 @@ def _write_catalogs(directory: Path, model_ids: list[str], generated_at: str) ->
 
 
 def _read_ids(directory: Path) -> list[str]:
-    return [model["id"] for model in json.loads((directory / "models.json").read_text())["models"]]
+    model_ids = []
+    for filename in CATALOG_FILENAMES:
+        model_ids.extend(
+            model["id"] for model in json.loads((directory / filename).read_text())["models"]
+        )
+    return model_ids
 
 
 def test_updates_only_primary_when_corpora_are_in_sync(tmp_path):
@@ -51,8 +55,8 @@ def test_updates_only_primary_when_corpora_are_in_sync(tmp_path):
 
     assert summary["status"] == "changes"
     assert summary["phase"] == "primary"
-    assert summary["beforeCounts"] == {"core": 1, "huggingFace": 0, "combined": 1}
-    assert summary["afterCounts"] == {"core": 2, "huggingFace": 1, "combined": 3}
+    assert summary["beforeCounts"] == {"core": 1, "huggingFace": 0, "total": 1}
+    assert summary["afterCounts"] == {"core": 2, "huggingFace": 1, "total": 3}
     assert summary["addedModels"] == ["hf-model", "model-b"]
     assert _read_ids(primary) == ["model-a", "model-b", "hf-model"]
     assert _read_ids(mirror) == ["model-a"]
@@ -87,8 +91,8 @@ def test_ignores_generated_timestamp_only_changes(tmp_path):
 
     assert summary["status"] == "noop"
     assert summary["phase"] == "noop"
-    assert json.loads((primary / "models.json").read_text())["generatedAt"] == "primary"
     for filename in CATALOG_FILENAMES:
+        assert json.loads((primary / filename).read_text())["generatedAt"] == "primary"
         assert (primary / filename).read_text() != (generated / filename).read_text()
 
 
@@ -103,3 +107,18 @@ def test_model_identity_includes_publisher():
     models = _models_by_key(catalog, Path("models.json"))
 
     assert set(models) == {("Publisher A", "shared-id"), ("Publisher B", "shared-id")}
+
+
+def test_copies_only_meaningfully_changed_shards(tmp_path):
+    generated = tmp_path / "generated"
+    primary = tmp_path / "docs"
+    mirror = tmp_path / "docs-vnext"
+    _write_catalogs(primary, ["model-a", "hf-model"], "old")
+    _write_catalogs(mirror, ["model-a", "hf-model"], "old")
+    _write_catalogs(generated, ["model-a", "model-b", "hf-model"], "new")
+
+    summary = prepare_sync(generated, primary, mirror)
+
+    assert summary["targetFiles"] == [(primary / "models-core.json").as_posix()]
+    assert json.loads((primary / "models-core.json").read_text())["generatedAt"] == "new"
+    assert json.loads((primary / "models-huggingface.json").read_text())["generatedAt"] == "old"
