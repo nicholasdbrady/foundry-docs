@@ -722,9 +722,14 @@ def test_real_git_backend_recovers_branch_with_add_and_path_replacements(tmp_pat
         runner_temp=runner_temp,
     )
 
-    backend.publish_batch(manifest, batch, branch)
+    reconstructed_sha = backend.publish_batch(manifest, batch, branch)
     orphans = backend.discover_campaign_branches([])
-    backend.publish_batch(manifest, batch, branch)
+    verified_sha = backend.publish_batch(
+        manifest,
+        batch,
+        branch,
+        expected_commit_sha=orphans[0].commit_sha,
+    )
 
     assert len(orphans) == 1
     assert orphans[0].head_ref == branch
@@ -732,6 +737,7 @@ def test_real_git_backend_recovers_branch_with_add_and_path_replacements(tmp_pat
     assert orphans[0].manifest_run_id == manifest.run_id
     assert orphans[0].batch_id == batch.id
     assert len(orphans[0].commit_sha) == 40
+    assert reconstructed_sha == orphans[0].commit_sha == verified_sha
     result = subprocess.run(
         ["git", "--git-dir", str(remote), "show", f"{branch}:docs-vnext/page.mdx"],
         check=True,
