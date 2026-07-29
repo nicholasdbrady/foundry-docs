@@ -68,6 +68,7 @@ jobs:
           SYNC_TOKEN: ${{ secrets.AZURE_AI_DOCS_PR_TOKEN }}
         run: |
           set -euo pipefail
+          umask 077
           fail_preflight() {
             local message="$1"
             python3 - "$CHECKPOINT_PATH" "$message" <<'PY'

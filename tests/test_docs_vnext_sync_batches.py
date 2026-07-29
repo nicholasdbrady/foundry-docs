@@ -1964,6 +1964,7 @@ def test_workflow_consumes_retained_manifest_and_always_retains_checkpoint():
     assert checkout["token"] == "${{ github.token }}"
     assert checkout["persist-credentials"] == "false"
     preflight = steps["Preflight pull-request automation token"]["run"]
+    assert "umask 077" in preflight
     assert "gh api user --jq .login" in preflight
     assert "--jq '.permissions.push'" in preflight
     assert '[[ "$push_permission" != "true" ]]' in preflight
@@ -1976,7 +1977,9 @@ def test_workflow_consumes_retained_manifest_and_always_retains_checkpoint():
     assert 'gh api --method POST "repos/$REPOSITORY/pulls"' in preflight
     assert '--input "$pr_probe" --include' in preflight
     assert '"$pr_probe_status" != "422"' in preflight
+    assert '"$pr_probe_exit" -eq 0' in preflight
     assert 'rm -f "$pr_probe" "$pr_response"' in preflight
+    assert 'echo "$SYNC_TOKEN"' not in preflight
     assert "checkpoint[\"diagnostics\"] = [sys.argv[2]]" in preflight
     assert steps["Resolve retained manifest run"]["env"]["GH_TOKEN"] == "${{ github.token }}"
     assert steps["Download retained schema-v2 manifest"]["env"]["GH_TOKEN"] == "${{ github.token }}"
