@@ -27,6 +27,7 @@ from apply_docs_vnext_sync_batches import (  # noqa: E402
     apply_batch,
     branch_name,
     build_pull_request_body,
+    completed_branch_deletions,
     enforce_campaign_candidate_limit,
     exclude_completed_remote_heads,
     execute_batches,
@@ -170,6 +171,30 @@ def _pull_request(
         url=f"https://github.com/example/repo/pull/{number}",
         head_ref=branch_name(manifest, batch),
         marker=parse_pull_request_marker(build_pull_request_body(manifest, batch)),
+    )
+
+
+def _synthetic_completed_pull_request(index: int, state: str = "MERGED") -> PullRequest:
+    manifest_digest = hashlib.sha256(f"manifest-{index}".encode()).hexdigest()
+    batch_digest = hashlib.sha256(f"batch-{index}".encode()).hexdigest()
+    head_ref = (
+        f"automation/docs-vnext-sync/{manifest_digest[:16]}/"
+        f"batch-001-{batch_digest[:12]}"
+    )
+    return PullRequest(
+        number=index + 1,
+        state=state,
+        url=f"https://github.com/example/repo/pull/{index + 1}",
+        head_ref=head_ref,
+        marker={
+            "schemaVersion": 1,
+            "manifestSha256": manifest_digest,
+            "manifestRunId": index + 1,
+            "batchId": f"sha256:{batch_digest}",
+            "batchNumber": 1,
+            "batchCount": 1,
+            "operationIds": [],
+        },
     )
 
 
@@ -1421,6 +1446,134 @@ def test_discovery_fetches_only_active_head_after_filtering_merged_history(tmp_p
     assert backend.fetches == [
         f"+refs/heads/{active_head}:refs/remotes/origin/{active_head}"
     ]
+
+
+def test_cleanup_removes_more_than_276_verified_completed_refs_before_discovery(
+    tmp_path,
+):
+    merged = [_synthetic_completed_pull_request(index) for index in range(300)]
+
+    class CleanupBackend(GitHubGitBackend):
+        def __init__(self):
+            super().__init__(
+                repository_root=tmp_path,
+                repository="example/repository",
+                base_branch="main",
+                runner_temp=tmp_path / "runner",
+            )
+            self.remote = {
+                pull_request.head_ref: f"{index + 1:040x}"
+                for index, pull_request in enumerate(merged)
+            }
+            self.deleted = []
+
+        def _run_bounded_stdout(
+            self,
+            args,
+            *,
+            max_bytes,
+            cwd=None,
+            timeout_seconds=30,
+        ):
+            if args[1] == "ls-remote":
+                requested = [
+                    item.removeprefix("refs/heads/")
+                    for item in args[4:]
+                ]
+                if requested == ["automation/docs-vnext-sync/*"]:
+                    requested = []
+                heads = self.remote if not requested else {
+                    head: self.remote[head]
+                    for head in requested
+                    if head in self.remote
+                }
+                return "".join(
+                    f"{commit}\trefs/heads/{head}\n"
+                    for head, commit in heads.items()
+                )
+            if args[1] == "push":
+                for head in args[4:]:
+                    self.remote.pop(head, None)
+                    self.deleted.append(head)
+                return ""
+            raise AssertionError(args)
+
+    backend = CleanupBackend()
+
+    identities = backend.discover_campaign_branches(merged)
+
+    assert identities == []
+    assert len(backend.deleted) == 300
+    assert backend.remote == {}
+
+
+def test_completed_cleanup_preserves_active_ref(tmp_path):
+    merged = [_synthetic_completed_pull_request(index) for index in range(10)]
+    active = _synthetic_completed_pull_request(500, state="OPEN")
+    remote = {
+        pull_request.head_ref: f"{index + 1:040x}"
+        for index, pull_request in enumerate([*merged, active])
+    }
+
+    assert active.head_ref not in completed_branch_deletions([*merged, active])
+    for head_ref in completed_branch_deletions([*merged, active]):
+        remote.pop(head_ref)
+
+    assert remote == {active.head_ref: f"{len(merged) + 1:040x}"}
+
+
+def test_completed_cleanup_tolerates_ref_deleted_before_push(tmp_path):
+    merged = [_synthetic_completed_pull_request(index) for index in range(2)]
+
+    class RacingCleanupBackend(GitHubGitBackend):
+        def __init__(self):
+            super().__init__(
+                repository_root=tmp_path,
+                repository="example/repository",
+                base_branch="main",
+                runner_temp=tmp_path / "runner",
+            )
+            self.remote = {merged[1].head_ref: "b" * 40}
+            self.attempted = []
+
+        def _run_bounded_stdout(
+            self,
+            args,
+            *,
+            max_bytes,
+            cwd=None,
+            timeout_seconds=30,
+        ):
+            if args[1] == "push":
+                head_ref = args[-1]
+                self.attempted.append(head_ref)
+                if head_ref not in self.remote:
+                    raise BatchSyncError("remote ref does not exist")
+                self.remote.pop(head_ref)
+                return ""
+            if args[1] == "ls-remote":
+                requested = args[-1].removeprefix("refs/heads/")
+                if requested == "automation/docs-vnext-sync/*":
+                    heads = self.remote
+                elif requested in self.remote:
+                    heads = {requested: self.remote[requested]}
+                else:
+                    heads = {}
+                return "".join(
+                    f"{commit}\trefs/heads/{head}\n"
+                    for head, commit in heads.items()
+                )
+            raise AssertionError(args)
+
+    backend = RacingCleanupBackend()
+
+    identities = backend.discover_campaign_branches(merged)
+
+    assert identities == []
+    assert backend.attempted == sorted(
+        [pull_request.head_ref for pull_request in merged]
+    )
+    assert backend.remote == {}
 
 
 def test_forged_pr_and_orphan_identities_cannot_bind_to_campaign(tmp_path):

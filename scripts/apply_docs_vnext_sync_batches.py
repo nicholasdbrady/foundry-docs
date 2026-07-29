@@ -25,6 +25,7 @@ CHECKPOINT_SCHEMA_VERSION = 1
 DEFAULT_MAX_FILES = 50
 DEFAULT_MAX_PAYLOAD_BYTES = 40 * 1024 * 1024
 MAX_AUTOMATION_BRANCHES = 100
+MAX_COMPLETED_BRANCH_DELETIONS = 500
 MAX_COMMIT_MESSAGE_BYTES = 4096
 MAX_REMOTE_DISCOVERY_BYTES = 32 * 1024
 DISCOVERY_COMMAND_TIMEOUT_SECONDS = 30
@@ -46,6 +47,11 @@ SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 OPERATION_ID_PATTERN = re.compile(r"^sha256:[0-9a-f]{64}$")
 GIT_COMMIT_PATTERN = re.compile(r"^[0-9a-f]{40,64}$")
 POSITIVE_DECIMAL_PATTERN = re.compile(r"^[1-9][0-9]*$")
+AUTOMATION_BRANCH_PATTERN = re.compile(
+    rf"^{re.escape(BRANCH_PREFIX)}/"
+    r"(?P<manifest>[0-9a-f]{16})/"
+    r"batch-(?P<number>[0-9]{3})-(?P<batch>[0-9a-f]{12})$"
+)
 DECISIONS = {"add", "modify", "remove", "preserve"}
 MUTATING_DECISIONS = {"add", "modify", "remove"}
 
@@ -645,6 +651,40 @@ def exclude_completed_remote_heads(
         for head_ref, commit_sha in remote_head_commits.items()
         if head_ref not in completed_heads
     }
+
+
+def completed_branch_deletions(
+    pull_requests: Sequence[PullRequest],
+) -> tuple[str, ...]:
+    active_heads = {
+        pull_request.head_ref
+        for pull_request in pull_requests
+        if pull_request.incomplete
+    }
+    deletions: set[str] = set()
+    for pull_request in pull_requests:
+        marker = pull_request.marker
+        match = AUTOMATION_BRANCH_PATTERN.fullmatch(pull_request.head_ref)
+        if (
+            not pull_request.merged
+            or pull_request.head_ref in active_heads
+            or marker is None
+            or match is None
+        ):
+            continue
+        if (
+            marker["manifestSha256"][:16] != match.group("manifest")
+            or marker["batchNumber"] != int(match.group("number"))
+            or marker["batchId"].removeprefix("sha256:")[:12] != match.group("batch")
+        ):
+            continue
+        deletions.add(pull_request.head_ref)
+    if len(deletions) > MAX_COMPLETED_BRANCH_DELETIONS:
+        raise BatchSyncError(
+            f"Found {len(deletions)} verified completed automation branches, above the "
+            f"{MAX_COMPLETED_BRANCH_DELETIONS}-branch cleanup limit"
+        )
+    return tuple(sorted(deletions))
 
 
 def validate_marker_claim(
@@ -1516,9 +1556,35 @@ class GitHubGitBackend:
             commit_sha=commit_sha,
         )
 
+    def _delete_completed_branches(
+        self,
+        pull_requests: Sequence[PullRequest],
+    ) -> None:
+        deletions = completed_branch_deletions(pull_requests)
+        for head_ref in deletions:
+            try:
+                self._run_bounded_stdout(
+                    ["git", "push", "origin", "--delete", head_ref],
+                    max_bytes=MAX_REMOTE_DISCOVERY_BYTES,
+                )
+            except BatchSyncError:
+                output = self._run_bounded_stdout(
+                    [
+                        "git",
+                        "ls-remote",
+                        "--heads",
+                        "origin",
+                        f"refs/heads/{head_ref}",
+                    ],
+                    max_bytes=MAX_REMOTE_DISCOVERY_BYTES,
+                )
+                if parse_remote_branch_refs(output):
+                    raise
+
     def discover_campaign_branches(
         self, pull_requests: Sequence[PullRequest]
     ) -> list[OrphanBranch]:
+        self._delete_completed_branches(pull_requests)
         output = self._run_bounded_stdout(
             [
                 "git",
