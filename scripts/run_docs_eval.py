@@ -1481,11 +1481,7 @@ def compare_results(current: dict, baseline_path: str, trusted_scenario_definiti
         return 2
     baseline_results = baseline["results"]
     baseline_scored = [score_result(row, trusted_scenarios) for row in baseline_results]
-    required_scenarios = sorted({
-        row.get("scenario_id")
-        for row in baseline_scored
-        if isinstance(row, dict) and isinstance(row.get("scenario_id"), str)
-    })
+    required_scenarios = sorted(trusted_scenarios)
     required_servers = sorted({
         row.get("server")
         for row in baseline_scored

@@ -283,6 +283,32 @@ def test_success_response_is_sanitized_in_raw_and_scored_rows(monkeypatch):
         assert "<PATH>" in persisted
 
 
+def test_scorer_cli_requires_trusted_scenario_file_before_scoring(tmp_path):
+        raw_path = tmp_path / "raw.json"
+        output_path = tmp_path / "scored.json"
+        raw_path.write_text(
+            json.dumps({"metadata": {}, "results": [_raw_row()]}),
+            encoding="utf-8",
+        )
+
+        proc = subprocess.run(
+            [
+                sys.executable,
+                str(Path(__file__).parents[1] / "scripts" / "eval_scorer.py"),
+                str(raw_path),
+                "--output",
+                str(output_path),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        assert proc.returncode == 2
+        assert "--required-scenarios" in proc.stderr
+        assert not output_path.exists()
+
+
 def test_success_response_preserves_root_relative_documentation_link(monkeypatch):
     response = (
         "Use agents. See [agent docs](/concepts/agents) for prerequisites. "
@@ -2375,6 +2401,26 @@ def test_required_scenario_definitions_require_complete_trusted_fields(scenarios
         validate_trusted_scenarios(scenarios)
 
 
+def test_trusted_scenario_ids_reject_sanitization_collisions():
+    scenarios = [
+        {
+            "id": "token=abc",
+            "question": "question one",
+            "category": "category",
+            "rubric": SCENARIO["rubric"],
+        },
+        {
+            "id": "token=[REDACTED]",
+            "question": "question two",
+            "category": "category",
+            "rubric": SCENARIO["rubric"],
+        },
+    ]
+
+    with pytest.raises(ValueError, match="canonical form"):
+        validate_trusted_scenarios(scenarios)
+
+
 def test_scorer_rejects_and_sanitizes_malicious_persisted_identifiers():
     row = _raw_row()
     malicious = r"foundry_docs-search_docs token=LEAKME C:\Users\Alice\private " + ("x" * 500)
@@ -3071,6 +3117,25 @@ def test_baseline_comparison_rejects_invalid_baseline_matrix(tmp_path, capsys):
         {"results": [_raw_row()]},
         str(baseline_path),
         _trusted_definitions("scenario-1"),
+    )
+
+    assert exit_code == 2
+    captured = capsys.readouterr()
+    assert "invalid baseline matrix" in captured.err
+    assert "No regressions detected" not in captured.out
+
+
+def test_baseline_comparison_requires_every_trusted_scenario_in_baseline(tmp_path, capsys):
+    baseline_path = tmp_path / "baseline.json"
+    baseline_path.write_text(
+        json.dumps({"results": [_raw_row(scenario_id="scenario-1")]}),
+        encoding="utf-8",
+    )
+
+    exit_code = compare_results(
+        {"results": [_raw_row(scenario_id="scenario-1")]},
+        str(baseline_path),
+        _trusted_definitions("scenario-1", "scenario-2"),
     )
 
     assert exit_code == 2

@@ -538,6 +538,10 @@ def validate_trusted_scenarios(scenarios: object) -> dict[str, dict]:
         rubric = scenario.get("rubric")
         if not isinstance(scenario_id, str) or not scenario_id.strip():
             raise ValueError(f"trusted scenario {index} must have a non-empty id")
+        if scenario_id != _sanitize_identifier(scenario_id):
+            raise ValueError(
+                f"trusted scenario id must equal its bounded sanitized canonical form: {scenario_id}"
+            )
         if scenario_id in trusted:
             raise ValueError(f"duplicate trusted scenario id: {scenario_id}")
         if not isinstance(question, str) or not question.strip():
@@ -1093,7 +1097,7 @@ def _parse_args() -> argparse.Namespace:
         help="Path to save scored results (default: scored-{run_id}.json)"
     )
     parser.add_argument(
-        "--required-scenarios", default=None,
+        "--required-scenarios", required=True,
         help="Scenario JSON whose IDs define the required matrix rows"
     )
     parser.add_argument(
@@ -1150,12 +1154,9 @@ def main():
 
     print(f"Scoring {len(all_results)} evaluation results from {len(args.input)} file(s)...")
 
-    scenario_ids = None
-    trusted_scenarios = None
-    if args.required_scenarios:
-        with open(args.required_scenarios) as f:
-            trusted_scenarios = validate_trusted_scenarios(json.load(f))
-            scenario_ids = list(trusted_scenarios)
+    with open(args.required_scenarios) as f:
+        trusted_scenarios = validate_trusted_scenarios(json.load(f))
+        scenario_ids = list(trusted_scenarios)
     scored_results = [score_result(r, trusted_scenarios) for r in all_results]
     publication = validate_required_matrix(
         scored_results,
