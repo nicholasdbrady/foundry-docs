@@ -1866,6 +1866,69 @@ def test_real_size_57kb_tool_result_parses_and_validates_selected_source(monkeyp
     assert result["event_parse_error"] is None
 
 
+def test_multiple_real_size_tool_results_over_128kb_remain_valid(monkeypatch):
+    events = []
+    for index in range(3):
+        tool_call_id = f"call-{index}"
+        events.append({
+            "type": "tool.execution_start",
+            "data": {
+                "toolCallId": tool_call_id,
+                "toolName": "foundry_docs-search_docs",
+            },
+        })
+        completion = {
+            "type": "tool.execution_complete",
+            "data": {
+                "toolCallId": tool_call_id,
+                "success": True,
+                "result": {"content": [{"type": "text", "text": ""}]},
+            },
+        }
+        base_size = len(json.dumps(completion, separators=(",", ":")).encode())
+        completion["data"]["result"]["content"][0]["text"] = "x" * (57_000 - base_size)
+        events.append(completion)
+    events.extend([
+        {"type": "assistant.message", "data": {"content": "trusted answer"}},
+        {"type": "result", "exitCode": 0},
+    ])
+    stdout = "\n".join(json.dumps(event, separators=(",", ":")) for event in events)
+    assert 128_000 < len(stdout.encode()) < run_docs_eval.MAX_STDOUT_PARSE_BYTES
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda cmd, **kwargs: subprocess.CompletedProcess(cmd, 0, stdout=stdout, stderr=""),
+    )
+
+    result = run_single_eval(
+        SCENARIO,
+        "foundry-docs",
+        MCP_SERVERS["foundry-docs"],
+        "model-1",
+    )
+
+    assert result["status"] == "success"
+    assert result["source_validated"] is True
+    assert result["response"] == "trusted answer"
+    assert result["event_parse_error"] is None
+
+
+def test_total_stdout_budget_still_fails_closed():
+    event = json.dumps({
+        "type": "session.mcp_servers_loaded",
+        "data": {"message": "x" * 63_000},
+    }, separators=(",", ":"))
+    assert len(event.encode()) < run_docs_eval.MAX_STDOUT_LINE_BYTES
+    line_count = run_docs_eval.MAX_STDOUT_PARSE_BYTES // len((event + "\n").encode()) + 1
+    stdout = "\n".join([event] * line_count)
+
+    parsed = parse_event_stream(stdout)
+
+    assert parsed["stdout_input_truncated"] is True
+    assert f"stdout exceeds {run_docs_eval.MAX_STDOUT_PARSE_BYTES} byte pre-parse limit" in parsed["parse_error"]
+    assert parsed["response"] == ""
+
+
 def test_deeply_nested_bounded_json_fails_closed_without_recursion_crash():
     nested = "[" * 5_000 + "null" + "]" * 5_000
     stdout = f'{{"type":"session.error","data":{{"message":{nested}}}}}'
