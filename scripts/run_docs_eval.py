@@ -191,6 +191,25 @@ def build_prompt(question: str, server_name: str) -> str:
     )
 
 
+def build_copilot_command(
+    model: str,
+    prompt: str,
+    config_path: Path,
+    source_name: str,
+) -> list[str]:
+    """Build an isolated Copilot command for one selected MCP server."""
+    return [
+        "copilot",
+        "--model", model,
+        "--prompt", prompt,
+        "--output-format", "json",
+        "--disable-builtin-mcps",
+        "--additional-mcp-config", f"@{config_path}",
+        f"--allow-tool={source_name}",
+        "--no-ask-user",
+    ]
+
+
 def build_mcp_config(server_config: dict, require_azure: bool = False) -> tuple[dict, dict]:
     """Build one isolated MCP configuration and its non-secret row descriptor."""
     config = server_config["config"]
@@ -1257,6 +1276,15 @@ def parse_event_stream(stdout: str | bytes) -> dict:
                     )
             else:
                 parse_errors.append(f"line {line_number}: output token count must be a non-negative integer")
+        elif (
+            etype == "session.info"
+            and data.get("infoType") == "configuration"
+            and isinstance(data.get("message"), str)
+            and "unknown tool name in the tool allowlist" in data["message"].lower()
+        ):
+            configuration_failure = _sanitize_text(data["message"], max_chars=MAX_DIAGNOSTIC_TEXT)[0]
+            metrics["session_failure"] = configuration_failure
+            add_diagnostic(etype, {"infoType": "configuration", "message": configuration_failure})
         elif etype == "tool.execution_start":
             tool_call_id = data.get("toolCallId")
             tool_name = data.get("toolName")
@@ -1529,17 +1557,7 @@ def run_single_eval(
             config_path.write_text(json.dumps(mcp_config), encoding="utf-8")
             config_path.chmod(0o600)
 
-            cmd = [
-                "copilot",
-                "--model", model,
-                "--prompt", prompt,
-                "--output-format", "json",
-                "--disable-builtin-mcps",
-                "--additional-mcp-config", f"@{config_path}",
-                f"--available-tools={source_name}",
-                f"--allow-tool={source_name}",
-                "--no-ask-user",
-            ]
+            cmd = build_copilot_command(model, prompt, config_path, source_name)
             process_env = os.environ.copy()
             process_env["COPILOT_HOME"] = isolated_home
 

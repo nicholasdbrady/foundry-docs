@@ -32,6 +32,7 @@ from run_docs_eval import (  # noqa: E402
     MCP_SERVERS,
     _sanitize_response_text,
     _sanitize_text,
+    build_copilot_command,
     build_mcp_config,
     compare_results,
     parse_event_stream,
@@ -239,7 +240,7 @@ def test_run_single_eval_passes_only_selected_config_across_process_boundary(mon
 
     assert list(captured["config"]["mcpServers"]) == ["foundry_docs"]
     assert "--disable-builtin-mcps" in captured["cmd"]
-    assert "--available-tools=foundry_docs" in captured["cmd"]
+    assert not any(arg.startswith("--available-tools") for arg in captured["cmd"])
     assert "--allow-tool=foundry_docs" in captured["cmd"]
     assert captured["streamed"] is True
     assert captured["cwd"] == captured["copilot_home"]
@@ -251,6 +252,68 @@ def test_run_single_eval_passes_only_selected_config_across_process_boundary(mon
     assert result["response_present"] is True
     assert result["status"] == "success"
     assert result["failure_reason"] is None
+
+
+@pytest.mark.parametrize(
+    ("server_name", "source_name"),
+    [
+        ("microsoft-learn", "MicrosoftDocs"),
+        ("mintlify-hosted", "mintlify"),
+        ("foundry-docs", "foundry_docs"),
+        ("foundry-docs-vnext", "foundry_docs_vnext"),
+    ],
+)
+def test_copilot_command_isolates_all_selected_mcp_servers_without_broken_availability_filter(
+    tmp_path,
+    server_name,
+    source_name,
+):
+    config_path = tmp_path / "selected-source.json"
+    config, descriptor = build_mcp_config(MCP_SERVERS[server_name])
+    config_path.write_text(json.dumps(config), encoding="utf-8")
+
+    cmd = build_copilot_command("model-1", "prompt", config_path, source_name)
+
+    assert list(config["mcpServers"]) == [source_name]
+    assert descriptor["tool_prefix"] == MCP_SERVERS[server_name]["config"]["tool_prefix"]
+    assert "--disable-builtin-mcps" in cmd
+    assert cmd[cmd.index("--additional-mcp-config") + 1] == f"@{config_path}"
+    assert f"--allow-tool={source_name}" in cmd
+    assert not any(arg.startswith("--available-tools") for arg in cmd)
+    for other_server in MCP_SERVERS.values():
+        other_name = other_server["config"]["name"]
+        if other_name != source_name:
+            assert f"--allow-tool={other_name}" not in cmd
+
+
+def test_unknown_tool_allowlist_warning_is_retained_and_fails_closed():
+    stdout = "\n".join([
+        json.dumps({
+            "type": "session.info",
+            "data": {
+                "infoType": "configuration",
+                "message": 'Unknown tool name in the tool allowlist: "foundry_docs_vnext"',
+            },
+        }),
+        json.dumps({"type": "result", "exitCode": 0}),
+    ])
+
+    parsed = parse_event_stream(stdout)
+    valid, failure_reason, _azure_proven = run_docs_eval.validate_row_evidence(
+        parsed,
+        "foundry_docs_vnext",
+        False,
+    )
+
+    assert valid is False
+    assert failure_reason.startswith("session_error:")
+    assert parsed["diagnostic_events"] == [{
+        "event_type": "session.info",
+        "data": {
+            "infoType": "configuration",
+            "message": 'Unknown tool name in the tool allowlist: "foundry_docs_vnext"',
+        },
+    }]
 
 
 def test_success_response_is_sanitized_in_raw_and_scored_rows(monkeypatch):
