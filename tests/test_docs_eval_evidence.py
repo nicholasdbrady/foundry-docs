@@ -16,7 +16,13 @@ from fastmcp import Client
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 
 from eval_report import generate_report  # noqa: E402
-from eval_scorer import aggregate_scores, score_result, validate_required_matrix, validate_row_schema  # noqa: E402
+from eval_scorer import (  # noqa: E402
+    _sanitize_metadata,
+    aggregate_scores,
+    score_result,
+    validate_required_matrix,
+    validate_row_schema,
+)
 from foundry_docs_mcp._server_factory import DOCS_CONFIG, build_server  # noqa: E402
 from run_docs_eval import (  # noqa: E402
     MCP_SERVERS,
@@ -24,6 +30,7 @@ from run_docs_eval import (  # noqa: E402
     _sanitize_text,
     build_mcp_config,
     parse_event_stream,
+    run_evaluation,
     run_single_eval,
     select_servers,
     serialized_diagnostic_events_size,
@@ -1075,6 +1082,40 @@ def test_authorization_header_redacts_entire_value_for_every_scheme(raw, secret)
 @pytest.mark.parametrize(
     "raw",
     [
+        "Authorization: Digest username=alice,\r\n nonce=LEAKME",
+        "Authorization=Digest username=alice,\n\tnonce=LEAKME",
+        "Authorization: Digest username=alice,\r\n \r\n nonce=LEAKME",
+    ],
+)
+def test_folded_authorization_values_redact_indented_continuations(raw):
+    sanitized, _truncated = _sanitize_text(raw)
+
+    assert sanitized in {"Authorization: [REDACTED]", "Authorization=[REDACTED]"}
+    assert "LEAKME" not in sanitized
+    assert "nonce" not in sanitized
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        "Authorization=Basic credential",
+        "Authorization=CustomScheme opaque credential",
+        "Authorization=Digest username=alice, realm=private, nonce=SECRET",
+        '"Authorization"=Digest username=alice, realm=private, nonce=SECRET',
+        '"Authorization": Digest username=alice, realm=private, nonce=SECRET',
+        r'{\"Authorization\":Digest username=alice, realm=private, nonce=SECRET}',
+        'Authorization=Digest username="alice}", nonce="LEAKME"',
+    ],
+)
+def test_unquoted_authorization_assignment_redacts_complete_value(raw):
+    sanitized, _truncated = _sanitize_text(raw)
+
+    assert sanitized == "Authorization=[REDACTED]"
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
         r'upstream={\"Authorization\":\"CustomScheme opaque-value\"}',
         r'upstream={\"authorization\":\"Basic dXNlcjpwYXNz\"}',
         r'upstream={\"AUTHORIZATION\":\"Digest username=alice response=digest-secret\"}',
@@ -1849,6 +1890,232 @@ def test_parse_event_stream_rejects_non_object_events_and_unknown_tool_outcomes(
 
 
 @pytest.mark.parametrize(
+    "invalid_value",
+    [
+        r"token=LEAKME C:\Users\Alice\private",
+        float("nan"),
+        float("inf"),
+        -1,
+    ],
+)
+def test_usage_metrics_discard_invalid_values_and_remain_strict_json(invalid_value):
+    stdout = json.dumps({
+        "type": "result",
+        "exitCode": 0,
+        "usage": {
+            "premiumRequests": invalid_value,
+            "totalApiDurationMs": invalid_value,
+            "sessionDurationMs": invalid_value,
+        },
+    })
+
+    parsed = parse_event_stream(stdout)
+
+    assert parsed["premium_requests"] is None
+    assert parsed["api_duration_ms"] is None
+    assert parsed["session_duration_ms"] is None
+    assert "must be a finite non-negative number" in parsed["parse_error"]
+    assert "LEAKME" not in parsed["parse_error"]
+    assert "Alice" not in parsed["parse_error"]
+    json.dumps(parsed, allow_nan=False)
+
+
+@pytest.mark.parametrize("usage", [None, False, [], "", 0])
+def test_usage_rejects_every_falsy_non_object_value(usage):
+    parsed = parse_event_stream(json.dumps({
+        "type": "result",
+        "exitCode": 0,
+        "usage": usage,
+    }))
+
+    assert "result usage must be a JSON object" in parsed["parse_error"]
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("premium_requests", float("nan")),
+        ("api_duration_ms", float("inf")),
+        ("session_duration_ms", -1),
+    ],
+)
+def test_scorer_rejects_nonfinite_usage_metrics(field, value):
+    row = _raw_row()
+    row[field] = value
+
+    scored = score_result(row)
+
+    assert scored["row_valid"] is False
+    assert scored[field] is None
+    json.dumps(scored, allow_nan=False)
+
+
+def test_cumulative_output_tokens_cannot_exceed_metric_bound():
+    stdout = "\n".join([
+        json.dumps({
+            "type": "assistant.message",
+            "data": {"content": "first", "outputTokens": 10**15},
+        }),
+        json.dumps({
+            "type": "assistant.message",
+            "data": {"content": "second", "outputTokens": 10**15},
+        }),
+        json.dumps({"type": "result", "exitCode": 0}),
+    ])
+
+    parsed = parse_event_stream(stdout)
+
+    assert parsed["output_tokens"] == 10**15
+    assert "cumulative output token count exceeds" in parsed["parse_error"]
+
+
+@pytest.mark.parametrize("output_tokens", [None, False, "", 0.0])
+def test_output_token_count_rejects_explicit_non_integer_values(output_tokens):
+    parsed = parse_event_stream("\n".join([
+        json.dumps({
+            "type": "assistant.message",
+            "data": {"content": "answer", "outputTokens": output_tokens},
+        }),
+        json.dumps({"type": "result", "exitCode": 0}),
+    ]))
+
+    assert parsed["output_tokens"] == 0
+    assert "output token count must be a non-negative integer" in parsed["parse_error"]
+
+
+def test_usage_metrics_reject_integer_beyond_aggregation_bound():
+    parsed = parse_event_stream(json.dumps({
+        "type": "result",
+        "exitCode": 0,
+        "usage": {"premiumRequests": 10**1_000},
+    }))
+
+    assert parsed["premium_requests"] is None
+    assert "must be a finite non-negative number" in parsed["parse_error"]
+
+
+def test_nonfinite_nested_diagnostic_value_is_normalized_for_strict_json():
+    stdout = "\n".join([
+        json.dumps({
+            "type": "session.error",
+            "data": {"errorType": "query", "message": "failed", "extra": float("nan")},
+        }),
+        json.dumps({"type": "result", "exitCode": 1}),
+    ])
+
+    parsed = parse_event_stream(stdout)
+
+    assert parsed["diagnostic_events"][0]["data"]["extra"] is None
+    json.dumps(parsed, allow_nan=False)
+
+
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), -1, 10**1_000])
+def test_scorer_rejects_nonfinite_response_time(value):
+    row = _raw_row()
+    row["response_time_seconds"] = value
+
+    scored = score_result(row)
+
+    assert scored["row_valid"] is False
+    assert scored["operational"]["response_time_seconds"] is None
+    assert scored["response_time_seconds"] is None
+    json.dumps(scored, allow_nan=False)
+
+
+@pytest.mark.parametrize("field", ["turns", "tool_calls", "tool_errors", "output_tokens"])
+def test_invalid_count_metrics_are_removed_from_strict_scored_output(field):
+    row = _raw_row()
+    row[field] = float("nan")
+
+    scored = score_result(row)
+
+    assert scored["row_valid"] is False
+    assert scored[field] is None
+    json.dumps(scored, allow_nan=False)
+
+
+@pytest.mark.parametrize("field", ["turns", "tool_calls", "tool_errors", "output_tokens"])
+def test_oversized_count_metrics_are_removed_from_operational_output(field):
+    row = _raw_row()
+    row[field] = 10**10_000
+
+    scored = score_result(row)
+
+    assert scored["row_valid"] is False
+    assert scored[field] is None
+    assert scored["operational"][field] is None
+    json.dumps(scored, allow_nan=False)
+
+
+def test_oversized_source_config_and_metadata_counts_are_bounded():
+    row = _raw_row()
+    row["source_config_count"] = 10**10_000
+    scored = score_result(row)
+
+    assert scored["row_valid"] is False
+    assert scored["source_config_count"] == 0
+    json.dumps(scored, allow_nan=False)
+
+    metadata = {
+        "run_id": "run-1",
+        "servers": ["foundry-docs"],
+        "models": ["model-1"],
+        "total_evaluations": 10**10_000,
+    }
+    # The scorer's metadata projection drops the oversized count before strict output.
+    projected = _sanitize_metadata(metadata)
+    assert "total_evaluations" not in projected
+    json.dumps(projected, allow_nan=False)
+
+
+def test_derived_tool_error_total_is_bounded():
+    first = score_result(_raw_row())
+    second = score_result(_raw_row(scenario_id="scenario-2"))
+    first["operational"]["tool_errors"] = 10**15
+    second["operational"]["tool_errors"] = 10**15
+
+    aggregates = aggregate_scores([first, second])
+    operational = aggregates["operational_metrics"]["foundry-docs"]
+
+    assert operational["total_tool_errors"] is None
+    assert operational["tool_errors_overflow"] is True
+    json.dumps(aggregates, allow_nan=False)
+
+
+@pytest.mark.parametrize("field", ["premium_requests", "api_duration_ms", "session_duration_ms"])
+def test_scorer_rejects_usage_metric_above_bound(field):
+    row = _raw_row()
+    row[field] = 10**15 + 1
+
+    scored = score_result(row)
+
+    assert scored["row_valid"] is False
+    assert scored[field] is None
+    json.dumps(scored, allow_nan=False)
+
+
+def test_usage_metrics_accept_large_non_negative_integer_without_float_overflow():
+    large_integer = 10**15
+    stdout = json.dumps({
+        "type": "result",
+        "exitCode": 0,
+        "usage": {"premiumRequests": large_integer},
+    })
+
+    parsed = parse_event_stream(stdout)
+
+    assert parsed["premium_requests"] == large_integer
+    assert parsed["parse_error"] is None
+    json.dumps(parsed, allow_nan=False)
+
+    invalid_row = {"premium_requests": large_integer}
+    scored = score_result(invalid_row)
+    assert scored["row_valid"] is False
+    assert scored["premium_requests"] == large_integer
+    json.dumps(scored, allow_nan=False)
+
+
+@pytest.mark.parametrize(
     "events",
     [
         [
@@ -2351,6 +2618,19 @@ def test_required_matrix_denominators_include_every_outcome():
         "missing": 1,
     }
     assert publication["response_counts"] == {"present": 1, "missing": 3}
+
+
+@pytest.mark.parametrize(
+    ("scenarios", "servers", "models", "message"),
+    [
+        ([], None, None, "scenarios must not be empty"),
+        ([SCENARIO], {}, None, "servers must not be empty"),
+        ([SCENARIO], None, [], "models must not be empty"),
+    ],
+)
+def test_run_evaluation_rejects_explicit_empty_collections(scenarios, servers, models, message):
+    with pytest.raises(ValueError, match=message):
+        run_evaluation(scenarios, servers=servers, models=models)
 
 
 def test_invalid_matrix_generates_diagnostics_without_comparative_scores():

@@ -10,6 +10,7 @@ Reads raw evaluation results and produces scored results with metrics:
 
 import argparse
 import json
+import math
 import re
 import sys
 from collections import defaultdict
@@ -21,6 +22,7 @@ from run_docs_eval import (
     MAX_DIAGNOSTIC_EVENTS_CHARS,
     MAX_STDERR_EXCERPT,
     MAX_STDOUT_EXCERPT,
+    MAX_USAGE_METRIC,
     MCP_SERVERS,
     _is_search_tool,
     _sanitize_diagnostic_value,
@@ -187,14 +189,28 @@ def _sanitize_invalid_result_fields(result: dict) -> dict:
             if isinstance(rubric, dict)
             else _sanitize_diagnostic_value(rubric)
         )
-    for field in ("premium_requests", "api_duration_ms", "session_duration_ms"):
+    for field in ("premium_requests", "api_duration_ms", "session_duration_ms", "response_time_seconds"):
         value = sanitized.get(field)
         if value is not None and (
             not isinstance(value, (int, float))
             or isinstance(value, bool)
+            or (isinstance(value, float) and not math.isfinite(value))
             or value < 0
+            or value > MAX_USAGE_METRIC
         ):
             sanitized[field] = None
+    for field in ("turns", "tool_calls", "tool_errors", "output_tokens"):
+        value = sanitized.get(field)
+        if type(value) is not int or value < 0 or value > MAX_USAGE_METRIC:
+            sanitized[field] = None
+    if (
+        type(sanitized.get("source_config_count")) is not int
+        or sanitized["source_config_count"] < 0
+        or sanitized["source_config_count"] > MAX_USAGE_METRIC
+    ):
+        sanitized["source_config_count"] = 0
+    if type(sanitized.get("exit_code")) is not int:
+        sanitized["exit_code"] = -1
     if "diagnostics" in sanitized:
         sanitized["diagnostics"] = _canonical_diagnostics(sanitized["diagnostics"])
     return sanitized
@@ -248,7 +264,7 @@ def _sanitize_metadata(metadata: object) -> dict:
     }
     for field in METADATA_COUNT_FIELDS:
         value = metadata.get(field)
-        if type(value) is int and value >= 0:
+        if type(value) is int and 0 <= value <= MAX_USAGE_METRIC:
             sanitized[field] = value
     for field in METADATA_LIST_FIELDS:
         value = metadata.get(field)
@@ -314,8 +330,12 @@ def validate_row_schema(result: object) -> list[str]:
         result["selected_source_config"]
     ) != SOURCE_CONFIG_FIELDS:
         errors.append("selected_source_config must contain exactly the required fields")
-    if "source_config_count" in result and type(result["source_config_count"]) is not int:
-        errors.append("source_config_count must be an integer")
+    if "source_config_count" in result and (
+        type(result["source_config_count"]) is not int
+        or result["source_config_count"] < 0
+        or result["source_config_count"] > MAX_USAGE_METRIC
+    ):
+        errors.append("source_config_count must be a bounded non-negative integer")
     for field in ("observed_tools", "successful_tools"):
         value = result.get(field)
         if field in result and (
@@ -398,17 +418,28 @@ def validate_row_schema(result: object) -> list[str]:
             errors.append("stderr must be a string")
         elif stderr != _sanitize_text(stderr, max_chars=MAX_STDERR_EXCERPT)[0]:
             errors.append("stderr must equal its bounded sanitized canonical form")
-    for field in ("exit_code", "tool_errors"):
-        if field in result and type(result[field]) is not int:
-            errors.append(f"{field} must be an integer")
+    if "exit_code" in result and type(result["exit_code"]) is not int:
+        errors.append("exit_code must be an integer")
+    if "tool_errors" in result and (
+        type(result["tool_errors"]) is not int
+        or result["tool_errors"] < 0
+        or result["tool_errors"] > MAX_USAGE_METRIC
+    ):
+        errors.append("tool_errors must be a bounded non-negative integer")
     for field in ("turns", "tool_calls", "output_tokens"):
-        if field in result and (type(result[field]) is not int or result[field] < 0):
+        if field in result and (
+            type(result[field]) is not int
+            or result[field] < 0
+            or result[field] > MAX_USAGE_METRIC
+        ):
             errors.append(f"{field} must be a non-negative integer")
     response_time = result.get("response_time_seconds")
     if "response_time_seconds" in result and (
         not isinstance(response_time, (int, float))
         or isinstance(response_time, bool)
+        or (isinstance(response_time, float) and not math.isfinite(response_time))
         or response_time < 0
+        or response_time > MAX_USAGE_METRIC
     ):
         errors.append("response_time_seconds must be a non-negative number")
     rubric = result.get("rubric")
@@ -438,7 +469,9 @@ def validate_row_schema(result: object) -> list[str]:
         if value is not None and (
             not isinstance(value, (int, float))
             or isinstance(value, bool)
+            or (isinstance(value, float) and not math.isfinite(value))
             or value < 0
+            or value > MAX_USAGE_METRIC
         ):
             errors.append(f"{field} must be a non-negative number or null")
     return errors
@@ -520,27 +553,36 @@ def score_result(result: object) -> dict:
     # aggregation can distinguish "known zero" from "not captured".
     operational = {
         "passed": result.get("passed") if type(result.get("passed")) is bool else None,
-        "turns": result.get("turns") if type(result.get("turns")) is int and result.get("turns") >= 0 else None,
+        "turns": (
+            result.get("turns")
+            if type(result.get("turns")) is int and 0 <= result.get("turns") <= MAX_USAGE_METRIC
+            else None
+        ),
         "tool_calls": (
             result.get("tool_calls")
-            if type(result.get("tool_calls")) is int and result.get("tool_calls") >= 0
+            if type(result.get("tool_calls")) is int and 0 <= result.get("tool_calls") <= MAX_USAGE_METRIC
             else None
         ),
         "tool_errors": (
             result.get("tool_errors")
-            if type(result.get("tool_errors")) is int and result.get("tool_errors") >= 0
+            if type(result.get("tool_errors")) is int and 0 <= result.get("tool_errors") <= MAX_USAGE_METRIC
             else None
         ),
         "output_tokens": (
             result.get("output_tokens")
-            if type(result.get("output_tokens")) is int and result.get("output_tokens") >= 0
+            if type(result.get("output_tokens")) is int and 0 <= result.get("output_tokens") <= MAX_USAGE_METRIC
             else None
         ),
         "response_time_seconds": (
             result.get("response_time_seconds")
             if isinstance(result.get("response_time_seconds"), (int, float))
             and not isinstance(result.get("response_time_seconds"), bool)
+            and (
+                not isinstance(result.get("response_time_seconds"), float)
+                or math.isfinite(result.get("response_time_seconds"))
+            )
             and result.get("response_time_seconds") >= 0
+            and result.get("response_time_seconds") <= MAX_USAGE_METRIC
             else None
         ),
     }
@@ -674,6 +716,7 @@ def aggregate_scores(scored_results: list[dict]) -> dict:
         "tool_calls": [],
         "tool_errors": 0,
         "tool_errors_known": False,
+        "tool_errors_overflow": False,
         "output_tokens": [],
         "response_time_seconds": [],
         "status_counts": defaultdict(int),
@@ -703,8 +746,14 @@ def aggregate_scores(scored_results: list[dict]) -> dict:
         if ops.get("tool_calls") is not None:
             agg["tool_calls"].append(ops["tool_calls"])
         if ops.get("tool_errors") is not None:
-            agg["tool_errors_known"] = True
-            agg["tool_errors"] += ops["tool_errors"]
+            if not agg["tool_errors_overflow"]:
+                agg["tool_errors_known"] = True
+                if agg["tool_errors"] + ops["tool_errors"] <= MAX_USAGE_METRIC:
+                    agg["tool_errors"] += ops["tool_errors"]
+                else:
+                    agg["tool_errors_known"] = False
+                    agg["tool_errors_overflow"] = True
+                    agg["tool_errors"] = 0
         if ops.get("output_tokens") is not None:
             agg["output_tokens"].append(ops["output_tokens"])
         if ops.get("response_time_seconds") is not None:
@@ -747,6 +796,7 @@ def aggregate_scores(scored_results: list[dict]) -> dict:
             "avg_turns": avg(agg["turns"]) if agg["turns"] else None,
             "avg_tool_calls": avg(agg["tool_calls"]) if agg["tool_calls"] else None,
             "total_tool_errors": agg["tool_errors"] if agg["tool_errors_known"] else None,
+            "tool_errors_overflow": agg["tool_errors_overflow"],
             "avg_output_tokens": avg(agg["output_tokens"]) if agg["output_tokens"] else None,
             "avg_response_time_seconds": (
                 avg(agg["response_time_seconds"]) if agg["response_time_seconds"] else None
@@ -1025,7 +1075,7 @@ def main():
         output_path = Path(args.input[0]).parent / f"scored-{run_id}.json"
 
     with open(output_path, "w") as f:
-        json.dump(output_data, f, indent=2)
+        json.dump(output_data, f, indent=2, allow_nan=False)
 
     print(f"Scored results saved to {output_path}")
     if not publication["allowed"]:

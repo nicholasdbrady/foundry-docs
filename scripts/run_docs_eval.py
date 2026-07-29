@@ -18,6 +18,7 @@ Models:
 import argparse
 import io
 import json
+import math
 import os
 import re
 import subprocess
@@ -105,8 +106,21 @@ MAX_STDOUT_PARSE_BYTES = 128_000
 MAX_STDOUT_PARSE_LINES = 500
 MAX_STDOUT_LINE_BYTES = 64_000
 MAX_IDENTIFIER_TEXT = 256
+MAX_USAGE_METRIC = 10**15
 _SECRET_KEY_PATTERN = re.compile(r"(?:api[_-]?key|authorization|credential|password|secret|token)", re.I)
-_AUTHORIZATION_HEADER_PATTERN = re.compile(r"(?im)(authorization\s*:\s*)[^\r\n]+")
+_AUTHORIZATION_HEADER_PATTERN = re.compile(
+    r"(?im)(authorization\s*:\s*)[^\r\n]+(?:\r?\n[ \t]+[^\r\n]*)*"
+)
+_AUTHORIZATION_ASSIGNMENT_PATTERN = re.compile(
+    r"""(?imx)
+    \{?
+    (?:
+        \\?["']?authorization\\?["']?\s*=\s*
+        | \\?["']authorization\\?["']\s*:\s*
+    )
+    [^\r\n]+(?:\r?\n[ \t]+[^\r\n]*)*
+    """
+)
 _SERIALIZED_AUTHORIZATION_KEY_PATTERN = re.compile(
     r"(?i)(?:\\?[\"'])authorization(?:\\?[\"'])\s*[:=]\s*"
 )
@@ -260,6 +274,7 @@ def _sanitize_text(value: str, max_chars: int = MAX_DIAGNOSTIC_TEXT) -> tuple[st
 
     sanitized = _redact_serialized_authorization(sanitized)
     sanitized = _AUTHORIZATION_HEADER_PATTERN.sub(r"\1[REDACTED]", sanitized)
+    sanitized = _AUTHORIZATION_ASSIGNMENT_PATTERN.sub("Authorization=[REDACTED]", sanitized)
     sanitized = _SECRET_VALUE_PATTERNS[0].sub("[REDACTED]", sanitized)
     sanitized = _SECRET_VALUE_PATTERNS[1].sub(r"\1[REDACTED]", sanitized)
     sanitized = _SECRET_VALUE_PATTERNS[2].sub("[REDACTED]", sanitized)
@@ -357,6 +372,8 @@ def _sanitize_diagnostic_value(value: object, *, depth: int = 0) -> object:
         return sanitized_items
     if isinstance(value, str):
         return _sanitize_text(value)[0]
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
     if value is None or isinstance(value, (bool, int, float)):
         return value
     return _sanitize_text(str(value))[0]
@@ -378,6 +395,7 @@ def _sanitize_response_text(value: str) -> str:
     )
     sanitized = _redact_serialized_authorization(sanitized)
     sanitized = _AUTHORIZATION_HEADER_PATTERN.sub(r"\1[REDACTED]", sanitized)
+    sanitized = _AUTHORIZATION_ASSIGNMENT_PATTERN.sub("Authorization=[REDACTED]", sanitized)
     sanitized = _SECRET_VALUE_PATTERNS[0].sub("[REDACTED]", sanitized)
     sanitized = _SECRET_VALUE_PATTERNS[1].sub(r"\1[REDACTED]", sanitized)
     sanitized = _SECRET_VALUE_PATTERNS[2].sub("[REDACTED]", sanitized)
@@ -439,6 +457,7 @@ def _redact_encoded_sensitive_tokens(value: str) -> str:
             return "<PATH>" + trailing
         sanitized_decoded = _redact_serialized_authorization(decoded)
         sanitized_decoded = _AUTHORIZATION_HEADER_PATTERN.sub(r"\1[REDACTED]", sanitized_decoded)
+        sanitized_decoded = _AUTHORIZATION_ASSIGNMENT_PATTERN.sub("Authorization=[REDACTED]", sanitized_decoded)
         sanitized_decoded = _SECRET_VALUE_PATTERNS[0].sub("[REDACTED]", sanitized_decoded)
         sanitized_decoded = _SECRET_VALUE_PATTERNS[1].sub(r"\1[REDACTED]", sanitized_decoded)
         sanitized_decoded = _SECRET_VALUE_PATTERNS[2].sub("[REDACTED]", sanitized_decoded)
@@ -886,9 +905,14 @@ def parse_event_stream(stdout: str | bytes) -> dict:
                 final_response_line = line_number
             elif content is not None and not isinstance(content, str):
                 parse_errors.append(f"line {line_number}: assistant content must be a string")
-            output_tokens = data.get("outputTokens", 0) or 0
-            if type(output_tokens) is int and output_tokens >= 0:
-                metrics["output_tokens"] += output_tokens
+            output_tokens = data["outputTokens"] if "outputTokens" in data else 0
+            if type(output_tokens) is int and 0 <= output_tokens <= MAX_USAGE_METRIC:
+                if metrics["output_tokens"] + output_tokens <= MAX_USAGE_METRIC:
+                    metrics["output_tokens"] += output_tokens
+                else:
+                    parse_errors.append(
+                        f"line {line_number}: cumulative output token count exceeds {MAX_USAGE_METRIC}"
+                    )
             else:
                 parse_errors.append(f"line {line_number}: output token count must be a non-negative integer")
         elif etype == "tool.execution_start":
@@ -988,11 +1012,28 @@ def parse_event_stream(stdout: str | bytes) -> dict:
                 parse_errors.append(f"line {line_number}: duplicate terminal result")
             result_seen = True
             metrics["result_exit_code"] = event.get("exitCode")
-            usage = event.get("usage", {}) or {}
+            usage = event["usage"] if "usage" in event else {}
             if isinstance(usage, dict):
-                metrics["premium_requests"] = usage.get("premiumRequests")
-                metrics["api_duration_ms"] = usage.get("totalApiDurationMs")
-                metrics["session_duration_ms"] = usage.get("sessionDurationMs")
+                for key, metric_name in (
+                    ("premiumRequests", "premium_requests"),
+                    ("totalApiDurationMs", "api_duration_ms"),
+                    ("sessionDurationMs", "session_duration_ms"),
+                ):
+                    value = usage.get(key)
+                    if value is None:
+                        continue
+                    if (
+                        not isinstance(value, (int, float))
+                        or isinstance(value, bool)
+                        or (isinstance(value, float) and not math.isfinite(value))
+                        or value < 0
+                        or value > MAX_USAGE_METRIC
+                    ):
+                        parse_errors.append(
+                            f"line {line_number}: usage.{key} must be a finite non-negative number"
+                        )
+                        continue
+                    metrics[metric_name] = value
             else:
                 parse_errors.append(f"line {line_number}: result usage must be a JSON object")
 
@@ -1283,15 +1324,22 @@ def run_single_eval(
 
 
 def run_evaluation(
-    scenarios: list[dict],
+    scenarios: list[dict] | None,
     servers: dict | None = None,
     models: list[str] | None = None,
     timeout: int = 120,
     require_azure: bool = False,
 ) -> dict:
     """Run the full evaluation matrix."""
-    servers = servers or MCP_SERVERS
-    models = models or MODELS
+    scenarios = load_scenarios(SCENARIOS_FILE) if scenarios is None else scenarios
+    servers = MCP_SERVERS if servers is None else servers
+    models = MODELS if models is None else models
+    if not scenarios:
+        raise ValueError("scenarios must not be empty")
+    if not servers:
+        raise ValueError("servers must not be empty")
+    if not models:
+        raise ValueError("models must not be empty")
 
     total = len(scenarios) * len(servers) * len(models)
     print(f"Running {total} evaluations: {len(scenarios)} scenarios × "
@@ -1505,7 +1553,7 @@ def main():
     output_path = output_dir / f"run-{run_id}{suffix}.json"
 
     with open(output_path, "w") as f:
-        json.dump(output, f, indent=2)
+        json.dump(output, f, indent=2, allow_nan=False)
 
     print(f"\nResults saved to {output_path}")
     print(f"Total evaluations: {output['metadata']['total_evaluations']}")
