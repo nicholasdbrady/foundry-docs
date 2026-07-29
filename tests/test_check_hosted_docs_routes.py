@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from http.client import BadStatusLine, IncompleteRead
 import json
 import os
 import shutil
@@ -11,6 +12,7 @@ import yaml
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 
+import check_hosted_docs_routes as hosted_routes  # noqa: E402
 from check_hosted_docs_routes import HttpResult, check_hosted_routes, load_targets, main  # noqa: E402
 from validate_docs_vnext_navigation import validate_navigation  # noqa: E402
 
@@ -337,6 +339,96 @@ def test_host_unavailability_is_blocked_without_false_route_success(tmp_path: Pa
     assert report["diagnosticSummary"]["counts"] == {"host_unavailable": 1}
 
 
+class _FakeHeaders:
+    def __init__(self, charset: str | None = "utf-8") -> None:
+        self.charset = charset
+
+    def get_content_charset(self) -> str | None:
+        return self.charset
+
+
+class _FakeResponse:
+    status = 200
+
+    def __init__(self, *, body: bytes = b"", read_error: Exception | None = None, charset: str = "utf-8") -> None:
+        self.body = body
+        self.read_error = read_error
+        self.headers = _FakeHeaders(charset)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback) -> None:
+        return None
+
+    def read(self, _size: int) -> bytes:
+        if self.read_error:
+            raise self.read_error
+        return self.body
+
+    def geturl(self) -> str:
+        return BASE_URL
+
+
+def test_fetch_url_converts_incomplete_read_to_structured_error(monkeypatch) -> None:
+    response = _FakeResponse(read_error=IncompleteRead(b"partial", 10))
+    monkeypatch.setattr(hosted_routes, "urlopen", lambda *_args, **_kwargs: response)
+
+    result = hosted_routes.fetch_url(BASE_URL, 1.0, 1024)
+
+    assert result.status_code == 200
+    assert result.body == ""
+    assert result.error and result.error.startswith("IncompleteRead:")
+
+
+def test_fetch_url_converts_unknown_charset_to_structured_error(monkeypatch) -> None:
+    response = _FakeResponse(body=b"content", charset="unknown-test-charset")
+    monkeypatch.setattr(hosted_routes, "urlopen", lambda *_args, **_kwargs: response)
+
+    result = hosted_routes.fetch_url(BASE_URL, 1.0, 1024)
+
+    assert result.status_code == 200
+    assert result.body == ""
+    assert result.error and result.error.startswith("LookupError:")
+
+
+def test_fetch_url_converts_pre_response_protocol_error(monkeypatch) -> None:
+    def raise_protocol_error(*_args, **_kwargs):
+        raise BadStatusLine("invalid status")
+
+    monkeypatch.setattr(hosted_routes, "urlopen", raise_protocol_error)
+
+    result = hosted_routes.fetch_url(BASE_URL, 1.0, 1024)
+
+    assert result.status_code is None
+    assert result.body == ""
+    assert result.error and result.error.startswith("BadStatusLine:")
+
+
+def test_fetch_url_marks_oversized_response_invalid(monkeypatch) -> None:
+    response = _FakeResponse(body=b"01234567890")
+    monkeypatch.setattr(hosted_routes, "urlopen", lambda *_args, **_kwargs: response)
+
+    result = hosted_routes.fetch_url(BASE_URL, 1.0, 10)
+
+    assert result.status_code == 200
+    assert result.body == "0123456789"
+    assert result.error == "response exceeded maximum inspection size (10 bytes)"
+
+
+def test_route_read_failures_complete_as_bounded_diagnostics(tmp_path: Path) -> None:
+    def fetcher(url: str, _timeout: float, _max_bytes: int) -> HttpResult:
+        if url == f"{BASE_URL}/":
+            return HttpResult(200, "<html><main>Healthy host preflight content.</main></html>", url)
+        return HttpResult(200, "", url, "IncompleteRead: partial response")
+
+    report = _run(tmp_path, fetcher)
+
+    assert report["status"] == "failed"
+    assert report["routeSummary"] == {"required": 2, "checked": 2, "passed": 0, "failed": 2}
+    assert report["diagnosticSummary"]["counts"] == {"route_response_invalid": 2}
+
+
 def test_uniform_infrastructure_4xx_is_host_unavailable(tmp_path: Path) -> None:
     def fetcher(url: str, _timeout: float, _max_bytes: int) -> HttpResult:
         if url == f"{BASE_URL}/":
@@ -615,6 +707,7 @@ def test_workflow_runs_after_deployment_and_on_schedule_with_retained_diagnostic
     assert "deployment_status" in resolver
     assert "HEAD:docs-vnext" in resolver
     assert "$deployed_commit_sha:docs-vnext" in resolver
+    assert resolver.count("-f ref=main") == 2
     checker = by_name["Check every hosted route"]["run"]
     assert "docs-vnext-route-inventory.json" in checker
     assert "--expected-source-sha" in checker
@@ -622,7 +715,7 @@ def test_workflow_runs_after_deployment_and_on_schedule_with_retained_diagnostic
     assert "--conflicting-base-url" in checker
 
 
-def test_intended_deployment_status_path_resolves_deployed_docs_tree(tmp_path: Path) -> None:
+def _bash_executable() -> Path:
     git = shutil.which("git")
     bash_candidates = (
         [
@@ -636,7 +729,10 @@ def test_intended_deployment_status_path_resolves_deployed_docs_tree(tmp_path: P
     bash = next((candidate for candidate in bash_candidates if candidate.is_file()), None)
     if bash is None:
         raise AssertionError("bash is required to execute the workflow resolver")
+    return bash
 
+
+def _resolver_fixture_repo(tmp_path: Path) -> tuple[Path, str, str]:
     repo = tmp_path / "repo"
     repo.mkdir()
     subprocess.run(["git", "init", "-b", "main"], cwd=repo, check=True, capture_output=True)
@@ -661,12 +757,44 @@ def test_intended_deployment_status_path_resolves_deployed_docs_tree(tmp_path: P
         capture_output=True,
         text=True,
     ).stdout.strip()
+    return repo, commit_sha, tree_sha
+
+
+def _run_workflow_resolver(
+    tmp_path: Path,
+    repo: Path,
+    *,
+    gh_function: str,
+    event_name: str,
+    event_environment: str,
+    event_sha: str,
+    event_state: str,
+    event_url: str,
+) -> dict[str, str]:
+    bash = _bash_executable()
 
     workflow = yaml.safe_load(WORKFLOW_PATH.read_text(encoding="utf-8"))
     steps = workflow["jobs"]["hosted-route-readiness"]["steps"]
     resolver = next(step for step in steps if step.get("name") == "Resolve hosted deployment")["run"]
     script = repo / "resolver.sh"
-    script.write_text("#!/usr/bin/env bash\ngh() { return 0; }\n" + resolver, encoding="utf-8", newline="\n")
+    jq_function = r"""
+jq() {
+  if [[ "$1" == "-r" ]]; then shift; fi
+  python -c 'import json, sys
+data = json.load(sys.stdin)
+expression = sys.argv[1]
+key = expression.split()[0].lstrip(".")
+value = data.get(key)
+if value is None:
+    value = "missing" if "\"missing\"" in expression else ""
+print(value)' "$1"
+}
+"""
+    script.write_text(
+        "#!/usr/bin/env bash\n" + jq_function + "\n" + gh_function + "\n" + resolver,
+        encoding="utf-8",
+        newline="\n",
+    )
     output_path = tmp_path / "github-output"
     env = {
         **os.environ,
@@ -675,23 +803,121 @@ def test_intended_deployment_status_path_resolves_deployed_docs_tree(tmp_path: P
         "GITHUB_OUTPUT": output_path.as_posix(),
         "DOCS_VNEXT_ENVIRONMENT": "staging - docs-vnext",
         "DOCS_PRIMARY_ENVIRONMENT": "staging - docs",
-        "EVENT_NAME": "deployment_status",
-        "EVENT_ENVIRONMENT": "staging - docs-vnext",
-        "EVENT_SHA": commit_sha,
-        "EVENT_STATE": "success",
-        "EVENT_URL": BASE_URL,
+        "EVENT_NAME": event_name,
+        "EVENT_ENVIRONMENT": event_environment,
+        "EVENT_SHA": event_sha,
+        "EVENT_STATE": event_state,
+        "EVENT_URL": event_url,
     }
 
-    subprocess.run([str(bash), script.as_posix()], cwd=repo, env=env, check=True, capture_output=True, text=True)
+    result = subprocess.run(
+        [str(bash), script.as_posix()],
+        cwd=repo,
+        env=env,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
 
-    outputs = dict(
+    return dict(
         line.split("=", 1)
         for line in output_path.read_text(encoding="utf-8").splitlines()
         if "=" in line
     )
+
+
+def test_intended_deployment_status_path_resolves_deployed_docs_tree(tmp_path: Path) -> None:
+    repo, commit_sha, tree_sha = _resolver_fixture_repo(tmp_path)
+    outputs = _run_workflow_resolver(
+        tmp_path,
+        repo,
+        gh_function="gh() { return 0; }",
+        event_name="deployment_status",
+        event_environment="staging - docs-vnext",
+        event_sha=commit_sha,
+        event_state="success",
+        event_url=BASE_URL,
+    )
+
     assert outputs["expected_sha"] == tree_sha
     assert outputs["deployed_commit_sha"] == commit_sha
     assert outputs["deployed_sha"] == tree_sha
     assert outputs["environment"] == "staging - docs-vnext"
     assert outputs["state"] == "success"
     assert outputs["observed_url"] == BASE_URL
+
+
+def test_main_deployments_detect_collision_despite_newer_distinct_preview(tmp_path: Path) -> None:
+    repo, commit_sha, tree_sha = _resolver_fixture_repo(tmp_path)
+    distinct_preview_url = "https://preview.example.test"
+    gh_function = f"""
+gh() {{
+  args="$*"
+  case "$args" in
+    *"deployments/101/statuses"*)
+      printf '%s\\n' '{{"state":"success","environment_url":"{BASE_URL}"}}'
+      ;;
+    *"deployments/202/statuses"*)
+      printf '%s\\n' '{{"state":"success","environment_url":"{BASE_URL}"}}'
+      ;;
+    *"environment=staging - docs-vnext"*)
+      if [[ "$args" == *"ref=main"* ]]; then
+        printf '%s\\n' '{{"id":101,"environment":"staging - docs-vnext","sha":"{commit_sha}"}}'
+      else
+        printf '%s\\n' '{{"id":901,"environment":"staging - docs-vnext","sha":"{'b' * 40}","url":"{distinct_preview_url}"}}'
+      fi
+      ;;
+    *"environment=staging - docs"*)
+      if [[ "$args" == *"ref=main"* ]]; then
+        printf '%s\\n' '{{"id":202,"environment":"staging - docs","sha":"{commit_sha}"}}'
+      else
+        printf '%s\\n' '{{"id":902,"environment":"staging - docs","sha":"{'c' * 40}","url":"{distinct_preview_url}"}}'
+      fi
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}}
+"""
+    outputs = _run_workflow_resolver(
+        tmp_path,
+        repo,
+        gh_function=gh_function,
+        event_name="schedule",
+        event_environment="",
+        event_sha="",
+        event_state="",
+        event_url="",
+    )
+
+    assert outputs["expected_sha"] == tree_sha
+    assert outputs["deployed_sha"] == tree_sha
+    assert outputs["observed_url"] == BASE_URL
+    assert outputs["conflicting_url"] == BASE_URL
+    assert distinct_preview_url not in outputs.values()
+
+    inventory = _write_inventory(tmp_path, ["guide/one"])
+
+    def fetcher(url: str, _timeout: float, _max_bytes: int) -> HttpResult:
+        raise AssertionError(f"collision must block before HTTP: {url}")
+
+    report = check_hosted_routes(
+        inventory_path=inventory,
+        repository_root=tmp_path,
+        base_url=BASE_URL,
+        expected_source_sha=outputs["expected_sha"],
+        deployed_source_sha=outputs["deployed_sha"],
+        deployment_state=outputs["state"],
+        expected_environment="staging - docs-vnext",
+        deployment_environment=outputs["environment"],
+        observed_base_url=outputs["observed_url"],
+        conflicting_environment=outputs["conflicting_environment"],
+        conflicting_source_sha=outputs["conflicting_sha"],
+        conflicting_base_url=outputs["conflicting_url"],
+        fetcher=fetcher,
+    )
+
+    assert report["status"] == "blocked"
+    assert report["diagnosticSummary"]["counts"] == {"deployment_host_collision": 1}

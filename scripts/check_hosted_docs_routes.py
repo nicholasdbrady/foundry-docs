@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import concurrent.futures
 import html
+from http.client import HTTPException
 import json
 import re
 import sys
@@ -382,24 +383,46 @@ def fetch_url(url: str, timeout_seconds: float, max_response_bytes: int) -> Http
     )
     try:
         with urlopen(request, timeout=timeout_seconds) as response:  # noqa: S310 - caller controls the trusted base URL
-            body_bytes = response.read(max_response_bytes + 1)
-            charset = response.headers.get_content_charset() or "utf-8"
+            try:
+                body_bytes = response.read(max_response_bytes + 1)
+                charset = response.headers.get_content_charset() or "utf-8"
+                body = body_bytes[:max_response_bytes].decode(charset, errors="replace")
+            except (HTTPException, LookupError, OSError) as exc:
+                return HttpResult(
+                    status_code=response.status,
+                    body="",
+                    final_url=response.geturl(),
+                    error=f"{type(exc).__name__}: {exc}",
+                )
             return HttpResult(
                 status_code=response.status,
-                body=body_bytes[:max_response_bytes].decode(charset, errors="replace"),
+                body=body,
                 final_url=response.geturl(),
-                error="response exceeded maximum inspection size" if len(body_bytes) > max_response_bytes else None,
+                error=(
+                    f"response exceeded maximum inspection size ({max_response_bytes} bytes)"
+                    if len(body_bytes) > max_response_bytes
+                    else None
+                ),
             )
     except HTTPError as exc:
-        body_bytes = exc.read(max_response_bytes)
-        charset = exc.headers.get_content_charset() or "utf-8"
+        try:
+            body_bytes = exc.read(max_response_bytes)
+            charset = exc.headers.get_content_charset() or "utf-8"
+            body = body_bytes.decode(charset, errors="replace")
+        except (HTTPException, LookupError, OSError) as read_exc:
+            return HttpResult(
+                status_code=exc.code,
+                body="",
+                final_url=exc.geturl(),
+                error=f"{type(read_exc).__name__}: {read_exc}",
+            )
         return HttpResult(
             status_code=exc.code,
-            body=body_bytes.decode(charset, errors="replace"),
+            body=body,
             final_url=exc.geturl(),
             error=None,
         )
-    except (TimeoutError, URLError, OSError) as exc:
+    except (HTTPException, TimeoutError, URLError, OSError) as exc:
         return HttpResult(status_code=None, body="", final_url=url, error=f"{type(exc).__name__}: {exc}")
 
 
@@ -528,6 +551,14 @@ def _probe_route(
             response.final_url,
             "route_http_error",
             "hosted route did not return a successful response",
+        )
+    if response.error:
+        return RouteResult(
+            target,
+            response.status_code,
+            response.final_url,
+            "route_response_invalid",
+            response.error,
         )
 
     if target.kind == "openapi_source":
@@ -739,6 +770,7 @@ def check_hosted_routes(
     if (
         preflight.status_code is None
         or not 200 <= preflight.status_code < 300
+        or preflight.error is not None
         or (preflight.final_url and not _same_origin(base_url, preflight.final_url))
     ):
         collector.add(

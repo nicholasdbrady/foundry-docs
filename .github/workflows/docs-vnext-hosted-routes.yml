@@ -79,6 +79,7 @@ jobs:
             deployment="$(
               gh api -X GET "repos/$GITHUB_REPOSITORY/deployments" \
                 -f environment="$DOCS_VNEXT_ENVIRONMENT" \
+                -f ref=main \
                 -f per_page=1 \
                 --jq '.[0] // empty'
             )"
@@ -120,6 +121,7 @@ jobs:
           conflicting_deployment="$(
             gh api -X GET "repos/$GITHUB_REPOSITORY/deployments" \
               -f environment="$DOCS_PRIMARY_ENVIRONMENT" \
+              -f ref=main \
               -f per_page=1 \
               --jq '.[0] // empty'
           )"
