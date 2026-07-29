@@ -31,6 +31,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import unquote_plus, urlsplit, urlunsplit
 
+import psutil
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 SCENARIOS_FILE = PROJECT_ROOT / "tests" / "docs_eval_scenarios.json"
 RESULTS_DIR = PROJECT_ROOT / "tests" / "eval_results"
@@ -109,13 +111,14 @@ MAX_STDOUT_PARSE_LINES = 500
 MAX_STDOUT_LINE_BYTES = 64_000
 MAX_STDOUT_CAPTURE_BYTES = MAX_STDOUT_PARSE_BYTES + MAX_STDOUT_LINE_BYTES + 1
 MAX_STDERR_CAPTURE_BYTES = 64_000
-MAX_PIPE_DRAIN_SECONDS = 0.5
+MAX_PROCESS_CLEANUP_SECONDS = 2.0
+DESCENDANT_POLL_SECONDS = 0.01
 MAX_IDENTIFIER_TEXT = 256
 MAX_USAGE_METRIC = 10**15
 MAX_ENCODED_TOKEN_BYTES = 8_192
 MAX_ENCODED_DECODE_ITERATIONS = 8
 MAX_ENCODED_DECODE_SECONDS = 0.02
-_ORIGINAL_SUBPROCESS_RUN = subprocess.run
+_PROCESS_FACTORY = subprocess.Popen
 _SECRET_KEY_PATTERN = re.compile(r"(?:api[_-]?key|authorization|credential|password|secret|token)", re.I)
 _AUTHORIZATION_HEADER_PATTERN = re.compile(
     r"(?im)(authorization\s*:\s*)[^\r\n]+(?:\r?\n[ \t]+[^\r\n]*)*"
@@ -219,6 +222,7 @@ def build_mcp_config(server_config: dict, require_azure: bool = False) -> tuple[
         mcp_server = {
             "type": "http",
             "url": config["url"],
+            "deferTools": "never",
             "tools": ["*"],
         }
     elif server_config["type"] == "stdio":
@@ -226,6 +230,7 @@ def build_mcp_config(server_config: dict, require_azure: bool = False) -> tuple[
             "type": "local",
             "command": config["command"],
             "args": list(config.get("args", [])),
+            "deferTools": "never",
             "tools": ["*"],
         }
     else:
@@ -818,99 +823,106 @@ def _drain_bounded_pipe(fd: int, sink: bytearray, max_bytes: int) -> None:
                 sink.extend(chunk[:remaining])
     except OSError:
         pass
-
-
-def _drain_bounded_stream(stream: object, sink: bytearray, max_bytes: int) -> None:
-    """Drain a process stream while retaining only a bounded byte projection."""
-    while chunk := stream.read(64 * 1024):
-        remaining = max_bytes - len(sink)
-        if remaining > 0:
-            sink.extend(chunk[:remaining])
-
-
-def _run_process_with_injected_runner(
-    cmd: list[str],
-    *,
-    timeout: int,
-    cwd: str,
-    env: dict[str, str],
-) -> subprocess.CompletedProcess:
-    """Exercise the bounded stream contract through an injected test runner."""
-    stdout_read_fd, stdout_write_fd = os.pipe()
-    stderr_read_fd, stderr_write_fd = os.pipe()
-    stdout_projection = bytearray()
-    stderr_projection = bytearray()
-
-    with (
-        os.fdopen(stdout_write_fd, "wb", buffering=0) as stdout_writer,
-        os.fdopen(stderr_write_fd, "wb", buffering=0) as stderr_writer,
-    ):
-        stdout_thread = threading.Thread(
-            target=_drain_bounded_pipe,
-            args=(stdout_read_fd, stdout_projection, MAX_STDOUT_CAPTURE_BYTES),
-            daemon=True,
-        )
-        stderr_thread = threading.Thread(
-            target=_drain_bounded_pipe,
-            args=(stderr_read_fd, stderr_projection, MAX_STDERR_CAPTURE_BYTES),
-            daemon=True,
-        )
-        stdout_thread.start()
-        stderr_thread.start()
-        timeout_error: subprocess.TimeoutExpired | None = None
+    finally:
         try:
-            proc = subprocess.run(
-                cmd,
-                stdout=stdout_writer,
-                stderr=stderr_writer,
-                timeout=timeout,
-                cwd=cwd,
-                env=env,
-            )
-        except subprocess.TimeoutExpired as exc:
-            timeout_error = exc
-        finally:
-            stdout_writer.close()
-            stderr_writer.close()
-            for thread in (stdout_thread, stderr_thread):
-                thread.join()
-            for fd in (stdout_read_fd, stderr_read_fd):
-                try:
-                    os.close(fd)
-                except OSError:
-                    pass
-
-        if timeout_error is not None:
-            if timeout_error.stdout is None:
-                timeout_error.stdout = bytes(stdout_projection)
-            if timeout_error.stderr is None:
-                timeout_error.stderr = bytes(stderr_projection)
-            raise timeout_error
-
-    if proc.stdout is None:
-        proc.stdout = bytes(stdout_projection)
-    if proc.stderr is None:
-        proc.stderr = bytes(stderr_projection)
-    return proc
+            os.close(fd)
+        except OSError:
+            pass
 
 
-def _terminate_process_tree(proc: subprocess.Popen) -> None:
-    """Terminate the process and descendants that can retain output pipes."""
+def _track_descendants(
+    tracked: dict[int, float],
+    stop: threading.Event,
+) -> None:
+    """Track descendants before reparenting can detach them from the root."""
+    while not stop.wait(DESCENDANT_POLL_SECONDS):
+        for pid, create_time in tuple(tracked.items()):
+            try:
+                process = psutil.Process(pid)
+                if process.create_time() != create_time:
+                    continue
+                for child in process.children(recursive=True):
+                    tracked.setdefault(child.pid, child.create_time())
+            except (psutil.Error, OSError):
+                continue
+
+
+def _tracked_processes(tracked: dict[int, float]) -> list[psutil.Process]:
+    processes = []
+    for pid, create_time in tracked.items():
+        try:
+            process = psutil.Process(pid)
+            if process.create_time() == create_time:
+                processes.append(process)
+        except (psutil.Error, OSError):
+            continue
+    return processes
+
+
+def _process_identities(processes: list[psutil.Process]) -> dict[int, float]:
+    identities = {}
+    for process in processes:
+        try:
+            identities[process.pid] = process.create_time()
+        except (psutil.Error, OSError):
+            continue
+    return identities
+
+
+def _set_linux_child_subreaper(enabled: bool) -> bool | None:
+    """Set Linux child-subreaper ownership and return the previous state."""
+    if sys.platform != "linux":
+        return None
+    import ctypes
+
+    libc = ctypes.CDLL(None, use_errno=True)
+    current = ctypes.c_int()
+    if libc.prctl(37, ctypes.byref(current), 0, 0, 0) != 0:
+        raise OSError(ctypes.get_errno(), "unable to read child subreaper state")
+    if libc.prctl(36, int(enabled), 0, 0, 0) != 0:
+        raise OSError(ctypes.get_errno(), "unable to set child subreaper state")
+    return bool(current.value)
+
+
+def _new_adopted_processes(baseline: dict[int, float]) -> dict[int, float]:
+    current = _process_identities(psutil.Process().children(recursive=True))
+    return {
+        pid: create_time
+        for pid, create_time in current.items()
+        if baseline.get(pid) != create_time
+    }
+
+
+def _terminate_tracked_processes(tracked: dict[int, float], deadline: float) -> None:
+    """Terminate every observed descendant within one absolute cleanup deadline."""
+    processes = _tracked_processes(tracked)
+    for process in sorted(processes, key=lambda item: item.pid, reverse=True):
+        try:
+            process.terminate()
+        except psutil.Error:
+            pass
+    graceful_deadline = min(deadline, time.monotonic() + 0.25)
+    _gone, alive = psutil.wait_procs(
+        processes,
+        timeout=max(0.0, graceful_deadline - time.monotonic()),
+    )
+    for process in alive:
+        try:
+            process.kill()
+        except psutil.Error:
+            pass
+    if alive:
+        forced_deadline = min(deadline, time.monotonic() + 0.5)
+        psutil.wait_procs(alive, timeout=max(0.0, forced_deadline - time.monotonic()))
+
+
+def _kill_process_group(proc: subprocess.Popen) -> None:
     if os.name == "nt":
-        completed = _ORIGINAL_SUBPROCESS_RUN(
-            ["taskkill", "/PID", str(proc.pid), "/T", "/F"],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            check=False,
-        )
-        if completed.returncode != 0 and proc.poll() is None:
-            proc.kill()
         return
     try:
         os.killpg(proc.pid, signal.SIGKILL)
     except ProcessLookupError:
-        if proc.poll() is None:
-            proc.kill()
+        pass
 
 
 def _assign_windows_kill_on_close_job(proc: subprocess.Popen) -> int | None:
@@ -1011,67 +1023,122 @@ def _run_process_bounded(
     env: dict[str, str],
 ) -> subprocess.CompletedProcess:
     """Run a process while bounding retained stdout and stderr in memory."""
-    if subprocess.run is not _ORIGINAL_SUBPROCESS_RUN:
-        return _run_process_with_injected_runner(cmd, timeout=timeout, cwd=cwd, env=env)
-
     creationflags = subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0
-    proc = subprocess.Popen(
-        cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        cwd=cwd,
-        env=env,
-        start_new_session=os.name != "nt",
-        creationflags=creationflags,
-    )
+    baseline_children = _process_identities(psutil.Process().children(recursive=True))
+    previous_subreaper = _set_linux_child_subreaper(True)
+    try:
+        proc = _PROCESS_FACTORY(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            cwd=cwd,
+            env=env,
+            start_new_session=os.name != "nt",
+            creationflags=creationflags,
+        )
+    except BaseException:
+        if previous_subreaper is not None:
+            _set_linux_child_subreaper(previous_subreaper)
+        raise
+    windows_job = None
+    stdout_read_fd = None
+    stderr_read_fd = None
+    started_threads: list[threading.Thread] = []
+    tracking_stop = threading.Event()
+    tracked: dict[int, float] = {}
     try:
         windows_job = _assign_windows_kill_on_close_job(proc)
-    except OSError:
-        proc.kill()
-        proc.wait()
+        assert proc.stdout is not None
+        assert proc.stderr is not None
+        stdout_read_fd = os.dup(proc.stdout.fileno())
+        stderr_read_fd = os.dup(proc.stderr.fileno())
         proc.stdout.close()
         proc.stderr.close()
+        stdout_projection = bytearray()
+        stderr_projection = bytearray()
+        stdout_thread = threading.Thread(
+            target=_drain_bounded_pipe,
+            args=(stdout_read_fd, stdout_projection, MAX_STDOUT_CAPTURE_BYTES),
+            daemon=True,
+        )
+        stderr_thread = threading.Thread(
+            target=_drain_bounded_pipe,
+            args=(stderr_read_fd, stderr_projection, MAX_STDERR_CAPTURE_BYTES),
+            daemon=True,
+        )
+        tracked = {proc.pid: psutil.Process(proc.pid).create_time()}
+        tracking_thread = threading.Thread(
+            target=_track_descendants,
+            args=(tracked, tracking_stop),
+            daemon=True,
+        )
+        for thread in (stdout_thread, stderr_thread, tracking_thread):
+            thread.start()
+            started_threads.append(thread)
+    except BaseException:
+        cleanup_deadline = time.monotonic() + MAX_PROCESS_CLEANUP_SECONDS
+        tracking_stop.set()
+        if windows_job is not None:
+            _close_windows_job(windows_job)
+        _kill_process_group(proc)
+        if previous_subreaper is not None:
+            tracked.update(_new_adopted_processes(baseline_children))
+        _terminate_tracked_processes(tracked, cleanup_deadline)
+        if proc.poll() is None:
+            proc.kill()
+        try:
+            proc.wait(timeout=max(0.0, cleanup_deadline - time.monotonic()))
+        except subprocess.TimeoutExpired:
+            pass
+        for stream in (proc.stdout, proc.stderr):
+            if stream is not None and not stream.closed:
+                stream.close()
+        for fd in (stdout_read_fd, stderr_read_fd):
+            if fd is not None:
+                try:
+                    os.close(fd)
+                except OSError:
+                    pass
+        for thread in started_threads:
+            thread.join(max(0.0, cleanup_deadline - time.monotonic()))
+        if previous_subreaper is not None:
+            _set_linux_child_subreaper(previous_subreaper)
         raise
-    stdout_projection = bytearray()
-    stderr_projection = bytearray()
-    stdout_thread = threading.Thread(
-        target=_drain_bounded_stream,
-        args=(proc.stdout, stdout_projection, MAX_STDOUT_CAPTURE_BYTES),
-        daemon=True,
-    )
-    stderr_thread = threading.Thread(
-        target=_drain_bounded_stream,
-        args=(proc.stderr, stderr_projection, MAX_STDERR_CAPTURE_BYTES),
-        daemon=True,
-    )
-    stdout_thread.start()
-    stderr_thread.start()
     timed_out = False
     try:
         returncode = proc.wait(timeout=timeout)
     except subprocess.TimeoutExpired:
         timed_out = True
-        if windows_job is not None:
-            _close_windows_job(windows_job)
-            windows_job = None
-        else:
-            _terminate_process_tree(proc)
-        returncode = proc.wait()
+        returncode = -1
     finally:
+        cleanup_deadline = time.monotonic() + MAX_PROCESS_CLEANUP_SECONDS
+        if timed_out:
+            _kill_process_group(proc)
+        tracking_stop.set()
+        tracking_thread.join(max(0.0, cleanup_deadline - time.monotonic()))
+        if previous_subreaper is not None:
+            tracked.update(_new_adopted_processes(baseline_children))
         if windows_job is not None:
             _close_windows_job(windows_job)
-        elif os.name != "nt" and not timed_out:
-            _terminate_process_tree(proc)
-        deadline = time.monotonic() + MAX_PIPE_DRAIN_SECONDS
+        _terminate_tracked_processes(tracked, cleanup_deadline)
+        if proc.poll() is None:
+            proc.kill()
+        try:
+            returncode = proc.wait(timeout=max(0.0, cleanup_deadline - time.monotonic()))
+        except subprocess.TimeoutExpired:
+            returncode = -1
         for thread in (stdout_thread, stderr_thread):
-            thread.join(max(0.0, deadline - time.monotonic()))
-        proc.stdout.close()
-        proc.stderr.close()
+            thread.join(max(0.0, cleanup_deadline - time.monotonic()))
+        drain_incomplete = stdout_thread.is_alive() or stderr_thread.is_alive()
+        if previous_subreaper is not None:
+            _set_linux_child_subreaper(previous_subreaper)
 
     stdout = bytes(stdout_projection)
     stderr = bytes(stderr_projection)
     if timed_out:
         raise subprocess.TimeoutExpired(cmd=cmd, timeout=timeout, output=stdout, stderr=stderr)
+    if drain_incomplete:
+        raise OSError("process output drain did not complete within cleanup deadline")
     return subprocess.CompletedProcess(cmd, returncode, stdout=stdout, stderr=stderr)
 
 

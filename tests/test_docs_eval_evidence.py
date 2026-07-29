@@ -13,6 +13,7 @@ import urllib.parse
 from pathlib import Path
 
 import pytest
+import psutil
 from fastmcp import Client
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
@@ -225,11 +226,9 @@ def test_run_single_eval_passes_only_selected_config_across_process_boundary(mon
         captured["cmd"] = cmd
         captured["cwd"] = kwargs["cwd"]
         captured["copilot_home"] = kwargs["env"]["COPILOT_HOME"]
-        captured["streamed"] = "capture_output" not in kwargs
-        kwargs["stdout"].write(_event_stream().encode())
-        return subprocess.CompletedProcess(cmd, 0, stdout=None, stderr=None)
+        return subprocess.CompletedProcess(cmd, 0, stdout=_event_stream(), stderr="")
 
-    monkeypatch.setattr(subprocess, "run", fake_run)
+    monkeypatch.setattr(run_docs_eval, "_run_process_bounded", fake_run)
 
     result = run_single_eval(
         SCENARIO,
@@ -242,7 +241,6 @@ def test_run_single_eval_passes_only_selected_config_across_process_boundary(mon
     assert "--disable-builtin-mcps" in captured["cmd"]
     assert not any(arg.startswith("--available-tools") for arg in captured["cmd"])
     assert "--allow-tool=foundry_docs" in captured["cmd"]
-    assert captured["streamed"] is True
     assert captured["cwd"] == captured["copilot_home"]
     assert result["selected_source"] == "foundry-docs"
     assert result["source_config_count"] == 1
@@ -275,6 +273,7 @@ def test_copilot_command_isolates_all_selected_mcp_servers_without_broken_availa
     cmd = build_copilot_command("model-1", "prompt", config_path, source_name)
 
     assert list(config["mcpServers"]) == [source_name]
+    assert config["mcpServers"][source_name]["deferTools"] == "never"
     assert descriptor["tool_prefix"] == MCP_SERVERS[server_name]["config"]["tool_prefix"]
     assert "--disable-builtin-mcps" in cmd
     assert cmd[cmd.index("--additional-mcp-config") + 1] == f"@{config_path}"
@@ -316,11 +315,58 @@ def test_unknown_tool_allowlist_warning_is_retained_and_fails_closed():
     }]
 
 
+def test_live_selected_mcp_fixture_loads_and_calls_search_without_allowlist_warning():
+    stdout = "\n".join([
+        json.dumps({
+            "type": "session.mcp_servers_loaded",
+            "data": {
+                "servers": [{
+                    "name": "foundry_docs_vnext",
+                    "status": "connected",
+                    "tools": ["search_docs"],
+                }],
+            },
+        }),
+        json.dumps({
+            "type": "tool.execution_start",
+            "data": {
+                "toolCallId": "call-live-1",
+                "toolName": "foundry_docs_vnext-search_docs",
+            },
+        }),
+        json.dumps({
+            "type": "tool.execution_complete",
+            "data": {
+                "toolCallId": "call-live-1",
+                "success": True,
+                "result": {"content": "selected source result"},
+            },
+        }),
+        json.dumps({
+            "type": "assistant.message",
+            "data": {"content": "trusted answer"},
+        }),
+        json.dumps({"type": "result", "exitCode": 0}),
+    ])
+
+    parsed = parse_event_stream(stdout)
+    valid, failure_reason, _azure_proven = run_docs_eval.validate_row_evidence(
+        parsed,
+        "foundry_docs_vnext",
+        False,
+    )
+
+    assert valid is True
+    assert failure_reason is None
+    assert parsed["successful_tools"] == ["foundry_docs_vnext-search_docs"]
+    assert "unknown tool name" not in (parsed["parse_error"] or "").lower()
+
+
 def test_success_response_is_sanitized_in_raw_and_scored_rows(monkeypatch):
     response = r"Useful answer. token=LEAKME See C:\Users\Alice\private for details."
     monkeypatch.setattr(
-        subprocess,
-        "run",
+        run_docs_eval,
+        "_run_process_bounded",
         lambda cmd, **kwargs: subprocess.CompletedProcess(
             cmd,
             0,
@@ -381,8 +427,8 @@ def test_success_response_preserves_root_relative_documentation_link(monkeypatch
         "Then configure managed identity."
     )
     monkeypatch.setattr(
-        subprocess,
-        "run",
+        run_docs_eval,
+        "_run_process_bounded",
         lambda cmd, **kwargs: subprocess.CompletedProcess(
             cmd,
             0,
@@ -586,8 +632,8 @@ def test_success_response_redacts_common_unix_roots_and_bare_oauth_sas_assignmen
 def test_signed_url_response_remains_valid_after_runner_and_scorer(monkeypatch):
     response = "Use https://host/path?sig=SECRET&view=foundry."
     monkeypatch.setattr(
-        subprocess,
-        "run",
+        run_docs_eval,
+        "_run_process_bounded",
         lambda cmd, **kwargs: subprocess.CompletedProcess(
             cmd,
             0,
@@ -794,8 +840,8 @@ def test_folded_encoded_authorization_redacts_logical_header_block(response):
 def test_encoded_credentials_and_paths_are_redacted_in_diagnostic_channels(monkeypatch):
     leaked = "token%3DSECRETVALUE %252Fhome%252Falice%252Fsecret.txt"
     monkeypatch.setattr(
-        subprocess,
-        "run",
+        run_docs_eval,
+        "_run_process_bounded",
         lambda cmd, **kwargs: subprocess.CompletedProcess(
             cmd,
             1,
@@ -885,8 +931,8 @@ def test_cli_plural_server_selection_fails_nonzero_before_execution(tmp_path, ex
 )
 def test_invalid_event_evidence_fails_closed(monkeypatch, stdout, failure_prefix):
     monkeypatch.setattr(
-        subprocess,
-        "run",
+        run_docs_eval,
+        "_run_process_bounded",
         lambda cmd, **kwargs: subprocess.CompletedProcess(cmd, 0, stdout=stdout, stderr=""),
     )
 
@@ -906,8 +952,8 @@ def test_azure_required_row_needs_successful_selected_search(monkeypatch):
     monkeypatch.setenv("AZURE_SEARCH_ENDPOINT", "https://search.example")
     monkeypatch.setenv("AZURE_AI_PROJECT_ENDPOINT", "https://project.example")
     monkeypatch.setattr(
-        subprocess,
-        "run",
+        run_docs_eval,
+        "_run_process_bounded",
         lambda cmd, **kwargs: subprocess.CompletedProcess(
             cmd,
             0,
@@ -953,7 +999,7 @@ def test_timeout_is_preserved_as_invalid_row_diagnostics(monkeypatch):
             stderr=b"Bearer abc.def.ghi from C:\\Users\\someone\\repo",
         )
 
-    monkeypatch.setattr(subprocess, "run", time_out)
+    monkeypatch.setattr(run_docs_eval, "_run_process_bounded", time_out)
 
     result = run_single_eval(
         SCENARIO,
@@ -985,7 +1031,7 @@ def test_timeout_is_preserved_as_invalid_row_diagnostics(monkeypatch):
     assert publication["allowed"] is False
 
 
-def test_timeout_projects_partial_stream_output_when_exception_has_no_payload(monkeypatch):
+def test_timeout_projects_partial_stream_output(monkeypatch):
     partial_event = json.dumps({
         "type": "session.mcp_server_status_changed",
         "data": {
@@ -996,11 +1042,14 @@ def test_timeout_projects_partial_stream_output_when_exception_has_no_payload(mo
     })
 
     def time_out(cmd, **kwargs):
-        kwargs["stdout"].write(partial_event.encode())
-        kwargs["stderr"].write(b"streamed timeout diagnostic")
-        raise subprocess.TimeoutExpired(cmd=cmd, timeout=kwargs["timeout"])
+        raise subprocess.TimeoutExpired(
+            cmd=cmd,
+            timeout=kwargs["timeout"],
+            output=partial_event.encode(),
+            stderr=b"streamed timeout diagnostic",
+        )
 
-    monkeypatch.setattr(subprocess, "run", time_out)
+    monkeypatch.setattr(run_docs_eval, "_run_process_bounded", time_out)
 
     result = run_single_eval(
         SCENARIO,
@@ -1037,6 +1086,32 @@ def test_bounded_process_timeout_does_not_wait_for_inheriting_descendant(tmp_pat
     assert elapsed < 2.0
 
 
+@pytest.mark.skipif(os.name == "nt", reason="POSIX detached-session regression")
+def test_bounded_process_timeout_terminates_detached_descendant(tmp_path):
+    script = (
+        "import subprocess, sys, time; "
+        "child = subprocess.Popen("
+        "[sys.executable, '-c', 'import time; time.sleep(10)'], start_new_session=True"
+        "); "
+        "print(child.pid, flush=True); "
+        "time.sleep(10)"
+    )
+    started = time.monotonic()
+
+    with pytest.raises(subprocess.TimeoutExpired) as exc_info:
+        run_docs_eval._run_process_bounded(
+            [sys.executable, "-c", script],
+            timeout=0.5,
+            cwd=str(tmp_path),
+            env=os.environ.copy(),
+        )
+    elapsed = time.monotonic() - started
+    descendant_pid = int(exc_info.value.stdout.decode().strip())
+
+    assert elapsed < 3.0
+    assert not psutil.pid_exists(descendant_pid)
+
+
 def test_bounded_process_success_terminates_inheriting_descendant(tmp_path):
     script = (
         "import subprocess, sys; "
@@ -1058,6 +1133,62 @@ def test_bounded_process_success_terminates_inheriting_descendant(tmp_path):
     assert elapsed < 2.0
 
 
+@pytest.mark.skipif(os.name == "nt", reason="Linux child-subreaper regression")
+def test_bounded_process_success_owns_immediately_detached_descendant(tmp_path):
+    script = (
+        "import subprocess, sys; "
+        "child = subprocess.Popen("
+        "[sys.executable, '-c', 'import time; time.sleep(10)'], start_new_session=True"
+        "); "
+        "print(child.pid, flush=True)"
+    )
+    started = time.monotonic()
+
+    completed = run_docs_eval._run_process_bounded(
+        [sys.executable, "-c", script],
+        timeout=5,
+        cwd=str(tmp_path),
+        env=os.environ.copy(),
+    )
+    elapsed = time.monotonic() - started
+    descendant_pid = int(completed.stdout.decode().strip())
+
+    assert elapsed < 3.0
+    assert not psutil.pid_exists(descendant_pid)
+
+
+def test_bounded_process_setup_failure_terminates_child_and_restores_subreaper(
+    monkeypatch,
+    tmp_path,
+):
+    captured = {}
+    original_factory = run_docs_eval._PROCESS_FACTORY
+    previous_subreaper = run_docs_eval._set_linux_child_subreaper(False)
+    if previous_subreaper is not None:
+        run_docs_eval._set_linux_child_subreaper(previous_subreaper)
+
+    def capture_factory(*args, **kwargs):
+        captured["proc"] = original_factory(*args, **kwargs)
+        return captured["proc"]
+
+    monkeypatch.setattr(run_docs_eval, "_PROCESS_FACTORY", capture_factory)
+    monkeypatch.setattr(run_docs_eval.os, "dup", lambda _fd: (_ for _ in ()).throw(OSError("EMFILE")))
+
+    with pytest.raises(OSError, match="EMFILE"):
+        run_docs_eval._run_process_bounded(
+            [sys.executable, "-c", "import time; time.sleep(10)"],
+            timeout=5,
+            cwd=str(tmp_path),
+            env=os.environ.copy(),
+        )
+
+    assert captured["proc"].poll() is not None
+    current_subreaper = run_docs_eval._set_linux_child_subreaper(False)
+    if current_subreaper is not None:
+        run_docs_eval._set_linux_child_subreaper(current_subreaper)
+        assert current_subreaper is previous_subreaper
+
+
 def test_process_launch_error_sanitizes_every_persisted_field(monkeypatch):
     leaked = (
         "failed to launch with GITHUB_TOKEN=github_pat_launchsecret "
@@ -1065,8 +1196,8 @@ def test_process_launch_error_sanitizes_every_persisted_field(monkeypatch):
         "failed at C:/Users/Jane Doe/private/copilot.exe"
     )
     monkeypatch.setattr(
-        subprocess,
-        "run",
+        run_docs_eval,
+        "_run_process_bounded",
         lambda cmd, **kwargs: (_ for _ in ()).throw(OSError(leaked)),
     )
 
@@ -1094,8 +1225,8 @@ def test_process_launch_error_sanitizes_every_persisted_field(monkeypatch):
 def test_exact_process_launch_error_leaks_neither_token_nor_path_in_raw_or_scored_row(monkeypatch):
     leaked = r"token=LEAKME at C:\Users\Alice\private"
     monkeypatch.setattr(
-        subprocess,
-        "run",
+        run_docs_eval,
+        "_run_process_bounded",
         lambda cmd, **kwargs: (_ for _ in ()).throw(OSError(leaked)),
     )
 
@@ -1130,8 +1261,8 @@ def test_mcp_initialization_failure_preserves_sanitized_lifecycle_diagnostics(mo
         json.dumps({"type": "result", "exitCode": 0}),
     ])
     monkeypatch.setattr(
-        subprocess,
-        "run",
+        run_docs_eval,
+        "_run_process_bounded",
         lambda cmd, **kwargs: subprocess.CompletedProcess(cmd, 0, stdout=stdout, stderr=""),
     )
 
@@ -1180,8 +1311,8 @@ def test_real_mcp_servers_loaded_schema_preserves_statuses_and_selected_failure(
         json.dumps({"type": "result", "exitCode": 0}),
     ])
     monkeypatch.setattr(
-        subprocess,
-        "run",
+        run_docs_eval,
+        "_run_process_bounded",
         lambda cmd, **kwargs: subprocess.CompletedProcess(cmd, 0, stdout=stdout, stderr=""),
     )
 
@@ -1231,8 +1362,8 @@ def test_canonical_mcp_servers_loaded_diagnostic_scores_as_valid(monkeypatch):
         json.dumps({"type": "result", "exitCode": 0}),
     ])
     monkeypatch.setattr(
-        subprocess,
-        "run",
+        run_docs_eval,
+        "_run_process_bounded",
         lambda cmd, **kwargs: subprocess.CompletedProcess(cmd, 0, stdout=stdout, stderr=""),
     )
 
@@ -1269,8 +1400,8 @@ def test_real_session_error_schema_preserves_diagnostics_and_invalidates_answer(
         json.dumps({"type": "result", "exitCode": 0}),
     ])
     monkeypatch.setattr(
-        subprocess,
-        "run",
+        run_docs_eval,
+        "_run_process_bounded",
         lambda cmd, **kwargs: subprocess.CompletedProcess(cmd, 0, stdout=stdout, stderr=""),
     )
 
@@ -1302,8 +1433,8 @@ def test_diagnostic_output_is_bounded(monkeypatch):
         json.dumps({"type": "result", "exitCode": 0}),
     ])
     monkeypatch.setattr(
-        subprocess,
-        "run",
+        run_docs_eval,
+        "_run_process_bounded",
         lambda cmd, **kwargs: subprocess.CompletedProcess(cmd, 0, stdout=stdout, stderr=long_error),
     )
 
@@ -1326,8 +1457,8 @@ def test_sanitizer_redacts_prefixed_secrets_and_windows_paths(monkeypatch):
         "at C:\\Users\\Jane Doe\\repo and \\\\server\\share\\private"
     )
     monkeypatch.setattr(
-        subprocess,
-        "run",
+        run_docs_eval,
+        "_run_process_bounded",
         lambda cmd, **kwargs: subprocess.CompletedProcess(
             cmd,
             0,
@@ -1423,8 +1554,8 @@ def test_escaped_authorization_does_not_leak_in_stdout_or_stderr(monkeypatch):
         r'response=\\\"digest-secret\\\"\"}'
     )
     monkeypatch.setattr(
-        subprocess,
-        "run",
+        run_docs_eval,
+        "_run_process_bounded",
         lambda cmd, **kwargs: subprocess.CompletedProcess(
             cmd,
             0,
@@ -1458,8 +1589,8 @@ def test_escaped_authorization_does_not_leak_in_stdout_or_stderr(monkeypatch):
 )
 def test_deeply_escaped_authorization_is_clean_in_valid_raw_and_scored_rows(monkeypatch, response):
     monkeypatch.setattr(
-        subprocess,
-        "run",
+        run_docs_eval,
+        "_run_process_bounded",
         lambda cmd, **kwargs: subprocess.CompletedProcess(
             cmd,
             0,
@@ -1488,8 +1619,8 @@ def test_deeply_escaped_authorization_is_clean_in_valid_raw_and_scored_rows(monk
 def test_exact_custom_scheme_escaped_authorization_does_not_leak_in_excerpts(monkeypatch):
     leaked = r'upstream={\"Authorization\":\"CustomScheme opaque-value\"}'
     monkeypatch.setattr(
-        subprocess,
-        "run",
+        run_docs_eval,
+        "_run_process_bounded",
         lambda cmd, **kwargs: subprocess.CompletedProcess(
             cmd,
             0,
@@ -1517,8 +1648,8 @@ def test_truncated_escaped_authorization_value_fails_closed(monkeypatch):
         r'response=\\\"digest-secret\\\"' + ("x" * 20_000)
     )
     monkeypatch.setattr(
-        subprocess,
-        "run",
+        run_docs_eval,
+        "_run_process_bounded",
         lambda cmd, **kwargs: subprocess.CompletedProcess(
             cmd,
             0,
@@ -1574,8 +1705,8 @@ def test_sanitizer_redacts_json_style_secret_keys(monkeypatch):
         json.dumps({"type": "result", "exitCode": 0}),
     ])
     monkeypatch.setattr(
-        subprocess,
-        "run",
+        run_docs_eval,
+        "_run_process_bounded",
         lambda cmd, **kwargs: subprocess.CompletedProcess(cmd, 0, stdout=stdout, stderr=""),
     )
 
@@ -1603,8 +1734,8 @@ def test_sanitizer_redacts_escaped_nested_json_secrets(monkeypatch):
         json.dumps({"type": "result", "exitCode": 0}),
     ])
     monkeypatch.setattr(
-        subprocess,
-        "run",
+        run_docs_eval,
+        "_run_process_bounded",
         lambda cmd, **kwargs: subprocess.CompletedProcess(cmd, 0, stdout=stdout, stderr=""),
     )
 
@@ -1627,8 +1758,8 @@ def test_process_exit_preserves_specific_mcp_failure_reason(monkeypatch):
         json.dumps({"type": "result", "exitCode": 1}),
     ])
     monkeypatch.setattr(
-        subprocess,
-        "run",
+        run_docs_eval,
+        "_run_process_bounded",
         lambda cmd, **kwargs: subprocess.CompletedProcess(cmd, 1, stdout=stdout, stderr=""),
     )
 
@@ -1646,8 +1777,8 @@ def test_process_exit_preserves_specific_mcp_failure_reason(monkeypatch):
 def test_non_success_preserves_stdout_even_when_tool_evidence_was_valid(monkeypatch):
     stdout = _event_stream(response="untrusted answer")
     monkeypatch.setattr(
-        subprocess,
-        "run",
+        run_docs_eval,
+        "_run_process_bounded",
         lambda cmd, **kwargs: subprocess.CompletedProcess(cmd, 1, stdout=stdout, stderr=""),
     )
 
@@ -1667,8 +1798,8 @@ def test_non_success_preserves_stdout_even_when_tool_evidence_was_valid(monkeypa
 def test_failed_tool_clears_untrusted_answer_and_preserves_diagnostics(monkeypatch):
     stdout = _event_stream(tool_success=False, response="untrusted answer")
     monkeypatch.setattr(
-        subprocess,
-        "run",
+        run_docs_eval,
+        "_run_process_bounded",
         lambda cmd, **kwargs: subprocess.CompletedProcess(cmd, 0, stdout=stdout, stderr=""),
     )
 
@@ -1732,8 +1863,8 @@ def test_mcp_failure_server_name_is_sanitized_and_bounded(monkeypatch):
         json.dumps({"type": "result", "exitCode": 1}),
     ])
     monkeypatch.setattr(
-        subprocess,
-        "run",
+        run_docs_eval,
+        "_run_process_bounded",
         lambda cmd, **kwargs: subprocess.CompletedProcess(cmd, 1, stdout=stdout, stderr=""),
     )
 
@@ -1987,8 +2118,8 @@ def test_real_size_57kb_tool_result_parses_and_validates_selected_source(monkeyp
         json.dumps({"type": "result", "exitCode": 0}),
     ])
     monkeypatch.setattr(
-        subprocess,
-        "run",
+        run_docs_eval,
+        "_run_process_bounded",
         lambda cmd, **kwargs: subprocess.CompletedProcess(cmd, 0, stdout=stdout, stderr=""),
     )
 
@@ -2034,8 +2165,8 @@ def test_multiple_real_size_tool_results_over_128kb_remain_valid(monkeypatch):
     stdout = "\n".join(json.dumps(event, separators=(",", ":")) for event in events)
     assert 128_000 < len(stdout.encode()) < run_docs_eval.MAX_STDOUT_PARSE_BYTES
     monkeypatch.setattr(
-        subprocess,
-        "run",
+        run_docs_eval,
+        "_run_process_bounded",
         lambda cmd, **kwargs: subprocess.CompletedProcess(cmd, 0, stdout=stdout, stderr=""),
     )
 
@@ -2068,34 +2199,19 @@ def test_total_stdout_budget_still_fails_closed():
     assert parsed["response"] == ""
 
 
-def test_process_stream_projection_discards_output_beyond_capture_budget(monkeypatch):
-    event = json.dumps({
-        "type": "session.mcp_servers_loaded",
-        "data": {"message": "x" * 63_000},
-    }, separators=(",", ":"))
-    stdout = ((event + "\n") * 100).encode()
-    assert len(stdout) > run_docs_eval.MAX_STDOUT_CAPTURE_BYTES
-
-    def emit_excess_output(cmd, **kwargs):
-        kwargs["stdout"].write(stdout)
-        return subprocess.CompletedProcess(cmd, 0, stdout=None, stderr=None)
-
-    monkeypatch.setattr(subprocess, "run", emit_excess_output)
-
-    result = run_single_eval(
-        SCENARIO,
-        "foundry-docs",
-        MCP_SERVERS["foundry-docs"],
-        "model-1",
+def test_process_stream_projection_discards_output_beyond_capture_budget(tmp_path):
+    output_bytes = run_docs_eval.MAX_STDOUT_CAPTURE_BYTES + 1_000_000
+    completed = run_docs_eval._run_process_bounded(
+        [sys.executable, "-c", f"import sys; sys.stdout.buffer.write(b'x' * {output_bytes})"],
+        timeout=10,
+        cwd=str(tmp_path),
+        env=os.environ.copy(),
     )
 
-    assert result["status"] == "invalid"
-    assert f"stdout exceeds {run_docs_eval.MAX_STDOUT_PARSE_BYTES} byte pre-parse limit" in result[
-        "event_parse_error"
-    ]
-    assert len(result["diagnostics"]["stdout_excerpt"]) <= run_docs_eval.MAX_STDOUT_EXCERPT + len(
-        "...[truncated]"
-    )
+    assert len(completed.stdout) == run_docs_eval.MAX_STDOUT_CAPTURE_BYTES
+    parsed = parse_event_stream(completed.stdout)
+    assert parsed["stdout_input_truncated"] is True
+    assert parsed["response"] == ""
 
 
 def test_deeply_nested_bounded_json_fails_closed_without_recursion_crash():
@@ -2126,8 +2242,8 @@ def test_diagnostic_path_keys_are_sanitized(monkeypatch):
         json.dumps({"type": "result", "exitCode": 0}),
     ])
     monkeypatch.setattr(
-        subprocess,
-        "run",
+        run_docs_eval,
+        "_run_process_bounded",
         lambda cmd, **kwargs: subprocess.CompletedProcess(cmd, 0, stdout=stdout, stderr=""),
     )
 
@@ -2147,8 +2263,8 @@ def test_tool_name_is_validated_raw_but_persisted_sanitized(monkeypatch):
     tool_name = r"foundry_docs-search_docs token=LEAKME C:\Users\Alice\private"
     stdout = _event_stream(tool_name=tool_name, response="trusted answer")
     monkeypatch.setattr(
-        subprocess,
-        "run",
+        run_docs_eval,
+        "_run_process_bounded",
         lambda cmd, **kwargs: subprocess.CompletedProcess(cmd, 0, stdout=stdout, stderr=""),
     )
 
@@ -2174,8 +2290,8 @@ def test_cross_source_failure_reason_sanitizes_tool_identifier(monkeypatch):
     tool_name = r"evil-search token=LEAKME C:\Users\Alice\private"
     stdout = _event_stream(tool_name=tool_name, response="untrusted answer")
     monkeypatch.setattr(
-        subprocess,
-        "run",
+        run_docs_eval,
+        "_run_process_bounded",
         lambda cmd, **kwargs: subprocess.CompletedProcess(cmd, 0, stdout=stdout, stderr=""),
     )
 
