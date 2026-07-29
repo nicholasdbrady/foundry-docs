@@ -25,6 +25,7 @@ from run_docs_eval import (
     _is_search_tool,
     _sanitize_diagnostic_value,
     _sanitize_identifier,
+    _sanitize_response_text,
     _sanitize_text,
     _source_for_tool,
     serialized_diagnostic_events_size,
@@ -232,6 +233,8 @@ def _project_result_fields(result: dict) -> dict:
         }
     if "diagnostics" in projected:
         projected["diagnostics"] = _canonical_diagnostics(projected["diagnostics"])
+    if isinstance(projected.get("response"), str):
+        projected["response"] = _sanitize_response_text(projected["response"])
     return projected
 
 
@@ -268,6 +271,13 @@ def validate_row_schema(result: object) -> list[str]:
             errors.append(f"{field} must be a string")
     if isinstance(result.get("server"), str) and result["server"] not in MCP_SERVERS:
         errors.append(f"unknown server: {_sanitize_identifier(result['server'])}")
+    if isinstance(result.get("server"), str) and result["server"] in MCP_SERVERS:
+        supports_azure = bool(MCP_SERVERS[result["server"]]["config"].get("supports_azure"))
+        if not supports_azure and (
+            result.get("azure_required") is True
+            or result.get("azure_live_query_proven") is True
+        ):
+            errors.append(f"server does not support Azure-required evidence: {result['server']}")
     for field in ("scenario_id", "server", "model", "category", "selected_source"):
         errors.extend(_identifier_errors(result.get(field), field))
     if "status" in result and (
@@ -275,6 +285,9 @@ def validate_row_schema(result: object) -> list[str]:
         or result["status"] not in {"success", "invalid", "error", "timeout"}
     ):
         errors.append("status must be success, invalid, error, or timeout")
+    response = result.get("response")
+    if isinstance(response, str) and response != _sanitize_response_text(response):
+        errors.append("response must equal its bounded sanitized canonical form")
     status = result.get("status")
     if isinstance(status, str) and status in {"invalid", "error", "timeout"} and (
         result.get("response") != "" or result.get("response_present") is not False
@@ -766,6 +779,12 @@ def validate_required_matrix(
     servers = [_sanitize_identifier(value) for value in servers] if servers is not None else None
     models = [_sanitize_identifier(value) for value in models] if models is not None else None
     azure_required_servers = {_sanitize_identifier(value) for value in azure_required_servers}
+    selector_presence = (
+        scenario_ids is not None,
+        servers is not None,
+        models is not None,
+    )
+    partial_required_selectors = not all(selector_presence)
     rows_by_key: dict[tuple[str, str, str], list[dict]] = defaultdict(list)
     malformed_rows: list[dict] = []
     for index, row in enumerate(scored_results):
@@ -787,6 +806,15 @@ def validate_required_matrix(
     unknown_required_servers = sorted(
         _sanitize_identifier(server)
         for server in (set(servers or []) | azure_required_servers) - set(MCP_SERVERS)
+    )
+    unsupported_azure_required_servers = sorted(
+        server
+        for server in azure_required_servers
+        if server in MCP_SERVERS and not MCP_SERVERS[server]["config"].get("supports_azure")
+    )
+    effective_matrix_servers = set(servers) if servers is not None else {key[1] for key in rows_by_key}
+    azure_required_outside_matrix = sorted(
+        azure_required_servers - effective_matrix_servers
     )
 
     for key, rows in rows_by_key.items():
@@ -837,7 +865,15 @@ def validate_required_matrix(
     unexpected_rows = sorted(" / ".join(key) for key in set(rows_by_key) - expected_keys)
     invalid_rows.extend(malformed_rows)
     status_counts["invalid"] += len(malformed_rows)
-    allowed = not invalid_rows and not duplicate_rows and not unexpected_rows and not unknown_required_servers
+    allowed = (
+        not invalid_rows
+        and not duplicate_rows
+        and not unexpected_rows
+        and not unknown_required_servers
+        and not unsupported_azure_required_servers
+        and not azure_required_outside_matrix
+        and not partial_required_selectors
+    )
     failure_reasons = []
     if invalid_rows:
         failure_reasons.append(f"{len(invalid_rows)} required row(s) are invalid or missing")
@@ -848,6 +884,20 @@ def validate_required_matrix(
     if unknown_required_servers:
         failure_reasons.append(
             "unknown required server(s): " + ", ".join(_sanitize_identifier(server) for server in unknown_required_servers)
+        )
+    if unsupported_azure_required_servers:
+        failure_reasons.append(
+            "Azure-required server(s) do not support Azure evidence: "
+            + ", ".join(unsupported_azure_required_servers)
+        )
+    if azure_required_outside_matrix:
+        failure_reasons.append(
+            "Azure-required server(s) are outside the required server matrix: "
+            + ", ".join(azure_required_outside_matrix)
+        )
+    if partial_required_selectors:
+        failure_reasons.append(
+            "required scenario, server, and model selectors must be supplied together"
         )
 
     return {
@@ -862,6 +912,9 @@ def validate_required_matrix(
         "duplicate_rows": duplicate_rows,
         "unexpected_rows": unexpected_rows,
         "unknown_required_servers": unknown_required_servers,
+        "unsupported_azure_required_servers": unsupported_azure_required_servers,
+        "azure_required_outside_matrix": azure_required_outside_matrix,
+        "partial_required_selectors": partial_required_selectors,
     }
 
 

@@ -26,6 +26,7 @@ import tempfile
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import unquote_plus, urlsplit, urlunsplit
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 SCENARIOS_FILE = PROJECT_ROOT / "tests" / "docs_eval_scenarios.json"
@@ -97,6 +98,7 @@ KNOWN_TOOL_PREFIXES = tuple(
 MAX_DIAGNOSTIC_EVENTS = 20
 MAX_DIAGNOSTIC_EVENTS_CHARS = 50_000
 MAX_DIAGNOSTIC_TEXT = 2_000
+MAX_RESPONSE_TEXT = 50_000
 MAX_STDOUT_EXCERPT = 12_000
 MAX_STDERR_EXCERPT = 4_000
 MAX_STDOUT_PARSE_BYTES = 128_000
@@ -111,10 +113,30 @@ _SERIALIZED_AUTHORIZATION_KEY_PATTERN = re.compile(
 _SECRET_VALUE_PATTERNS = (
     re.compile(r"\b(?:github_pat_|gh[pousr]_)[A-Za-z0-9_]+\b"),
     re.compile(r"(?i)(bearer\s+)[A-Za-z0-9._~+/=-]+"),
-    re.compile(
-        r"(?i)([\"']?[A-Z0-9_-]{0,128}(?:api[_-]?key|authorization|credential|password|secret|token)"
-        r"[\"']?\s*[:=]\s*)(?:\"[^\"]*\"|'[^']*'|[^\s,;}]+)"
-    ),
+    re.compile(r"\b[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b"),
+)
+_SECRET_ASSIGNMENT_PATTERN = re.compile(
+    r"""(?ix)
+    (?P<prefix>
+        ["']?[A-Z0-9_-]{0,128}
+        (?:
+            api[_-]?key|account[_-]?key|authorization|credential|password|secret|token
+            |sig(?:nature)?|client[_-]?secret|access[_-]?token|refresh[_-]?token|id[_-]?token
+        )
+        ["']?\s*[:=]\s*
+    )
+    (?:
+        "(?P<double>[^"]*)"
+        | '(?P<single>[^']*)'
+        | (?P<bare>[^\s,;}&?!\)#]+)
+    )
+    """
+)
+_OAUTH_CODE_ASSIGNMENT_PATTERN = re.compile(
+    r"(?i)(?<![A-Z0-9_-])(?P<prefix>code\s*[:=]\s*)(?P<bare>[^\s,;}&?!\)#]+)"
+)
+_EXACT_SECRET_ALIAS_PATTERN = re.compile(
+    r"(?i)(?<![A-Z0-9_-])(?P<prefix>(?:pat|sas|sharedaccesskey)\s*[:=]\s*)(?P<bare>[^\s,;}&?!\)#]+)"
 )
 _ABSOLUTE_PATH_PATTERNS = (
     re.compile(r"(?i)(?:\\\\|//)[^\\/\r\n]+[\\/][^,\r\n;\"']+"),
@@ -226,6 +248,7 @@ def _sanitize_text(value: str, max_chars: int = MAX_DIAGNOSTIC_TEXT) -> tuple[st
     pre_redaction_limit = max_chars * 4
     truncated = len(value) > pre_redaction_limit
     sanitized = value[:pre_redaction_limit]
+    sanitized = _redact_encoded_sensitive_tokens(sanitized)
     path_replacements = (
         (str(PROJECT_ROOT), "<PROJECT_ROOT>"),
         (str(Path.home()), "<HOME>"),
@@ -239,7 +262,8 @@ def _sanitize_text(value: str, max_chars: int = MAX_DIAGNOSTIC_TEXT) -> tuple[st
     sanitized = _AUTHORIZATION_HEADER_PATTERN.sub(r"\1[REDACTED]", sanitized)
     sanitized = _SECRET_VALUE_PATTERNS[0].sub("[REDACTED]", sanitized)
     sanitized = _SECRET_VALUE_PATTERNS[1].sub(r"\1[REDACTED]", sanitized)
-    sanitized = _SECRET_VALUE_PATTERNS[2].sub(r"\1[REDACTED]", sanitized)
+    sanitized = _SECRET_VALUE_PATTERNS[2].sub("[REDACTED]", sanitized)
+    sanitized = _redact_secret_assignments(sanitized)
     for pattern in _ABSOLUTE_PATH_PATTERNS:
         sanitized = pattern.sub("<PATH>", sanitized)
 
@@ -287,6 +311,24 @@ def _redact_serialized_authorization(value: str) -> str:
     return value
 
 
+def _redact_secret_assignments(value: str) -> str:
+    def redact(match: re.Match) -> str:
+        trailing = ""
+        bare = match.groupdict().get("bare")
+        secret_value = bare or match.groupdict().get("double") or match.groupdict().get("single") or ""
+        if secret_value == "[REDACTED]":
+            return match.group(0)
+        if bare:
+            while bare.endswith("."):
+                trailing += "."
+                bare = bare[:-1]
+        return f"{match.group('prefix')}[REDACTED]{trailing}"
+
+    value = _SECRET_ASSIGNMENT_PATTERN.sub(redact, value)
+    value = _OAUTH_CODE_ASSIGNMENT_PATTERN.sub(redact, value)
+    return _EXACT_SECRET_ALIAS_PATTERN.sub(redact, value)
+
+
 def _sanitize_diagnostic_value(value: object, *, depth: int = 0) -> object:
     if depth >= 4:
         return "[truncated-depth]"
@@ -322,6 +364,313 @@ def _sanitize_diagnostic_value(value: object, *, depth: int = 0) -> object:
 
 def _sanitize_identifier(value: object) -> str:
     return _sanitize_text(str(value), max_chars=MAX_IDENTIFIER_TEXT)[0]
+
+
+def _sanitize_response_text(value: str) -> str:
+    """Sanitize answer text without treating root-relative documentation links as local paths."""
+    pre_redaction_limit = MAX_RESPONSE_TEXT * 4
+    sanitized = value[:pre_redaction_limit]
+    sanitized = _redact_encoded_sensitive_tokens(sanitized)
+    sanitized = re.sub(
+        r"(?i)(https?://)[^/\s@]+@",
+        r"\1redacted-user@",
+        sanitized,
+    )
+    sanitized = _redact_serialized_authorization(sanitized)
+    sanitized = _AUTHORIZATION_HEADER_PATTERN.sub(r"\1[REDACTED]", sanitized)
+    sanitized = _SECRET_VALUE_PATTERNS[0].sub("[REDACTED]", sanitized)
+    sanitized = _SECRET_VALUE_PATTERNS[1].sub(r"\1[REDACTED]", sanitized)
+    sanitized = _SECRET_VALUE_PATTERNS[2].sub("[REDACTED]", sanitized)
+    sanitized = _redact_secret_assignments(sanitized)
+    protected_links: list[str] = []
+
+    def protect_link(match: re.Match) -> str:
+        raw_link = match.group(0)
+        link = "<PATH>" if _RESPONSE_LOCAL_PATH_START.match(raw_link) else _sanitize_link_target(raw_link)
+        if len(link) > 2_048:
+            link = link[:2_048] + "...[truncated]"
+        protected_links.append(link)
+        return f"__ROOT_DOC_LINK_{len(protected_links) - 1}__"
+
+    sanitized = re.sub(r"(?<=\]\()/(?!/)[^)\r\n]+(?=\))", protect_link, sanitized)
+    sanitized = re.sub(r"https?://[^\s<>'\")]+", protect_link, sanitized, flags=re.I)
+    sanitized = re.sub(
+        r"(?<![:/\w~}%])/(?!/|home(?:/|\b)|tmp(?:/|\b)|var(?:/|\b)|etc(?:/|\b)|root(?:/|\b)|Users(?:/|\b)"
+        r"|usr(?:/|\b)|opt(?:/|\b)|mnt(?:/|\b)|srv(?:/|\b)|bin(?:/|\b)|sbin(?:/|\b)|lib(?:64)?(?:/|\b)"
+        r"|run(?:/|\b)|dev(?:/|\b)|proc(?:/|\b)|sys(?:/|\b)|workspace(?:/|\b)|app(?:/|\b)|data(?:/|\b)"
+        r"|boot(?:/|\b)|private(?:/|\b)|media(?:/|\b))"
+        r"[^\s,;!)]+",
+        protect_link,
+        sanitized,
+        flags=re.I,
+    )
+    sanitized = _redact_response_local_paths(sanitized)
+    for index, link in enumerate(protected_links):
+        sanitized = sanitized.replace(f"__ROOT_DOC_LINK_{index}__", link)
+    sanitized = sanitized.replace("https://redacted-user@", "https://[REDACTED]@")
+
+    if len(sanitized) > MAX_RESPONSE_TEXT:
+        sanitized = sanitized[:MAX_RESPONSE_TEXT] + "...[truncated]"
+    return sanitized
+
+
+def _redact_encoded_sensitive_tokens(value: str) -> str:
+    encoded_token = re.compile(r"\S*%[0-9A-Fa-f]{2}\S*")
+
+    def inspect(match: re.Match) -> str:
+        original = match.group(0)
+        trailing = ""
+        core = original
+        while core and core[-1] in ".,;!?)]":
+            trailing = core[-1] + trailing
+            core = core[:-1]
+        decoded = core
+        for _ in range(3):
+            next_value = unquote_plus(decoded)
+            if next_value == decoded:
+                break
+            decoded = next_value
+        if len(decoded) > 8_192:
+            return "[REDACTED]" + trailing
+        if decoded.lower().startswith(("http://", "https://")):
+            sanitized_url = _sanitize_link_target(decoded)
+            return sanitized_url + trailing if sanitized_url != decoded else original
+        if _RESPONSE_LOCAL_PATH_START.search(decoded):
+            return "<PATH>" + trailing
+        sanitized_decoded = _redact_serialized_authorization(decoded)
+        sanitized_decoded = _AUTHORIZATION_HEADER_PATTERN.sub(r"\1[REDACTED]", sanitized_decoded)
+        sanitized_decoded = _SECRET_VALUE_PATTERNS[0].sub("[REDACTED]", sanitized_decoded)
+        sanitized_decoded = _SECRET_VALUE_PATTERNS[1].sub(r"\1[REDACTED]", sanitized_decoded)
+        sanitized_decoded = _SECRET_VALUE_PATTERNS[2].sub("[REDACTED]", sanitized_decoded)
+        sanitized_decoded = _redact_secret_assignments(sanitized_decoded)
+        if sanitized_decoded != decoded:
+            return "[REDACTED]" + trailing
+        return original
+
+    return encoded_token.sub(inspect, value)
+
+
+def _sanitize_link_target(target: str) -> str:
+    trailing = ""
+    while target and target[-1] in ".,;!?":
+        trailing = target[-1] + trailing
+        target = target[:-1]
+    try:
+        parsed = urlsplit(target)
+    except ValueError:
+        fallback = _redact_serialized_authorization(target)
+        fallback = _SECRET_VALUE_PATTERNS[0].sub("[REDACTED]", fallback)
+        fallback = _SECRET_VALUE_PATTERNS[1].sub(r"\1[REDACTED]", fallback)
+        fallback = _redact_secret_assignments(fallback)
+        return fallback[:2_048] + ("...[truncated]" if len(fallback) > 2_048 else "") + trailing
+    sensitive_keys = {
+        "api_key",
+        "apikey",
+        "authorization",
+        "client_assertion",
+        "code_verifier",
+        "client_assertion",
+        "client_secret",
+        "code_verifier",
+        "code",
+        "credential",
+        "id_token",
+        "key",
+        "password",
+        "secret",
+        "sig",
+        "signature",
+        "subscription_key",
+        "token",
+        "x_api_key",
+    }
+
+    def sanitize_url_component(component: str) -> str:
+        decoded = unquote_plus(component)
+        sanitized_component = _redact_serialized_authorization(decoded)
+        sanitized_component = _SECRET_VALUE_PATTERNS[0].sub("[REDACTED]", sanitized_component)
+        sanitized_component = _SECRET_VALUE_PATTERNS[1].sub(r"\1[REDACTED]", sanitized_component)
+        sanitized_component = _SECRET_VALUE_PATTERNS[2].sub("[REDACTED]", sanitized_component)
+        sanitized_component = _redact_secret_assignments(sanitized_component)
+        return component if sanitized_component == decoded else sanitized_component
+
+    def sanitize_parameters(parameters: str) -> str:
+        parts = []
+        for part in parameters.split("&") if parameters else []:
+            key, separator, value = part.partition("=")
+            normalized_key = unquote_plus(key).casefold().replace("-", "_")
+            is_sensitive = (
+                normalized_key in sensitive_keys
+                or normalized_key.endswith("_token")
+                or normalized_key.endswith("_key")
+            )
+            decoded_value = unquote_plus(value)
+            sanitized_value = sanitize_url_component(decoded_value)
+            embedded_secret = sanitized_value != decoded_value
+            parts.append(
+                f"{key}{separator}[REDACTED]"
+                if separator and (is_sensitive or embedded_secret)
+                else (
+                    f"{key}{separator}{value}"
+                    if separator
+                    else sanitize_url_component(part)
+                )
+            )
+        return "&".join(parts)
+
+    netloc = parsed.netloc
+    if "@" in netloc:
+        _userinfo, host = netloc.rsplit("@", 1)
+        netloc = f"[REDACTED]@{host}"
+    fragment = parsed.fragment
+    if "?" in fragment:
+        fragment_path, fragment_query = fragment.split("?", 1)
+        fragment = f"{fragment_path}?{sanitize_parameters(fragment_query)}"
+    else:
+        fragment = sanitize_parameters(fragment)
+
+    return urlunsplit(
+        (
+            parsed.scheme,
+            sanitize_url_component(netloc),
+            sanitize_url_component(parsed.path),
+            sanitize_parameters(parsed.query),
+            fragment,
+        )
+    ) + trailing
+
+
+_RESPONSE_LOCAL_PATH_START = re.compile(
+    r"""(?ix)
+    (?:
+        [A-Z]:[\\/]
+        | (?<!:)\\\\[^\\/\r\n]+[\\/]
+        | (?<!:)//[^/\r\n]+/
+        | /(?:home|tmp|var|etc|root|Users)(?:/|$)
+        | /(?:usr|opt|mnt|srv|bin|sbin|lib|lib64|run|dev|proc|sys)(?:/|$)
+        | /(?:workspace|boot|private|media|app|data)(?:/|$)
+        | \$HOME[\\/]
+        | \$\{HOME\}[\\/]
+        | ~[A-Za-z0-9._-]*[\\/]
+        | %USERPROFILE%[\\/]
+    )
+    """
+)
+
+
+def _redact_response_local_paths(value: str) -> str:
+    value = _redact_quoted_response_paths(value)
+    cursor = 0
+    while match := _RESPONSE_LOCAL_PATH_START.search(value, cursor):
+        end = _scan_unquoted_path_end(value, match.start(), match.end())
+        if end <= match.start():
+            cursor = match.end()
+            continue
+        value = value[:match.start()] + "<PATH>" + value[end:]
+        cursor = match.start() + len("<PATH>")
+    return value
+
+
+def _redact_quoted_response_paths(value: str) -> str:
+    cursor = 0
+    while cursor < len(value):
+        if value[cursor] not in {'"', "'"}:
+            cursor += 1
+            continue
+        quote = value[cursor]
+        start_match = _RESPONSE_LOCAL_PATH_START.match(value, cursor + 1)
+        if not start_match:
+            cursor += 1
+            continue
+        scan = start_match.end()
+        while scan < len(value) and value[scan] not in "\r\n":
+            if value[scan] == quote:
+                following = value[scan + 1] if scan + 1 < len(value) else ""
+                if not following or following.isspace() or following in ".,;:!?)]}":
+                    value = value[:cursor + 1] + "<PATH>" + value[scan:]
+                    cursor += len('"<PATH>"')
+                    break
+            scan += 1
+        else:
+            cursor += 1
+            continue
+    return value
+
+
+def _scan_unquoted_path_end(value: str, start: int, prefix_end: int) -> int:
+    scan = prefix_end
+    while scan < len(value):
+        char = value[scan]
+        if char in "\r\n,;!?\"()[]{}":
+            break
+        if char == "." and (scan + 1 == len(value) or value[scan + 1].isspace()):
+            break
+        if char.isspace():
+            final_component = re.split(r"[\\/]", value[start:scan])[-1]
+            if "." in final_component:
+                break
+            token_start = scan + 1
+            token_end = token_start
+            while token_end < len(value) and not value[token_end].isspace():
+                if value[token_end] in "\r\n,;!?\"()[]{}":
+                    break
+                token_end += 1
+            token = value[token_start:token_end]
+            previous = value[scan - 1] if scan > start else ""
+            following = value[token_end:]
+            if re.fullmatch(
+                r"(?i)(?:and|or|before|then|for|from|with|at|in|on|to|using|should|must|via|exists)",
+                token,
+            ):
+                break
+            extension_ahead = bool(
+                re.match(
+                    r"(?i)^\s+(?:(?!\s+(?:and|or|before|then|for|from|with|at|in|on|to|using|should|must|via)\b)"
+                    r"[^,;!?\"()\[\]{}])*\.[A-Za-z0-9]{1,10}(?=\s|[.,;!?]|$)",
+                    following,
+                )
+            )
+            next_is_boundary = (
+                not following
+                or following[0] in ".,;!?\"()[]{}"
+                or bool(
+                    re.match(
+                        r"\s+(?:and|or|before|then|for|from|with|at|in|on|to|using|should|must|via|exists)\b",
+                        following,
+                        flags=re.I,
+                    )
+                )
+            )
+            if (
+                previous not in "\\/"
+                and not any(separator in token for separator in ("\\", "/"))
+                and "." not in token
+                and not extension_ahead
+                and not next_is_boundary
+            ):
+                break
+        scan += 1
+    return scan
+
+
+def select_servers(server: str | None, servers: list[str] | None) -> dict:
+    """Resolve an explicit server selection without silent fallback."""
+    if server is not None and servers is not None:
+        raise ValueError("--server and --servers cannot be used together")
+    if server is not None:
+        if server not in MCP_SERVERS:
+            raise ValueError(f"unknown server '{_sanitize_identifier(server)}'")
+        return {server: MCP_SERVERS[server]}
+    if servers is not None:
+        if not servers:
+            raise ValueError("--servers requires at least one server")
+        unknown = [name for name in servers if name not in MCP_SERVERS]
+        if unknown:
+            raise ValueError(
+                "unknown server(s): " + ", ".join(_sanitize_identifier(name) for name in unknown)
+            )
+        return {name: MCP_SERVERS[name] for name in servers}
+    return MCP_SERVERS
 
 
 def _bounded_excerpt(value: str | bytes | None, max_chars: int) -> tuple[str, bool]:
@@ -842,6 +1191,8 @@ def run_single_eval(
             status = "success" if evidence_valid else "invalid"
         if status != "success":
             response = ""
+        else:
+            response = _sanitize_response_text(response)
 
         result.update({
             "response": response,
@@ -1119,16 +1470,16 @@ def main():
     scenarios = load_scenarios(Path(args.scenarios))
     print(f"Loaded {len(scenarios)} scenarios from {args.scenarios}")
 
-    servers = MCP_SERVERS
-    if args.server:
-        if args.server not in MCP_SERVERS:
-            print(f"Error: unknown server '{args.server}'. Available: {list(MCP_SERVERS.keys())}", file=sys.stderr)
-            raise SystemExit(1)
-        servers = {args.server: MCP_SERVERS[args.server]}
-    elif args.servers:
-        servers = {k: v for k, v in MCP_SERVERS.items() if k in args.servers}
+    try:
+        servers = select_servers(args.server, args.servers)
+    except ValueError as exc:
+        print(f"Error: {exc}. Available: {list(MCP_SERVERS.keys())}", file=sys.stderr)
+        raise SystemExit(1) from exc
 
-    models = args.models or MODELS
+    if args.models is not None and not args.models:
+        print("Error: --models requires at least one model", file=sys.stderr)
+        raise SystemExit(1)
+    models = args.models if args.models is not None else MODELS
 
     if args.dry_run:
         total = len(scenarios) * len(servers) * len(models)

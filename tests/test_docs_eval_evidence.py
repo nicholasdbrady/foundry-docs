@@ -20,10 +20,12 @@ from eval_scorer import aggregate_scores, score_result, validate_required_matrix
 from foundry_docs_mcp._server_factory import DOCS_CONFIG, build_server  # noqa: E402
 from run_docs_eval import (  # noqa: E402
     MCP_SERVERS,
+    _sanitize_response_text,
     _sanitize_text,
     build_mcp_config,
     parse_event_stream,
     run_single_eval,
+    select_servers,
     serialized_diagnostic_events_size,
 )
 
@@ -207,6 +209,494 @@ def test_run_single_eval_passes_only_selected_config_across_process_boundary(mon
     assert result["response_present"] is True
     assert result["status"] == "success"
     assert result["failure_reason"] is None
+
+
+def test_success_response_is_sanitized_in_raw_and_scored_rows(monkeypatch):
+    response = r"Useful answer. token=LEAKME See C:\Users\Alice\private for details."
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda cmd, **kwargs: subprocess.CompletedProcess(
+            cmd,
+            0,
+            stdout=_event_stream(response=response),
+            stderr="",
+        ),
+    )
+
+    raw_row = run_single_eval(
+        SCENARIO,
+        "foundry-docs",
+        MCP_SERVERS["foundry-docs"],
+        "model-1",
+    )
+    scored_row = score_result(raw_row)
+
+    assert raw_row["status"] == "success"
+    assert scored_row["row_valid"] is True
+    assert raw_row["response"].startswith("Useful answer.")
+    for row in (raw_row, scored_row):
+        persisted = json.dumps(row)
+        assert "LEAKME" not in persisted
+        assert "Alice" not in persisted
+        assert "private" not in persisted
+        assert "token=[REDACTED]" in persisted
+        assert "<PATH>" in persisted
+
+
+def test_success_response_preserves_root_relative_documentation_link(monkeypatch):
+    response = (
+        "Use agents. See [agent docs](/concepts/agents) for prerequisites. "
+        "Then configure managed identity."
+    )
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda cmd, **kwargs: subprocess.CompletedProcess(
+            cmd,
+            0,
+            stdout=_event_stream(response=response),
+            stderr="",
+        ),
+    )
+
+    raw_row = run_single_eval(
+        SCENARIO,
+        "foundry-docs",
+        MCP_SERVERS["foundry-docs"],
+        "model-1",
+    )
+    scored_row = score_result(raw_row)
+
+    assert raw_row["status"] == "success"
+    assert raw_row["response"] == response
+    assert scored_row["row_valid"] is True
+    assert scored_row["response"] == response
+
+
+def test_success_response_preserves_bare_route_and_https_url_but_redacts_sensitive_query():
+    response = (
+        "See /concepts/agents and https://learn.microsoft.com/en-us/azure/ai. "
+        "Do not expose [private](/concepts/agents?token=LEAKME&view=foundry). "
+        "Signed: https://host/path?sig=SUPERSECRET&se=2099-01-01. "
+        "Bare: /concepts/agents?sig=BARESECRET&view=foundry. "
+        "OAuth: https://host/path?access_token=OAUTHSECRET&view=foundry."
+    )
+
+    sanitized = _sanitize_response_text(response)
+
+    assert "/concepts/agents" in sanitized
+    assert "https://learn.microsoft.com/en-us/azure/ai" in sanitized
+    assert "LEAKME" not in sanitized
+    assert "token=[REDACTED]" in sanitized
+    assert "view=foundry" in sanitized
+    assert "SUPERSECRET" not in sanitized
+    assert "sig=[REDACTED]&se=2099-01-01" in sanitized
+    assert "BARESECRET" not in sanitized
+    assert "/concepts/agents?sig=[REDACTED]&view=foundry." in sanitized
+    assert "OAUTHSECRET" not in sanitized
+    assert "access_token=[REDACTED]&view=foundry." in sanitized
+    assert _sanitize_response_text(sanitized) == sanitized
+
+
+def test_success_response_redacts_confirmed_unix_local_paths_and_bounds_long_routes():
+    response = "Read /etc/private.conf and /home/alice/private before [docs](/" + ("x" * 200_000) + ")."
+
+    sanitized = _sanitize_response_text(response)
+
+    assert "/etc/private.conf" not in sanitized
+    assert "/home/alice/private" not in sanitized
+    assert sanitized.count("<PATH>") == 2
+    assert len(sanitized) <= 50_000 + len("...[truncated]")
+
+
+def test_success_response_preserves_sentence_and_os_named_root_link():
+    response = (
+        r"Read C:\Users\Alice\private. This sentence must remain intact. "
+        r"Also read C:\Users\Alice\other! Keep this too. "
+        "See [home docs](/home/overview)."
+    )
+
+    sanitized = _sanitize_response_text(response)
+
+    assert sanitized == (
+        "Read <PATH>. This sentence must remain intact. "
+        "Also read <PATH>! Keep this too. "
+        "See [home docs](<PATH>)."
+    )
+
+
+def test_success_response_path_match_stops_before_unrecognized_prose():
+    response = r"The file C:\Users\Alice\private should remain secret while this prose survives."
+
+    sanitized = _sanitize_response_text(response)
+
+    assert sanitized == "The file <PATH> should remain secret while this prose survives."
+
+
+def test_success_response_stops_unquoted_path_after_filename_component():
+    response = (
+        r"The file is at C:\Users\Alice\secret.txt locally. "
+        "The export is /home/alice/Customer SSN.csv now."
+    )
+
+    sanitized = _sanitize_response_text(response)
+
+    assert sanitized == "The file is at <PATH> locally. The export is <PATH> now."
+
+
+@pytest.mark.parametrize(
+    ("response", "expected"),
+    [
+        (
+            r"Open C:\Users\Alice\Customer SSN.csv and continue.",
+            "Open <PATH> and continue.",
+        ),
+        (
+            r"Open C:\Users\O'Connor\Customer SSN.csv and continue.",
+            "Open <PATH> and continue.",
+        ),
+        (
+            "Open $HOME/private.txt and ${HOME}/fourth.txt and ~/other.txt and %USERPROFILE%\\third.txt.",
+            "Open <PATH> and <PATH> and <PATH> and <PATH>.",
+        ),
+        (
+            r"Open C:\Program Files and \\server\share\Customer Data and $HOME/Customer Data.",
+            "Open <PATH> and <PATH> and <PATH>.",
+        ),
+        (
+            r"Open C:\Users\Alice\Customer Data using Explorer.",
+            "Open <PATH> using Explorer.",
+        ),
+        (
+            r"Open C:\Users\Alice\Customer SSN exists nearby.",
+            "Open <PATH> exists nearby.",
+        ),
+        (
+            r"Open C:\Users\Alice\Customer Sensitive Data.csv and /home/alice/Customer Sensitive Data.csv.",
+            "Open <PATH> and <PATH>.",
+        ),
+        (
+            "Open ~alice/private.txt and /app/Customer Data/config.json and /data/private.bin.",
+            "Open <PATH> and <PATH> and <PATH>.",
+        ),
+    ],
+)
+def test_success_response_redacts_unquoted_paths_with_spaces_apostrophes_and_home_aliases(response, expected):
+    assert _sanitize_response_text(response) == expected
+
+
+def test_success_response_redacts_entire_quoted_local_path_with_spaces():
+    response = r'Open "C:\Users\Alice\Customer SSN.csv" and continue.'
+
+    sanitized = _sanitize_response_text(response)
+
+    assert sanitized == 'Open "<PATH>" and continue.'
+
+
+def test_success_response_redacts_single_quoted_path_with_apostrophe():
+    response = r"Open 'C:\Users\O'Connor\Customer SSN.csv' and continue."
+
+    sanitized = _sanitize_response_text(response)
+
+    assert sanitized == "Open '<PATH>' and continue."
+
+
+def test_success_response_redacts_complete_path_under_home_prefix():
+    response = "Open \"C:\\Users\\nbrady\\O'Connor Customer SSN.csv\" and continue."
+
+    sanitized = _sanitize_response_text(response)
+
+    assert sanitized == 'Open "<PATH>" and continue.'
+
+
+def test_success_response_unclosed_quoted_path_does_not_consume_later_prose():
+    response = "Open \"C:\\Users\\Alice\\secret.txt\nKeep this paragraph and say \"done\"."
+
+    sanitized = _sanitize_response_text(response)
+
+    assert "secret.txt" not in sanitized
+    assert "Keep this paragraph" in sanitized
+    assert '"done"' in sanitized
+
+
+def test_success_response_quoted_path_stops_before_arbitrary_following_word():
+    response = r'Open "C:\Users\Alice\secret.txt" using the command "Open". Then continue.'
+
+    sanitized = _sanitize_response_text(response)
+
+    assert sanitized == 'Open "<PATH>" using the command "Open". Then continue.'
+
+
+def test_success_response_redacts_complete_dotted_token_and_preserves_period():
+    response = "Use token=header.payload.signature. Then continue."
+
+    sanitized = _sanitize_response_text(response)
+
+    assert sanitized == "Use token=[REDACTED]. Then continue."
+
+
+def test_success_response_redacts_common_unix_roots_and_bare_oauth_sas_assignments():
+    response = (
+        "Read /opt/acme/private.conf and /usr/local/private and /workspace/private. "
+        "Also read /boot/grub/grub.cfg and /private/etc/hosts. "
+        "Use ?sv=2024-01-01&sig=SUPERSECRET and code=AUTHCODE123."
+    )
+
+    sanitized = _sanitize_response_text(response)
+
+    assert sanitized == (
+        "Read <PATH> and <PATH> and <PATH>. "
+        "Also read <PATH> and <PATH>. "
+        "Use ?sv=2024-01-01&sig=[REDACTED] and code=[REDACTED]."
+    )
+
+
+def test_signed_url_response_remains_valid_after_runner_and_scorer(monkeypatch):
+    response = "Use https://host/path?sig=SECRET&view=foundry."
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda cmd, **kwargs: subprocess.CompletedProcess(
+            cmd,
+            0,
+            stdout=_event_stream(response=response),
+            stderr="",
+        ),
+    )
+
+    raw_row = run_single_eval(
+        SCENARIO,
+        "foundry-docs",
+        MCP_SERVERS["foundry-docs"],
+        "model-1",
+    )
+    scored_row = score_result(raw_row)
+
+    assert raw_row["response"] == "Use https://host/path?sig=[REDACTED]&view=foundry."
+    assert scored_row["row_valid"] is True
+    assert scored_row["response"] == raw_row["response"]
+
+
+def test_oauth_query_and_fragment_credentials_are_redacted():
+    response = (
+        "Open https://host/callback?code=AUTHCODE123&client_secret=CLIENTSECRET123"
+        "#access_token=header.payload.signature&view=foundry."
+    )
+
+    sanitized = _sanitize_response_text(response)
+
+    for secret in ("AUTHCODE123", "CLIENTSECRET123", "header.payload.signature"):
+        assert secret not in sanitized
+    assert "code=[REDACTED]" in sanitized
+    assert "client_secret=[REDACTED]" in sanitized
+    assert "access_token=[REDACTED]&view=foundry." in sanitized
+
+
+def test_url_userinfo_aliases_and_nested_fragment_credentials_are_redacted():
+    response = (
+        "Open https://user:password@host/path?x-api-key=APISECRET&subscription-key=AZURESECRET"
+        "#/callback?code=AUTHCODE&client_secret=CLIENTSECRET."
+    )
+
+    sanitized = _sanitize_response_text(response)
+
+    for secret in ("user:password", "APISECRET", "AZURESECRET", "AUTHCODE", "CLIENTSECRET"):
+        assert secret not in sanitized
+    assert "https://[REDACTED]@host/path" in sanitized
+    assert "x-api-key=[REDACTED]" in sanitized
+    assert "subscription-key=[REDACTED]" in sanitized
+    assert "#/callback?code=[REDACTED]&client_secret=[REDACTED]." in sanitized
+
+
+def test_quoted_url_values_assertions_and_encoded_tokens_are_redacted():
+    response = (
+        'Open https://host/path?token="URLSECRET"&client_assertion=header.payload.signature'
+        '&code_verifier=VERIFIER&ref=ghp%5FENCODEDSECRET.'
+    )
+
+    sanitized = _sanitize_response_text(response)
+
+    for secret in ("URLSECRET", "header.payload.signature", "VERIFIER", "ghp%5FENCODEDSECRET"):
+        assert secret not in sanitized
+    assert "token=[REDACTED]" in sanitized
+    assert "client_assertion=[REDACTED]" in sanitized
+    assert "code_verifier=[REDACTED]" in sanitized
+    assert "ref=[REDACTED]" in sanitized
+
+
+def test_malformed_url_userinfo_is_redacted_before_url_parsing():
+    response = "See https://user:URLSECRET@[broken/path"
+
+    sanitized = _sanitize_response_text(response)
+
+    assert "URLSECRET" not in sanitized
+    assert "https://[REDACTED]@" in sanitized
+
+
+def test_url_benign_parameter_values_and_fragments_still_redact_embedded_tokens():
+    response = (
+        "Open https://host/path?ref=ghp_QUERYSECRET123"
+        "#section=ghp_FRAGMENTSECRET123."
+    )
+
+    sanitized = _sanitize_response_text(response)
+
+    assert "ghp_QUERYSECRET123" not in sanitized
+    assert "ghp_FRAGMENTSECRET123" not in sanitized
+    assert "ref=[REDACTED]" in sanitized
+    assert "#section=[REDACTED]." in sanitized
+
+
+def test_strict_and_alias_credentials_are_redacted_without_corrupting_redaction_marker():
+    response = (
+        "jwt=headerheader.payloadpayload.signaturesig "
+        "pat=PATSECRET sas=SASSECRET SharedAccessKey=SHAREDSECRET AccountKey=ACCOUNTSECRET "
+        "token=[REDACTED] token=[REDACTED]LEAK"
+    )
+
+    sanitized = _sanitize_response_text(response)
+
+    for secret in (
+        "headerheader.payloadpayload.signaturesig",
+        "PATSECRET",
+        "SASSECRET",
+        "SHAREDSECRET",
+        "ACCOUNTSECRET",
+        "[REDACTED]LEAK",
+    ):
+        assert secret not in sanitized
+    assert "token=[REDACTED]" in sanitized
+
+
+def test_malformed_https_url_fails_closed_without_crashing():
+    response = "See https://[broken/path?token=LEAKME"
+
+    sanitized = _sanitize_response_text(response)
+
+    assert "LEAKME" not in sanitized
+    assert "token=[REDACTED]" in sanitized
+
+
+def test_noncredential_code_assignments_remain_usable():
+    response = "status_code=404 errorCode=InvalidRequest language_code=en-US"
+
+    assert _sanitize_response_text(response) == response
+
+
+def test_secrets_in_https_path_components_are_redacted():
+    response = "See https://host/token=LEAKME and https://host/github_pat_ABCDEF123456."
+
+    sanitized = _sanitize_response_text(response)
+
+    assert "LEAKME" not in sanitized
+    assert "github_pat_ABCDEF123456" not in sanitized
+    assert "https://host/token=[REDACTED]" in sanitized
+    assert "https://host/[REDACTED]." in sanitized
+
+
+def test_https_path_encoding_is_preserved_when_no_secret_is_present():
+    response = "See https://host/a%2Fb+c."
+
+    assert _sanitize_response_text(response) == response
+
+
+def test_percent_encoded_credentials_and_local_paths_are_detected_recursively():
+    response = (
+        "Account %41ccountKey=ACCOUNTSECRET123 "
+        "JWT jwt=headerheader%252Epayloadpayload%252Esignaturesig "
+        "Path %252Fhome%252Falice%252Fsecret.txt "
+        "Safe https://host/a%2Fb+c."
+    )
+
+    sanitized = _sanitize_response_text(response)
+
+    for leaked in ("ACCOUNTSECRET123", "headerheader", "payloadpayload", "signaturesig", "secret.txt"):
+        assert leaked not in sanitized
+    assert "<PATH>" in sanitized
+    assert "https://host/a%2Fb+c." in sanitized
+
+
+def test_encoded_credentials_and_paths_are_redacted_in_diagnostic_channels(monkeypatch):
+    leaked = "token%3DSECRETVALUE %252Fhome%252Falice%252Fsecret.txt"
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda cmd, **kwargs: subprocess.CompletedProcess(
+            cmd,
+            1,
+            stdout="not-json",
+            stderr=leaked,
+        ),
+    )
+
+    raw_row = run_single_eval(
+        SCENARIO,
+        "foundry-docs",
+        MCP_SERVERS["foundry-docs"],
+        "model-1",
+    )
+    scored_row = score_result(raw_row)
+
+    for row in (raw_row, scored_row):
+        persisted = json.dumps(row)
+        assert "SECRETVALUE" not in persisted
+        assert "secret.txt" not in persisted
+        assert "[REDACTED]" in persisted
+        assert "<PATH>" in persisted
+
+
+def test_markdown_os_paths_are_redacted_while_documentation_routes_survive():
+    response = (
+        "Read [passwd](/etc/passwd) and [env](/home/runner/work/repo/.env). "
+        "Keep [agents](/concepts/agents)."
+    )
+
+    sanitized = _sanitize_response_text(response)
+
+    assert sanitized == "Read [passwd](<PATH>) and [env](<PATH>). Keep [agents](/concepts/agents)."
+
+
+def test_select_servers_rejects_unknown_mixed_and_empty_plural_selection():
+    with pytest.raises(ValueError, match="unknown server"):
+        select_servers(None, ["unknown"])
+    with pytest.raises(ValueError, match="unknown server"):
+        select_servers(None, ["foundry-docs", "unknown"])
+    with pytest.raises(ValueError, match="requires at least one"):
+        select_servers(None, [])
+    with pytest.raises(ValueError, match="cannot be used together"):
+        select_servers("foundry-docs", ["foundry-docs-vnext"])
+
+
+@pytest.mark.parametrize(
+    "extra_args",
+    [
+        ["--servers", "unknown", "--dry-run"],
+        ["--servers", "foundry-docs", "unknown", "--dry-run"],
+        ["--servers", "--dry-run"],
+        ["--servers", "unknown"],
+        ["--models", "--dry-run"],
+    ],
+)
+def test_cli_plural_server_selection_fails_nonzero_before_execution(tmp_path, extra_args):
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(Path(__file__).parents[1] / "scripts" / "run_docs_eval.py"),
+            "--scenarios",
+            str(Path(__file__).parents[1] / "tests" / "docs_eval_scenarios.json"),
+            "--output-dir",
+            str(tmp_path),
+            *extra_args,
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert proc.returncode == 1
+    assert "Error:" in proc.stderr
+    assert list(tmp_path.glob("run-*.json")) == []
 
 
 @pytest.mark.parametrize(
@@ -1660,6 +2150,99 @@ def test_unknown_azure_required_server_blocks_otherwise_valid_matrix():
     assert publication["allowed"] is False
     assert publication["unknown_required_servers"] == ["typo-server"]
     assert "unknown required server(s): typo-server" in publication["failure_reasons"]
+
+
+def test_non_azure_server_cannot_spoof_azure_evidence():
+    spoofed = _raw_row(server="microsoft-learn")
+    spoofed["azure_required"] = True
+    spoofed["azure_live_query_proven"] = True
+    spoofed["selected_source_config"]["azure_required"] = True
+
+    scored = score_result(spoofed)
+    publication = validate_required_matrix(
+        [scored],
+        scenario_ids=["scenario-1"],
+        servers=["microsoft-learn"],
+        models=["model-1"],
+        azure_required_servers={"microsoft-learn"},
+    )
+
+    assert scored["row_valid"] is False
+    assert scored["status"] == "invalid"
+    assert scored["response"] == ""
+    assert publication["allowed"] is False
+    assert publication["unsupported_azure_required_servers"] == ["microsoft-learn"]
+    assert (
+        "Azure-required server(s) do not support Azure evidence: microsoft-learn"
+        in publication["failure_reasons"]
+    )
+
+
+def test_azure_required_server_must_be_in_required_matrix():
+    valid = score_result(_raw_row())
+
+    publication = validate_required_matrix(
+        [valid],
+        scenario_ids=["scenario-1"],
+        servers=["foundry-docs"],
+        models=["model-1"],
+        azure_required_servers={"foundry-docs-vnext"},
+    )
+
+    assert publication["allowed"] is False
+    assert publication["azure_required_outside_matrix"] == ["foundry-docs-vnext"]
+    assert (
+        "Azure-required server(s) are outside the required server matrix: foundry-docs-vnext"
+        in publication["failure_reasons"]
+    )
+
+
+def test_azure_required_server_must_be_in_implicit_effective_matrix():
+    valid = score_result(_raw_row())
+
+    publication = validate_required_matrix(
+        [valid],
+        azure_required_servers={"foundry-docs-vnext"},
+    )
+
+    assert publication["allowed"] is False
+    assert publication["azure_required_outside_matrix"] == ["foundry-docs-vnext"]
+
+
+@pytest.mark.parametrize(
+    "selectors",
+    [
+        {"scenario_ids": ["scenario-1"]},
+        {"servers": ["foundry-docs"]},
+        {"models": ["model-1"]},
+        {"scenario_ids": ["scenario-1"], "servers": ["foundry-docs"]},
+        {"servers": ["foundry-docs"], "models": ["model-1"]},
+    ],
+)
+def test_required_matrix_rejects_partial_selector_combinations(selectors):
+    valid = score_result(_raw_row())
+
+    publication = validate_required_matrix([valid], **selectors)
+
+    assert publication["allowed"] is False
+    assert publication["partial_required_selectors"] is True
+    assert (
+        "required scenario, server, and model selectors must be supplied together"
+        in publication["failure_reasons"]
+    )
+
+
+def test_required_matrix_rejects_omitted_selector_triple():
+    valid = score_result(_raw_row())
+
+    publication = validate_required_matrix([valid])
+
+    assert publication["allowed"] is False
+    assert publication["partial_required_selectors"] is True
+    assert (
+        "required scenario, server, and model selectors must be supplied together"
+        in publication["failure_reasons"]
+    )
 
 
 def test_required_matrix_sanitizes_unknown_selector_row_labels():
