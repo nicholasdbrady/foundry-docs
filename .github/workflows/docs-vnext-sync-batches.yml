@@ -14,8 +14,8 @@ on:
 
 permissions:
   actions: read
-  contents: write
-  pull-requests: write
+  contents: read
+  pull-requests: read
 
 concurrency:
   group: docs-vnext-bounded-baseline-sync
@@ -28,20 +28,85 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
+      - name: Initialize failure checkpoint
+        env:
+          CHECKPOINT_PATH: ${{ runner.temp }}/docs-vnext-sync/checkpoint.json
+        run: |
+          set -euo pipefail
+          mkdir -p "$(dirname "$CHECKPOINT_PATH")"
+          python3 - "$CHECKPOINT_PATH" <<'PY'
+          import json
+          import pathlib
+          import sys
+
+          path = pathlib.Path(sys.argv[1])
+          checkpoint = {
+              "schemaVersion": 1,
+              "status": "failed",
+              "manifest": {"sha256": None, "runId": None},
+              "limits": {"maxFiles": 50, "maxPayloadBytes": 41943040},
+              "summary": {"completed": 0, "failed": 0, "pending": 0},
+              "diagnostics": ["Workflow failed before the batch runner initialized."],
+              "batches": [],
+          }
+          path.write_text(json.dumps(checkpoint, indent=2, sort_keys=True) + "\n")
+          PY
+
       - name: Checkout repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
-          token: ${{ secrets.AZURE_AI_DOCS_PR_TOKEN || github.token }}
+          persist-credentials: false
+          token: ${{ github.token }}
 
-      - name: Require pull-request automation token
+      - name: Preflight pull-request automation token
         env:
+          CHECKPOINT_PATH: ${{ runner.temp }}/docs-vnext-sync/checkpoint.json
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          EXPECTED_OWNER: ${{ github.repository_owner }}
+          REPOSITORY: ${{ github.repository }}
           SYNC_TOKEN: ${{ secrets.AZURE_AI_DOCS_PR_TOKEN }}
         run: |
           set -euo pipefail
-          if [[ -z "$SYNC_TOKEN" ]]; then
-            echo "::error::AZURE_AI_DOCS_PR_TOKEN is required so automation-created PRs trigger checks."
+          fail_preflight() {
+            local message="$1"
+            python3 - "$CHECKPOINT_PATH" "$message" <<'PY'
+          import json
+          import pathlib
+          import sys
+
+          path = pathlib.Path(sys.argv[1])
+          checkpoint = json.loads(path.read_text())
+          checkpoint["diagnostics"] = [sys.argv[2]]
+          path.write_text(json.dumps(checkpoint, indent=2, sort_keys=True) + "\n")
+          PY
+            echo "::error::$message"
             exit 1
+          }
+          if [[ -z "$SYNC_TOKEN" ]]; then
+            fail_preflight "AZURE_AI_DOCS_PR_TOKEN is absent. Rotate it to a token owned by $EXPECTED_OWNER with repository contents and pull-request write access."
+          fi
+          if ! token_owner=$(GH_TOKEN="$SYNC_TOKEN" gh api user --jq .login 2>/dev/null); then
+            fail_preflight "AZURE_AI_DOCS_PR_TOKEN is invalid or expired. Rotate the $EXPECTED_OWNER-owned secret."
+          fi
+          if [[ "$token_owner" != "$EXPECTED_OWNER" ]]; then
+            fail_preflight "AZURE_AI_DOCS_PR_TOKEN authenticates as $token_owner; rotate it to a token owned by $EXPECTED_OWNER."
+          fi
+          if ! push_permission=$(GH_TOKEN="$SYNC_TOKEN" gh api "repos/$REPOSITORY" \
+            --jq '.permissions.push' 2>/dev/null); then
+            fail_preflight "AZURE_AI_DOCS_PR_TOKEN cannot read permission metadata for $REPOSITORY."
+          fi
+          if [[ "$push_permission" != "true" ]]; then
+            fail_preflight "AZURE_AI_DOCS_PR_TOKEN does not grant push access to $REPOSITORY."
+          fi
+          if ! GH_TOKEN="$SYNC_TOKEN" gh api --method GET \
+            "repos/$REPOSITORY/pulls?state=open&per_page=1" >/dev/null; then
+            fail_preflight "AZURE_AI_DOCS_PR_TOKEN cannot access pull requests in $REPOSITORY."
+          fi
+          GH_TOKEN="$SYNC_TOKEN" gh auth setup-git
+          if ! GH_TOKEN="$SYNC_TOKEN" git ls-remote --exit-code origin \
+            "refs/heads/$DEFAULT_BRANCH" >/dev/null; then
+            fail_preflight "AZURE_AI_DOCS_PR_TOKEN is not usable for Git access to $REPOSITORY. Rotate the $EXPECTED_OWNER-owned secret."
           fi
 
       - name: Resolve retained manifest run
@@ -50,7 +115,7 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           INPUT_RUN_ID: ${{ inputs.manifest_run_id }}
           WORKFLOW_RUN_ID: ${{ github.event.workflow_run.id }}
-          GH_TOKEN: ${{ secrets.AZURE_AI_DOCS_PR_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           run_id="$INPUT_RUN_ID"
@@ -73,7 +138,7 @@ jobs:
 
       - name: Download retained schema-v2 manifest
         env:
-          GH_TOKEN: ${{ secrets.AZURE_AI_DOCS_PR_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
           MANIFEST_RUN_ID: ${{ steps.manifest.outputs.run-id }}
         run: |
           set -euo pipefail

@@ -1947,9 +1947,36 @@ def test_workflow_consumes_retained_manifest_and_always_retains_checkpoint():
     ]
     assert workflow["permissions"] == {
         "actions": "read",
-        "contents": "write",
-        "pull-requests": "write",
+        "contents": "read",
+        "pull-requests": "read",
     }
+    step_names = [step["name"] for step in job["steps"]]
+    assert step_names[:3] == [
+        "Initialize failure checkpoint",
+        "Checkout repository",
+        "Preflight pull-request automation token",
+    ]
+    initialize_step = steps["Initialize failure checkpoint"]["run"]
+    assert '"status": "failed"' in initialize_step
+    assert '"maxFiles": 50' in initialize_step
+    checkout = steps["Checkout repository"]["with"]
+    assert checkout["token"] == "${{ github.token }}"
+    assert checkout["persist-credentials"] == "false"
+    preflight = steps["Preflight pull-request automation token"]["run"]
+    assert "gh api user --jq .login" in preflight
+    assert "--jq '.permissions.push'" in preflight
+    assert '[[ "$push_permission" != "true" ]]' in preflight
+    assert "--jq -e" not in preflight
+    assert "pulls?state=open&per_page=1" in preflight
+    assert "gh auth setup-git" in preflight
+    assert "git ls-remote --exit-code origin" in preflight
+    assert "checkpoint[\"diagnostics\"] = [sys.argv[2]]" in preflight
+    assert steps["Resolve retained manifest run"]["env"]["GH_TOKEN"] == "${{ github.token }}"
+    assert steps["Download retained schema-v2 manifest"]["env"]["GH_TOKEN"] == "${{ github.token }}"
+    assert (
+        steps["Apply resumable bounded batches"]["env"]["GH_TOKEN"]
+        == "${{ secrets.AZURE_AI_DOCS_PR_TOKEN }}"
+    )
     assert "docs-vnext-sync-manifest-$MANIFEST_RUN_ID" in steps[
         "Download retained schema-v2 manifest"
     ]["run"]
