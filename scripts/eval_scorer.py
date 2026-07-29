@@ -77,6 +77,7 @@ SOURCE_CONFIG_FIELDS = {"name", "type", "endpoint", "command", "tool_prefix", "a
 METADATA_IDENTIFIER_FIELDS = {"run_id", "timestamp"}
 METADATA_COUNT_FIELDS = {"scenarios_count", "total_evaluations", "completed", "input_files"}
 METADATA_LIST_FIELDS = {"servers", "models"}
+MAX_DIAGNOSTIC_IDENTIFIER_DEPTH = 7
 
 
 def _invalid_scores() -> dict:
@@ -117,7 +118,7 @@ def _diagnostic_identifier_errors(
     depth: int = 0,
 ) -> list[str]:
     errors = []
-    if depth >= 4 and isinstance(value, (dict, list)):
+    if depth >= MAX_DIAGNOSTIC_IDENTIFIER_DEPTH and isinstance(value, (dict, list)):
         return [f"{path} exceeds maximum diagnostic nesting depth"]
     if isinstance(value, dict):
         if len(value) > 20:
@@ -233,13 +234,28 @@ def _canonical_diagnostics(value: object) -> object:
     if not isinstance(value, dict):
         return _sanitize_diagnostic_value(value)
     return {
-        "events": _sanitize_diagnostic_value(value.get("events", [])),
+        "events": _canonical_diagnostic_events(value.get("events", [])),
         "events_truncated": value.get("events_truncated") if type(value.get("events_truncated")) is bool else False,
         "stdout_excerpt": _sanitize_text(str(value.get("stdout_excerpt", "")), max_chars=MAX_STDOUT_EXCERPT)[0],
         "stdout_truncated": value.get("stdout_truncated") if type(value.get("stdout_truncated")) is bool else False,
         "stderr_excerpt": _sanitize_text(str(value.get("stderr_excerpt", "")), max_chars=MAX_STDERR_EXCERPT)[0],
         "stderr_truncated": value.get("stderr_truncated") if type(value.get("stderr_truncated")) is bool else False,
     }
+
+
+def _canonical_diagnostic_events(value: object) -> object:
+    if not isinstance(value, list):
+        return _sanitize_diagnostic_value(value)
+    canonical = []
+    for event in value[:20]:
+        if not isinstance(event, dict):
+            canonical.append(_sanitize_diagnostic_value(event))
+            continue
+        canonical.append({
+            "event_type": _sanitize_text(str(event.get("event_type", "")))[0],
+            "data": _sanitize_diagnostic_value(event.get("data", {})),
+        })
+    return canonical
 
 
 def _project_result_fields(result: dict) -> dict:
@@ -397,7 +413,7 @@ def validate_row_schema(result: object) -> list[str]:
         events = diagnostics["events"]
         if not excessive_depth:
             try:
-                canonical_events = _sanitize_diagnostic_value(events)
+                canonical_events = _canonical_diagnostic_events(events)
             except RecursionError:
                 excessive_depth = True
                 errors.append("diagnostics.events exceeds maximum diagnostic nesting depth")

@@ -1010,6 +1010,53 @@ def test_real_mcp_servers_loaded_schema_preserves_statuses_and_selected_failure(
     assert "[REDACTED]" in diagnostic["data"]["servers"][0]["error"]
 
 
+def test_canonical_mcp_servers_loaded_diagnostic_scores_as_valid(monkeypatch):
+    stdout = "\n".join([
+        json.dumps({
+            "type": "session.mcp_servers_loaded",
+            "ephemeral": True,
+            "data": {
+                "servers": [
+                    {
+                        "name": "foundry_docs",
+                        "status": "connected",
+                        "source": "user",
+                        "transport": "stdio",
+                    }
+                ]
+            },
+        }),
+        json.dumps({
+            "type": "tool.execution_start",
+            "data": {"toolCallId": "call-1", "toolName": "foundry_docs-search_docs"},
+        }),
+        json.dumps({
+            "type": "tool.execution_complete",
+            "data": {"toolCallId": "call-1", "success": True},
+        }),
+        json.dumps({"type": "assistant.message", "data": {"content": "trusted answer"}}),
+        json.dumps({"type": "result", "exitCode": 0}),
+    ])
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda cmd, **kwargs: subprocess.CompletedProcess(cmd, 0, stdout=stdout, stderr=""),
+    )
+
+    raw_row = run_single_eval(
+        SCENARIO,
+        "foundry-docs",
+        MCP_SERVERS["foundry-docs"],
+        "model-1",
+    )
+    scored_row = score_result(raw_row)
+
+    assert raw_row["status"] == "success"
+    assert raw_row["diagnostics"]["events"][0]["event_type"] == "session.mcp_servers_loaded"
+    assert scored_row["row_valid"] is True
+    assert scored_row["status"] == "success"
+
+
 def test_real_session_error_schema_preserves_diagnostics_and_invalidates_answer(monkeypatch):
     stdout = "\n".join([
         json.dumps({
