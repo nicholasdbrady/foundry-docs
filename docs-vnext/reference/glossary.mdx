@@ -7,6 +7,9 @@ Key terms and concepts used throughout the Microsoft Foundry documentation.
 
 ## A
 
+### A2A (Agent2Agent Protocol)
+An open protocol that standardizes communication between AI agents from different vendors and frameworks. In Microsoft Foundry, agents can use the A2A tool to call external A2A-compliant agent endpoints, pass context between agents, and receive answers back — while the calling agent retains control of the conversation. Contrasts with multi-agent workflows, where the called agent takes over the conversation.
+
 ### Agent
 An AI-powered entity that can perform tasks autonomously using tools, models, and instructions. In Microsoft Foundry, agents are created via the Azure AI Projects SDK and can use built-in tools like Code Interpreter, File Search, and Function Calling.
 
@@ -19,10 +22,16 @@ The primary Python client class in the Azure AI Projects SDK for connecting to a
 ### Azure AI Search
 A cloud search service providing keyword, vector, and semantic search capabilities. Used as the underlying indexing and retrieval infrastructure for RAG patterns, Foundry IQ knowledge bases, and vector stores.
 
+### Browser Automation Tool (BAT)
+A built-in Foundry agent tool that enables agents to automate web browsing tasks in isolated, headless browser sessions. BAT is backed by Playwright Workspaces and exposed as an MCP tool. It supports navigation, form filling, and interaction with private or public websites. Includes real-time Live View debugging and human-in-the-loop take-control capability.
+
 ## C
 
 ### Code Interpreter
 A built-in Foundry agent tool that lets agents write and execute Python code in a sandboxed environment. Useful for data analysis, mathematical calculations, chart generation, and file processing tasks.
+
+### Computer Use
+A built-in Foundry agent tool that enables agents to interpret screenshots and automate UI interactions — clicking, typing, and scrolling — on desktop or browser applications. Powered by the `computer-use-preview` model, it follows a screenshot → propose action → execute loop. Because it can interact with real UI surfaces, it carries significant security risks and should run in sandboxed environments.
 
 ### Conversation
 A durable object in Foundry Agent Service that persists interaction state across turns and sessions. Conversations store items (messages, tool calls, tool outputs) and have unique identifiers that can be reused across sessions. Replaces the thread concept from the Assistants API.
@@ -71,8 +80,14 @@ A top-level Foundry IQ resource that orchestrates agentic retrieval over one or 
 
 ## M
 
+### Memory Store
+A managed, persistent storage resource in Foundry Agent Service that retains agent knowledge across sessions. A memory store holds two types of long-term memories: **user profile memory** (stable preferences and facts about the user) and **chat summary memory** (distilled summaries of past conversation topics). The service automatically extracts, consolidates, and deduplicates memories via LLMs so that agents can retrieve personalized context at the start of each new session.
+
 ### MCP (Model Context Protocol)
 An open protocol that enables AI agents to connect to external data sources and tools through a standardized interface. In Microsoft Foundry, agents can use MCP servers as tools via the Model Context Protocol tool type, allowing integration with custom data sources and services.
+
+### Model Router
+A purpose-built, trained machine-learning model in Microsoft Foundry that analyzes each incoming prompt in real time and routes it to the most suitable LLM in a configured pool. Model router is not itself an LLM — it is a lightweight routing model optimized for fast inference. It operates in three modes: **Balanced** (default), **Cost**, and **Quality**. The selected model is always reported in the API response, and routing adds negligible latency overhead.
 
 ### Microsoft Entra ID
 Microsoft's cloud identity and access management service, formerly Azure Active Directory. Used in Foundry for keyless authentication (instead of API keys) and as the identity provider for role-based access control (RBAC) assignments.
@@ -95,6 +110,9 @@ The output of a single agent invocation in Foundry Agent Service. A response inc
 
 ### Responses API
 The API surface for generating agent outputs in Foundry Agent Service. The Responses API accepts a conversation (or previous response output) and returns a new response with the agent's result. It supersedes the older Assistants API runs endpoint.
+
+### Routine
+A project-native trigger in Foundry Agent Service that automatically invokes an agent when a defined timer or recurring schedule fires. A routine pairs one trigger (one-time or cron-style) with one action (an agent invocation) and stores the run history — including inputs, outputs, and trace links — within the same Foundry project. Use routines for lightweight scheduled automation; use workflows for multi-agent or conditional-logic scenarios.
 
 ## S
 
