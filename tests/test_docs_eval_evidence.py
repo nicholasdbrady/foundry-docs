@@ -9,6 +9,7 @@ import os
 import subprocess
 import sys
 import time
+import urllib.parse
 from pathlib import Path
 
 import pytest
@@ -625,6 +626,49 @@ def test_percent_encoded_credentials_and_local_paths_are_detected_recursively():
         assert leaked not in sanitized
     assert "<PATH>" in sanitized
     assert "https://host/a%2Fb+c." in sanitized
+
+
+def test_four_plus_layer_encoded_authorization_redacts_and_budget_exhaustion_fails_closed(monkeypatch):
+    encoded = "Authorization=CustomScheme opaque-value"
+    for _ in range(5):
+        encoded = urllib.parse.quote_plus(encoded)
+    response = f"upstream={encoded}"
+
+    sanitized = _sanitize_response_text(response)
+    assert "opaque-value" not in sanitized
+    assert "[REDACTED]" in sanitized
+
+    monkeypatch.setattr(run_docs_eval, "MAX_ENCODED_DECODE_ITERATIONS", 1)
+    exhausted = _sanitize_response_text(response)
+    assert encoded not in exhausted
+    assert exhausted == "[REDACTED]"
+
+
+@pytest.mark.parametrize(
+    "response",
+    [
+        "Authorization%3A CustomScheme opaque-value",
+        "%41uthorization=CustomScheme opaque-value",
+    ],
+)
+def test_partially_encoded_authorization_redacts_complete_line(response):
+    assert _sanitize_response_text(response) == "[REDACTED]"
+
+
+@pytest.mark.parametrize(
+    "response",
+    [
+        "Authorization%3A\n opaque-value",
+        "Authorization%253A\r\n \r\n nonce=LEAKME",
+        'upstream={%22Authorization%22%3A\n opaque-value}',
+    ],
+)
+def test_folded_encoded_authorization_redacts_logical_header_block(response):
+    sanitized = _sanitize_response_text(response)
+
+    assert sanitized == "[REDACTED]\n" or sanitized == "[REDACTED]\r\n"
+    assert "opaque-value" not in sanitized
+    assert "LEAKME" not in sanitized
 
 
 def test_encoded_credentials_and_paths_are_redacted_in_diagnostic_channels(monkeypatch):
@@ -2283,6 +2327,35 @@ def test_scorer_rejects_non_string_diagnostic_identifier():
     assert "diagnostics.events[0].data.toolCallId must be a string identifier" in scored["failure_reason"]
 
 
+def test_deep_diagnostic_identifier_nesting_fails_closed_without_recursion_error():
+    nested: object = {"toolCallId": "safe-call"}
+    for _ in range(995):
+        nested = {"child": nested}
+    row = _raw_row()
+    row["diagnostics"]["events"] = [{"event_type": "status", "data": nested}]
+
+    scored = score_result(row)
+
+    assert scored["row_valid"] is False
+    assert "exceeds maximum diagnostic nesting depth" in scored["failure_reason"]
+
+
+def test_wide_diagnostic_identifier_mapping_is_bounded_lazily():
+    row = _raw_row()
+    row["diagnostics"]["events"] = [{
+        "event_type": "status",
+        "data": {f"field-{index}": "value" for index in range(100_000)},
+    }]
+
+    started = time.perf_counter()
+    scored = score_result(row)
+    elapsed = time.perf_counter() - started
+
+    assert elapsed < 1.0
+    assert scored["row_valid"] is False
+    assert "contains more than 20 fields" in scored["failure_reason"]
+
+
 @pytest.mark.parametrize(
     "malformed",
     [
@@ -2837,6 +2910,38 @@ def test_baseline_comparison_blocks_invalid_current_required_row(tmp_path, capsy
     captured = capsys.readouterr()
     assert "Baseline comparison blocked" in captured.err
     assert "No regressions detected" not in captured.out
+
+
+def test_baseline_comparison_rejects_invalid_baseline_matrix(tmp_path, capsys):
+    invalid_baseline = _raw_row()
+    invalid_baseline["status"] = "invalid"
+    invalid_baseline["passed"] = False
+    invalid_baseline["response"] = ""
+    invalid_baseline["response_present"] = False
+    invalid_baseline["failure_reason"] = "invalid baseline evidence"
+    baseline_path = tmp_path / "baseline.json"
+    baseline_path.write_text(
+        json.dumps({"results": [invalid_baseline]}),
+        encoding="utf-8",
+    )
+
+    exit_code = compare_results({"results": [_raw_row()]}, str(baseline_path))
+
+    assert exit_code == 2
+    captured = capsys.readouterr()
+    assert "invalid baseline matrix" in captured.err
+    assert "No regressions detected" not in captured.out
+
+
+@pytest.mark.parametrize("baseline", [[], {"results": None}, {"results": 123}])
+def test_baseline_comparison_rejects_malformed_baseline_shape(tmp_path, capsys, baseline):
+    baseline_path = tmp_path / "baseline.json"
+    baseline_path.write_text(json.dumps(baseline), encoding="utf-8")
+
+    exit_code = compare_results({"results": [_raw_row()]}, str(baseline_path))
+
+    assert exit_code == 2
+    assert "must be an object with a results array" in capsys.readouterr().err
 
 
 def test_cli_main_baseline_comparison_fails_for_missing_required_current_row(

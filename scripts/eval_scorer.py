@@ -14,7 +14,7 @@ import math
 import re
 import sys
 from collections import defaultdict
-from itertools import product
+from itertools import islice, product
 from pathlib import Path
 
 from run_docs_eval import (
@@ -110,10 +110,19 @@ def _identifier_errors(value: object, field: str) -> list[str]:
     return []
 
 
-def _diagnostic_identifier_errors(value: object, path: str = "diagnostics") -> list[str]:
+def _diagnostic_identifier_errors(
+    value: object,
+    path: str = "diagnostics",
+    *,
+    depth: int = 0,
+) -> list[str]:
     errors = []
+    if depth >= 4 and isinstance(value, (dict, list)):
+        return [f"{path} exceeds maximum diagnostic nesting depth"]
     if isinstance(value, dict):
-        for key, child in value.items():
+        if len(value) > 20:
+            errors.append(f"{path} contains more than 20 fields")
+        for key, child in islice(value.items(), 20):
             child_path = f"{path}.{key}"
             if key in {
                 "toolName",
@@ -125,10 +134,14 @@ def _diagnostic_identifier_errors(value: object, path: str = "diagnostics") -> l
                 "name",
             }:
                 errors.extend(_identifier_errors(child, child_path))
-            errors.extend(_diagnostic_identifier_errors(child, child_path))
+            errors.extend(_diagnostic_identifier_errors(child, child_path, depth=depth + 1))
     elif isinstance(value, list):
-        for index, child in enumerate(value):
-            errors.extend(_diagnostic_identifier_errors(child, f"{path}[{index}]"))
+        if len(value) > 20:
+            errors.append(f"{path} contains more than 20 items")
+        for index, child in enumerate(value[:20]):
+            errors.extend(
+                _diagnostic_identifier_errors(child, f"{path}[{index}]", depth=depth + 1)
+            )
     return errors
 
 
@@ -375,18 +388,30 @@ def validate_row_schema(result: object) -> list[str]:
     elif set(diagnostics) != required_diagnostic_fields:
         errors.append("diagnostics must contain exactly the required bounded-output fields")
     else:
-        errors.extend(_diagnostic_identifier_errors(diagnostics))
+        diagnostic_identifier_errors = _diagnostic_identifier_errors(diagnostics)
+        errors.extend(diagnostic_identifier_errors)
+        excessive_depth = any(
+            "exceeds maximum diagnostic nesting depth" in error
+            for error in diagnostic_identifier_errors
+        )
         events = diagnostics["events"]
-        if events != _sanitize_diagnostic_value(events):
-            errors.append("diagnostics.events must equal its sanitized canonical form")
+        if not excessive_depth:
+            try:
+                canonical_events = _sanitize_diagnostic_value(events)
+            except RecursionError:
+                excessive_depth = True
+                errors.append("diagnostics.events exceeds maximum diagnostic nesting depth")
+            else:
+                if events != canonical_events:
+                    errors.append("diagnostics.events must equal its sanitized canonical form")
         if not isinstance(events, list):
             errors.append("diagnostics.events must be a list")
         elif len(events) > MAX_DIAGNOSTIC_EVENTS:
             errors.append(f"diagnostics.events must contain at most {MAX_DIAGNOSTIC_EVENTS} entries")
-        else:
+        elif not excessive_depth:
             try:
                 serialized_event_chars = serialized_diagnostic_events_size(events)
-            except (TypeError, ValueError):
+            except (TypeError, ValueError, RecursionError):
                 errors.append("diagnostics.events must contain JSON-serializable values")
             else:
                 if serialized_event_chars > MAX_DIAGNOSTIC_EVENTS_CHARS:

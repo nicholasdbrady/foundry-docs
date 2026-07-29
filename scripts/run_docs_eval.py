@@ -107,6 +107,9 @@ MAX_STDOUT_PARSE_LINES = 500
 MAX_STDOUT_LINE_BYTES = 64_000
 MAX_IDENTIFIER_TEXT = 256
 MAX_USAGE_METRIC = 10**15
+MAX_ENCODED_TOKEN_BYTES = 8_192
+MAX_ENCODED_DECODE_ITERATIONS = 8
+MAX_ENCODED_DECODE_SECONDS = 0.02
 _SECRET_KEY_PATTERN = re.compile(r"(?:api[_-]?key|authorization|credential|password|secret|token)", re.I)
 _AUTHORIZATION_HEADER_PATTERN = re.compile(
     r"(?im)(authorization\s*:\s*)[^\r\n]+(?:\r?\n[ \t]+[^\r\n]*)*"
@@ -434,6 +437,28 @@ def _sanitize_response_text(value: str) -> str:
 
 def _redact_encoded_sensitive_tokens(value: str) -> str:
     encoded_token = re.compile(r"\S*%[0-9A-Fa-f]{2}\S*")
+    lines = value.splitlines(keepends=True)
+    redacted_lines = []
+    index = 0
+    while index < len(lines):
+        line = lines[index]
+        decoded = _bounded_stable_decode(line.rstrip("\r\n"))
+        redacted_lines.append(_redact_encoded_authorization_line(line))
+        if decoded is not None:
+            key_only = bool(
+                re.search(
+                    r"""(?ix)\{?(?:\\)*["']?authorization(?:\\)*["']?\s*[:=]\s*$""",
+                    decoded,
+                )
+            )
+            if key_only:
+                redacted_lines[-1] = "[REDACTED]" + line[len(line.rstrip("\r\n")):]
+                index += 1
+                while index < len(lines) and lines[index].startswith((" ", "\t")):
+                    index += 1
+                continue
+        index += 1
+    value = "".join(redacted_lines)
 
     def inspect(match: re.Match) -> str:
         original = match.group(0)
@@ -442,13 +467,22 @@ def _redact_encoded_sensitive_tokens(value: str) -> str:
         while core and core[-1] in ".,;!?)]":
             trailing = core[-1] + trailing
             core = core[:-1]
+        if len(core.encode("utf-8", errors="replace")) > MAX_ENCODED_TOKEN_BYTES:
+            return "[REDACTED]" + trailing
         decoded = core
-        for _ in range(3):
+        deadline = time.monotonic() + MAX_ENCODED_DECODE_SECONDS
+        stable = False
+        for _ in range(MAX_ENCODED_DECODE_ITERATIONS):
+            if time.monotonic() > deadline:
+                return "[REDACTED]" + trailing
             next_value = unquote_plus(decoded)
+            if len(next_value.encode("utf-8", errors="replace")) > MAX_ENCODED_TOKEN_BYTES:
+                return "[REDACTED]" + trailing
             if next_value == decoded:
+                stable = True
                 break
             decoded = next_value
-        if len(decoded) > 8_192:
+        if not stable:
             return "[REDACTED]" + trailing
         if decoded.lower().startswith(("http://", "https://")):
             sanitized_url = _sanitize_link_target(decoded)
@@ -467,6 +501,42 @@ def _redact_encoded_sensitive_tokens(value: str) -> str:
         return original
 
     return encoded_token.sub(inspect, value)
+
+
+def _redact_encoded_authorization_line(line: str) -> str:
+    if "%" not in line:
+        return line
+    core = line.rstrip("\r\n")
+    newline = line[len(core):]
+    if len(core.encode("utf-8", errors="replace")) > MAX_ENCODED_TOKEN_BYTES:
+        return "[REDACTED]" + newline
+    decoded = _bounded_stable_decode(core)
+    if decoded is None:
+        return "[REDACTED]" + newline
+    if (
+        _AUTHORIZATION_HEADER_PATTERN.search(decoded)
+        or _AUTHORIZATION_ASSIGNMENT_PATTERN.search(decoded)
+        or _SERIALIZED_AUTHORIZATION_KEY_PATTERN.search(decoded)
+    ):
+        return "[REDACTED]" + newline
+    return line
+
+
+def _bounded_stable_decode(value: str) -> str | None:
+    if len(value.encode("utf-8", errors="replace")) > MAX_ENCODED_TOKEN_BYTES:
+        return None
+    decoded = value
+    deadline = time.monotonic() + MAX_ENCODED_DECODE_SECONDS
+    for _ in range(MAX_ENCODED_DECODE_ITERATIONS):
+        if time.monotonic() > deadline:
+            return None
+        next_value = unquote_plus(decoded)
+        if len(next_value.encode("utf-8", errors="replace")) > MAX_ENCODED_TOKEN_BYTES:
+            return None
+        if next_value == decoded:
+            return decoded
+        decoded = next_value
+    return None
 
 
 def _sanitize_link_target(target: str) -> str:
@@ -1400,29 +1470,47 @@ def compare_results(current: dict, baseline_path: str) -> int:
 
     from eval_scorer import score_result, validate_required_matrix
 
-    baseline_results = baseline.get("results", [])
+    if not isinstance(baseline, dict) or not isinstance(baseline.get("results"), list):
+        print("Error: Baseline JSON must be an object with a results array", file=sys.stderr)
+        return 2
+    baseline_results = baseline["results"]
+    baseline_scored = [score_result(row) for row in baseline_results]
     required_scenarios = sorted({
         row.get("scenario_id")
-        for row in baseline_results
+        for row in baseline_scored
         if isinstance(row, dict) and isinstance(row.get("scenario_id"), str)
     })
     required_servers = sorted({
         row.get("server")
-        for row in baseline_results
+        for row in baseline_scored
         if isinstance(row, dict) and isinstance(row.get("server"), str)
     })
     required_models = sorted({
         row.get("model")
-        for row in baseline_results
+        for row in baseline_scored
         if isinstance(row, dict) and isinstance(row.get("model"), str)
     })
     azure_required_servers = {
         row.get("server")
-        for row in baseline_results
+        for row in baseline_scored
         if isinstance(row, dict)
         and row.get("azure_required") is True
         and isinstance(row.get("server"), str)
     }
+    baseline_publication = validate_required_matrix(
+        baseline_scored,
+        scenario_ids=required_scenarios,
+        servers=required_servers,
+        models=required_models,
+        azure_required_servers=azure_required_servers,
+    )
+    if not baseline_publication["allowed"]:
+        print(
+            "Error: Baseline comparison blocked by invalid baseline matrix: "
+            + "; ".join(baseline_publication["failure_reasons"]),
+            file=sys.stderr,
+        )
+        return 2
     current_scored = [score_result(row) for row in current.get("results", [])]
     publication = validate_required_matrix(
         current_scored,
@@ -1456,8 +1544,8 @@ def compare_results(current: dict, baseline_path: str) -> int:
             for scenario, servers in rates.items()
         }
 
-    baseline_rates = _success_rates(baseline)
-    current_rates = _success_rates(current)
+    baseline_rates = _success_rates({"results": baseline_scored})
+    current_rates = _success_rates({"results": current_scored})
 
     THRESHOLD = 0.05
     verdicts: list[dict] = []
