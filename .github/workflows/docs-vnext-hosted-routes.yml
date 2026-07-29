@@ -1,0 +1,190 @@
+name: docs-vnext hosted route readiness
+
+on:
+  deployment_status:
+  schedule:
+    - cron: "17 8 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+env:
+  DOCS_VNEXT_ENVIRONMENT: staging - docs-vnext
+  DOCS_PRIMARY_ENVIRONMENT: staging - docs
+  DOCS_VNEXT_BASE_URL: ${{ vars.DOCS_VNEXT_BASE_URL }}
+
+jobs:
+  hosted-route-readiness:
+    name: Verify hosted docs-vnext routes
+    if: >-
+      github.event_name != 'deployment_status' ||
+      (
+        (
+          github.event.deployment.environment == 'staging - docs-vnext' ||
+          github.event.deployment.environment == 'staging - docs'
+        ) &&
+        contains(fromJSON('["success","failure","error"]'), github.event.deployment_status.state)
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: "3.12"
+
+      - name: Initialize blocked diagnostics
+        run: |
+          python scripts/check_hosted_docs_routes.py \
+            --base-url "$DOCS_VNEXT_BASE_URL" \
+            --output tests/eval_results/docs-vnext-hosted-routes.json \
+            --summary-output tests/eval_results/docs-vnext-hosted-routes.md \
+            --initialize-output || true
+
+      - name: Generate validated route inventory
+        run: |
+          python scripts/validate_docs_vnext_navigation.py \
+            --base-docs-dir docs-vnext \
+            --output tests/eval_results/docs-vnext-route-inventory.json
+
+      - name: Resolve hosted deployment
+        id: deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_ENVIRONMENT: ${{ github.event.deployment.environment }}
+          EVENT_SHA: ${{ github.event.deployment.sha }}
+          EVENT_STATE: ${{ github.event.deployment_status.state }}
+          EVENT_URL: ${{ github.event.deployment_status.environment_url }}
+        run: |
+          set -euo pipefail
+          expected_commit_sha="$(git rev-parse HEAD)"
+          expected_sha="$(git rev-parse HEAD:docs-vnext)"
+          environment="$EVENT_ENVIRONMENT"
+          deployed_commit_sha="$EVENT_SHA"
+          state="$EVENT_STATE"
+          observed_url="$EVENT_URL"
+
+          if [[ "$EVENT_NAME" != "deployment_status" || "$EVENT_ENVIRONMENT" != "$DOCS_VNEXT_ENVIRONMENT" ]]; then
+            deployment="$(
+              gh api -X GET "repos/$GITHUB_REPOSITORY/deployments" \
+                -f environment="$DOCS_VNEXT_ENVIRONMENT" \
+                -f ref=main \
+                -f per_page=1 \
+                --jq '.[0] // empty'
+            )"
+            if [[ -z "$deployment" ]]; then
+              environment="$DOCS_VNEXT_ENVIRONMENT"
+              deployed_commit_sha=""
+              state="missing"
+              observed_url=""
+            else
+              deployment_id="$(jq -r '.id' <<<"$deployment")"
+              environment="$(jq -r '.environment' <<<"$deployment")"
+              deployed_commit_sha="$(jq -r '.sha' <<<"$deployment")"
+              status="$(
+                gh api -X GET "repos/$GITHUB_REPOSITORY/deployments/$deployment_id/statuses" \
+                  -f per_page=1 \
+                  --jq '.[0] // empty'
+              )"
+              if [[ -z "$status" ]]; then
+                state="missing"
+                observed_url=""
+              else
+                state="$(jq -r '.state // "missing"' <<<"$status")"
+                observed_url="$(jq -r '.environment_url // ""' <<<"$status")"
+              fi
+            fi
+
+          fi
+
+          deployed_sha=""
+          if [[ -n "$deployed_commit_sha" ]]; then
+            if ! git cat-file -e "$deployed_commit_sha^{commit}" 2>/dev/null; then
+              git fetch --no-tags --depth=1 origin "$deployed_commit_sha"
+            fi
+            if git cat-file -e "$deployed_commit_sha:docs-vnext" 2>/dev/null; then
+              deployed_sha="$(git rev-parse "$deployed_commit_sha:docs-vnext")"
+            fi
+          fi
+
+          conflicting_deployment="$(
+            gh api -X GET "repos/$GITHUB_REPOSITORY/deployments" \
+              -f environment="$DOCS_PRIMARY_ENVIRONMENT" \
+              -f ref=main \
+              -f per_page=1 \
+              --jq '.[0] // empty'
+          )"
+          conflicting_environment=""
+          conflicting_sha=""
+          conflicting_url=""
+          if [[ -n "$conflicting_deployment" ]]; then
+            conflicting_id="$(jq -r '.id' <<<"$conflicting_deployment")"
+            conflicting_environment="$(jq -r '.environment' <<<"$conflicting_deployment")"
+            conflicting_sha="$(jq -r '.sha' <<<"$conflicting_deployment")"
+            conflicting_status="$(
+              gh api -X GET "repos/$GITHUB_REPOSITORY/deployments/$conflicting_id/statuses" \
+                -f per_page=1 \
+                --jq '.[0] // empty'
+            )"
+            if [[ -n "$conflicting_status" ]]; then
+              conflicting_url="$(jq -r '.environment_url // ""' <<<"$conflicting_status")"
+            fi
+          fi
+
+          {
+            echo "expected_commit_sha=$expected_commit_sha"
+            echo "expected_sha=$expected_sha"
+            echo "deployed_commit_sha=$deployed_commit_sha"
+            echo "deployed_sha=$deployed_sha"
+            echo "environment=$environment"
+            echo "state=$state"
+            echo "observed_url=$observed_url"
+            echo "conflicting_environment=$conflicting_environment"
+            echo "conflicting_sha=$conflicting_sha"
+            echo "conflicting_url=$conflicting_url"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Check every hosted route
+        run: |
+          python scripts/check_hosted_docs_routes.py \
+            --inventory tests/eval_results/docs-vnext-route-inventory.json \
+            --repository-root . \
+            --base-url "$DOCS_VNEXT_BASE_URL" \
+            --expected-source-sha "${{ steps.deployment.outputs.expected_sha }}" \
+            --deployed-source-sha "${{ steps.deployment.outputs.deployed_sha }}" \
+            --deployment-state "${{ steps.deployment.outputs.state }}" \
+            --expected-environment "$DOCS_VNEXT_ENVIRONMENT" \
+            --deployment-environment "${{ steps.deployment.outputs.environment }}" \
+            --observed-base-url "${{ steps.deployment.outputs.observed_url }}" \
+            --conflicting-environment "${{ steps.deployment.outputs.conflicting_environment }}" \
+            --conflicting-source-sha "${{ steps.deployment.outputs.conflicting_sha }}" \
+            --conflicting-base-url "${{ steps.deployment.outputs.conflicting_url }}" \
+            --output tests/eval_results/docs-vnext-hosted-routes.json \
+            --summary-output tests/eval_results/docs-vnext-hosted-routes.md
+
+      - name: Publish hosted readiness summary
+        if: always()
+        run: cat tests/eval_results/docs-vnext-hosted-routes.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload hosted route diagnostics
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        with:
+          name: docs-vnext-hosted-route-readiness
+          path: |
+            tests/eval_results/docs-vnext-route-inventory.json
+            tests/eval_results/docs-vnext-hosted-routes.json
+            tests/eval_results/docs-vnext-hosted-routes.md
+          if-no-files-found: error
+          retention-days: 30
