@@ -115,8 +115,8 @@ _AUTHORIZATION_ASSIGNMENT_PATTERN = re.compile(
     r"""(?imx)
     \{?
     (?:
-        \\?["']?authorization\\?["']?\s*=\s*
-        | \\?["']authorization\\?["']\s*:\s*
+        (?:\\)*["']?authorization(?:\\)*["']?\s*=\s*
+        | (?:\\)*["']authorization(?:\\)*["']\s*:\s*
     )
     [^\r\n]+(?:\r?\n[ \t]+[^\r\n]*)*
     """
@@ -1397,6 +1397,47 @@ def compare_results(current: dict, baseline_path: str) -> int:
     except json.JSONDecodeError as e:
         print(f"Error: Invalid JSON in baseline file: {e}", file=sys.stderr)
         return 2
+
+    from eval_scorer import score_result, validate_required_matrix
+
+    baseline_results = baseline.get("results", [])
+    required_scenarios = sorted({
+        row.get("scenario_id")
+        for row in baseline_results
+        if isinstance(row, dict) and isinstance(row.get("scenario_id"), str)
+    })
+    required_servers = sorted({
+        row.get("server")
+        for row in baseline_results
+        if isinstance(row, dict) and isinstance(row.get("server"), str)
+    })
+    required_models = sorted({
+        row.get("model")
+        for row in baseline_results
+        if isinstance(row, dict) and isinstance(row.get("model"), str)
+    })
+    azure_required_servers = {
+        row.get("server")
+        for row in baseline_results
+        if isinstance(row, dict)
+        and row.get("azure_required") is True
+        and isinstance(row.get("server"), str)
+    }
+    current_scored = [score_result(row) for row in current.get("results", [])]
+    publication = validate_required_matrix(
+        current_scored,
+        scenario_ids=required_scenarios,
+        servers=required_servers,
+        models=required_models,
+        azure_required_servers=azure_required_servers,
+    )
+    if not publication["allowed"]:
+        print(
+            "Error: Baseline comparison blocked by invalid or incomplete current matrix: "
+            + "; ".join(publication["failure_reasons"]),
+            file=sys.stderr,
+        )
+        return 1
 
     def _success_rates(data: dict) -> dict[str, dict[str, float]]:
         """Compute per-scenario, per-server success rates."""

@@ -29,6 +29,7 @@ from run_docs_eval import (  # noqa: E402
     _sanitize_response_text,
     _sanitize_text,
     build_mcp_config,
+    compare_results,
     parse_event_stream,
     run_evaluation,
     run_single_eval,
@@ -1159,6 +1160,42 @@ def test_escaped_authorization_does_not_leak_in_stdout_or_stderr(monkeypatch):
     assert "digest-secret" not in result["diagnostics"]["stderr_excerpt"]
     assert "[REDACTED]" in result["diagnostics"]["stdout_excerpt"]
     assert "[REDACTED]" in result["diagnostics"]["stderr_excerpt"]
+
+
+@pytest.mark.parametrize(
+    "response",
+    [
+        r'upstream={\\"Authorization\\":CustomScheme opaque-value}',
+        r'upstream={\\\\\"Authorization\\\\\":Digest username=alice, nonce=LEAKME}',
+    ],
+)
+def test_deeply_escaped_authorization_is_clean_in_valid_raw_and_scored_rows(monkeypatch, response):
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda cmd, **kwargs: subprocess.CompletedProcess(
+            cmd,
+            0,
+            stdout=_event_stream(response=response),
+            stderr=response,
+        ),
+    )
+
+    raw_row = run_single_eval(
+        SCENARIO,
+        "foundry-docs",
+        MCP_SERVERS["foundry-docs"],
+        "model-1",
+    )
+    scored_row = score_result(raw_row)
+
+    assert raw_row["status"] == "success"
+    assert scored_row["row_valid"] is True
+    for row in (raw_row, scored_row):
+        persisted = json.dumps(row)
+        assert "opaque-value" not in persisted
+        assert "LEAKME" not in persisted
+        assert "[REDACTED]" in persisted
 
 
 def test_exact_custom_scheme_escaped_authorization_does_not_leak_in_excerpts(monkeypatch):
@@ -2512,6 +2549,33 @@ def test_required_matrix_rejects_omitted_selector_triple():
     )
 
 
+@pytest.mark.parametrize(
+    ("scenario_ids", "servers", "models", "empty_name"),
+    [
+        ([], [], [], "scenarios"),
+        ([], ["foundry-docs"], ["model-1"], "scenarios"),
+        (["scenario-1"], [], ["model-1"], "servers"),
+        (["scenario-1"], ["foundry-docs"], [], "models"),
+    ],
+)
+def test_required_matrix_rejects_explicit_empty_selector_collections(
+    scenario_ids,
+    servers,
+    models,
+    empty_name,
+):
+    publication = validate_required_matrix(
+        [],
+        scenario_ids=scenario_ids,
+        servers=servers,
+        models=models,
+    )
+
+    assert publication["allowed"] is False
+    assert empty_name in publication["empty_required_selectors"]
+    assert "required selector collection(s) must not be empty" in publication["failure_reasons"][-1]
+
+
 def test_required_matrix_sanitizes_unknown_selector_row_labels():
     selector = r"token=SERVERLEAK C:\Users\Alice\private"
 
@@ -2728,3 +2792,45 @@ def test_scorer_cli_writes_blocked_diagnostics_before_failing(tmp_path):
     assert "extra_secret" not in scored["metadata"]
     assert "token=[REDACTED]" in persisted
     assert "<PATH>" in persisted
+
+
+def test_baseline_comparison_blocks_missing_current_required_rows(tmp_path, capsys):
+    baseline_path = tmp_path / "baseline.json"
+    baseline_path.write_text(
+        json.dumps({
+            "results": [
+                _raw_row(scenario_id="scenario-1", server="foundry-docs", model="model-1"),
+                _raw_row(scenario_id="scenario-2", server="foundry-docs", model="model-1"),
+            ]
+        }),
+        encoding="utf-8",
+    )
+    current = {"results": [_raw_row(scenario_id="scenario-1", server="foundry-docs", model="model-1")]}
+
+    exit_code = compare_results(current, str(baseline_path))
+
+    assert exit_code == 1
+    captured = capsys.readouterr()
+    assert "Baseline comparison blocked" in captured.err
+    assert "No regressions detected" not in captured.out
+
+
+def test_baseline_comparison_blocks_invalid_current_required_row(tmp_path, capsys):
+    baseline_path = tmp_path / "baseline.json"
+    baseline_path.write_text(
+        json.dumps({"results": [_raw_row()]}),
+        encoding="utf-8",
+    )
+    invalid = _raw_row()
+    invalid["status"] = "invalid"
+    invalid["passed"] = False
+    invalid["response"] = ""
+    invalid["response_present"] = False
+    invalid["failure_reason"] = "invalid evidence"
+
+    exit_code = compare_results({"results": [invalid]}, str(baseline_path))
+
+    assert exit_code == 1
+    captured = capsys.readouterr()
+    assert "Baseline comparison blocked" in captured.err
+    assert "No regressions detected" not in captured.out

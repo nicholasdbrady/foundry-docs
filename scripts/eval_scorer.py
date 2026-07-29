@@ -835,6 +835,13 @@ def validate_required_matrix(
         models is not None,
     )
     partial_required_selectors = not all(selector_presence)
+    empty_required_selectors = []
+    if scenario_ids is not None and not scenario_ids:
+        empty_required_selectors.append("scenarios")
+    if servers is not None and not servers:
+        empty_required_selectors.append("servers")
+    if models is not None and not models:
+        empty_required_selectors.append("models")
     rows_by_key: dict[tuple[str, str, str], list[dict]] = defaultdict(list)
     malformed_rows: list[dict] = []
     for index, row in enumerate(scored_results):
@@ -923,6 +930,7 @@ def validate_required_matrix(
         and not unsupported_azure_required_servers
         and not azure_required_outside_matrix
         and not partial_required_selectors
+        and not empty_required_selectors
     )
     failure_reasons = []
     if invalid_rows:
@@ -949,6 +957,11 @@ def validate_required_matrix(
         failure_reasons.append(
             "required scenario, server, and model selectors must be supplied together"
         )
+    if empty_required_selectors:
+        failure_reasons.append(
+            "required selector collection(s) must not be empty: "
+            + ", ".join(empty_required_selectors)
+        )
 
     return {
         "allowed": allowed,
@@ -965,6 +978,7 @@ def validate_required_matrix(
         "unsupported_azure_required_servers": unsupported_azure_required_servers,
         "azure_required_outside_matrix": azure_required_outside_matrix,
         "partial_required_selectors": partial_required_selectors,
+        "empty_required_selectors": empty_required_selectors,
     }
 
 
