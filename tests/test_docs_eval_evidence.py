@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import asyncio
 import json
 import os
@@ -15,6 +16,7 @@ from fastmcp import Client
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 
+import run_docs_eval  # noqa: E402
 from eval_report import generate_report  # noqa: E402
 from eval_scorer import (  # noqa: E402
     _sanitize_metadata,
@@ -1167,6 +1169,7 @@ def test_escaped_authorization_does_not_leak_in_stdout_or_stderr(monkeypatch):
     [
         r'upstream={\\"Authorization\\":CustomScheme opaque-value}',
         r'upstream={\\\\\"Authorization\\\\\":Digest username=alice, nonce=LEAKME}',
+        r'upstream={\\\\\\\\\"Authorization\\\\\\\\\":Digest username=alice, nonce=LEAKME}',
     ],
 )
 def test_deeply_escaped_authorization_is_clean_in_valid_raw_and_scored_rows(monkeypatch, response):
@@ -2831,6 +2834,65 @@ def test_baseline_comparison_blocks_invalid_current_required_row(tmp_path, capsy
     exit_code = compare_results({"results": [invalid]}, str(baseline_path))
 
     assert exit_code == 1
+    captured = capsys.readouterr()
+    assert "Baseline comparison blocked" in captured.err
+    assert "No regressions detected" not in captured.out
+
+
+def test_cli_main_baseline_comparison_fails_for_missing_required_current_row(
+    tmp_path,
+    monkeypatch,
+    capsys,
+):
+    baseline_path = tmp_path / "baseline.json"
+    baseline_path.write_text(
+        json.dumps({
+            "results": [
+                _raw_row(scenario_id="scenario-1"),
+                _raw_row(scenario_id="scenario-2"),
+            ]
+        }),
+        encoding="utf-8",
+    )
+    output_dir = tmp_path / "results"
+    args = argparse.Namespace(
+        scenarios=str(Path(__file__).parents[1] / "tests" / "docs_eval_scenarios.json"),
+        output_dir=str(output_dir),
+        server="foundry-docs",
+        servers=None,
+        models=["model-1"],
+        timeout=3,
+        require_azure=False,
+        dry_run=False,
+        baseline=str(baseline_path),
+    )
+    monkeypatch.setattr(run_docs_eval, "_parse_args", lambda: args)
+    monkeypatch.setattr(
+        run_docs_eval,
+        "load_scenarios",
+        lambda path: [SCENARIO],
+    )
+    monkeypatch.setattr(
+        run_docs_eval,
+        "run_evaluation",
+        lambda scenarios, servers, models, timeout, require_azure: {
+            "metadata": {
+                "run_id": "current-run",
+                "timestamp": "2026-07-29T00:00:00Z",
+                "scenarios_count": 1,
+                "servers": ["foundry-docs"],
+                "models": ["model-1"],
+                "total_evaluations": 1,
+                "completed": 1,
+            },
+            "results": [_raw_row(scenario_id="scenario-1")],
+        },
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        run_docs_eval.main()
+
+    assert exc_info.value.code == 1
     captured = capsys.readouterr()
     assert "Baseline comparison blocked" in captured.err
     assert "No regressions detected" not in captured.out
