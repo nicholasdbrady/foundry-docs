@@ -1639,6 +1639,49 @@ def test_completed_cleanup_tolerates_ref_deleted_before_push(tmp_path):
     assert backend.remote == {}
 
 
+def test_historical_cleanup_then_reconstruction_propagates_sha_and_reopens(tmp_path):
+    historical = [_synthetic_completed_pull_request(index) for index in range(300)]
+    manifest = _write_manifest(tmp_path, [_operation(1, 1)], run_id=876)
+    batch = plan_batches(manifest, max_files=1, max_payload_bytes=10)[0]
+    closed = _pull_request(manifest, batch, number=999, state="CLOSED")
+    old_identity = OrphanBranch(
+        head_ref=closed.head_ref,
+        manifest_digest=manifest.digest,
+        manifest_run_id=manifest.run_id,
+        batch_id=batch.id,
+        pull_request_number=closed.number,
+        commit_sha="d" * 40,
+    )
+    backend = FakeBackend(
+        [*historical, closed],
+        downloaded_manifests={manifest.run_id: manifest.path},
+        pull_request_identities={closed.number: old_identity},
+    )
+
+    assert len(completed_branch_deletions([*historical, closed])) == 300
+    campaign = backend.discover_campaign_branches([*historical, closed])
+    selected = select_active_manifest(manifest, backend, campaign)
+    authenticated = validate_campaign_identities(
+        selected,
+        [batch],
+        backend,
+        [*historical, closed],
+        campaign,
+    )
+    assert authenticated[batch.id] != old_identity.commit_sha
+    assert execute_batches(
+        selected,
+        [batch],
+        backend,
+        [*historical, closed],
+        tmp_path / "combined-closure-checkpoint.json",
+        max_files=1,
+        max_payload_bytes=10,
+        authenticated_batch_commits=authenticated,
+    )
+    assert backend.reopened == [closed.number]
+
+
 def test_forged_pr_and_orphan_identities_cannot_bind_to_campaign(tmp_path):
     manifest = _write_manifest(tmp_path, [_operation(1, 1)])
     batch = plan_batches(manifest, max_files=1, max_payload_bytes=10)[0]
