@@ -40,6 +40,8 @@ REQUIRED_ROW_FIELDS = (
     "server",
     "model",
     "category",
+    "question",
+    "rubric",
     "response",
     "response_present",
     "status",
@@ -492,8 +494,12 @@ def validate_row_schema(result: object) -> list[str]:
                 errors.append("rubric must contain exactly the required fields")
             for field in ("must_mention", "quality_criteria", "expected_docs"):
                 value = rubric.get(field, [])
-                if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
-                    errors.append(f"rubric.{field} must be a list of strings")
+                if (
+                    not isinstance(value, list)
+                    or not value
+                    or not all(isinstance(item, str) and item.strip() for item in value)
+                ):
+                    errors.append(f"rubric.{field} must be a non-empty list of non-empty strings")
                 elif any(item != _sanitize_text(item)[0] for item in value):
                     errors.append(f"rubric.{field} must contain sanitized bounded strings")
     question = result.get("question")
@@ -516,6 +522,47 @@ def validate_row_schema(result: object) -> list[str]:
         ):
             errors.append(f"{field} must be a non-negative number or null")
     return errors
+
+
+def validate_trusted_scenarios(scenarios: object) -> dict[str, dict]:
+    """Validate and index complete trusted scenario definitions."""
+    if not isinstance(scenarios, list) or not scenarios:
+        raise ValueError("trusted scenarios must be a non-empty JSON array")
+    trusted: dict[str, dict] = {}
+    for index, scenario in enumerate(scenarios):
+        if not isinstance(scenario, dict):
+            raise ValueError(f"trusted scenario {index} must be an object")
+        scenario_id = scenario.get("id")
+        question = scenario.get("question")
+        category = scenario.get("category")
+        rubric = scenario.get("rubric")
+        if not isinstance(scenario_id, str) or not scenario_id.strip():
+            raise ValueError(f"trusted scenario {index} must have a non-empty id")
+        if scenario_id in trusted:
+            raise ValueError(f"duplicate trusted scenario id: {scenario_id}")
+        if not isinstance(question, str) or not question.strip():
+            raise ValueError(f"trusted scenario {scenario_id} must have a non-empty question")
+        if not isinstance(category, str) or not category.strip():
+            raise ValueError(f"trusted scenario {scenario_id} must have a non-empty category")
+        if not isinstance(rubric, dict) or set(rubric) != RUBRIC_FIELDS:
+            raise ValueError(f"trusted scenario {scenario_id} must have a complete rubric")
+        for field in RUBRIC_FIELDS:
+            value = rubric.get(field)
+            if (
+                not isinstance(value, list)
+                or not value
+                or not all(isinstance(item, str) and item.strip() for item in value)
+            ):
+                raise ValueError(
+                    f"trusted scenario {scenario_id} rubric.{field} must be a non-empty list"
+                )
+        trusted[scenario_id] = {
+            "id": scenario_id,
+            "question": question,
+            "category": category,
+            "rubric": rubric,
+        }
+    return trusted
 
 
 def score_completeness(response: str, must_mention: list[str]) -> float:
@@ -575,11 +622,22 @@ def score_doc_retrieval(response: str, expected_docs: list[str]) -> float:
     return hits / len(expected_docs)
 
 
-def score_result(result: object) -> dict:
+def score_result(result: object, trusted_scenarios: dict[str, dict]) -> dict:
     """Score a single evaluation result."""
     schema_errors = validate_row_schema(result)
     if not isinstance(result, dict):
         result = {"raw_row": result}
+    scenario_id = result.get("scenario_id")
+    trusted = trusted_scenarios.get(scenario_id) if isinstance(scenario_id, str) else None
+    if trusted is None:
+        schema_errors.append("scenario_id is not present in trusted scenarios")
+    else:
+        if result.get("question") != trusted["question"]:
+            schema_errors.append("question does not match trusted scenario")
+        if result.get("category") != trusted["category"]:
+            schema_errors.append("category does not match trusted scenario")
+        if result.get("rubric") != trusted["rubric"]:
+            schema_errors.append("rubric does not match trusted scenario")
 
     response = result.get("response", "")
     if not isinstance(response, str):
@@ -1092,11 +1150,13 @@ def main():
 
     print(f"Scoring {len(all_results)} evaluation results from {len(args.input)} file(s)...")
 
-    scored_results = [score_result(r) for r in all_results]
     scenario_ids = None
+    trusted_scenarios = None
     if args.required_scenarios:
         with open(args.required_scenarios) as f:
-            scenario_ids = [scenario["id"] for scenario in json.load(f)]
+            trusted_scenarios = validate_trusted_scenarios(json.load(f))
+            scenario_ids = list(trusted_scenarios)
+    scored_results = [score_result(r, trusted_scenarios) for r in all_results]
     publication = validate_required_matrix(
         scored_results,
         scenario_ids=scenario_ids,

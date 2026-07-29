@@ -1452,7 +1452,7 @@ def run_evaluation(
     return {"metadata": run_metadata, "results": results}
 
 
-def compare_results(current: dict, baseline_path: str) -> int:
+def compare_results(current: dict, baseline_path: str, trusted_scenario_definitions: list[dict]) -> int:
     """Compare current results against a baseline run.
 
     Returns exit code 0 for improvement/inconclusive, 1 for regression.
@@ -1468,13 +1468,19 @@ def compare_results(current: dict, baseline_path: str) -> int:
         print(f"Error: Invalid JSON in baseline file: {e}", file=sys.stderr)
         return 2
 
-    from eval_scorer import score_result, validate_required_matrix
+    from eval_scorer import score_result, validate_required_matrix, validate_trusted_scenarios
+
+    try:
+        trusted_scenarios = validate_trusted_scenarios(trusted_scenario_definitions)
+    except ValueError as exc:
+        print(f"Error: Invalid trusted scenarios for baseline comparison: {exc}", file=sys.stderr)
+        return 2
 
     if not isinstance(baseline, dict) or not isinstance(baseline.get("results"), list):
         print("Error: Baseline JSON must be an object with a results array", file=sys.stderr)
         return 2
     baseline_results = baseline["results"]
-    baseline_scored = [score_result(row) for row in baseline_results]
+    baseline_scored = [score_result(row, trusted_scenarios) for row in baseline_results]
     required_scenarios = sorted({
         row.get("scenario_id")
         for row in baseline_scored
@@ -1511,7 +1517,7 @@ def compare_results(current: dict, baseline_path: str) -> int:
             file=sys.stderr,
         )
         return 2
-    current_scored = [score_result(row) for row in current.get("results", [])]
+    current_scored = [score_result(row, trusted_scenarios) for row in current.get("results", [])]
     publication = validate_required_matrix(
         current_scored,
         scenario_ids=required_scenarios,
@@ -1688,7 +1694,7 @@ def main():
     print(f"Total evaluations: {output['metadata']['total_evaluations']}")
 
     if args.baseline:
-        exit_code = compare_results(output, args.baseline)
+        exit_code = compare_results(output, args.baseline, scenarios)
         raise SystemExit(exit_code)
 
 

@@ -22,7 +22,8 @@ from eval_report import generate_report  # noqa: E402
 from eval_scorer import (  # noqa: E402
     _sanitize_metadata,
     aggregate_scores,
-    score_result,
+    score_result as _score_result,
+    validate_trusted_scenarios,
     validate_required_matrix,
     validate_row_schema,
 )
@@ -47,8 +48,8 @@ SCENARIO = {
     "question": "How do I create an agent?",
     "rubric": {
         "must_mention": ["agent"],
-        "quality_criteria": [],
-        "expected_docs": [],
+        "quality_criteria": ["step-by-step"],
+        "expected_docs": ["agent"],
     },
 }
 
@@ -95,6 +96,7 @@ def _raw_row(
         "server": server,
         "model": model,
         "category": "getting-started",
+        "question": SCENARIO["question"],
         "response": response,
         "response_present": bool(response),
         "status": status,
@@ -132,6 +134,32 @@ def _raw_row(
         "output_tokens": 12,
         "response_time_seconds": 0.1,
     }
+
+
+def score_result(result, trusted_scenarios=None):
+    if trusted_scenarios is None:
+        scenario_id = result.get("scenario_id") if isinstance(result, dict) else SCENARIO["id"]
+        trusted_scenarios = {
+            scenario_id: {
+                "id": scenario_id,
+                "question": SCENARIO["question"],
+                "category": SCENARIO["category"],
+                "rubric": SCENARIO["rubric"],
+            }
+        }
+    return _score_result(result, trusted_scenarios)
+
+
+def _trusted_definitions(*scenario_ids):
+    return [
+        {
+            "id": scenario_id,
+            "question": SCENARIO["question"],
+            "category": SCENARIO["category"],
+            "rubric": SCENARIO["rubric"],
+        }
+        for scenario_id in scenario_ids
+    ]
 
 
 def test_build_mcp_config_contains_exactly_one_selected_source(monkeypatch):
@@ -2301,6 +2329,52 @@ def test_scorer_rejects_success_row_missing_required_evidence_fields():
     assert scored["scores"]["has_response"] is False
 
 
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        lambda row: row.pop("rubric"),
+        lambda row: row.update({"rubric": {"must_mention": [], "quality_criteria": [], "expected_docs": []}}),
+        lambda row: row.update({"rubric": {**row["rubric"], "must_mention": ["different"]}}),
+        lambda row: row.update({"question": "different question"}),
+        lambda row: row.update({"category": "different-category"}),
+    ],
+)
+def test_scorer_rejects_missing_empty_or_mismatched_trusted_scenario_fields(mutation):
+    row = _raw_row()
+    mutation(row)
+    trusted = validate_trusted_scenarios([{
+        "id": SCENARIO["id"],
+        "question": SCENARIO["question"],
+        "category": SCENARIO["category"],
+        "rubric": SCENARIO["rubric"],
+    }])
+
+    scored = score_result(row, trusted)
+
+    assert scored["row_valid"] is False
+    assert scored["status"] == "invalid"
+    assert scored["response"] == ""
+    assert scored["scores"]["completeness"] == 0.0
+
+
+@pytest.mark.parametrize(
+    "scenarios",
+    [
+        [{"id": "x", "question": "q", "category": "c", "rubric": {
+            "must_mention": [], "quality_criteria": ["q"], "expected_docs": ["d"]
+        }}],
+        [{"id": "x", "question": "", "category": "c", "rubric": SCENARIO["rubric"]}],
+        [{"id": "x", "question": "q", "category": "c", "rubric": {"must_mention": ["x"]}}],
+        [{"id": " ", "question": " ", "category": " ", "rubric": {
+            "must_mention": [" "], "quality_criteria": [" "], "expected_docs": [" "]
+        }}],
+    ],
+)
+def test_required_scenario_definitions_require_complete_trusted_fields(scenarios):
+    with pytest.raises(ValueError):
+        validate_trusted_scenarios(scenarios)
+
+
 def test_scorer_rejects_and_sanitizes_malicious_persisted_identifiers():
     row = _raw_row()
     malicious = r"foundry_docs-search_docs token=LEAKME C:\Users\Alice\private " + ("x" * 500)
@@ -2870,7 +2944,20 @@ def test_scorer_cli_writes_blocked_diagnostics_before_failing(tmp_path):
         encoding="utf-8",
     )
     scenarios_path.write_text(
-        json.dumps([{"id": "scenario-1"}, {"id": "scenario-2"}]),
+        json.dumps([
+            {
+                "id": "scenario-1",
+                "question": SCENARIO["question"],
+                "category": SCENARIO["category"],
+                "rubric": SCENARIO["rubric"],
+            },
+            {
+                "id": "scenario-2",
+                "question": SCENARIO["question"],
+                "category": SCENARIO["category"],
+                "rubric": SCENARIO["rubric"],
+            },
+        ]),
         encoding="utf-8",
     )
 
@@ -2930,7 +3017,11 @@ def test_baseline_comparison_blocks_missing_current_required_rows(tmp_path, caps
     )
     current = {"results": [_raw_row(scenario_id="scenario-1", server="foundry-docs", model="model-1")]}
 
-    exit_code = compare_results(current, str(baseline_path))
+    exit_code = compare_results(
+        current,
+        str(baseline_path),
+        _trusted_definitions("scenario-1", "scenario-2"),
+    )
 
     assert exit_code == 1
     captured = capsys.readouterr()
@@ -2951,7 +3042,11 @@ def test_baseline_comparison_blocks_invalid_current_required_row(tmp_path, capsy
     invalid["response_present"] = False
     invalid["failure_reason"] = "invalid evidence"
 
-    exit_code = compare_results({"results": [invalid]}, str(baseline_path))
+    exit_code = compare_results(
+        {"results": [invalid]},
+        str(baseline_path),
+        _trusted_definitions("scenario-1"),
+    )
 
     assert exit_code == 1
     captured = capsys.readouterr()
@@ -2972,7 +3067,11 @@ def test_baseline_comparison_rejects_invalid_baseline_matrix(tmp_path, capsys):
         encoding="utf-8",
     )
 
-    exit_code = compare_results({"results": [_raw_row()]}, str(baseline_path))
+    exit_code = compare_results(
+        {"results": [_raw_row()]},
+        str(baseline_path),
+        _trusted_definitions("scenario-1"),
+    )
 
     assert exit_code == 2
     captured = capsys.readouterr()
@@ -2985,7 +3084,11 @@ def test_baseline_comparison_rejects_malformed_baseline_shape(tmp_path, capsys, 
     baseline_path = tmp_path / "baseline.json"
     baseline_path.write_text(json.dumps(baseline), encoding="utf-8")
 
-    exit_code = compare_results({"results": [_raw_row()]}, str(baseline_path))
+    exit_code = compare_results(
+        {"results": [_raw_row()]},
+        str(baseline_path),
+        _trusted_definitions("scenario-1"),
+    )
 
     assert exit_code == 2
     assert "must be an object with a results array" in capsys.readouterr().err
@@ -3022,7 +3125,10 @@ def test_cli_main_baseline_comparison_fails_for_missing_required_current_row(
     monkeypatch.setattr(
         run_docs_eval,
         "load_scenarios",
-        lambda path: [SCENARIO],
+        lambda path: [
+            SCENARIO,
+            {**SCENARIO, "id": "scenario-2"},
+        ],
     )
     monkeypatch.setattr(
         run_docs_eval,
