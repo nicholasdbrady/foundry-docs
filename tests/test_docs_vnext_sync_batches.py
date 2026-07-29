@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -1970,6 +1971,12 @@ def test_workflow_consumes_retained_manifest_and_always_retains_checkpoint():
     assert "pulls?state=open&per_page=1" in preflight
     assert "gh auth setup-git" in preflight
     assert "git ls-remote --exit-code origin" in preflight
+    assert "git push --dry-run origin" in preflight
+    assert "HEAD:$preflight_ref" in preflight
+    assert 'gh api --method POST "repos/$REPOSITORY/pulls"' in preflight
+    assert '--input "$pr_probe" --include' in preflight
+    assert '"$pr_probe_status" != "422"' in preflight
+    assert 'rm -f "$pr_probe" "$pr_response"' in preflight
     assert "checkpoint[\"diagnostics\"] = [sys.argv[2]]" in preflight
     assert steps["Resolve retained manifest run"]["env"]["GH_TOKEN"] == "${{ github.token }}"
     assert steps["Download retained schema-v2 manifest"]["env"]["GH_TOKEN"] == "${{ github.token }}"
@@ -1996,3 +2003,113 @@ def test_workflow_consumes_retained_manifest_and_always_retains_checkpoint():
     )
     producer_upload = producer["jobs"]["manifest"]["steps"][-1]
     assert producer_upload["with"]["retention-days"] == "90"
+
+
+@pytest.mark.skipif(
+    os.name == "nt" or shutil.which("bash") is None,
+    reason="Executable workflow shell contract requires POSIX bash",
+)
+def test_preflight_write_probes_are_non_mutating_and_accept_expected_422(tmp_path):
+    workflow = yaml.load(
+        (REPO_ROOT / ".github" / "workflows" / "docs-vnext-sync-batches.yml").read_text(
+            encoding="utf-8"
+        ),
+        Loader=yaml.BaseLoader,
+    )
+    steps = {step["name"]: step for step in workflow["jobs"]["apply-batches"]["steps"]}
+    script = tmp_path / "preflight.sh"
+    script.write_text(
+        steps["Preflight pull-request automation token"]["run"],
+        encoding="utf-8",
+        newline="\n",
+    )
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    log = tmp_path / "probe.log"
+    fake_gh = fake_bin / "gh"
+    fake_gh.write_text(
+        """#!/usr/bin/env bash
+set -euo pipefail
+printf 'gh %s\\n' "$*" >> "$PROBE_LOG"
+if [[ "$1" == "api" && "$2" == "user" ]]; then
+  printf '%s\\n' "$EXPECTED_OWNER"
+elif [[ "$1" == "api" && "$2" == "repos/$REPOSITORY" ]]; then
+  printf 'true\\n'
+elif [[ "$1" == "api" && "$2" == "--method" && "$3" == "POST" ]]; then
+  printf 'HTTP/2 422 Unprocessable Entity\\r\\ncontent-type: application/json\\r\\n\\r\\n{}\\n'
+  exit 1
+elif [[ "$1" == "api" ]]; then
+  printf '[]\\n'
+elif [[ "$1" == "auth" && "$2" == "setup-git" ]]; then
+  exit 0
+else
+  exit 2
+fi
+""",
+        encoding="utf-8",
+        newline="\n",
+    )
+    fake_git = fake_bin / "git"
+    fake_git.write_text(
+        """#!/usr/bin/env bash
+set -euo pipefail
+printf 'git %s\\n' "$*" >> "$PROBE_LOG"
+if [[ "$1" == "ls-remote" ]]; then
+  printf '%040d\\trefs/heads/main\\n' 1
+elif [[ "$1" == "push" && "$2" == "--dry-run" ]]; then
+  [[ "$4" == HEAD:refs/heads/automation/docs-vnext-sync/preflight-* ]]
+else
+  exit 2
+fi
+""",
+        encoding="utf-8",
+        newline="\n",
+    )
+    fake_gh.chmod(0o755)
+    fake_git.chmod(0o755)
+    checkpoint = tmp_path / "docs-vnext-sync" / "checkpoint.json"
+    checkpoint.parent.mkdir()
+    checkpoint.write_text(
+        json.dumps(
+            {
+                "schemaVersion": 1,
+                "status": "failed",
+                "diagnostics": ["initial"],
+            }
+        ),
+        encoding="utf-8",
+    )
+    env = os.environ.copy()
+    env.update(
+        {
+            "CHECKPOINT_PATH": str(checkpoint),
+            "DEFAULT_BRANCH": "main",
+            "EXPECTED_OWNER": "nicholasdbrady",
+            "GITHUB_RUN_ATTEMPT": "1",
+            "GITHUB_RUN_ID": "12345",
+            "PATH": f"{fake_bin}{os.pathsep}{env['PATH']}",
+            "PROBE_LOG": str(log),
+            "REPOSITORY": "nicholasdbrady/foundry-docs",
+            "RUNNER_TEMP": str(tmp_path),
+            "SYNC_TOKEN": "test-token-not-logged",
+        }
+    )
+
+    result = subprocess.run(
+        ["bash", str(script)],
+        check=False,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        env=env,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == ""
+    assert result.stderr == ""
+    probe_log = log.read_text(encoding="utf-8")
+    assert "git push --dry-run origin HEAD:refs/heads/automation/docs-vnext-sync/preflight-12345-1" in probe_log
+    assert "gh api --method POST repos/nicholasdbrady/foundry-docs/pulls" in probe_log
+    assert "test-token-not-logged" not in probe_log
+    assert not (tmp_path / "docs-vnext-sync" / "pr-write-probe.json").exists()
+    assert not (tmp_path / "docs-vnext-sync" / "pr-write-response.txt").exists()

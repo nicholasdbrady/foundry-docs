@@ -108,6 +108,41 @@ jobs:
             "refs/heads/$DEFAULT_BRANCH" >/dev/null; then
             fail_preflight "AZURE_AI_DOCS_PR_TOKEN is not usable for Git access to $REPOSITORY. Rotate the $EXPECTED_OWNER-owned secret."
           fi
+          preflight_ref="refs/heads/automation/docs-vnext-sync/preflight-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          if ! GH_TOKEN="$SYNC_TOKEN" git push --dry-run origin \
+            "HEAD:$preflight_ref" >/dev/null 2>&1; then
+            fail_preflight "AZURE_AI_DOCS_PR_TOKEN cannot push branches to $REPOSITORY. Grant repository contents write access."
+          fi
+          pr_probe="$RUNNER_TEMP/docs-vnext-sync/pr-write-probe.json"
+          pr_response="$RUNNER_TEMP/docs-vnext-sync/pr-write-response.txt"
+          python3 - "$pr_probe" "$EXPECTED_OWNER" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" <<'PY'
+          import json
+          import pathlib
+          import sys
+
+          path = pathlib.Path(sys.argv[1])
+          suffix = f"{sys.argv[3]}-{sys.argv[4]}"
+          probe = {
+              "title": f"docs-vnext sync permission probe {suffix}",
+              "head": f"{sys.argv[2]}:automation/docs-vnext-sync/nonexistent-{suffix}",
+              "base": f"docs-vnext-sync-nonexistent-base-{suffix}",
+              "body": "This request must fail validation and must not create a pull request.",
+          }
+          path.write_text(json.dumps(probe))
+          PY
+          set +e
+          GH_TOKEN="$SYNC_TOKEN" gh api --method POST "repos/$REPOSITORY/pulls" \
+            --input "$pr_probe" --include >"$pr_response" 2>/dev/null
+          pr_probe_exit=$?
+          set -e
+          pr_probe_status=$(awk '
+            toupper($1) ~ /^HTTP\// { status=$2 }
+            END { print status }
+          ' "$pr_response")
+          rm -f "$pr_probe" "$pr_response"
+          if [[ "$pr_probe_exit" -eq 0 || "$pr_probe_status" != "422" ]]; then
+            fail_preflight "AZURE_AI_DOCS_PR_TOKEN pull-request write probe failed with HTTP ${pr_probe_status:-unknown}. Grant pull-request write access."
+          fi
 
       - name: Resolve retained manifest run
         id: manifest
