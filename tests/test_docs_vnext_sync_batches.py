@@ -737,6 +737,8 @@ def test_real_git_backend_rejects_same_tree_force_push_after_identity_authentica
             [forged_pr],
             campaign_branches,
         )
+    with pytest.raises(BatchSyncError, match="campaign trailer"):
+        backend.publish_batch(manifest, batch, branch)
 
 
 def test_partial_failure_records_completed_failed_and_pending_batches(tmp_path):

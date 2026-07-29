@@ -1515,6 +1515,19 @@ class GitHubGitBackend:
                     f"Automation branch {branch!r} moved from authenticated commit "
                     f"{expected_commit_sha} to {final_commit_sha} before final verification"
                 )
+            final_message = self._run(
+                ["git", "show", "--no-patch", "--format=%B", final_commit_sha]
+            ).stdout
+            final_identity = parse_commit_identity(final_message, branch)
+            if (
+                final_identity.manifest_digest != manifest.digest
+                or final_identity.manifest_run_id != manifest.run_id
+                or final_identity.batch_id != batch.id
+            ):
+                raise BatchSyncError(
+                    f"Automation branch {branch!r} final commit identity does not match "
+                    "the planned manifest batch"
+                )
 
         worktree = Path(tempfile.mkdtemp(prefix="docs-vnext-sync-", dir=self.runner_temp))
         worktree.rmdir()
