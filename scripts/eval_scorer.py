@@ -10,13 +10,28 @@ Reads raw evaluation results and produces scored results with metrics:
 
 import argparse
 import json
+import math
 import re
 import sys
 from collections import defaultdict
-from itertools import product
+from itertools import islice, product
 from pathlib import Path
 
-from run_docs_eval import MCP_SERVERS, _is_search_tool, _source_for_tool
+from run_docs_eval import (
+    MAX_DIAGNOSTIC_EVENTS,
+    MAX_DIAGNOSTIC_EVENTS_CHARS,
+    MAX_STDERR_EXCERPT,
+    MAX_STDOUT_EXCERPT,
+    MAX_USAGE_METRIC,
+    MCP_SERVERS,
+    _is_search_tool,
+    _sanitize_diagnostic_value,
+    _sanitize_identifier,
+    _sanitize_response_text,
+    _sanitize_text,
+    _source_for_tool,
+    serialized_diagnostic_events_size,
+)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 RESULTS_DIR = PROJECT_ROOT / "tests" / "eval_results"
@@ -25,6 +40,8 @@ REQUIRED_ROW_FIELDS = (
     "server",
     "model",
     "category",
+    "question",
+    "rubric",
     "response",
     "response_present",
     "status",
@@ -39,10 +56,255 @@ REQUIRED_ROW_FIELDS = (
     "azure_live_query_proven",
     "failure_reason",
     "event_parse_error",
+    "diagnostics",
     "exit_code",
     "tool_errors",
     "response_time_seconds",
 )
+SCORED_ROW_FIELDS = {
+    *REQUIRED_ROW_FIELDS,
+    "question",
+    "rubric",
+    "timestamp",
+    "stderr",
+    "turns",
+    "tool_calls",
+    "output_tokens",
+    "premium_requests",
+    "api_duration_ms",
+    "session_duration_ms",
+}
+RUBRIC_FIELDS = {"must_mention", "quality_criteria", "expected_docs"}
+SOURCE_CONFIG_FIELDS = {"name", "type", "endpoint", "command", "tool_prefix", "azure_required"}
+METADATA_IDENTIFIER_FIELDS = {"run_id", "timestamp"}
+METADATA_COUNT_FIELDS = {"scenarios_count", "total_evaluations", "completed", "input_files"}
+METADATA_LIST_FIELDS = {"servers", "models"}
+MAX_DIAGNOSTIC_IDENTIFIER_DEPTH = 7
+
+
+def _invalid_scores() -> dict:
+    return {
+        "completeness": 0.0,
+        "quality": 0.0,
+        "doc_retrieval": 0.0,
+        "response_length": 0,
+        "has_response": False,
+    }
+
+
+def _invalidate_scored_row(row: dict, failure_reason: str) -> None:
+    row["response"] = ""
+    row["response_present"] = False
+    row["status"] = "invalid"
+    row["passed"] = False
+    row["row_valid"] = False
+    row["scores"] = _invalid_scores()
+    if isinstance(row.get("operational"), dict):
+        row["operational"]["passed"] = False
+    if not row.get("failure_reason"):
+        row["failure_reason"] = failure_reason
+
+
+def _identifier_errors(value: object, field: str) -> list[str]:
+    if not isinstance(value, str):
+        return [f"{field} must be a string identifier"]
+    if value != _sanitize_identifier(value):
+        return [f"{field} must equal its bounded sanitized canonical form"]
+    return []
+
+
+def _diagnostic_identifier_errors(
+    value: object,
+    path: str = "diagnostics",
+    *,
+    depth: int = 0,
+) -> list[str]:
+    errors = []
+    if depth >= MAX_DIAGNOSTIC_IDENTIFIER_DEPTH and isinstance(value, (dict, list)):
+        return [f"{path} exceeds maximum diagnostic nesting depth"]
+    if isinstance(value, dict):
+        if len(value) > 20:
+            errors.append(f"{path} contains more than 20 fields")
+        for key, child in islice(value.items(), 20):
+            child_path = f"{path}.{key}"
+            if key in {
+                "toolName",
+                "toolCallId",
+                "serverName",
+                "providerCallId",
+                "serviceRequestId",
+                "turnId",
+                "name",
+            }:
+                errors.extend(_identifier_errors(child, child_path))
+            errors.extend(_diagnostic_identifier_errors(child, child_path, depth=depth + 1))
+    elif isinstance(value, list):
+        if len(value) > 20:
+            errors.append(f"{path} contains more than 20 items")
+        for index, child in enumerate(value[:20]):
+            errors.extend(
+                _diagnostic_identifier_errors(child, f"{path}[{index}]", depth=depth + 1)
+            )
+    return errors
+
+
+def _sanitize_invalid_result_fields(result: dict) -> dict:
+    sanitized = {
+        field: result[field]
+        for field in SCORED_ROW_FIELDS
+        if field in result
+    }
+    for field in ("scenario_id", "server", "model", "category", "selected_source"):
+        if field in sanitized:
+            sanitized[field] = _sanitize_identifier(sanitized[field])
+    if "question" in sanitized:
+        sanitized["question"] = (
+            _sanitize_text(sanitized["question"])[0]
+            if isinstance(sanitized["question"], str)
+            else _sanitize_diagnostic_value(sanitized["question"])
+        )
+    if "timestamp" in sanitized:
+        sanitized["timestamp"] = _sanitize_identifier(sanitized["timestamp"])
+    for field in ("observed_tools", "successful_tools"):
+        value = sanitized.get(field)
+        if isinstance(value, list):
+            sanitized[field] = [_sanitize_identifier(item) for item in value]
+        elif field in sanitized:
+            sanitized[field] = []
+    for field in ("failure_reason", "event_parse_error"):
+        value = sanitized.get(field)
+        if isinstance(value, str):
+            sanitized[field] = _sanitize_text(value)[0]
+        elif field in sanitized and value is not None:
+            sanitized[field] = _sanitize_diagnostic_value(value)
+    if "stderr" in sanitized:
+        sanitized["stderr"] = (
+            _sanitize_text(sanitized["stderr"], max_chars=MAX_STDERR_EXCERPT)[0]
+            if isinstance(sanitized["stderr"], str)
+            else _sanitize_diagnostic_value(sanitized["stderr"])
+        )
+    if "selected_source_config" in sanitized:
+        config = sanitized["selected_source_config"]
+        sanitized["selected_source_config"] = (
+            {
+                field: _sanitize_diagnostic_value(config[field])
+                for field in SOURCE_CONFIG_FIELDS
+                if field in config
+            }
+            if isinstance(config, dict)
+            else _sanitize_diagnostic_value(config)
+        )
+    if "rubric" in sanitized:
+        rubric = sanitized["rubric"]
+        sanitized["rubric"] = (
+            {
+                field: _sanitize_diagnostic_value(rubric[field])
+                for field in RUBRIC_FIELDS
+                if field in rubric
+            }
+            if isinstance(rubric, dict)
+            else _sanitize_diagnostic_value(rubric)
+        )
+    for field in ("premium_requests", "api_duration_ms", "session_duration_ms", "response_time_seconds"):
+        value = sanitized.get(field)
+        if value is not None and (
+            not isinstance(value, (int, float))
+            or isinstance(value, bool)
+            or (isinstance(value, float) and not math.isfinite(value))
+            or value < 0
+            or value > MAX_USAGE_METRIC
+        ):
+            sanitized[field] = None
+    for field in ("turns", "tool_calls", "tool_errors", "output_tokens"):
+        value = sanitized.get(field)
+        if type(value) is not int or value < 0 or value > MAX_USAGE_METRIC:
+            sanitized[field] = None
+    if (
+        type(sanitized.get("source_config_count")) is not int
+        or sanitized["source_config_count"] < 0
+        or sanitized["source_config_count"] > MAX_USAGE_METRIC
+    ):
+        sanitized["source_config_count"] = 0
+    if type(sanitized.get("exit_code")) is not int:
+        sanitized["exit_code"] = -1
+    if "diagnostics" in sanitized:
+        sanitized["diagnostics"] = _canonical_diagnostics(sanitized["diagnostics"])
+    return sanitized
+
+
+def _canonical_diagnostics(value: object) -> object:
+    if not isinstance(value, dict):
+        return _sanitize_diagnostic_value(value)
+    return {
+        "events": _canonical_diagnostic_events(value.get("events", [])),
+        "events_truncated": value.get("events_truncated") if type(value.get("events_truncated")) is bool else False,
+        "stdout_excerpt": _sanitize_text(str(value.get("stdout_excerpt", "")), max_chars=MAX_STDOUT_EXCERPT)[0],
+        "stdout_truncated": value.get("stdout_truncated") if type(value.get("stdout_truncated")) is bool else False,
+        "stderr_excerpt": _sanitize_text(str(value.get("stderr_excerpt", "")), max_chars=MAX_STDERR_EXCERPT)[0],
+        "stderr_truncated": value.get("stderr_truncated") if type(value.get("stderr_truncated")) is bool else False,
+    }
+
+
+def _canonical_diagnostic_events(value: object) -> object:
+    if not isinstance(value, list):
+        return _sanitize_diagnostic_value(value)
+    canonical = []
+    for event in value[:20]:
+        if not isinstance(event, dict):
+            canonical.append(_sanitize_diagnostic_value(event))
+            continue
+        canonical.append({
+            "event_type": _sanitize_text(str(event.get("event_type", "")))[0],
+            "data": _sanitize_diagnostic_value(event.get("data", {})),
+        })
+    return canonical
+
+
+def _project_result_fields(result: dict) -> dict:
+    projected = {
+        field: result[field]
+        for field in SCORED_ROW_FIELDS
+        if field in result
+    }
+    if isinstance(projected.get("rubric"), dict):
+        projected["rubric"] = {
+            field: projected["rubric"][field]
+            for field in RUBRIC_FIELDS
+            if field in projected["rubric"]
+        }
+    if isinstance(projected.get("selected_source_config"), dict):
+        projected["selected_source_config"] = {
+            field: projected["selected_source_config"][field]
+            for field in SOURCE_CONFIG_FIELDS
+            if field in projected["selected_source_config"]
+        }
+    if "diagnostics" in projected:
+        projected["diagnostics"] = _canonical_diagnostics(projected["diagnostics"])
+    if isinstance(projected.get("response"), str):
+        projected["response"] = _sanitize_response_text(projected["response"])
+    return projected
+
+
+def _sanitize_metadata(metadata: object) -> dict:
+    if not isinstance(metadata, dict):
+        return {"servers": [], "models": []}
+    sanitized = {
+        field: _sanitize_identifier(metadata[field])
+        for field in METADATA_IDENTIFIER_FIELDS
+        if field in metadata
+    }
+    for field in METADATA_COUNT_FIELDS:
+        value = metadata.get(field)
+        if type(value) is int and 0 <= value <= MAX_USAGE_METRIC:
+            sanitized[field] = value
+    for field in METADATA_LIST_FIELDS:
+        value = metadata.get(field)
+        sanitized[field] = (
+            [_sanitize_identifier(item) for item in value]
+            if isinstance(value, list)
+            else []
+        )
+    return sanitized
 
 
 def validate_row_schema(result: object) -> list[str]:
@@ -54,11 +316,36 @@ def validate_row_schema(result: object) -> list[str]:
     for field in ("scenario_id", "server", "model", "category", "response", "selected_source"):
         if field in result and not isinstance(result[field], str):
             errors.append(f"{field} must be a string")
+    if isinstance(result.get("server"), str) and result["server"] not in MCP_SERVERS:
+        errors.append(f"unknown server: {_sanitize_identifier(result['server'])}")
+    if isinstance(result.get("server"), str) and result["server"] in MCP_SERVERS:
+        supports_azure = bool(MCP_SERVERS[result["server"]]["config"].get("supports_azure"))
+        if not supports_azure and (
+            result.get("azure_required") is True
+            or result.get("azure_live_query_proven") is True
+        ):
+            errors.append(f"server does not support Azure-required evidence: {result['server']}")
+    for field in ("scenario_id", "server", "model", "category", "selected_source"):
+        errors.extend(_identifier_errors(result.get(field), field))
     if "status" in result and (
         not isinstance(result["status"], str)
         or result["status"] not in {"success", "invalid", "error", "timeout"}
     ):
         errors.append("status must be success, invalid, error, or timeout")
+    response = result.get("response")
+    if isinstance(response, str) and response != _sanitize_response_text(response):
+        errors.append("response must equal its bounded sanitized canonical form")
+    status = result.get("status")
+    if isinstance(status, str) and status in {"invalid", "error", "timeout"} and (
+        result.get("response") != "" or result.get("response_present") is not False
+    ):
+        errors.append("non-success rows must clear response and set response_present=false")
+    if status == "success" and (
+        not isinstance(result.get("response"), str)
+        or not result.get("response")
+        or result.get("response_present") is not True
+    ):
+        errors.append("success rows must contain a response and set response_present=true")
     for field in (
         "response_present",
         "passed",
@@ -70,33 +357,132 @@ def validate_row_schema(result: object) -> list[str]:
             errors.append(f"{field} must be a Boolean")
     if "selected_source_config" in result and not isinstance(result["selected_source_config"], dict):
         errors.append("selected_source_config must be a JSON object")
-    if "source_config_count" in result and type(result["source_config_count"]) is not int:
-        errors.append("source_config_count must be an integer")
+    elif isinstance(result.get("selected_source_config"), dict) and set(
+        result["selected_source_config"]
+    ) != SOURCE_CONFIG_FIELDS:
+        errors.append("selected_source_config must contain exactly the required fields")
+    if "source_config_count" in result and (
+        type(result["source_config_count"]) is not int
+        or result["source_config_count"] < 0
+        or result["source_config_count"] > MAX_USAGE_METRIC
+    ):
+        errors.append("source_config_count must be a bounded non-negative integer")
     for field in ("observed_tools", "successful_tools"):
         value = result.get(field)
         if field in result and (
             not isinstance(value, list) or not all(isinstance(tool_name, str) for tool_name in value)
         ):
             errors.append(f"{field} must be a list of strings")
+        elif isinstance(value, list):
+            for index, identifier in enumerate(value):
+                errors.extend(_identifier_errors(identifier, f"{field}[{index}]"))
     if "failure_reason" in result and result["failure_reason"] is not None and not isinstance(
         result["failure_reason"], str
     ):
         errors.append("failure_reason must be a string or null")
+    elif isinstance(result.get("failure_reason"), str) and result["failure_reason"] != _sanitize_text(
+        result["failure_reason"]
+    )[0]:
+        errors.append("failure_reason must equal its bounded sanitized canonical form")
     if "event_parse_error" in result and result["event_parse_error"] is not None and not isinstance(
         result["event_parse_error"], str
     ):
         errors.append("event_parse_error must be a string or null")
-    for field in ("exit_code", "tool_errors"):
-        if field in result and type(result[field]) is not int:
-            errors.append(f"{field} must be an integer")
+    elif isinstance(result.get("event_parse_error"), str) and result["event_parse_error"] != _sanitize_text(
+        result["event_parse_error"]
+    )[0]:
+        errors.append("event_parse_error must equal its bounded sanitized canonical form")
+    diagnostics = result.get("diagnostics")
+    required_diagnostic_fields = {
+        "events",
+        "events_truncated",
+        "stdout_excerpt",
+        "stdout_truncated",
+        "stderr_excerpt",
+        "stderr_truncated",
+    }
+    if not isinstance(diagnostics, dict):
+        errors.append("diagnostics must be a JSON object")
+    elif set(diagnostics) != required_diagnostic_fields:
+        errors.append("diagnostics must contain exactly the required bounded-output fields")
+    else:
+        diagnostic_identifier_errors = _diagnostic_identifier_errors(diagnostics)
+        errors.extend(diagnostic_identifier_errors)
+        excessive_depth = any(
+            "exceeds maximum diagnostic nesting depth" in error
+            for error in diagnostic_identifier_errors
+        )
+        events = diagnostics["events"]
+        if not excessive_depth:
+            try:
+                canonical_events = _canonical_diagnostic_events(events)
+            except RecursionError:
+                excessive_depth = True
+                errors.append("diagnostics.events exceeds maximum diagnostic nesting depth")
+            else:
+                if events != canonical_events:
+                    errors.append("diagnostics.events must equal its sanitized canonical form")
+        if not isinstance(events, list):
+            errors.append("diagnostics.events must be a list")
+        elif len(events) > MAX_DIAGNOSTIC_EVENTS:
+            errors.append(f"diagnostics.events must contain at most {MAX_DIAGNOSTIC_EVENTS} entries")
+        elif not excessive_depth:
+            try:
+                serialized_event_chars = serialized_diagnostic_events_size(events)
+            except (TypeError, ValueError, RecursionError):
+                errors.append("diagnostics.events must contain JSON-serializable values")
+            else:
+                if serialized_event_chars > MAX_DIAGNOSTIC_EVENTS_CHARS:
+                    errors.append("diagnostics.events exceeds its total serialized size limit")
+        for field in ("events_truncated", "stdout_truncated", "stderr_truncated"):
+            if type(diagnostics[field]) is not bool:
+                errors.append(f"diagnostics.{field} must be a Boolean")
+        excerpt_limits = {
+            "stdout_excerpt": MAX_STDOUT_EXCERPT + len("...[truncated]"),
+            "stderr_excerpt": MAX_STDERR_EXCERPT + len("...[truncated]"),
+        }
+        for field, max_length in excerpt_limits.items():
+            excerpt = diagnostics[field]
+            if not isinstance(excerpt, str):
+                errors.append(f"diagnostics.{field} must be a string")
+            elif len(excerpt) > max_length:
+                errors.append(f"diagnostics.{field} exceeds its maximum length")
+        if isinstance(diagnostics["stdout_excerpt"], str) and diagnostics["stdout_excerpt"] != _sanitize_text(
+            diagnostics["stdout_excerpt"], max_chars=MAX_STDOUT_EXCERPT
+        )[0]:
+            errors.append("diagnostics.stdout_excerpt must equal its sanitized canonical form")
+        if isinstance(diagnostics["stderr_excerpt"], str) and diagnostics["stderr_excerpt"] != _sanitize_text(
+            diagnostics["stderr_excerpt"], max_chars=MAX_STDERR_EXCERPT
+        )[0]:
+            errors.append("diagnostics.stderr_excerpt must equal its sanitized canonical form")
+    stderr = result.get("stderr")
+    if stderr is not None:
+        if not isinstance(stderr, str):
+            errors.append("stderr must be a string")
+        elif stderr != _sanitize_text(stderr, max_chars=MAX_STDERR_EXCERPT)[0]:
+            errors.append("stderr must equal its bounded sanitized canonical form")
+    if "exit_code" in result and type(result["exit_code"]) is not int:
+        errors.append("exit_code must be an integer")
+    if "tool_errors" in result and (
+        type(result["tool_errors"]) is not int
+        or result["tool_errors"] < 0
+        or result["tool_errors"] > MAX_USAGE_METRIC
+    ):
+        errors.append("tool_errors must be a bounded non-negative integer")
     for field in ("turns", "tool_calls", "output_tokens"):
-        if field in result and (type(result[field]) is not int or result[field] < 0):
+        if field in result and (
+            type(result[field]) is not int
+            or result[field] < 0
+            or result[field] > MAX_USAGE_METRIC
+        ):
             errors.append(f"{field} must be a non-negative integer")
     response_time = result.get("response_time_seconds")
     if "response_time_seconds" in result and (
         not isinstance(response_time, (int, float))
         or isinstance(response_time, bool)
+        or (isinstance(response_time, float) and not math.isfinite(response_time))
         or response_time < 0
+        or response_time > MAX_USAGE_METRIC
     ):
         errors.append("response_time_seconds must be a non-negative number")
     rubric = result.get("rubric")
@@ -104,11 +490,85 @@ def validate_row_schema(result: object) -> list[str]:
         if not isinstance(rubric, dict):
             errors.append("rubric must be a JSON object")
         else:
+            if set(rubric) != RUBRIC_FIELDS:
+                errors.append("rubric must contain exactly the required fields")
             for field in ("must_mention", "quality_criteria", "expected_docs"):
                 value = rubric.get(field, [])
-                if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
-                    errors.append(f"rubric.{field} must be a list of strings")
+                if (
+                    not isinstance(value, list)
+                    or not value
+                    or not all(isinstance(item, str) and item.strip() for item in value)
+                ):
+                    errors.append(f"rubric.{field} must be a non-empty list of non-empty strings")
+                elif any(item != _sanitize_text(item)[0] for item in value):
+                    errors.append(f"rubric.{field} must contain sanitized bounded strings")
+    question = result.get("question")
+    if question is not None:
+        if not isinstance(question, str):
+            errors.append("question must be a string")
+        elif question != _sanitize_text(question)[0]:
+            errors.append("question must equal its bounded sanitized canonical form")
+    timestamp = result.get("timestamp")
+    if timestamp is not None:
+        errors.extend(_identifier_errors(timestamp, "timestamp"))
+    for field in ("premium_requests", "api_duration_ms", "session_duration_ms"):
+        value = result.get(field)
+        if value is not None and (
+            not isinstance(value, (int, float))
+            or isinstance(value, bool)
+            or (isinstance(value, float) and not math.isfinite(value))
+            or value < 0
+            or value > MAX_USAGE_METRIC
+        ):
+            errors.append(f"{field} must be a non-negative number or null")
     return errors
+
+
+def validate_trusted_scenarios(scenarios: object) -> dict[str, dict]:
+    """Validate and index complete trusted scenario definitions."""
+    if not isinstance(scenarios, list) or not scenarios:
+        raise ValueError("trusted scenarios must be a non-empty JSON array")
+    trusted: dict[str, dict] = {}
+    for index, scenario in enumerate(scenarios):
+        if not isinstance(scenario, dict):
+            raise ValueError(f"trusted scenario {index} must be an object")
+        scenario_id = scenario.get("id")
+        question = scenario.get("question")
+        category = scenario.get("category")
+        rubric = scenario.get("rubric")
+        if not isinstance(scenario_id, str) or not scenario_id.strip():
+            raise ValueError(f"trusted scenario {index} must have a non-empty id")
+        safe_scenario_id = _sanitize_identifier(scenario_id)
+        if scenario_id != safe_scenario_id:
+            raise ValueError(
+                "trusted scenario id must equal its bounded sanitized canonical form: "
+                f"{safe_scenario_id}"
+            )
+        if scenario_id in trusted:
+            raise ValueError(f"duplicate trusted scenario id: {safe_scenario_id}")
+        if not isinstance(question, str) or not question.strip():
+            raise ValueError(f"trusted scenario {safe_scenario_id} must have a non-empty question")
+        if not isinstance(category, str) or not category.strip():
+            raise ValueError(f"trusted scenario {safe_scenario_id} must have a non-empty category")
+        if not isinstance(rubric, dict) or set(rubric) != RUBRIC_FIELDS:
+            raise ValueError(f"trusted scenario {safe_scenario_id} must have a complete rubric")
+        for field in RUBRIC_FIELDS:
+            value = rubric.get(field)
+            if (
+                not isinstance(value, list)
+                or not value
+                or not all(isinstance(item, str) and item.strip() for item in value)
+            ):
+                raise ValueError(
+                    f"trusted scenario {safe_scenario_id} rubric.{field} must be a non-empty list"
+                )
+        trusted[scenario_id] = {
+            "id": scenario_id,
+            "question": question,
+            "category": category,
+            "rubric": rubric,
+        }
+    return trusted
 
 
 def score_completeness(response: str, must_mention: list[str]) -> float:
@@ -168,11 +628,22 @@ def score_doc_retrieval(response: str, expected_docs: list[str]) -> float:
     return hits / len(expected_docs)
 
 
-def score_result(result: object) -> dict:
+def score_result(result: object, trusted_scenarios: dict[str, dict]) -> dict:
     """Score a single evaluation result."""
     schema_errors = validate_row_schema(result)
     if not isinstance(result, dict):
         result = {"raw_row": result}
+    scenario_id = result.get("scenario_id")
+    trusted = trusted_scenarios.get(scenario_id) if isinstance(scenario_id, str) else None
+    if trusted is None:
+        schema_errors.append("scenario_id is not present in trusted scenarios")
+    else:
+        if result.get("question") != trusted["question"]:
+            schema_errors.append("question does not match trusted scenario")
+        if result.get("category") != trusted["category"]:
+            schema_errors.append("category does not match trusted scenario")
+        if result.get("rubric") != trusted["rubric"]:
+            schema_errors.append("rubric does not match trusted scenario")
 
     response = result.get("response", "")
     if not isinstance(response, str):
@@ -187,50 +658,56 @@ def score_result(result: object) -> dict:
     # aggregation can distinguish "known zero" from "not captured".
     operational = {
         "passed": result.get("passed") if type(result.get("passed")) is bool else None,
-        "turns": result.get("turns") if type(result.get("turns")) is int and result.get("turns") >= 0 else None,
+        "turns": (
+            result.get("turns")
+            if type(result.get("turns")) is int and 0 <= result.get("turns") <= MAX_USAGE_METRIC
+            else None
+        ),
         "tool_calls": (
             result.get("tool_calls")
-            if type(result.get("tool_calls")) is int and result.get("tool_calls") >= 0
+            if type(result.get("tool_calls")) is int and 0 <= result.get("tool_calls") <= MAX_USAGE_METRIC
             else None
         ),
         "tool_errors": (
             result.get("tool_errors")
-            if type(result.get("tool_errors")) is int and result.get("tool_errors") >= 0
+            if type(result.get("tool_errors")) is int and 0 <= result.get("tool_errors") <= MAX_USAGE_METRIC
             else None
         ),
         "output_tokens": (
             result.get("output_tokens")
-            if type(result.get("output_tokens")) is int and result.get("output_tokens") >= 0
+            if type(result.get("output_tokens")) is int and 0 <= result.get("output_tokens") <= MAX_USAGE_METRIC
             else None
         ),
         "response_time_seconds": (
             result.get("response_time_seconds")
             if isinstance(result.get("response_time_seconds"), (int, float))
             and not isinstance(result.get("response_time_seconds"), bool)
+            and (
+                not isinstance(result.get("response_time_seconds"), float)
+                or math.isfinite(result.get("response_time_seconds"))
+            )
             and result.get("response_time_seconds") >= 0
+            and result.get("response_time_seconds") <= MAX_USAGE_METRIC
             else None
         ),
     }
     if schema_errors:
+        operational["passed"] = False
         existing_failure = result.get("failure_reason")
         schema_failure = "row_schema_invalid: " + "; ".join(schema_errors)
         failure_reason = f"{existing_failure}; {schema_failure}" if existing_failure else schema_failure
+        failure_reason = _sanitize_text(failure_reason)[0]
+        sanitized_result = _sanitize_invalid_result_fields(result)
         return {
-            **result,
-            "response": response,
-            "response_present": bool(response),
+            **sanitized_result,
+            "response": "",
+            "response_present": False,
             "status": "invalid",
             "passed": False,
             "source_validated": False,
             "failure_reason": failure_reason,
             "row_valid": False,
-            "scores": {
-                "completeness": 0.0,
-                "quality": 0.0,
-                "doc_retrieval": 0.0,
-                "response_length": len(response),
-                "has_response": bool(response),
-            },
+            "scores": _invalid_scores(),
             "operational": operational,
         }
 
@@ -288,16 +765,17 @@ def score_result(result: object) -> dict:
     )
 
     if not row_valid:
+        operational["passed"] = False
+        normalized_status = status if status in {"error", "timeout"} else "invalid"
         return {
-            **result,
+            **_sanitize_invalid_result_fields(result),
+            "response": "",
+            "response_present": False,
+            "status": normalized_status,
+            "passed": False,
+            "failure_reason": result.get("failure_reason") or "scoring_evidence_invalid",
             "row_valid": False,
-            "scores": {
-                "completeness": 0.0,
-                "quality": 0.0,
-                "doc_retrieval": 0.0,
-                "response_length": len(response),
-                "has_response": bool(response),
-            },
+            "scores": _invalid_scores(),
             "operational": operational,
         }
 
@@ -322,7 +800,7 @@ def score_result(result: object) -> dict:
         + scores["doc_retrieval"] * 0.3
     )
 
-    return {**result, "row_valid": True, "scores": scores, "operational": operational}
+    return {**_project_result_fields(result), "row_valid": True, "scores": scores, "operational": operational}
 
 
 def aggregate_scores(scored_results: list[dict]) -> dict:
@@ -343,6 +821,7 @@ def aggregate_scores(scored_results: list[dict]) -> dict:
         "tool_calls": [],
         "tool_errors": 0,
         "tool_errors_known": False,
+        "tool_errors_overflow": False,
         "output_tokens": [],
         "response_time_seconds": [],
         "status_counts": defaultdict(int),
@@ -372,8 +851,14 @@ def aggregate_scores(scored_results: list[dict]) -> dict:
         if ops.get("tool_calls") is not None:
             agg["tool_calls"].append(ops["tool_calls"])
         if ops.get("tool_errors") is not None:
-            agg["tool_errors_known"] = True
-            agg["tool_errors"] += ops["tool_errors"]
+            if not agg["tool_errors_overflow"]:
+                agg["tool_errors_known"] = True
+                if agg["tool_errors"] + ops["tool_errors"] <= MAX_USAGE_METRIC:
+                    agg["tool_errors"] += ops["tool_errors"]
+                else:
+                    agg["tool_errors_known"] = False
+                    agg["tool_errors_overflow"] = True
+                    agg["tool_errors"] = 0
         if ops.get("output_tokens") is not None:
             agg["output_tokens"].append(ops["output_tokens"])
         if ops.get("response_time_seconds") is not None:
@@ -416,6 +901,7 @@ def aggregate_scores(scored_results: list[dict]) -> dict:
             "avg_turns": avg(agg["turns"]) if agg["turns"] else None,
             "avg_tool_calls": avg(agg["tool_calls"]) if agg["tool_calls"] else None,
             "total_tool_errors": agg["tool_errors"] if agg["tool_errors_known"] else None,
+            "tool_errors_overflow": agg["tool_errors_overflow"],
             "avg_output_tokens": avg(agg["output_tokens"]) if agg["output_tokens"] else None,
             "avg_response_time_seconds": (
                 avg(agg["response_time_seconds"]) if agg["response_time_seconds"] else None
@@ -444,6 +930,23 @@ def validate_required_matrix(
 ) -> dict:
     """Validate required scenario/server/model rows and produce complete denominators."""
     azure_required_servers = azure_required_servers or set()
+    scenario_ids = [_sanitize_identifier(value) for value in scenario_ids] if scenario_ids is not None else None
+    servers = [_sanitize_identifier(value) for value in servers] if servers is not None else None
+    models = [_sanitize_identifier(value) for value in models] if models is not None else None
+    azure_required_servers = {_sanitize_identifier(value) for value in azure_required_servers}
+    selector_presence = (
+        scenario_ids is not None,
+        servers is not None,
+        models is not None,
+    )
+    partial_required_selectors = not all(selector_presence)
+    empty_required_selectors = []
+    if scenario_ids is not None and not scenario_ids:
+        empty_required_selectors.append("scenarios")
+    if servers is not None and not servers:
+        empty_required_selectors.append("servers")
+    if models is not None and not models:
+        empty_required_selectors.append("models")
     rows_by_key: dict[tuple[str, str, str], list[dict]] = defaultdict(list)
     malformed_rows: list[dict] = []
     for index, row in enumerate(scored_results):
@@ -462,6 +965,35 @@ def validate_required_matrix(
         expected_keys = set(product(scenario_ids, servers, models))
     else:
         expected_keys = set(rows_by_key)
+    unknown_required_servers = sorted(
+        _sanitize_identifier(server)
+        for server in (set(servers or []) | azure_required_servers) - set(MCP_SERVERS)
+    )
+    unsupported_azure_required_servers = sorted(
+        server
+        for server in azure_required_servers
+        if server in MCP_SERVERS and not MCP_SERVERS[server]["config"].get("supports_azure")
+    )
+    effective_matrix_servers = set(servers) if servers is not None else {key[1] for key in rows_by_key}
+    azure_required_outside_matrix = sorted(
+        azure_required_servers - effective_matrix_servers
+    )
+
+    for key, rows in rows_by_key.items():
+        if len(rows) > 1:
+            for row in rows:
+                _invalidate_scored_row(row, "duplicate_required_row")
+        if key not in expected_keys:
+            for row in rows:
+                _invalidate_scored_row(row, "unexpected_matrix_row")
+        for row in rows:
+            if row["server"] in azure_required_servers and row.get("row_valid") is True and not (
+                row.get("azure_required") is True
+                and row.get("azure_live_query_proven") is True
+                and all(isinstance(tool_name, str) for tool_name in row.get("successful_tools", []))
+                and any(_is_search_tool(tool_name) for tool_name in row.get("successful_tools", []))
+            ):
+                _invalidate_scored_row(row, "azure_required_evidence_missing")
 
     status_counts = {"success": 0, "invalid": 0, "error": 0, "timeout": 0, "missing": 0}
     response_counts = {"present": 0, "missing": 0}
@@ -480,14 +1012,6 @@ def validate_required_matrix(
             duplicate_rows.append(row_id)
 
         row = rows[0]
-        if row["server"] in azure_required_servers and not (
-            row.get("azure_required") is True
-            and row.get("azure_live_query_proven") is True
-            and any(_is_search_tool(tool_name) for tool_name in row.get("successful_tools", []))
-        ):
-            row["row_valid"] = False
-            if not row.get("failure_reason"):
-                row["failure_reason"] = "azure_required_evidence_missing"
         response_counts["present" if row.get("response_present", bool(row.get("response"))) else "missing"] += 1
         status = row.get("status", "invalid")
         outcome = status if status in {"error", "timeout"} else ("success" if row.get("row_valid") else "invalid")
@@ -503,7 +1027,16 @@ def validate_required_matrix(
     unexpected_rows = sorted(" / ".join(key) for key in set(rows_by_key) - expected_keys)
     invalid_rows.extend(malformed_rows)
     status_counts["invalid"] += len(malformed_rows)
-    allowed = not invalid_rows and not duplicate_rows and not unexpected_rows
+    allowed = (
+        not invalid_rows
+        and not duplicate_rows
+        and not unexpected_rows
+        and not unknown_required_servers
+        and not unsupported_azure_required_servers
+        and not azure_required_outside_matrix
+        and not partial_required_selectors
+        and not empty_required_selectors
+    )
     failure_reasons = []
     if invalid_rows:
         failure_reasons.append(f"{len(invalid_rows)} required row(s) are invalid or missing")
@@ -511,6 +1044,29 @@ def validate_required_matrix(
         failure_reasons.append(f"{len(duplicate_rows)} required row(s) are duplicated")
     if unexpected_rows:
         failure_reasons.append(f"{len(unexpected_rows)} unexpected row(s) were supplied")
+    if unknown_required_servers:
+        failure_reasons.append(
+            "unknown required server(s): " + ", ".join(_sanitize_identifier(server) for server in unknown_required_servers)
+        )
+    if unsupported_azure_required_servers:
+        failure_reasons.append(
+            "Azure-required server(s) do not support Azure evidence: "
+            + ", ".join(unsupported_azure_required_servers)
+        )
+    if azure_required_outside_matrix:
+        failure_reasons.append(
+            "Azure-required server(s) are outside the required server matrix: "
+            + ", ".join(azure_required_outside_matrix)
+        )
+    if partial_required_selectors:
+        failure_reasons.append(
+            "required scenario, server, and model selectors must be supplied together"
+        )
+    if empty_required_selectors:
+        failure_reasons.append(
+            "required selector collection(s) must not be empty: "
+            + ", ".join(empty_required_selectors)
+        )
 
     return {
         "allowed": allowed,
@@ -523,6 +1079,11 @@ def validate_required_matrix(
         "invalid_rows": invalid_rows,
         "duplicate_rows": duplicate_rows,
         "unexpected_rows": unexpected_rows,
+        "unknown_required_servers": unknown_required_servers,
+        "unsupported_azure_required_servers": unsupported_azure_required_servers,
+        "azure_required_outside_matrix": azure_required_outside_matrix,
+        "partial_required_selectors": partial_required_selectors,
+        "empty_required_selectors": empty_required_selectors,
     }
 
 
@@ -538,7 +1099,7 @@ def _parse_args() -> argparse.Namespace:
         help="Path to save scored results (default: scored-{run_id}.json)"
     )
     parser.add_argument(
-        "--required-scenarios", default=None,
+        "--required-scenarios", required=True,
         help="Scenario JSON whose IDs define the required matrix rows"
     )
     parser.add_argument(
@@ -573,17 +1134,16 @@ def main():
 
         file_meta = data.get("metadata", {})
         all_results.extend(data.get("results", []))
+        sanitized_meta = _sanitize_metadata(file_meta)
 
         # Merge metadata: keep first run_id, union servers/models, sum counts
         if not merged_metadata:
-            merged_metadata = dict(file_meta)
-            merged_metadata["servers"] = list(file_meta.get("servers", []))
-            merged_metadata["models"] = list(file_meta.get("models", []))
+            merged_metadata = sanitized_meta
         else:
-            for s in file_meta.get("servers", []):
+            for s in sanitized_meta.get("servers", []):
                 if s not in merged_metadata["servers"]:
                     merged_metadata["servers"].append(s)
-            for m in file_meta.get("models", []):
+            for m in sanitized_meta.get("models", []):
                 if m not in merged_metadata["models"]:
                     merged_metadata["models"].append(m)
 
@@ -596,12 +1156,10 @@ def main():
 
     print(f"Scoring {len(all_results)} evaluation results from {len(args.input)} file(s)...")
 
-    scored_results = [score_result(r) for r in all_results]
-    aggregates = aggregate_scores(scored_results)
-    scenario_ids = None
-    if args.required_scenarios:
-        with open(args.required_scenarios) as f:
-            scenario_ids = [scenario["id"] for scenario in json.load(f)]
+    with open(args.required_scenarios) as f:
+        trusted_scenarios = validate_trusted_scenarios(json.load(f))
+        scenario_ids = list(trusted_scenarios)
+    scored_results = [score_result(r, trusted_scenarios) for r in all_results]
     publication = validate_required_matrix(
         scored_results,
         scenario_ids=scenario_ids,
@@ -609,6 +1167,7 @@ def main():
         models=args.required_models,
         azure_required_servers=set(args.azure_required_servers or []),
     )
+    aggregates = aggregate_scores(scored_results)
     aggregates["denominators"] = {
         "required_rows": publication["required_rows"],
         "observed_rows": publication["observed_rows"],
@@ -634,7 +1193,7 @@ def main():
         output_path = Path(args.input[0]).parent / f"scored-{run_id}.json"
 
     with open(output_path, "w") as f:
-        json.dump(output_data, f, indent=2)
+        json.dump(output_data, f, indent=2, allow_nan=False)
 
     print(f"Scored results saved to {output_path}")
     if not publication["allowed"]:
