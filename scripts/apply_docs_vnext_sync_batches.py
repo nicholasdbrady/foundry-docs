@@ -29,6 +29,7 @@ MAX_COMMIT_MESSAGE_BYTES = 4096
 MAX_REMOTE_DISCOVERY_BYTES = 32 * 1024
 DISCOVERY_COMMAND_TIMEOUT_SECONDS = 30
 DISCOVERY_TERMINATION_GRACE_SECONDS = 0.1
+WINDOWS_CREATE_SUSPENDED = 0x00000004
 BRANCH_PREFIX = "automation/docs-vnext-sync"
 PR_MARKER_NAME = "docs-vnext-sync-state"
 PR_MARKER_PATTERN = re.compile(
@@ -1099,17 +1100,20 @@ class GitHubGitBackend:
         cwd: Path | None = None,
         timeout_seconds: int = DISCOVERY_COMMAND_TIMEOUT_SECONDS,
     ) -> str:
+        deadline = time.monotonic() + timeout_seconds
+        windows_creation_flags = (
+            getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+            | WINDOWS_CREATE_SUSPENDED
+            if os.name == "nt"
+            else 0
+        )
         process = subprocess.Popen(
             list(args),
             cwd=cwd or self.repository_root,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             start_new_session=os.name == "posix",
-            creationflags=(
-                getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
-                if os.name == "nt"
-                else 0
-            ),
+            creationflags=windows_creation_flags,
         )
         windows_job: int | None = None
         windows_kernel32: Any | None = None
@@ -1149,6 +1153,18 @@ class GitHubGitBackend:
                     ("PeakJobMemoryUsed", ctypes.c_size_t),
                 ]
 
+            class BasicAccountingInformation(ctypes.Structure):
+                _fields_ = [
+                    ("TotalUserTime", ctypes.c_longlong),
+                    ("TotalKernelTime", ctypes.c_longlong),
+                    ("ThisPeriodTotalUserTime", ctypes.c_longlong),
+                    ("ThisPeriodTotalKernelTime", ctypes.c_longlong),
+                    ("TotalPageFaultCount", ctypes.c_uint32),
+                    ("TotalProcesses", ctypes.c_uint32),
+                    ("ActiveProcesses", ctypes.c_uint32),
+                    ("TotalTerminatedProcesses", ctypes.c_uint32),
+                ]
+
             windows_kernel32 = ctypes.windll.kernel32
             windows_kernel32.CreateJobObjectW.restype = ctypes.c_void_p
             windows_job = windows_kernel32.CreateJobObjectW(None, None)
@@ -1175,6 +1191,12 @@ class GitHubGitBackend:
                     windows_kernel32.CloseHandle(windows_job)
                 process.kill()
                 raise BatchSyncError("Cannot assign discovery command to a Windows Job Object")
+            windows_ntdll = ctypes.windll.ntdll
+            if windows_ntdll.NtResumeProcess(int(process._handle)) != 0:  # type: ignore[attr-defined]
+                windows_kernel32.TerminateJobObject(windows_job, 1)
+                windows_kernel32.CloseHandle(windows_job)
+                process.kill()
+                raise BatchSyncError("Cannot resume discovery command after Job Object assignment")
         assert process.stdout is not None
         assert process.stderr is not None
         stdout = bytearray()
@@ -1183,7 +1205,6 @@ class GitHubGitBackend:
         overflow_event = threading.Event()
         termination_lock = threading.Lock()
         process_group_id = process.pid
-        deadline = time.monotonic() + timeout_seconds
 
         def close_windows_job() -> None:
             nonlocal windows_job
@@ -1195,16 +1216,25 @@ class GitHubGitBackend:
             with termination_lock:
                 remaining = max(0.0, deadline - time.monotonic())
                 if os.name == "posix":
+                    signaled_group = False
                     try:
                         os.killpg(process_group_id, signal.SIGTERM)
+                        signaled_group = True
                     except (OSError, ProcessLookupError):
                         pass
-                    if remaining > 0:
+                    if signaled_group and remaining > 0:
                         time.sleep(min(0.02, remaining))
-                    try:
-                        os.killpg(process_group_id, signal.SIGKILL)
-                    except (OSError, ProcessLookupError):
-                        pass
+                    if signaled_group:
+                        try:
+                            os.killpg(process_group_id, signal.SIGKILL)
+                        except (OSError, ProcessLookupError):
+                            pass
+                    while time.monotonic() < deadline:
+                        try:
+                            os.killpg(process_group_id, 0)
+                        except (OSError, ProcessLookupError):
+                            break
+                        time.sleep(0.005)
                 elif os.name == "nt":
                     terminated_job = bool(
                         windows_job
@@ -1213,6 +1243,19 @@ class GitHubGitBackend:
                     )
                     if not terminated_job:
                         close_windows_job()
+                    elif windows_job and windows_kernel32 is not None:
+                        accounting = BasicAccountingInformation()
+                        while time.monotonic() < deadline:
+                            queried = windows_kernel32.QueryInformationJobObject(
+                                windows_job,
+                                1,
+                                ctypes.byref(accounting),
+                                ctypes.sizeof(accounting),
+                                None,
+                            )
+                            if not queried or accounting.ActiveProcesses == 0:
+                                break
+                            time.sleep(0.005)
                 else:
                     try:
                         process.kill()
@@ -1224,6 +1267,11 @@ class GitHubGitBackend:
                     except OSError:
                         pass
 
+        def join_readers() -> bool:
+            for thread in (stdout_thread, stderr_thread):
+                thread.join(timeout=max(0.0, deadline - time.monotonic()))
+            return not stdout_thread.is_alive() and not stderr_thread.is_alive()
+
         def drain(stream: Any, destination: bytearray, name: str) -> None:
             try:
                 while block := stream.read(1024):
@@ -1231,7 +1279,6 @@ class GitHubGitBackend:
                     if len(destination) > max_bytes:
                         overflow_streams.add(name)
                         overflow_event.set()
-                        terminate_process_group()
                         return
             except (OSError, ValueError):
                 return
@@ -1252,6 +1299,7 @@ class GitHubGitBackend:
         while True:
             if overflow_event.is_set():
                 terminate_process_group()
+                join_readers()
                 close_windows_job()
                 raise BatchSyncError(
                     f"{args[0]} {args[1] if len(args) > 1 else ''} "
@@ -1263,6 +1311,7 @@ class GitHubGitBackend:
             remaining = deadline - now
             if remaining <= DISCOVERY_TERMINATION_GRACE_SECONDS:
                 terminate_process_group()
+                join_readers()
                 close_windows_job()
                 raise BatchSyncError(
                     f"{args[0]} {args[1] if len(args) > 1 else ''} exceeded the "
@@ -1280,11 +1329,18 @@ class GitHubGitBackend:
             time.sleep(min(0.01, remaining))
         if overflow_event.is_set() or overflow_streams:
             terminate_process_group()
+            join_readers()
             close_windows_job()
             raise BatchSyncError(
                 f"{args[0]} {args[1] if len(args) > 1 else ''} "
                 f"{'/'.join(sorted(overflow_streams))} exceeds the "
                 f"{max_bytes}-byte discovery limit"
+            )
+        terminate_process_group()
+        if not join_readers():
+            close_windows_job()
+            raise BatchSyncError(
+                f"{args[0]} discovery process tree did not stop before its deadline"
             )
         try:
             stdout_text = bytes(stdout).decode("utf-8")

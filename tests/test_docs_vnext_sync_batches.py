@@ -23,6 +23,7 @@ from apply_docs_vnext_sync_batches import (  # noqa: E402
     Manifest,
     OrphanBranch,
     PullRequest,
+    WINDOWS_CREATE_SUSPENDED,
     apply_batch,
     branch_name,
     build_pull_request_body,
@@ -1082,6 +1083,43 @@ def test_windows_job_object_uses_kill_on_close_limit():
     assert "LimitFlags = 0x00002000" in source
     assert "TerminateJobObject" in source
     assert "CTRL_BREAK_EVENT" not in source
+    assert WINDOWS_CREATE_SUSPENDED == 0x00000004
+    assert not hasattr(subprocess, "CREATE_SUSPENDED")
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX process-group lifecycle")
+def test_posix_successful_leader_exit_kills_descendant_with_redirected_pipes(tmp_path):
+    backend = GitHubGitBackend(
+        repository_root=tmp_path,
+        repository="example/repository",
+        base_branch="main",
+        runner_temp=tmp_path / "runner",
+    )
+    pid_file = tmp_path / "redirected-child.pid"
+    child_code = (
+        "import os, pathlib, time; "
+        f"pathlib.Path({str(pid_file)!r}).write_text(str(os.getpid())); "
+        "time.sleep(5)"
+    )
+    parent_code = (
+        "import pathlib, subprocess, sys, time; "
+        f"subprocess.Popen([sys.executable, '-c', {child_code!r}], "
+        "stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL); "
+        f"pid_file = pathlib.Path({str(pid_file)!r}); "
+        "deadline = time.monotonic() + 2; "
+        "exec(\"while not pid_file.exists() and time.monotonic() < deadline:\\n time.sleep(0.01)\")"
+    )
+
+    output = backend._run_bounded_stdout(
+        [sys.executable, "-c", parent_code],
+        max_bytes=4096,
+        timeout_seconds=1,
+    )
+
+    assert output == ""
+    child_pid = int(pid_file.read_text(encoding="utf-8"))
+    with pytest.raises(ProcessLookupError):
+        os.kill(child_pid, 0)
 
 
 def test_overflow_terminates_grandchild_holding_discovery_pipes(tmp_path):
