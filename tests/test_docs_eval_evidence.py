@@ -2421,6 +2421,26 @@ def test_trusted_scenario_ids_reject_sanitization_collisions():
         validate_trusted_scenarios(scenarios)
 
 
+def test_trusted_scenario_validation_errors_do_not_leak_raw_id():
+    scenario_id = r"token=LEAKME C:\Users\Alice\private"
+    scenarios = [{
+        "id": scenario_id,
+        "question": "question",
+        "category": "category",
+        "rubric": SCENARIO["rubric"],
+    }]
+
+    with pytest.raises(ValueError) as exc_info:
+        validate_trusted_scenarios(scenarios)
+
+    error = str(exc_info.value)
+    assert "LEAKME" not in error
+    assert "Alice" not in error
+    assert "private" not in error
+    assert "token=[REDACTED]" in error
+    assert "<PATH>" in error
+
+
 def test_scorer_rejects_and_sanitizes_malicious_persisted_identifiers():
     row = _raw_row()
     malicious = r"foundry_docs-search_docs token=LEAKME C:\Users\Alice\private " + ("x" * 500)

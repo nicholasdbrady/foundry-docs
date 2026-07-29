@@ -538,18 +538,20 @@ def validate_trusted_scenarios(scenarios: object) -> dict[str, dict]:
         rubric = scenario.get("rubric")
         if not isinstance(scenario_id, str) or not scenario_id.strip():
             raise ValueError(f"trusted scenario {index} must have a non-empty id")
-        if scenario_id != _sanitize_identifier(scenario_id):
+        safe_scenario_id = _sanitize_identifier(scenario_id)
+        if scenario_id != safe_scenario_id:
             raise ValueError(
-                f"trusted scenario id must equal its bounded sanitized canonical form: {scenario_id}"
+                "trusted scenario id must equal its bounded sanitized canonical form: "
+                f"{safe_scenario_id}"
             )
         if scenario_id in trusted:
-            raise ValueError(f"duplicate trusted scenario id: {scenario_id}")
+            raise ValueError(f"duplicate trusted scenario id: {safe_scenario_id}")
         if not isinstance(question, str) or not question.strip():
-            raise ValueError(f"trusted scenario {scenario_id} must have a non-empty question")
+            raise ValueError(f"trusted scenario {safe_scenario_id} must have a non-empty question")
         if not isinstance(category, str) or not category.strip():
-            raise ValueError(f"trusted scenario {scenario_id} must have a non-empty category")
+            raise ValueError(f"trusted scenario {safe_scenario_id} must have a non-empty category")
         if not isinstance(rubric, dict) or set(rubric) != RUBRIC_FIELDS:
-            raise ValueError(f"trusted scenario {scenario_id} must have a complete rubric")
+            raise ValueError(f"trusted scenario {safe_scenario_id} must have a complete rubric")
         for field in RUBRIC_FIELDS:
             value = rubric.get(field)
             if (
@@ -558,7 +560,7 @@ def validate_trusted_scenarios(scenarios: object) -> dict[str, dict]:
                 or not all(isinstance(item, str) and item.strip() for item in value)
             ):
                 raise ValueError(
-                    f"trusted scenario {scenario_id} rubric.{field} must be a non-empty list"
+                    f"trusted scenario {safe_scenario_id} rubric.{field} must be a non-empty list"
                 )
         trusted[scenario_id] = {
             "id": scenario_id,
