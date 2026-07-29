@@ -1360,6 +1360,69 @@ def test_historical_merged_heads_are_excluded_before_active_candidate_cap():
     assert list(active) == ["automation/docs-vnext-sync/history/batch-100"]
 
 
+def test_discovery_fetches_only_active_head_after_filtering_merged_history(tmp_path):
+    manifest = _write_manifest(tmp_path, [_operation(1, 1)], run_id=777)
+    batch = plan_batches(manifest, max_files=1, max_payload_bytes=10)[0]
+    active_head = branch_name(manifest, batch)
+    active_sha = "f" * 40
+    merged = [
+        PullRequest(
+            number=index + 1,
+            state="MERGED",
+            url=f"https://github.com/example/repo/pull/{index + 1}",
+            head_ref=f"automation/docs-vnext-sync/history/batch-{index:03d}",
+            marker=None,
+        )
+        for index in range(100)
+    ]
+    remote_lines = [
+        f"{index:040x}\trefs/heads/{pull_request.head_ref}"
+        for index, pull_request in enumerate(merged)
+    ]
+    remote_lines.append(f"{active_sha}\trefs/heads/{active_head}")
+
+    class RecordingBackend(GitHubGitBackend):
+        def __init__(self):
+            super().__init__(
+                repository_root=tmp_path,
+                repository="example/repository",
+                base_branch="main",
+                runner_temp=tmp_path / "runner",
+            )
+            self.fetches = []
+
+        def _run_bounded_stdout(
+            self,
+            args,
+            *,
+            max_bytes,
+            cwd=None,
+            timeout_seconds=30,
+        ):
+            if args[1] == "ls-remote":
+                return "\n".join(remote_lines) + "\n"
+            if args[1] == "fetch":
+                self.fetches.append(args[-1])
+                return ""
+            if args[1] == "rev-parse":
+                return f"{active_sha}\n"
+            return (
+                "Sync batch\n\n"
+                f"Manifest-SHA256: {manifest.digest}\n"
+                f"Manifest-Run-ID: {manifest.run_id}\n"
+                f"Batch-ID: {batch.id}\n"
+            )
+
+    backend = RecordingBackend()
+
+    identities = backend.discover_campaign_branches(merged)
+
+    assert [identity.head_ref for identity in identities] == [active_head]
+    assert backend.fetches == [
+        f"+refs/heads/{active_head}:refs/remotes/origin/{active_head}"
+    ]
+
+
 def test_forged_pr_and_orphan_identities_cannot_bind_to_campaign(tmp_path):
     manifest = _write_manifest(tmp_path, [_operation(1, 1)])
     batch = plan_batches(manifest, max_files=1, max_payload_bytes=10)[0]
