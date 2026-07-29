@@ -28,6 +28,7 @@ from apply_docs_vnext_sync_batches import (  # noqa: E402
     branch_name,
     build_pull_request_body,
     enforce_campaign_candidate_limit,
+    exclude_completed_remote_heads,
     execute_batches,
     load_manifest,
     parse_commit_identity,
@@ -371,6 +372,24 @@ def test_atomic_path_dependency_fails_closed_when_group_exceeds_ceiling(tmp_path
         plan_batches(manifest, max_files=1, max_payload_bytes=1000)
 
 
+def test_path_dependency_span_preserves_intervening_manifest_order(tmp_path):
+    swap = _operation(1, 1)
+    swap["path"] = "swap"
+    intervening = _operation(2, 1)
+    intervening["path"] = "z.mdx"
+    child = _operation(3, 1, decision="remove")
+    child["path"] = "swap/child.mdx"
+    manifest = _write_manifest(tmp_path, [swap, intervening, child])
+
+    batches = plan_batches(manifest, max_files=3, max_payload_bytes=10)
+
+    assert [[operation.path for operation in batch.operations] for batch in batches] == [
+        ["swap", "z.mdx", "swap/child.mdx"]
+    ]
+    with pytest.raises(BatchSyncError, match="Atomic path dependency.*exceeding ceilings"):
+        plan_batches(manifest, max_files=2, max_payload_bytes=10)
+
+
 def test_apply_batch_copies_adds_and_modifications_removes_and_preserves(tmp_path):
     source = tmp_path / "docs"
     target = tmp_path / "docs-vnext"
@@ -709,6 +728,13 @@ def test_real_git_backend_rejects_same_tree_force_push_after_identity_authentica
     forged_pr = _pull_request(manifest, batch)
     campaign_branches = backend.discover_campaign_branches([forged_pr])
     authenticated_sha = campaign_branches[0].commit_sha
+    authenticated_commits = validate_campaign_identities(
+        manifest,
+        [batch],
+        backend,
+        [forged_pr],
+        campaign_branches,
+    )
 
     _git(repository, "fetch", "origin", branch)
     _git(repository, "switch", "--create", "forged", "FETCH_HEAD")
@@ -730,14 +756,20 @@ def test_real_git_backend_rejects_same_tree_force_push_after_identity_authentica
     ).stdout.strip()
     assert forged_sha != authenticated_sha
 
-    with pytest.raises(BatchSyncError, match="moved from authenticated commit"):
-        validate_campaign_identities(
-            manifest,
-            [batch],
-            backend,
-            [forged_pr],
-            campaign_branches,
-        )
+    checkpoint = tmp_path / "force-push-checkpoint.json"
+    succeeded = execute_batches(
+        manifest,
+        [batch],
+        backend,
+        [forged_pr],
+        checkpoint,
+        max_files=10,
+        max_payload_bytes=1000,
+        authenticated_batch_commits=authenticated_commits,
+    )
+    assert succeeded is False
+    state = json.loads(checkpoint.read_text(encoding="utf-8"))
+    assert "moved from authenticated commit" in state["batches"][0]["diagnostic"]
     with pytest.raises(BatchSyncError, match="campaign trailer"):
         backend.publish_batch(manifest, batch, branch)
 
@@ -1274,8 +1306,9 @@ def test_remote_branch_discovery_rejects_excessive_branch_count():
         for index in range(101)
     )
 
+    parsed = parse_remote_branch_refs(output)
     with pytest.raises(BatchSyncError, match="above the 100-branch discovery limit"):
-        parse_remote_branch_refs(output)
+        enforce_campaign_candidate_limit(set(parsed), set())
 
 
 def test_remote_branch_discovery_rejects_duplicate_refs():
@@ -1296,6 +1329,35 @@ def test_combined_remote_and_deleted_pr_candidates_are_capped_before_fetch():
 
     with pytest.raises(BatchSyncError, match="101 active automation identity candidates"):
         enforce_campaign_candidate_limit(remote_heads, deleted_pr_heads)
+
+
+def test_historical_merged_heads_are_excluded_before_active_candidate_cap():
+    expected_heads = {
+        f"automation/docs-vnext-sync/history/batch-{index:03d}": f"{index:040x}"
+        for index in range(101)
+    }
+    output = "\n".join(
+        f"{commit_sha}\trefs/heads/{head_ref}"
+        for head_ref, commit_sha in expected_heads.items()
+    )
+    merged = [
+        PullRequest(
+            number=index + 1,
+            state="MERGED",
+            url=f"https://github.com/example/repo/pull/{index + 1}",
+            head_ref=f"automation/docs-vnext-sync/history/batch-{index:03d}",
+            marker=None,
+        )
+        for index in range(100)
+    ]
+
+    active = exclude_completed_remote_heads(
+        parse_remote_branch_refs(output),
+        merged,
+    )
+    enforce_campaign_candidate_limit(set(active), set())
+
+    assert list(active) == ["automation/docs-vnext-sync/history/batch-100"]
 
 
 def test_forged_pr_and_orphan_identities_cannot_bind_to_campaign(tmp_path):
@@ -1368,7 +1430,7 @@ def test_missing_or_malformed_pr_marker_recovers_from_verified_head(tmp_path, bo
         tmp_path / "recovered-checkpoint.json",
         max_files=1,
         max_payload_bytes=10,
-        preverified_batch_ids=preverified,
+        authenticated_batch_commits=preverified,
     )
 
     assert succeeded is True

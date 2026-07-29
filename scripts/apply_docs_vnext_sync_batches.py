@@ -341,7 +341,7 @@ def _atomic_operation_groups(operations: Sequence[Operation]) -> tuple[tuple[Ope
     for index in range(len(operations)):
         grouped_indices.setdefault(find(index), []).append(index)
 
-    groups: list[tuple[int, tuple[Operation, ...]]] = []
+    dependency_intervals: list[tuple[int, int]] = []
     for indices in grouped_indices.values():
         group = tuple(operations[index] for index in sorted(indices))
         if len(group) > 1:
@@ -357,9 +357,28 @@ def _atomic_operation_groups(operations: Sequence[Operation]) -> tuple[tuple[Ope
                     "Path dependency must be a file/directory remove-and-create replacement: "
                     f"{paths}"
                 )
-        groups.append((min(indices), group))
-    groups.sort(key=lambda item: item[0])
-    return tuple(group for _, group in groups)
+            dependency_intervals.append((min(indices), max(indices)))
+
+    merged_intervals: list[tuple[int, int]] = []
+    for start, end in sorted(dependency_intervals):
+        if merged_intervals and start <= merged_intervals[-1][1]:
+            prior_start, prior_end = merged_intervals[-1]
+            merged_intervals[-1] = (prior_start, max(prior_end, end))
+        else:
+            merged_intervals.append((start, end))
+
+    groups: list[tuple[Operation, ...]] = []
+    interval_by_start = {start: end for start, end in merged_intervals}
+    index = 0
+    while index < len(operations):
+        end = interval_by_start.get(index)
+        if end is None:
+            groups.append((operations[index],))
+            index += 1
+        else:
+            groups.append(tuple(operations[index : end + 1]))
+            index = end + 1
+    return tuple(groups)
 
 
 def plan_batches(
@@ -583,11 +602,6 @@ def parse_commit_identity(message: str, head_ref: str) -> OrphanBranch:
 
 def parse_remote_branch_refs(output: str) -> dict[str, str]:
     lines = [line for line in output.splitlines() if line]
-    if len(lines) > MAX_AUTOMATION_BRANCHES:
-        raise BatchSyncError(
-            f"Found {len(lines)} automation branches, above the "
-            f"{MAX_AUTOMATION_BRANCHES}-branch discovery limit"
-        )
     head_refs: dict[str, str] = {}
     for line in lines:
         commit_sha, separator, ref = line.partition("\t")
@@ -615,6 +629,22 @@ def enforce_campaign_candidate_limit(
             f"Found {candidate_count} active automation identity candidates, above the "
             f"{MAX_AUTOMATION_BRANCHES}-branch discovery limit"
         )
+
+
+def exclude_completed_remote_heads(
+    remote_head_commits: dict[str, str],
+    pull_requests: Sequence[PullRequest],
+) -> dict[str, str]:
+    completed_heads = {
+        pull_request.head_ref
+        for pull_request in pull_requests
+        if pull_request.merged
+    }
+    return {
+        head_ref: commit_sha
+        for head_ref, commit_sha in remote_head_commits.items()
+        if head_ref not in completed_heads
+    }
 
 
 def validate_marker_claim(
@@ -681,10 +711,11 @@ def validate_campaign_identities(
     backend: AutomationBackend,
     pull_requests: Sequence[PullRequest],
     campaign_branches: Sequence[OrphanBranch],
-) -> frozenset[str]:
+) -> dict[str, str]:
     """Bind every unfinished identity to one exact planned batch and verified branch."""
     batches_by_id = {batch.id: batch for batch in batches}
     claimed_batches: dict[str, str] = {}
+    authenticated_commits: dict[str, str] = {}
 
     for pull_request in pull_requests:
         if not pull_request.incomplete or not pull_request.head_ref.startswith(
@@ -729,6 +760,7 @@ def validate_campaign_identities(
             expected_head,
             expected_commit_sha=identity.commit_sha,
         )
+        authenticated_commits[batch.id] = identity.commit_sha
 
     for orphan in campaign_branches:
         if orphan.pull_request_number is not None:
@@ -758,7 +790,8 @@ def validate_campaign_identities(
             expected_head,
             expected_commit_sha=orphan.commit_sha,
         )
-    return frozenset(claimed_batches)
+        authenticated_commits[batch.id] = orphan.commit_sha
+    return authenticated_commits
 
 
 def _metadata(path: Path) -> dict[str, int | str] | None:
@@ -949,11 +982,12 @@ def execute_batches(
     checkpoint_path: Path,
     max_files: int,
     max_payload_bytes: int,
-    preverified_batch_ids: frozenset[str] = frozenset(),
+    authenticated_batch_commits: dict[str, str] | None = None,
 ) -> bool:
     """Resume or publish batches sequentially and stop after the first partial failure."""
     checkpoint = _initial_checkpoint(manifest, batches, max_files, max_payload_bytes)
     _write_checkpoint(checkpoint_path, checkpoint)
+    authenticated_batch_commits = authenticated_batch_commits or {}
 
     failed = False
     for batch, batch_state in zip(batches, checkpoint["batches"], strict=True):
@@ -975,7 +1009,7 @@ def execute_batches(
             if branch_pull_requests:
                 pull_request = branch_pull_requests[0]
                 if (
-                    batch.id not in preverified_batch_ids
+                    batch.id not in authenticated_batch_commits
                     and not _matching_marker(manifest, batch, pull_request.marker)
                 ):
                     raise BatchSyncError(
@@ -983,16 +1017,25 @@ def execute_batches(
                     )
                 if pull_request.merged:
                     result = "existing-merged-pull-request"
-                elif batch.id not in preverified_batch_ids:
-                    backend.publish_batch(manifest, batch, branch)
+                else:
+                    backend.publish_batch(
+                        manifest,
+                        batch,
+                        branch,
+                        expected_commit_sha=authenticated_batch_commits.get(batch.id),
+                    )
                 if pull_request.state == "CLOSED":
                     pull_request = backend.reopen_pull_request(pull_request)
                     result = "reopened-pull-request"
                 elif not pull_request.merged:
                     result = "existing-open-pull-request"
             else:
-                if batch.id not in preverified_batch_ids:
-                    backend.publish_batch(manifest, batch, branch)
+                backend.publish_batch(
+                    manifest,
+                    batch,
+                    branch,
+                    expected_commit_sha=authenticated_batch_commits.get(batch.id),
+                )
                 title = (
                     f"[docs-vnext-sync] Baseline {manifest.digest[:12]} "
                     f"batch {batch.number}/{batch.total}"
@@ -1165,8 +1208,21 @@ class GitHubGitBackend:
                     ("TotalTerminatedProcesses", ctypes.c_uint32),
                 ]
 
+            class ThreadEntry32(ctypes.Structure):
+                _fields_ = [
+                    ("dwSize", ctypes.c_uint32),
+                    ("cntUsage", ctypes.c_uint32),
+                    ("th32ThreadID", ctypes.c_uint32),
+                    ("th32OwnerProcessID", ctypes.c_uint32),
+                    ("tpBasePri", ctypes.c_long),
+                    ("tpDeltaPri", ctypes.c_long),
+                    ("dwFlags", ctypes.c_uint32),
+                ]
+
             windows_kernel32 = ctypes.windll.kernel32
             windows_kernel32.CreateJobObjectW.restype = ctypes.c_void_p
+            windows_kernel32.CreateToolhelp32Snapshot.restype = ctypes.c_void_p
+            windows_kernel32.OpenThread.restype = ctypes.c_void_p
             windows_job = windows_kernel32.CreateJobObjectW(None, None)
             limits = ExtendedLimitInformation()
             limits.BasicLimitInformation.LimitFlags = 0x00002000
@@ -1191,12 +1247,36 @@ class GitHubGitBackend:
                     windows_kernel32.CloseHandle(windows_job)
                 process.kill()
                 raise BatchSyncError("Cannot assign discovery command to a Windows Job Object")
-            windows_ntdll = ctypes.windll.ntdll
-            if windows_ntdll.NtResumeProcess(int(process._handle)) != 0:  # type: ignore[attr-defined]
+            snapshot = windows_kernel32.CreateToolhelp32Snapshot(0x00000004, 0)
+            invalid_handle = ctypes.c_void_p(-1).value
+            resumed = False
+            if snapshot != invalid_handle:
+                entry = ThreadEntry32()
+                entry.dwSize = ctypes.sizeof(entry)
+                has_thread = windows_kernel32.Thread32First(snapshot, ctypes.byref(entry))
+                while has_thread:
+                    if entry.th32OwnerProcessID == process.pid:
+                        thread_handle = windows_kernel32.OpenThread(
+                            0x0002,
+                            False,
+                            entry.th32ThreadID,
+                        )
+                        if thread_handle:
+                            resumed = windows_kernel32.ResumeThread(thread_handle) != 0xFFFFFFFF
+                            windows_kernel32.CloseHandle(thread_handle)
+                        break
+                    has_thread = windows_kernel32.Thread32Next(
+                        snapshot,
+                        ctypes.byref(entry),
+                    )
+                windows_kernel32.CloseHandle(snapshot)
+            if not resumed:
                 windows_kernel32.TerminateJobObject(windows_job, 1)
                 windows_kernel32.CloseHandle(windows_job)
                 process.kill()
-                raise BatchSyncError("Cannot resume discovery command after Job Object assignment")
+                raise BatchSyncError(
+                    "Cannot resume discovery command primary thread after Job Object assignment"
+                )
         assert process.stdout is not None
         assert process.stderr is not None
         stdout = bytearray()
@@ -1449,7 +1529,10 @@ class GitHubGitBackend:
             ],
             max_bytes=MAX_REMOTE_DISCOVERY_BYTES,
         )
-        remote_head_commits = parse_remote_branch_refs(output)
+        remote_head_commits = exclude_completed_remote_heads(
+            parse_remote_branch_refs(output),
+            pull_requests,
+        )
         remote_heads = set(remote_head_commits)
         all_pull_request_heads = {pull_request.head_ref for pull_request in pull_requests}
         incomplete_by_head: dict[str, PullRequest] = {}
@@ -1795,7 +1878,7 @@ def main(
             campaign_branches,
         )
         batches = plan_batches(manifest, args.max_files, args.max_payload_bytes)
-        preverified_batch_ids = validate_campaign_identities(
+        authenticated_batch_commits = validate_campaign_identities(
             manifest,
             batches,
             active_backend,
@@ -1810,7 +1893,7 @@ def main(
             args.checkpoint,
             args.max_files,
             args.max_payload_bytes,
-            preverified_batch_ids,
+            authenticated_batch_commits,
         )
         _write_summary(args.summary, args.checkpoint)
         if not succeeded:
