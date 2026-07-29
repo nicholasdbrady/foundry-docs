@@ -21,9 +21,11 @@ import json
 import math
 import os
 import re
+import signal
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -105,11 +107,15 @@ MAX_STDERR_EXCERPT = 4_000
 MAX_STDOUT_PARSE_BYTES = 4_000_000
 MAX_STDOUT_PARSE_LINES = 500
 MAX_STDOUT_LINE_BYTES = 64_000
+MAX_STDOUT_CAPTURE_BYTES = MAX_STDOUT_PARSE_BYTES + MAX_STDOUT_LINE_BYTES + 1
+MAX_STDERR_CAPTURE_BYTES = 64_000
+MAX_PIPE_DRAIN_SECONDS = 0.5
 MAX_IDENTIFIER_TEXT = 256
 MAX_USAGE_METRIC = 10**15
 MAX_ENCODED_TOKEN_BYTES = 8_192
 MAX_ENCODED_DECODE_ITERATIONS = 8
 MAX_ENCODED_DECODE_SECONDS = 0.02
+_ORIGINAL_SUBPROCESS_RUN = subprocess.run
 _SECRET_KEY_PATTERN = re.compile(r"(?:api[_-]?key|authorization|credential|password|secret|token)", re.I)
 _AUTHORIZATION_HEADER_PATTERN = re.compile(
     r"(?im)(authorization\s*:\s*)[^\r\n]+(?:\r?\n[ \t]+[^\r\n]*)*"
@@ -784,6 +790,272 @@ def _bounded_stdout_excerpt(value: str | bytes | None) -> tuple[str, bool]:
     return excerpt, per_line_truncated or final_truncated
 
 
+def _drain_bounded_pipe(fd: int, sink: bytearray, max_bytes: int) -> None:
+    """Drain a process pipe while retaining only a bounded byte projection."""
+    try:
+        while chunk := os.read(fd, 64 * 1024):
+            remaining = max_bytes - len(sink)
+            if remaining > 0:
+                sink.extend(chunk[:remaining])
+    except OSError:
+        pass
+
+
+def _drain_bounded_stream(stream: object, sink: bytearray, max_bytes: int) -> None:
+    """Drain a process stream while retaining only a bounded byte projection."""
+    while chunk := stream.read(64 * 1024):
+        remaining = max_bytes - len(sink)
+        if remaining > 0:
+            sink.extend(chunk[:remaining])
+
+
+def _run_process_with_injected_runner(
+    cmd: list[str],
+    *,
+    timeout: int,
+    cwd: str,
+    env: dict[str, str],
+) -> subprocess.CompletedProcess:
+    """Exercise the bounded stream contract through an injected test runner."""
+    stdout_read_fd, stdout_write_fd = os.pipe()
+    stderr_read_fd, stderr_write_fd = os.pipe()
+    stdout_projection = bytearray()
+    stderr_projection = bytearray()
+
+    with (
+        os.fdopen(stdout_write_fd, "wb", buffering=0) as stdout_writer,
+        os.fdopen(stderr_write_fd, "wb", buffering=0) as stderr_writer,
+    ):
+        stdout_thread = threading.Thread(
+            target=_drain_bounded_pipe,
+            args=(stdout_read_fd, stdout_projection, MAX_STDOUT_CAPTURE_BYTES),
+            daemon=True,
+        )
+        stderr_thread = threading.Thread(
+            target=_drain_bounded_pipe,
+            args=(stderr_read_fd, stderr_projection, MAX_STDERR_CAPTURE_BYTES),
+            daemon=True,
+        )
+        stdout_thread.start()
+        stderr_thread.start()
+        timeout_error: subprocess.TimeoutExpired | None = None
+        try:
+            proc = subprocess.run(
+                cmd,
+                stdout=stdout_writer,
+                stderr=stderr_writer,
+                timeout=timeout,
+                cwd=cwd,
+                env=env,
+            )
+        except subprocess.TimeoutExpired as exc:
+            timeout_error = exc
+        finally:
+            stdout_writer.close()
+            stderr_writer.close()
+            for thread in (stdout_thread, stderr_thread):
+                thread.join()
+            for fd in (stdout_read_fd, stderr_read_fd):
+                try:
+                    os.close(fd)
+                except OSError:
+                    pass
+
+        if timeout_error is not None:
+            if timeout_error.stdout is None:
+                timeout_error.stdout = bytes(stdout_projection)
+            if timeout_error.stderr is None:
+                timeout_error.stderr = bytes(stderr_projection)
+            raise timeout_error
+
+    if proc.stdout is None:
+        proc.stdout = bytes(stdout_projection)
+    if proc.stderr is None:
+        proc.stderr = bytes(stderr_projection)
+    return proc
+
+
+def _terminate_process_tree(proc: subprocess.Popen) -> None:
+    """Terminate the process and descendants that can retain output pipes."""
+    if os.name == "nt":
+        completed = _ORIGINAL_SUBPROCESS_RUN(
+            ["taskkill", "/PID", str(proc.pid), "/T", "/F"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+        if completed.returncode != 0 and proc.poll() is None:
+            proc.kill()
+        return
+    try:
+        os.killpg(proc.pid, signal.SIGKILL)
+    except ProcessLookupError:
+        if proc.poll() is None:
+            proc.kill()
+
+
+def _assign_windows_kill_on_close_job(proc: subprocess.Popen) -> int | None:
+    """Own the Windows process tree so closing the job terminates descendants."""
+    if os.name != "nt":
+        return None
+
+    import ctypes
+    from ctypes import wintypes
+
+    class IO_COUNTERS(ctypes.Structure):
+        _fields_ = [
+            ("ReadOperationCount", ctypes.c_ulonglong),
+            ("WriteOperationCount", ctypes.c_ulonglong),
+            ("OtherOperationCount", ctypes.c_ulonglong),
+            ("ReadTransferCount", ctypes.c_ulonglong),
+            ("WriteTransferCount", ctypes.c_ulonglong),
+            ("OtherTransferCount", ctypes.c_ulonglong),
+        ]
+
+    class JOBOBJECT_BASIC_LIMIT_INFORMATION(ctypes.Structure):
+        _fields_ = [
+            ("PerProcessUserTimeLimit", ctypes.c_longlong),
+            ("PerJobUserTimeLimit", ctypes.c_longlong),
+            ("LimitFlags", wintypes.DWORD),
+            ("MinimumWorkingSetSize", ctypes.c_size_t),
+            ("MaximumWorkingSetSize", ctypes.c_size_t),
+            ("ActiveProcessLimit", wintypes.DWORD),
+            ("Affinity", ctypes.c_size_t),
+            ("PriorityClass", wintypes.DWORD),
+            ("SchedulingClass", wintypes.DWORD),
+        ]
+
+    class JOBOBJECT_EXTENDED_LIMIT_INFORMATION(ctypes.Structure):
+        _fields_ = [
+            ("BasicLimitInformation", JOBOBJECT_BASIC_LIMIT_INFORMATION),
+            ("IoInfo", IO_COUNTERS),
+            ("ProcessMemoryLimit", ctypes.c_size_t),
+            ("JobMemoryLimit", ctypes.c_size_t),
+            ("PeakProcessMemoryUsed", ctypes.c_size_t),
+            ("PeakJobMemoryUsed", ctypes.c_size_t),
+        ]
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.CreateJobObjectW.argtypes = [ctypes.c_void_p, wintypes.LPCWSTR]
+    kernel32.CreateJobObjectW.restype = wintypes.HANDLE
+    kernel32.SetInformationJobObject.argtypes = [
+        wintypes.HANDLE,
+        ctypes.c_int,
+        ctypes.c_void_p,
+        wintypes.DWORD,
+    ]
+    kernel32.SetInformationJobObject.restype = wintypes.BOOL
+    kernel32.AssignProcessToJobObject.argtypes = [wintypes.HANDLE, wintypes.HANDLE]
+    kernel32.AssignProcessToJobObject.restype = wintypes.BOOL
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel32.CloseHandle.restype = wintypes.BOOL
+
+    job = kernel32.CreateJobObjectW(None, None)
+    if not job:
+        raise ctypes.WinError(ctypes.get_last_error())
+    limits = JOBOBJECT_EXTENDED_LIMIT_INFORMATION()
+    limits.BasicLimitInformation.LimitFlags = 0x00002000
+    if not kernel32.SetInformationJobObject(
+        job,
+        9,
+        ctypes.byref(limits),
+        ctypes.sizeof(limits),
+    ):
+        error = ctypes.WinError(ctypes.get_last_error())
+        kernel32.CloseHandle(job)
+        raise error
+    if not kernel32.AssignProcessToJobObject(job, wintypes.HANDLE(proc._handle)):
+        error = ctypes.WinError(ctypes.get_last_error())
+        kernel32.CloseHandle(job)
+        raise error
+    return int(job)
+
+
+def _close_windows_job(job: int | None) -> None:
+    if job is None:
+        return
+    import ctypes
+    from ctypes import wintypes
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel32.CloseHandle.restype = wintypes.BOOL
+    if not kernel32.CloseHandle(wintypes.HANDLE(job)):
+        raise ctypes.WinError(ctypes.get_last_error())
+
+
+def _run_process_bounded(
+    cmd: list[str],
+    *,
+    timeout: int,
+    cwd: str,
+    env: dict[str, str],
+) -> subprocess.CompletedProcess:
+    """Run a process while bounding retained stdout and stderr in memory."""
+    if subprocess.run is not _ORIGINAL_SUBPROCESS_RUN:
+        return _run_process_with_injected_runner(cmd, timeout=timeout, cwd=cwd, env=env)
+
+    creationflags = subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0
+    proc = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        cwd=cwd,
+        env=env,
+        start_new_session=os.name != "nt",
+        creationflags=creationflags,
+    )
+    try:
+        windows_job = _assign_windows_kill_on_close_job(proc)
+    except OSError:
+        proc.kill()
+        proc.wait()
+        proc.stdout.close()
+        proc.stderr.close()
+        raise
+    stdout_projection = bytearray()
+    stderr_projection = bytearray()
+    stdout_thread = threading.Thread(
+        target=_drain_bounded_stream,
+        args=(proc.stdout, stdout_projection, MAX_STDOUT_CAPTURE_BYTES),
+        daemon=True,
+    )
+    stderr_thread = threading.Thread(
+        target=_drain_bounded_stream,
+        args=(proc.stderr, stderr_projection, MAX_STDERR_CAPTURE_BYTES),
+        daemon=True,
+    )
+    stdout_thread.start()
+    stderr_thread.start()
+    timed_out = False
+    try:
+        returncode = proc.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        timed_out = True
+        if windows_job is not None:
+            _close_windows_job(windows_job)
+            windows_job = None
+        else:
+            _terminate_process_tree(proc)
+        returncode = proc.wait()
+    finally:
+        if windows_job is not None:
+            _close_windows_job(windows_job)
+        elif os.name != "nt" and not timed_out:
+            _terminate_process_tree(proc)
+        deadline = time.monotonic() + MAX_PIPE_DRAIN_SECONDS
+        for thread in (stdout_thread, stderr_thread):
+            thread.join(max(0.0, deadline - time.monotonic()))
+        proc.stdout.close()
+        proc.stderr.close()
+
+    stdout = bytes(stdout_projection)
+    stderr = bytes(stderr_projection)
+    if timed_out:
+        raise subprocess.TimeoutExpired(cmd=cmd, timeout=timeout, output=stdout, stderr=stderr)
+    return subprocess.CompletedProcess(cmd, returncode, stdout=stdout, stderr=stderr)
+
+
 def _bounded_event_lines(value: str | bytes | None) -> tuple[list[tuple[int, str]], list[str], bool]:
     """Bound bytes, lines, and per-line size before any JSON parsing."""
     is_bytes = isinstance(value, bytes)
@@ -1271,19 +1543,17 @@ def run_single_eval(
             process_env = os.environ.copy()
             process_env["COPILOT_HOME"] = isolated_home
 
-            proc = subprocess.run(
+            proc = _run_process_bounded(
                 cmd,
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                errors="replace",
                 timeout=timeout,
                 cwd=isolated_home,
                 env=process_env,
             )
+            proc_stdout = proc.stdout
+            proc_stderr = proc.stderr
 
         elapsed = time.monotonic() - start_time
-        parsed = parse_event_stream(_coerce_process_text(proc.stdout))
+        parsed = parse_event_stream(proc_stdout)
         response = parsed["response"]
         evidence_valid, failure_reason, azure_live_query_proven = validate_row_evidence(
             parsed,
@@ -1307,7 +1577,7 @@ def run_single_eval(
 
         result.update({
             "response": response,
-            "stderr": _bounded_excerpt(proc.stderr, MAX_STDERR_EXCERPT)[0],
+            "stderr": _bounded_excerpt(proc_stderr, MAX_STDERR_EXCERPT)[0],
             "exit_code": proc.returncode,
             "response_time_seconds": round(elapsed, 2),
             "status": status,
@@ -1328,8 +1598,8 @@ def run_single_eval(
             "event_parse_error": parsed["parse_error"],
             "diagnostics": _build_diagnostics(
                 parsed,
-                proc.stdout,
-                proc.stderr,
+                proc_stdout,
+                proc_stderr,
                 preserve_stdout=status != "success",
             ),
         })

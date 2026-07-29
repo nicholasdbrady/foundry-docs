@@ -224,7 +224,9 @@ def test_run_single_eval_passes_only_selected_config_across_process_boundary(mon
         captured["cmd"] = cmd
         captured["cwd"] = kwargs["cwd"]
         captured["copilot_home"] = kwargs["env"]["COPILOT_HOME"]
-        return subprocess.CompletedProcess(cmd, 0, stdout=_event_stream(), stderr="")
+        captured["streamed"] = "capture_output" not in kwargs
+        kwargs["stdout"].write(_event_stream().encode())
+        return subprocess.CompletedProcess(cmd, 0, stdout=None, stderr=None)
 
     monkeypatch.setattr(subprocess, "run", fake_run)
 
@@ -239,6 +241,7 @@ def test_run_single_eval_passes_only_selected_config_across_process_boundary(mon
     assert "--disable-builtin-mcps" in captured["cmd"]
     assert "--available-tools=foundry_docs" in captured["cmd"]
     assert "--allow-tool=foundry_docs" in captured["cmd"]
+    assert captured["streamed"] is True
     assert captured["cwd"] == captured["copilot_home"]
     assert result["selected_source"] == "foundry-docs"
     assert result["source_config_count"] == 1
@@ -917,6 +920,79 @@ def test_timeout_is_preserved_as_invalid_row_diagnostics(monkeypatch):
         models=["model-1"],
     )
     assert publication["allowed"] is False
+
+
+def test_timeout_projects_partial_stream_output_when_exception_has_no_payload(monkeypatch):
+    partial_event = json.dumps({
+        "type": "session.mcp_server_status_changed",
+        "data": {
+            "serverName": "foundry_docs",
+            "status": "failed",
+            "error": "initialization failed",
+        },
+    })
+
+    def time_out(cmd, **kwargs):
+        kwargs["stdout"].write(partial_event.encode())
+        kwargs["stderr"].write(b"streamed timeout diagnostic")
+        raise subprocess.TimeoutExpired(cmd=cmd, timeout=kwargs["timeout"])
+
+    monkeypatch.setattr(subprocess, "run", time_out)
+
+    result = run_single_eval(
+        SCENARIO,
+        "foundry-docs",
+        MCP_SERVERS["foundry-docs"],
+        "model-1",
+        timeout=3,
+    )
+
+    assert result["status"] == "timeout"
+    assert result["diagnostics"]["events"][0]["event_type"] == "session.mcp_server_status_changed"
+    assert result["diagnostics"]["stderr_excerpt"] == "streamed timeout diagnostic"
+
+
+def test_bounded_process_timeout_does_not_wait_for_inheriting_descendant(tmp_path):
+    script = (
+        "import subprocess, sys, time; "
+        "child = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(2)']); "
+        "print(child.pid, flush=True); "
+        "time.sleep(2)"
+    )
+    started = time.monotonic()
+
+    with pytest.raises(subprocess.TimeoutExpired) as exc_info:
+        run_docs_eval._run_process_bounded(
+            [sys.executable, "-c", script],
+            timeout=0.2,
+            cwd=str(tmp_path),
+            env=os.environ.copy(),
+        )
+    elapsed = time.monotonic() - started
+
+    assert int(exc_info.value.stdout.decode().strip()) > 0
+    assert elapsed < 2.0
+
+
+def test_bounded_process_success_terminates_inheriting_descendant(tmp_path):
+    script = (
+        "import subprocess, sys; "
+        "child = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(10)']); "
+        "print(child.pid, flush=True)"
+    )
+    started = time.monotonic()
+
+    completed = run_docs_eval._run_process_bounded(
+        [sys.executable, "-c", script],
+        timeout=5,
+        cwd=str(tmp_path),
+        env=os.environ.copy(),
+    )
+    elapsed = time.monotonic() - started
+
+    assert completed.returncode == 0
+    assert int(completed.stdout.decode().strip()) > 0
+    assert elapsed < 2.0
 
 
 def test_process_launch_error_sanitizes_every_persisted_field(monkeypatch):
@@ -1927,6 +2003,36 @@ def test_total_stdout_budget_still_fails_closed():
     assert parsed["stdout_input_truncated"] is True
     assert f"stdout exceeds {run_docs_eval.MAX_STDOUT_PARSE_BYTES} byte pre-parse limit" in parsed["parse_error"]
     assert parsed["response"] == ""
+
+
+def test_process_stream_projection_discards_output_beyond_capture_budget(monkeypatch):
+    event = json.dumps({
+        "type": "session.mcp_servers_loaded",
+        "data": {"message": "x" * 63_000},
+    }, separators=(",", ":"))
+    stdout = ((event + "\n") * 100).encode()
+    assert len(stdout) > run_docs_eval.MAX_STDOUT_CAPTURE_BYTES
+
+    def emit_excess_output(cmd, **kwargs):
+        kwargs["stdout"].write(stdout)
+        return subprocess.CompletedProcess(cmd, 0, stdout=None, stderr=None)
+
+    monkeypatch.setattr(subprocess, "run", emit_excess_output)
+
+    result = run_single_eval(
+        SCENARIO,
+        "foundry-docs",
+        MCP_SERVERS["foundry-docs"],
+        "model-1",
+    )
+
+    assert result["status"] == "invalid"
+    assert f"stdout exceeds {run_docs_eval.MAX_STDOUT_PARSE_BYTES} byte pre-parse limit" in result[
+        "event_parse_error"
+    ]
+    assert len(result["diagnostics"]["stdout_excerpt"]) <= run_docs_eval.MAX_STDOUT_EXCERPT + len(
+        "...[truncated]"
+    )
 
 
 def test_deeply_nested_bounded_json_fails_closed_without_recursion_crash():
