@@ -145,7 +145,7 @@ class AutomationBackend(Protocol):
         batch: Batch,
         branch: str,
         expected_commit_sha: str | None = None,
-    ) -> None: ...
+    ) -> str: ...
 
     def create_pull_request(
         self,
@@ -794,13 +794,12 @@ def validate_campaign_identities(
         prior = claimed_batches.setdefault(batch.id, f"pull request #{pull_request.number}")
         if prior != f"pull request #{pull_request.number}":
             raise BatchSyncError(f"Batch {batch.id} is claimed by both {prior} and a pull request")
-        backend.publish_batch(
+        authenticated_commits[batch.id] = backend.publish_batch(
             manifest,
             batch,
             expected_head,
             expected_commit_sha=identity.commit_sha,
         )
-        authenticated_commits[batch.id] = identity.commit_sha
 
     for orphan in campaign_branches:
         if orphan.pull_request_number is not None:
@@ -824,13 +823,12 @@ def validate_campaign_identities(
         prior = claimed_batches.setdefault(batch.id, f"orphan branch {orphan.head_ref}")
         if prior != f"orphan branch {orphan.head_ref}":
             raise BatchSyncError(f"Batch {batch.id} is claimed by both {prior} and an orphan branch")
-        backend.publish_batch(
+        authenticated_commits[batch.id] = backend.publish_batch(
             manifest,
             batch,
             expected_head,
             expected_commit_sha=orphan.commit_sha,
         )
-        authenticated_commits[batch.id] = orphan.commit_sha
     return authenticated_commits
 
 
@@ -1694,7 +1692,7 @@ class GitHubGitBackend:
         batch: Batch,
         branch: str,
         expected_commit_sha: str | None = None,
-    ) -> None:
+    ) -> str:
         self._run(["git", "fetch", "--no-tags", "origin", self.base_branch])
         base_ref = f"refs/remotes/origin/{self.base_branch}"
         remote_exists = self._remote_branch_exists(branch)
@@ -1774,7 +1772,7 @@ class GitHubGitBackend:
                     raise BatchSyncError(
                         f"Existing branch {branch!r} does not match the reconstructed batch"
                     )
-                return
+                return final_commit_sha
 
             self._run(["git", "switch", "--create", branch], cwd=worktree)
             self._run(["git", "config", "user.name", "github-actions[bot]"], cwd=worktree)
@@ -1801,10 +1799,15 @@ class GitHubGitBackend:
                 ],
                 cwd=worktree,
             )
+            published_commit_sha = self._run(
+                ["git", "rev-parse", "HEAD"],
+                cwd=worktree,
+            ).stdout.strip()
             self._run(
                 ["git", "push", "origin", f"HEAD:refs/heads/{branch}"],
                 cwd=worktree,
             )
+            return published_commit_sha
         finally:
             self._run(
                 ["git", "worktree", "remove", "--force", str(worktree)],

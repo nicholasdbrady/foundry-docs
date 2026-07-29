@@ -229,6 +229,10 @@ class FakeBackend:
         self.verified_branches: list[int] = []
         self.reconstructed_branches: list[int] = []
         self.downloaded_run_ids: list[int] = []
+        self.remote_commit_shas: dict[str, str] = {}
+        for identity in self.pull_request_identities.values():
+            if identity.head_ref in self.remote_branches:
+                self.remote_commit_shas[identity.head_ref] = identity.commit_sha
 
     def list_pull_requests(self) -> list[PullRequest]:
         return list(self.pull_requests)
@@ -271,20 +275,34 @@ class FakeBackend:
         batch: Batch,
         branch: str,
         expected_commit_sha: str | None = None,
-    ) -> None:
+    ) -> str:
         assert branch == branch_name(manifest, batch)
         if branch in self.remote_branches:
+            actual_commit_sha = self.remote_commit_shas.get(
+                branch,
+                expected_commit_sha or ("c" * 40),
+            )
+            if expected_commit_sha is not None and actual_commit_sha != expected_commit_sha:
+                raise BatchSyncError(
+                    f"Automation branch {branch!r} moved from authenticated commit"
+                )
             self.verified_branches.append(batch.number)
         else:
+            actual_commit_sha = hashlib.sha1(
+                f"{manifest.digest}:{batch.id}:reconstructed".encode()
+            ).hexdigest()
             self.remote_branches.add(branch)
+            self.remote_commit_shas[branch] = actual_commit_sha
             self.reconstructed_branches.append(batch.number)
         self.branch_identities[branch] = OrphanBranch(
             head_ref=branch,
             manifest_digest=manifest.digest,
             manifest_run_id=manifest.run_id,
             batch_id=batch.id,
+            commit_sha=actual_commit_sha,
         )
         self.published.append(batch.number)
+        return actual_commit_sha
 
     def create_pull_request(
         self,
@@ -603,6 +621,51 @@ def test_closed_pull_request_with_existing_branch_is_verified_before_reopen(tmp_
     assert backend.reconstructed_branches == []
     assert backend.verified_branches == [1]
     assert backend.created == []
+
+
+def test_deleted_closed_pr_reconstruction_propagates_new_authenticated_sha(tmp_path):
+    manifest = _write_manifest(tmp_path, [_operation(1, 1)], run_id=432)
+    batch = plan_batches(manifest, max_files=1, max_payload_bytes=10)[0]
+    closed = _pull_request(manifest, batch, number=9, state="CLOSED")
+    old_identity = OrphanBranch(
+        head_ref=closed.head_ref,
+        manifest_digest=manifest.digest,
+        manifest_run_id=manifest.run_id,
+        batch_id=batch.id,
+        pull_request_number=closed.number,
+        commit_sha="a" * 40,
+    )
+    backend = FakeBackend(
+        [closed],
+        downloaded_manifests={manifest.run_id: manifest.path},
+        pull_request_identities={closed.number: old_identity},
+    )
+
+    campaign = backend.discover_campaign_branches([closed])
+    selected = select_active_manifest(manifest, backend, campaign)
+    authenticated_commits = validate_campaign_identities(
+        selected,
+        [batch],
+        backend,
+        [closed],
+        campaign,
+    )
+
+    assert authenticated_commits[batch.id] != old_identity.commit_sha
+    assert authenticated_commits[batch.id] == backend.remote_commit_shas[closed.head_ref]
+    succeeded = execute_batches(
+        selected,
+        [batch],
+        backend,
+        [closed],
+        tmp_path / "reconstructed-reopen-checkpoint.json",
+        max_files=1,
+        max_payload_bytes=10,
+        authenticated_batch_commits=authenticated_commits,
+    )
+    assert succeeded is True
+    assert backend.reopened == [closed.number]
+    assert backend.verified_branches == [batch.number]
 
 
 def test_real_git_backend_recovers_branch_with_add_and_path_replacements(tmp_path):
