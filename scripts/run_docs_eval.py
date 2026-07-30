@@ -27,11 +27,13 @@ import sys
 import tempfile
 import threading
 import time
+from decimal import Decimal, DecimalException
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import unquote_plus, urlsplit, urlunsplit
 
 import psutil
+import ijson
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 SCENARIOS_FILE = PROJECT_ROOT / "tests" / "docs_eval_scenarios.json"
@@ -108,12 +110,15 @@ MAX_STDOUT_EXCERPT = 12_000
 MAX_STDERR_EXCERPT = 4_000
 MAX_STDOUT_PARSE_BYTES = 4_000_000
 MAX_STDOUT_PARSE_LINES = 5_000
-MAX_STDOUT_LINE_BYTES = 512_000
+MAX_STDOUT_LINE_BYTES = MAX_STDOUT_PARSE_BYTES
+MAX_EAGER_JSON_EVENT_BYTES = 512_000
 MAX_STDOUT_CAPTURE_BYTES = MAX_STDOUT_PARSE_BYTES + 1
 MAX_STDERR_CAPTURE_BYTES = 64_000
 MAX_PROCESS_CLEANUP_SECONDS = 2.0
 DESCENDANT_POLL_SECONDS = 0.01
 MAX_SANITIZE_CANONICAL_ITERATIONS = 4
+MAX_STREAM_JSON_DEPTH = 64
+MAX_STREAM_JSON_MAP_KEYS = 10_000
 MAX_IDENTIFIER_TEXT = 256
 MAX_USAGE_METRIC = 10**15
 MAX_ENCODED_TOKEN_BYTES = 8_192
@@ -170,6 +175,40 @@ _ABSOLUTE_PATH_PATTERNS = (
     re.compile(r"(?i)\b[A-Z]:[\\/][^,\r\n;\"']+"),
     re.compile(r"(?<![:/\w])/(?!/)[^,\r\n;\"']+"),
 )
+
+_LARGE_EVENT_SCALAR_PATHS = {
+    ("type",),
+    ("exitCode",),
+    ("usage", "premiumRequests"),
+    ("usage", "totalApiDurationMs"),
+    ("usage", "sessionDurationMs"),
+    ("data", "turnId"),
+    ("data", "content"),
+    ("data", "outputTokens"),
+    ("data", "infoType"),
+    ("data", "message"),
+    ("data", "errorType"),
+    ("data", "toolCallId"),
+    ("data", "toolName"),
+    ("data", "success"),
+    ("data", "serverName"),
+    ("data", "server"),
+    ("data", "name"),
+    ("data", "status"),
+    ("data", "state"),
+    ("data", "error"),
+    ("data", "error", "message"),
+    ("data", "error", "code"),
+}
+_LARGE_EVENT_MAP_PATHS = {
+    (),
+    ("data",),
+    ("usage",),
+    ("data", "servers", "item"),
+}
+_LARGE_EVENT_ARRAY_PATHS = {("data", "servers")}
+_SERVER_ITEM_PATH = ("data", "servers", "item")
+_SERVER_SCALAR_FIELDS = {"name", "status", "error", "source", "transport"}
 
 
 def load_scenarios(path: Path) -> list[dict]:
@@ -816,13 +855,17 @@ def _bounded_stdout_excerpt(value: str | bytes | None) -> tuple[str, bool]:
     per_line_truncated = boundary_truncated
     for _line_number, line in lines:
         try:
-            parsed_line = json.loads(line)
+            parsed_line, projected_truncated = _parse_json_event(line)
         except (json.JSONDecodeError, ValueError, RecursionError):
             sanitized_line, truncated = _sanitize_text(line)
             sanitized_lines.append(sanitized_line)
             per_line_truncated = per_line_truncated or truncated
         else:
-            per_line_truncated = per_line_truncated or _contains_oversized_diagnostic_value(parsed_line)
+            per_line_truncated = (
+                per_line_truncated
+                or projected_truncated
+                or _contains_oversized_diagnostic_value(parsed_line)
+            )
             sanitized_lines.append(json.dumps(_sanitize_diagnostic_value(parsed_line), ensure_ascii=True))
     excerpt, final_truncated = _canonicalize_sanitized_text(
         "\n".join(sanitized_lines),
@@ -1259,6 +1302,145 @@ def _build_diagnostics(
     return diagnostics
 
 
+def _set_projected_value(target: dict, path: tuple[str, ...], value: object) -> None:
+    current = target
+    for part in path[:-1]:
+        current = current.setdefault(part, {})
+    if isinstance(value, str):
+        if path == ("data", "content"):
+            value = _sanitize_response_text(value)
+    elif isinstance(value, Decimal):
+        value = float(value)
+    current[path[-1]] = value
+
+
+def _consume_projected_path(stack: list[dict]) -> tuple[str, ...]:
+    if not stack:
+        raise ValueError("streamed JSON event has multiple roots")
+    parent = stack[-1]
+    if parent["kind"] == "map":
+        key = parent["pending_key"]
+        if key is None:
+            raise ValueError("streamed JSON map value is missing a key")
+        parent["pending_key"] = None
+        return (*parent["path"], key)
+    return (*parent["path"], "item")
+
+
+def _validate_projected_container(path: tuple[str, ...], kind: str) -> None:
+    if path == ("data", "error"):
+        if kind != "map":
+            raise ValueError("streamed JSON error field has an invalid container type")
+        return
+    if path in _LARGE_EVENT_SCALAR_PATHS:
+        raise ValueError("streamed JSON evidence field has an invalid container type")
+    if path in _LARGE_EVENT_MAP_PATHS and kind != "map":
+        raise ValueError("streamed JSON evidence field must be an object")
+    if path in _LARGE_EVENT_ARRAY_PATHS and kind != "array":
+        raise ValueError("streamed JSON evidence field must be an array")
+    if path[:3] == _SERVER_ITEM_PATH and len(path) == 4 and path[-1] in _SERVER_SCALAR_FIELDS:
+        if path[-1] != "error":
+            raise ValueError("streamed MCP server field has an invalid container type")
+    if path == (*_SERVER_ITEM_PATH, "error") and kind != "map":
+        raise ValueError("streamed MCP server error has an invalid container type")
+
+
+def _project_large_json_event(line: str) -> tuple[dict, bool]:
+    """Stream-project required evidence from one aggregate-sized JSON event."""
+    projected: dict = {"data": {}}
+    servers: list[dict] = []
+    servers_array_seen = False
+    current_server: dict | None = None
+    stack: list[dict] = []
+    root_complete = False
+    try:
+        for event_type, value in ijson.basic_parse(
+            io.BytesIO(line.encode("utf-8", errors="replace")),
+        ):
+            if root_complete:
+                raise ValueError("streamed JSON event contains trailing data")
+            if event_type == "map_key":
+                if not stack or stack[-1]["kind"] != "map":
+                    raise ValueError("streamed JSON map key is outside an object")
+                frame = stack[-1]
+                if value in frame["keys"]:
+                    raise ValueError("streamed JSON event contains a duplicate key")
+                frame["keys"].add(value)
+                if len(frame["keys"]) > MAX_STREAM_JSON_MAP_KEYS:
+                    raise ValueError("streamed JSON object exceeds its key limit")
+                frame["pending_key"] = value
+                continue
+            if event_type in {"start_map", "start_array"}:
+                if len(stack) >= MAX_STREAM_JSON_DEPTH:
+                    raise ValueError("streamed JSON event exceeds its depth limit")
+                path = () if not stack else _consume_projected_path(stack)
+                kind = "map" if event_type == "start_map" else "array"
+                _validate_projected_container(path, kind)
+                stack.append({
+                    "kind": kind,
+                    "path": path,
+                    "keys": set(),
+                    "pending_key": None,
+                })
+                if path == ("data", "servers") and kind == "array":
+                    servers_array_seen = True
+                if path == _SERVER_ITEM_PATH:
+                    if kind != "map":
+                        raise ValueError("streamed MCP server summary must be an object")
+                    current_server = {}
+                continue
+            if event_type in {"end_map", "end_array"}:
+                if not stack:
+                    raise ValueError("streamed JSON container ended without a start")
+                frame = stack.pop()
+                expected = "map" if event_type == "end_map" else "array"
+                if frame["kind"] != expected or frame["pending_key"] is not None:
+                    raise ValueError("streamed JSON container shape is invalid")
+                if frame["path"] == _SERVER_ITEM_PATH:
+                    if current_server is not None and len(servers) < MAX_DIAGNOSTIC_EVENTS:
+                        servers.append(current_server)
+                    current_server = None
+                if not stack:
+                    root_complete = True
+                continue
+            path = _consume_projected_path(stack)
+            if path in _LARGE_EVENT_MAP_PATHS or path in _LARGE_EVENT_ARRAY_PATHS:
+                raise ValueError("streamed JSON evidence field has an invalid scalar type")
+            if path == _SERVER_ITEM_PATH:
+                raise ValueError("streamed MCP server summary must be an object")
+            if path[:3] == _SERVER_ITEM_PATH and len(path) == 4:
+                field = path[-1]
+                if field in _SERVER_SCALAR_FIELDS and current_server is not None:
+                    current_server[field] = value
+                continue
+            if path[:4] == (*_SERVER_ITEM_PATH, "error") and len(path) == 5:
+                if current_server is not None and path[-1] in {"message", "code"}:
+                    error = current_server.setdefault("error", {})
+                    error[path[-1]] = value
+                continue
+            if path in _LARGE_EVENT_SCALAR_PATHS:
+                _set_projected_value(projected, path, value)
+    except (
+        ijson.JSONError,
+        DecimalException,
+        OverflowError,
+        ValueError,
+        RecursionError,
+    ) as exc:
+        raise ValueError("invalid streamed JSON event") from exc
+    if not root_complete or stack:
+        raise ValueError("streamed JSON event is incomplete")
+    if servers_array_seen:
+        projected["data"]["servers"] = servers
+    return projected, True
+
+
+def _parse_json_event(line: str) -> tuple[dict, bool]:
+    if len(line.encode("utf-8", errors="replace")) <= MAX_EAGER_JSON_EVENT_BYTES:
+        return json.loads(line), False
+    return _project_large_json_event(line)
+
+
 def parse_event_stream(stdout: str | bytes) -> dict:
     """Parse `copilot --output-format json` JSONL output into operational metrics.
 
@@ -1320,7 +1502,7 @@ def parse_event_stream(stdout: str | bytes) -> dict:
 
     for line_number, line in lines:
         try:
-            event = json.loads(line)
+            event, _projected_truncated = _parse_json_event(line)
         except (json.JSONDecodeError, ValueError, RecursionError):
             parse_errors.append(f"line {line_number}: invalid JSON event")
             continue

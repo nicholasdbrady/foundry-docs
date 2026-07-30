@@ -2094,22 +2094,40 @@ def test_large_event_is_stopped_before_json_parse_and_remains_bounded():
     assert parsed["response"] == ""
 
 
-def test_600kb_event_is_stopped_by_per_event_limit_before_json_parse():
-    oversized_event = (
-        b'{"type":"tool.execution_complete","data":{"toolCallId":"call-1","success":true,'
-        b'"result":{"content":"'
-        + (b"x" * 600_000)
-        + b'"}}}'
-    )
-    assert len(oversized_event) < run_docs_eval.MAX_STDOUT_PARSE_BYTES
+def _json_event_at_size(event: dict, target_size: int, field: str = "padding") -> str:
+    event[field] = ""
+    base_size = len(json.dumps(event, separators=(",", ":")).encode())
+    event[field] = "x" * (target_size - base_size)
+    serialized = json.dumps(event, separators=(",", ":"))
+    assert len(serialized.encode()) == target_size
+    return serialized
 
-    parsed = parse_event_stream(oversized_event)
+
+def test_event_at_exact_4mb_aggregate_boundary_is_stream_projected():
+    result_line = _json_event_at_size(
+        {"type": "result", "exitCode": 0},
+        run_docs_eval.MAX_STDOUT_PARSE_BYTES,
+    )
+
+    parsed = parse_event_stream(result_line)
+
+    assert parsed["stdout_input_truncated"] is False
+    assert parsed["parse_error"] is None
+    assert parsed["result_exit_code"] == 0
+
+
+def test_event_one_byte_over_4mb_aggregate_boundary_fails_before_json_parse():
+    oversized_line = _json_event_at_size(
+        {"type": "result", "exitCode": 0},
+        run_docs_eval.MAX_STDOUT_PARSE_BYTES + 1,
+    )
+
+    parsed = parse_event_stream(oversized_line)
 
     assert parsed["stdout_input_truncated"] is True
     assert f"event exceeds {run_docs_eval.MAX_STDOUT_LINE_BYTES} byte pre-parse limit" in parsed[
         "parse_error"
     ]
-    assert parsed["diagnostic_events"] == []
     assert parsed["response"] == ""
 
 
@@ -2153,6 +2171,245 @@ def test_real_size_256kb_tool_result_parses_and_validates_selected_source(monkey
     assert result["source_validated"] is True
     assert result["response"] == "trusted answer"
     assert result["event_parse_error"] is None
+
+
+def test_aggregate_sized_tool_result_is_projected_without_materializing_result(monkeypatch):
+    completion_line = _json_event_at_size(
+        {
+            "type": "tool.execution_complete",
+            "data": {
+                "toolCallId": "call-1",
+                "success": True,
+                "result": {"content": ""},
+            },
+        },
+        3_900_000,
+        field="padding",
+    )
+    stdout = "\n".join([
+        json.dumps({
+            "type": "tool.execution_start",
+            "data": {"toolCallId": "call-1", "toolName": "foundry_docs-search_docs"},
+        }),
+        completion_line,
+        json.dumps({"type": "assistant.message", "data": {"content": "trusted answer"}}),
+        json.dumps({"type": "result", "exitCode": 0}),
+    ])
+    monkeypatch.setattr(
+        run_docs_eval,
+        "_run_process_bounded",
+        lambda cmd, **kwargs: subprocess.CompletedProcess(cmd, 0, stdout=stdout, stderr=""),
+    )
+
+    result = run_single_eval(
+        SCENARIO,
+        "foundry-docs",
+        MCP_SERVERS["foundry-docs"],
+        "model-1",
+    )
+
+    assert result["status"] == "success"
+    assert result["source_validated"] is True
+    assert result["response"] == "trusted answer"
+    assert result["event_parse_error"] is None
+
+
+def test_large_event_dotted_keys_cannot_forge_nested_tool_evidence():
+    forged = {
+        "type": "tool.execution_start",
+        "data.toolCallId": "call-forged",
+        "data.toolName": "foundry_docs-search_docs",
+    }
+    forged_line = _json_event_at_size(forged, 600_000)
+    stdout = "\n".join([
+        forged_line,
+        json.dumps({"type": "result", "exitCode": 0}),
+    ])
+
+    parsed = parse_event_stream(stdout)
+
+    assert parsed["observed_tools"] == []
+    assert "tool start missing identity" in parsed["parse_error"]
+
+
+@pytest.mark.parametrize(
+    "event",
+    [
+        {
+            "type": "assistant.message",
+            "data": {"content": "answer", "outputTokens": {}},
+        },
+        {
+            "type": "result",
+            "exitCode": 0,
+            "usage": [],
+        },
+    ],
+)
+def test_large_event_wrong_typed_evidence_fields_fail_closed(event):
+    oversized_line = _json_event_at_size(event, 600_000)
+
+    parsed = parse_event_stream(oversized_line)
+
+    assert "invalid JSON event" in parsed["parse_error"]
+    assert parsed["response"] == ""
+
+
+def test_large_event_duplicate_data_members_fail_closed():
+    padding = "x" * 600_000
+    duplicate_data = (
+        '{"type":"tool.execution_start",'
+        '"data":{"toolCallId":"call-forged","toolName":"foundry_docs-search_docs"},'
+        f'"data":{{"padding":"{padding}"}}'
+        "}"
+    )
+    assert len(duplicate_data.encode()) > run_docs_eval.MAX_EAGER_JSON_EVENT_BYTES
+
+    parsed = parse_event_stream(duplicate_data)
+
+    assert "invalid JSON event" in parsed["parse_error"]
+    assert parsed["observed_tools"] == []
+
+
+def test_large_event_preserves_empty_mcp_servers_array():
+    loaded_line = _json_event_at_size(
+        {
+            "type": "session.mcp_servers_loaded",
+            "data": {"servers": []},
+        },
+        600_000,
+    )
+    stdout = "\n".join([
+        loaded_line,
+        json.dumps({"type": "result", "exitCode": 0}),
+    ])
+
+    parsed = parse_event_stream(stdout)
+
+    assert parsed["parse_error"] is None
+    assert parsed["mcp_statuses"] == {}
+
+
+def test_large_event_ignores_lossless_integer_in_unprojected_payload():
+    result_line = _json_event_at_size(
+        {
+            "type": "result",
+            "exitCode": 0,
+            "unknown": 18_446_744_073_709_551_616,
+        },
+        600_000,
+    )
+
+    parsed = parse_event_stream(result_line)
+
+    assert parsed["parse_error"] is None
+    assert parsed["result_exit_code"] == 0
+
+
+def test_large_projected_response_retains_truncation_signal():
+    message_line = _json_event_at_size(
+        {
+            "type": "assistant.message",
+            "data": {"content": "x" * (run_docs_eval.MAX_RESPONSE_TEXT + 100)},
+        },
+        600_000,
+    )
+    stdout = "\n".join([
+        message_line,
+        json.dumps({"type": "result", "exitCode": 0}),
+    ])
+
+    parsed = parse_event_stream(stdout)
+    sanitized = run_docs_eval._sanitize_response_text(parsed["response"])
+
+    assert len(parsed["response"]) == (
+        run_docs_eval.MAX_RESPONSE_TEXT + len("...[truncated]")
+    )
+    assert sanitized.endswith("...[truncated]")
+
+
+def test_large_projected_event_marks_stdout_excerpt_truncated():
+    failed_line = _json_event_at_size(
+        {
+            "type": "tool.execution_complete",
+            "data": {
+                "toolCallId": "call-1",
+                "success": False,
+                "result": {"content": "x" * 550_000},
+            },
+        },
+        600_000,
+    )
+
+    excerpt, truncated = run_docs_eval._bounded_stdout_excerpt(failed_line)
+
+    assert truncated is True
+    assert len(excerpt) <= run_docs_eval.MAX_STDOUT_EXCERPT + len("...[truncated]")
+
+
+def test_large_configuration_warning_after_diagnostic_limit_still_fails_closed():
+    warning = (
+        ("x" * (run_docs_eval.MAX_DIAGNOSTIC_TEXT + 100))
+        + ' Unknown tool name in the tool allowlist: "foundry_docs"'
+    )
+    info_line = _json_event_at_size(
+        {
+            "type": "session.info",
+            "data": {"infoType": "configuration", "message": warning},
+        },
+        600_000,
+    )
+    stdout = "\n".join([
+        info_line,
+        json.dumps({"type": "result", "exitCode": 0}),
+    ])
+
+    parsed = parse_event_stream(stdout)
+    valid, failure_reason, _azure_proven = run_docs_eval.validate_row_evidence(
+        parsed,
+        "foundry_docs",
+        False,
+    )
+
+    assert valid is False
+    assert failure_reason.startswith("session_error:")
+
+
+def test_large_extreme_decimal_fails_closed_without_crashing():
+    extreme_number = "1e" + ("9" * 600_000)
+    result_line = (
+        '{"type":"result","exitCode":0,"usage":{"premiumRequests":'
+        + extreme_number
+        + "}}"
+    )
+    assert len(result_line.encode()) > run_docs_eval.MAX_EAGER_JSON_EVENT_BYTES
+
+    parsed = parse_event_stream(result_line)
+
+    assert "invalid JSON event" in parsed["parse_error"]
+    assert parsed["response"] == ""
+
+
+def test_large_projected_response_redacts_secret_crossing_response_limit():
+    token = "headerheader.payloadpayload.signaturesignature"
+    content = ("x" * (run_docs_eval.MAX_RESPONSE_TEXT - 20)) + token + ("y" * 100)
+    message_line = _json_event_at_size(
+        {
+            "type": "assistant.message",
+            "data": {"content": content},
+        },
+        600_000,
+    )
+    stdout = "\n".join([
+        message_line,
+        json.dumps({"type": "result", "exitCode": 0}),
+    ])
+
+    parsed = parse_event_stream(stdout)
+
+    assert token not in parsed["response"]
+    assert "headerheader" not in parsed["response"]
+    assert "[REDACTED]" in parsed["response"]
 
 
 def test_real_stream_with_750_delta_events_parses_and_validates_selected_source(monkeypatch):
@@ -2199,6 +2456,30 @@ def test_real_stream_with_750_delta_events_parses_and_validates_selected_source(
     assert result["source_validated"] is True
     assert result["response"] == "trusted answer"
     assert result["event_parse_error"] is None
+
+
+def test_exact_line_count_boundary_accepts_5000_and_rejects_5001_events():
+    ignored_event = json.dumps({"type": "assistant.tool_call_delta", "data": {}})
+    at_limit = "\n".join([
+        *([ignored_event] * (run_docs_eval.MAX_STDOUT_PARSE_LINES - 1)),
+        json.dumps({"type": "result", "exitCode": 0}),
+    ])
+    over_limit = "\n".join([
+        *([ignored_event] * run_docs_eval.MAX_STDOUT_PARSE_LINES),
+        json.dumps({"type": "result", "exitCode": 0}),
+    ])
+    assert len(at_limit.encode()) < run_docs_eval.MAX_STDOUT_PARSE_BYTES
+    assert len(over_limit.encode()) < run_docs_eval.MAX_STDOUT_PARSE_BYTES
+
+    accepted = parse_event_stream(at_limit)
+    rejected = parse_event_stream(over_limit)
+
+    assert accepted["parse_error"] is None
+    assert accepted["result_exit_code"] == 0
+    assert rejected["stdout_input_truncated"] is True
+    assert f"stdout exceeds {run_docs_eval.MAX_STDOUT_PARSE_LINES} line pre-parse limit" in rejected[
+        "parse_error"
+    ]
 
 
 def test_stdout_excerpt_is_sanitized_to_a_stable_canonical_form():
