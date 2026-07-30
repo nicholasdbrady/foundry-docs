@@ -112,7 +112,11 @@ MAX_STDOUT_PARSE_BYTES = 4_000_000
 MAX_STDOUT_PARSE_LINES = 5_000
 MAX_STDOUT_LINE_BYTES = MAX_STDOUT_PARSE_BYTES
 MAX_EAGER_JSON_EVENT_BYTES = 512_000
-MAX_STDOUT_CAPTURE_BYTES = MAX_STDOUT_PARSE_BYTES + 1
+MAX_STDOUT_CAPTURE_BYTES = (
+    MAX_STDOUT_PARSE_BYTES
+    + (MAX_STDOUT_PARSE_LINES * 2)
+    + 1
+)
 MAX_STDERR_CAPTURE_BYTES = 64_000
 MAX_PROCESS_CLEANUP_SECONDS = 2.0
 DESCENDANT_POLL_SECONDS = 0.01
@@ -1212,29 +1216,33 @@ def _bounded_event_lines(value: str | bytes | None) -> tuple[list[tuple[int, str
     truncated = False
 
     for line_number in range(1, MAX_STDOUT_PARSE_LINES + 1):
-        line = reader.readline(MAX_STDOUT_LINE_BYTES + 1)
+        line = reader.readline(MAX_STDOUT_LINE_BYTES + 3)
         if not line:
             break
-        newline_markers = (b"\n", b"\r") if is_bytes else ("\n", "\r")
-        if len(line) > MAX_STDOUT_LINE_BYTES and not line.endswith(newline_markers):
+        lf = b"\n" if is_bytes else "\n"
+        cr = b"\r" if is_bytes else "\r"
+        payload = line
+        if payload.endswith(lf):
+            payload = payload[:-1]
+            if payload.endswith(cr):
+                payload = payload[:-1]
+        payload_bytes = (
+            len(payload)
+            if is_bytes
+            else len(payload.encode("utf-8", errors="replace"))
+        )
+        if payload_bytes > MAX_STDOUT_LINE_BYTES:
             errors.append(
                 f"line {line_number}: event exceeds {MAX_STDOUT_LINE_BYTES} byte pre-parse limit"
             )
             truncated = True
             break
-        line_bytes = len(line) if is_bytes else len(line.encode("utf-8", errors="replace"))
-        if line_bytes > MAX_STDOUT_LINE_BYTES:
-            errors.append(
-                f"line {line_number}: event exceeds {MAX_STDOUT_LINE_BYTES} byte pre-parse limit"
-            )
-            truncated = True
-            break
-        if total_bytes + line_bytes > MAX_STDOUT_PARSE_BYTES:
+        if total_bytes + payload_bytes > MAX_STDOUT_PARSE_BYTES:
             errors.append(f"stdout exceeds {MAX_STDOUT_PARSE_BYTES} byte pre-parse limit")
             truncated = True
             break
-        total_bytes += line_bytes
-        text_line = line.decode("utf-8", errors="replace") if is_bytes else line
+        total_bytes += payload_bytes
+        text_line = payload.decode("utf-8", errors="replace") if is_bytes else payload
         stripped = text_line.strip()
         if stripped:
             accepted.append((line_number, stripped))
@@ -1312,6 +1320,19 @@ def _set_projected_value(target: dict, path: tuple[str, ...], value: object) -> 
     elif isinstance(value, Decimal):
         value = float(value)
     current[path[-1]] = value
+
+
+def _reject_duplicate_json_pairs(pairs: list[tuple[str, object]]) -> dict:
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("JSON event contains a duplicate key")
+        result[key] = value
+    return result
+
+
+def _reject_nonstandard_json_constant(value: str) -> object:
+    raise ValueError(f"JSON event contains non-standard constant {value}")
 
 
 def _consume_projected_path(stack: list[dict]) -> tuple[str, ...]:
@@ -1437,7 +1458,11 @@ def _project_large_json_event(line: str) -> tuple[dict, bool]:
 
 def _parse_json_event(line: str) -> tuple[dict, bool]:
     if len(line.encode("utf-8", errors="replace")) <= MAX_EAGER_JSON_EVENT_BYTES:
-        return json.loads(line), False
+        return json.loads(
+            line,
+            object_pairs_hook=_reject_duplicate_json_pairs,
+            parse_constant=_reject_nonstandard_json_constant,
+        ), False
     return _project_large_json_event(line)
 
 

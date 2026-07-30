@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import math
 import os
 import subprocess
 import sys
@@ -2116,6 +2117,20 @@ def test_event_at_exact_4mb_aggregate_boundary_is_stream_projected():
     assert parsed["result_exit_code"] == 0
 
 
+@pytest.mark.parametrize("terminator", ["\n", "\r\n"])
+def test_exact_4mb_json_event_accepts_normal_line_terminator(terminator):
+    result_line = _json_event_at_size(
+        {"type": "result", "exitCode": 0},
+        run_docs_eval.MAX_STDOUT_PARSE_BYTES,
+    )
+
+    parsed = parse_event_stream(result_line + terminator)
+
+    assert parsed["stdout_input_truncated"] is False
+    assert parsed["parse_error"] is None
+    assert parsed["result_exit_code"] == 0
+
+
 def test_event_one_byte_over_4mb_aggregate_boundary_fails_before_json_parse():
     oversized_line = _json_event_at_size(
         {"type": "result", "exitCode": 0},
@@ -2129,6 +2144,62 @@ def test_event_one_byte_over_4mb_aggregate_boundary_fails_before_json_parse():
         "parse_error"
     ]
     assert parsed["response"] == ""
+
+
+@pytest.mark.parametrize("terminator", ["\n", "\r\n"])
+def test_4mb_plus_one_json_payload_fails_with_line_terminator(terminator):
+    oversized_line = _json_event_at_size(
+        {"type": "result", "exitCode": 0},
+        run_docs_eval.MAX_STDOUT_PARSE_BYTES + 1,
+    )
+
+    parsed = parse_event_stream(oversized_line + terminator)
+
+    assert parsed["stdout_input_truncated"] is True
+    assert f"event exceeds {run_docs_eval.MAX_STDOUT_LINE_BYTES} byte pre-parse limit" in parsed[
+        "parse_error"
+    ]
+    assert parsed["response"] == ""
+
+
+@pytest.mark.parametrize("padding_size", [0, 600_000])
+def test_duplicate_type_cannot_suppress_session_error_in_eager_or_streaming_parser(
+    padding_size,
+):
+    padding = "x" * padding_size
+    duplicate_type = (
+        '{"type":"session.error",'
+        '"data":{"errorType":"fatal","message":"must fail"},'
+        '"type":"result","exitCode":0,'
+        f'"padding":"{padding}"'
+        "}"
+    )
+
+    parsed = parse_event_stream(duplicate_type)
+
+    assert "invalid JSON event" in parsed["parse_error"]
+    assert parsed["result_exit_code"] is None
+    assert parsed["response"] == ""
+
+
+@pytest.mark.parametrize("constant", ["NaN", "Infinity", "-Infinity"])
+@pytest.mark.parametrize("padding_size", [0, 600_000])
+def test_nonstandard_numeric_constants_fail_in_eager_and_streaming_parser(
+    constant,
+    padding_size,
+):
+    padding = "x" * padding_size
+    nonstandard = (
+        '{"type":"result","exitCode":0,'
+        f'"usage":{{"premiumRequests":{constant}}},'
+        f'"padding":"{padding}"'
+        "}"
+    )
+
+    parsed = parse_event_stream(nonstandard)
+
+    assert "invalid JSON event" in parsed["parse_error"]
+    assert parsed["result_exit_code"] is None
 
 
 def test_real_size_256kb_tool_result_parses_and_validates_selected_source(monkeypatch):
@@ -2845,7 +2916,10 @@ def test_usage_metrics_discard_invalid_values_and_remain_strict_json(invalid_val
     assert parsed["premium_requests"] is None
     assert parsed["api_duration_ms"] is None
     assert parsed["session_duration_ms"] is None
-    assert "must be a finite non-negative number" in parsed["parse_error"]
+    if isinstance(invalid_value, float) and not math.isfinite(invalid_value):
+        assert "invalid JSON event" in parsed["parse_error"]
+    else:
+        assert "must be a finite non-negative number" in parsed["parse_error"]
     assert "LEAKME" not in parsed["parse_error"]
     assert "Alice" not in parsed["parse_error"]
     json.dumps(parsed, allow_nan=False)
@@ -2925,7 +2999,7 @@ def test_usage_metrics_reject_integer_beyond_aggregation_bound():
     assert "must be a finite non-negative number" in parsed["parse_error"]
 
 
-def test_nonfinite_nested_diagnostic_value_is_normalized_for_strict_json():
+def test_nonfinite_nested_diagnostic_value_is_rejected_as_invalid_json():
     stdout = "\n".join([
         json.dumps({
             "type": "session.error",
@@ -2936,7 +3010,8 @@ def test_nonfinite_nested_diagnostic_value_is_normalized_for_strict_json():
 
     parsed = parse_event_stream(stdout)
 
-    assert parsed["diagnostic_events"][0]["data"]["extra"] is None
+    assert parsed["diagnostic_events"] == []
+    assert "invalid JSON event" in parsed["parse_error"]
     json.dumps(parsed, allow_nan=False)
 
 
