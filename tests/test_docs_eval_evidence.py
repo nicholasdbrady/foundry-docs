@@ -326,7 +326,7 @@ def test_unknown_tool_allowlist_warning_is_retained_and_fails_closed():
         json.dumps({"type": "result", "exitCode": 0}),
     ])
 
-    parsed = parse_event_stream(stdout)
+    parsed = parse_event_stream(stdout, expected_mcp_server="foundry_docs")
     valid, failure_reason, _azure_proven = run_docs_eval.validate_row_evidence(
         parsed,
         "foundry_docs_vnext",
@@ -370,7 +370,7 @@ def test_known_ephemeral_post_result_events_are_retained_and_ignored():
         *(json.dumps(event) for event in post_result_events),
     ])
 
-    parsed = parse_event_stream(stdout)
+    parsed = parse_event_stream(stdout, expected_mcp_server="foundry_docs")
     valid, failure_reason, _azure_proven = run_docs_eval.validate_row_evidence(
         parsed,
         "foundry_docs",
@@ -384,8 +384,10 @@ def test_known_ephemeral_post_result_events_are_retained_and_ignored():
     assert [event["event_type"] for event in parsed["post_result_events"]] == [
         event["type"] for event in post_result_events
     ]
-    assert parsed["post_result_events"][-2]["status"] == "connected"
-    assert parsed["post_result_events"][-1]["status"] == "connected,disabled"
+    assert parsed["post_result_events"][-2]["status"] == "foundry_docs=connected"
+    assert parsed["post_result_events"][-1]["status"] == (
+        "foundry_docs=connected,github-mcp-server=disabled"
+    )
 
 
 @pytest.mark.parametrize(
@@ -407,6 +409,11 @@ def test_known_ephemeral_post_result_events_are_retained_and_ignored():
         {
             "type": "session.mcp_server_status_changed",
             "data": {"serverName": "foundry_docs", "status": "failed"},
+            "ephemeral": True,
+        },
+        {
+            "type": "session.mcp_server_status_changed",
+            "data": {"serverName": "other_server", "status": "connected"},
             "ephemeral": True,
         },
         {"type": "result", "exitCode": 0},
@@ -2328,6 +2335,24 @@ def test_scorer_rejects_malformed_or_semantic_post_result_metadata(event):
 
     assert errors
     assert scored["row_valid"] is False
+
+
+def test_scorer_requires_selected_or_builtin_identity_for_lifecycle_postamble():
+    row = _raw_row()
+    row["diagnostics"].update({
+        "post_result_events": [{
+            "line": 42,
+            "event_type": "session.mcp_server_status_changed",
+            "ephemeral": True,
+            "status": "other_server=connected",
+        }],
+        "post_result_event_count": 1,
+        "post_result_events_truncated": False,
+    })
+
+    errors = validate_row_schema(row)
+
+    assert "diagnostics.post_result_events[0] is not a benign post-result event" in errors
 
 
 @pytest.mark.parametrize(

@@ -151,6 +151,7 @@ BENIGN_EPHEMERAL_POST_RESULT_EVENTS = {
     "mcp.tools.list_changed",
 }
 BENIGN_POST_RESULT_MCP_STATUSES = {"connected", "disabled"}
+BUILTIN_MCP_SERVER_NAME = "github-mcp-server"
 MAX_IDENTIFIER_TEXT = 256
 MAX_USAGE_METRIC = 10**15
 MAX_ENCODED_TOKEN_BYTES = 8_192
@@ -1357,16 +1358,25 @@ def _build_diagnostics(
 
 def _post_result_status(event_type: object, data: dict) -> str | None:
     if event_type == "session.mcp_server_status_changed":
+        server = data.get("serverName") or data.get("server") or data.get("name")
         status = data.get("status") or data.get("state")
-        return _sanitize_identifier(status) if isinstance(status, str) else None
+        return (
+            _sanitize_identifier(f"{server}={status.casefold()}")
+            if isinstance(server, str) and isinstance(status, str)
+            else None
+        )
     if event_type == "session.mcp_servers_loaded":
         servers = data.get("servers")
         if not isinstance(servers, list):
             return None
         statuses = sorted({
-            str(server.get("status")).casefold()
+            f"{server.get('name')}={str(server.get('status')).casefold()}"
             for server in servers
-            if isinstance(server, dict) and isinstance(server.get("status"), str)
+            if (
+                isinstance(server, dict)
+                and isinstance(server.get("name"), str)
+                and isinstance(server.get("status"), str)
+            )
         })
         return _sanitize_identifier(",".join(statuses)) if statuses else None
     return None
@@ -1376,33 +1386,62 @@ def _is_benign_post_result_metadata(
     event_type: object,
     ephemeral: object,
     status: object,
+    expected_mcp_server: object,
 ) -> bool:
     if ephemeral is not True or not isinstance(event_type, str):
         return False
     if event_type in BENIGN_EPHEMERAL_POST_RESULT_EVENTS:
         return status is None
     if event_type == "session.mcp_server_status_changed":
-        return status in BENIGN_POST_RESULT_MCP_STATUSES
+        return (
+            isinstance(expected_mcp_server, str)
+            and status
+            in {
+                f"{_sanitize_identifier(expected_mcp_server)}=connected",
+                f"{BUILTIN_MCP_SERVER_NAME}=disabled",
+            }
+        )
     if event_type == "session.mcp_servers_loaded" and isinstance(status, str):
         statuses = status.split(",")
-        return bool(statuses) and all(
-            value in BENIGN_POST_RESULT_MCP_STATUSES
-            for value in statuses
+        selected_status = (
+            f"{_sanitize_identifier(expected_mcp_server)}=connected"
+            if isinstance(expected_mcp_server, str)
+            else None
+        )
+        return (
+            selected_status is not None
+            and selected_status in statuses
+            and all(
+                value
+                in {
+                    selected_status,
+                    f"{BUILTIN_MCP_SERVER_NAME}=disabled",
+                }
+                for value in statuses
+            )
         )
     return False
 
 
-def _is_benign_post_result_event(event: dict, data: dict) -> bool:
+def _is_benign_post_result_event(
+    event: dict,
+    data: dict,
+    expected_mcp_server: str | None,
+) -> bool:
     if event.get("ephemeral") is not True:
         return False
     event_type = event.get("type")
     if event_type in BENIGN_EPHEMERAL_POST_RESULT_EVENTS:
         return True
     if event_type == "session.mcp_server_status_changed":
-        status = str(data.get("status") or data.get("state") or "").casefold()
         return (
             not (data.get("error") or data.get("message"))
-            and _is_benign_post_result_metadata(event_type, True, status)
+            and _is_benign_post_result_metadata(
+                event_type,
+                True,
+                _post_result_status(event_type, data),
+                expected_mcp_server,
+            )
         )
     if event_type == "session.mcp_servers_loaded":
         servers = data.get("servers")
@@ -1421,6 +1460,7 @@ def _is_benign_post_result_event(event: dict, data: dict) -> bool:
             event_type,
             True,
             _post_result_status(event_type, data),
+            expected_mcp_server,
         )
     return False
 
@@ -1581,7 +1621,11 @@ def _parse_json_event(line: str) -> tuple[dict, bool]:
     return _project_large_json_event(line)
 
 
-def parse_event_stream(stdout: str | bytes) -> dict:
+def parse_event_stream(
+    stdout: str | bytes,
+    *,
+    expected_mcp_server: str | None = None,
+) -> dict:
     """Parse `copilot --output-format json` JSONL output into operational metrics.
 
     Extracts the final assistant response text plus turn count, tool-call count,
@@ -1668,7 +1712,11 @@ def parse_event_stream(stdout: str | bytes) -> dict:
                 if not metrics["post_result_events_truncated"]:
                     parse_errors.append("post-result event evidence exceeds retained limit")
                 metrics["post_result_events_truncated"] = True
-            if not isinstance(data, dict) or not _is_benign_post_result_event(event, data):
+            if not isinstance(data, dict) or not _is_benign_post_result_event(
+                event,
+                data,
+                expected_mcp_server,
+            ):
                 parse_errors.append(f"line {line_number}: event occurred after terminal result")
             continue
         if not isinstance(data, dict):
@@ -2009,7 +2057,7 @@ def run_single_eval(
             proc_stderr = proc.stderr
 
         elapsed = time.monotonic() - start_time
-        parsed = parse_event_stream(proc_stdout)
+        parsed = parse_event_stream(proc_stdout, expected_mcp_server=source_name)
         response = parsed["response"]
         evidence_valid, failure_reason, azure_live_query_proven = validate_row_evidence(
             parsed,
@@ -2064,7 +2112,11 @@ def run_single_eval(
         elapsed = time.monotonic() - start_time
         partial_stdout = exc.stdout
         partial_stderr = exc.stderr
-        parsed = parse_event_stream(partial_stdout) if partial_stdout else None
+        parsed = (
+            parse_event_stream(partial_stdout, expected_mcp_server=source_name)
+            if partial_stdout
+            else None
+        )
         azure_live_query_proven = (
             _azure_search_proven(
                 parsed,

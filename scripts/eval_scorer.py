@@ -504,6 +504,9 @@ def validate_row_schema(result: object) -> list[str]:
                     event["event_type"],
                     event["ephemeral"],
                     event["status"],
+                    result.get("selected_source_config", {}).get("name")
+                    if isinstance(result.get("selected_source_config"), dict)
+                    else None,
                 ):
                     errors.append(f"{path} is not a benign post-result event")
         if diagnostics["post_result_events_truncated"] is True:
