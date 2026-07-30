@@ -142,6 +142,42 @@ def _raw_row(
     }
 
 
+def _post_result_event_metadata(
+    event_type: str,
+    *,
+    line: int = 42,
+    ephemeral: bool = True,
+    servers: list[dict] | None = None,
+    server_count: int | None = None,
+    servers_truncated: bool = False,
+    server_metadata_valid: bool = True,
+) -> dict:
+    servers = [] if servers is None else [
+        {
+            **server,
+            "identity_aliases": server.get(
+                "identity_aliases",
+                [server["name"]] if server.get("name") else [],
+            ),
+            "status_aliases": server.get(
+                "status_aliases",
+                [server["status"]] if server.get("status") else [],
+            ),
+            "error_fields": server.get("error_fields", []),
+        }
+        for server in servers
+    ]
+    return {
+        "line": line,
+        "event_type": event_type,
+        "ephemeral": ephemeral,
+        "servers": servers,
+        "server_count": len(servers) if server_count is None else server_count,
+        "servers_truncated": servers_truncated,
+        "server_metadata_valid": server_metadata_valid,
+    }
+
+
 def score_result(result, trusted_scenarios=None):
     if trusted_scenarios is None:
         scenario_id = result.get("scenario_id") if isinstance(result, dict) else SCENARIO["id"]
@@ -355,6 +391,16 @@ def test_known_ephemeral_post_result_events_are_retained_and_ignored():
             "ephemeral": True,
         },
         {
+            "type": "session.mcp_server_status_changed",
+            "data": {"serverName": "foundry_docs", "status": "ready"},
+            "ephemeral": True,
+        },
+        {
+            "type": "session.mcp_server_status_changed",
+            "data": {"serverName": "github-mcp-server", "status": "disabled"},
+            "ephemeral": True,
+        },
+        {
             "type": "session.mcp_servers_loaded",
             "data": {
                 "servers": [
@@ -379,15 +425,23 @@ def test_known_ephemeral_post_result_events_are_retained_and_ignored():
 
     assert valid is True
     assert failure_reason is None
-    assert parsed["post_result_event_count"] == 5
+    assert parsed["post_result_event_count"] == 7
     assert parsed["post_result_events_truncated"] is False
     assert [event["event_type"] for event in parsed["post_result_events"]] == [
         event["type"] for event in post_result_events
     ]
-    assert parsed["post_result_events"][-2]["status"] == "foundry_docs=connected"
-    assert parsed["post_result_events"][-1]["status"] == (
-        "foundry_docs=connected,github-mcp-server=disabled"
-    )
+    connected = parsed["post_result_events"][-4]["servers"][0]
+    assert connected["name"] == "foundry_docs"
+    assert connected["status"] == "connected"
+    assert connected["identity_aliases"] == ["foundry_docs"]
+    assert connected["status_aliases"] == ["connected"]
+    assert connected["error_fields"] == []
+    assert connected["error_present"] is False
+    loaded = parsed["post_result_events"][-1]["servers"]
+    assert [(server["name"], server["status"]) for server in loaded] == [
+        ("foundry_docs", "connected"),
+        ("github-mcp-server", "disabled"),
+    ]
 
 
 @pytest.mark.parametrize(
@@ -414,6 +468,85 @@ def test_known_ephemeral_post_result_events_are_retained_and_ignored():
         {
             "type": "session.mcp_server_status_changed",
             "data": {"serverName": "other_server", "status": "connected"},
+            "ephemeral": True,
+        },
+        {
+            "type": "mcp.tools.list_changed",
+            "data": {"serverName": "other_server"},
+            "ephemeral": True,
+        },
+        {
+            "type": "mcp.tools.list_changed",
+            "data": {},
+            "ephemeral": True,
+        },
+        {
+            "type": "mcp.tools.list_changed",
+            "data": {"serverName": "foundry_docs", "error": "failed"},
+            "ephemeral": True,
+        },
+        {
+            "type": "mcp.tools.list_changed",
+            "data": {"serverName": "foundry_docs", "server": "other_server"},
+            "ephemeral": True,
+        },
+        {
+            "type": "session.mcp_server_status_changed",
+            "data": {
+                "serverName": "foundry_docs",
+                "status": "connected",
+                "state": "failed",
+            },
+            "ephemeral": True,
+        },
+        {
+            "type": "session.mcp_servers_loaded",
+            "data": {
+                "servers": [
+                    {"name": "foundry_docs", "status": "connected"},
+                    {"name": "other_server", "status": "disabled"},
+                ],
+            },
+            "ephemeral": True,
+        },
+        {
+            "type": "session.mcp_servers_loaded",
+            "data": {
+                "servers": [
+                    {"name": "foundry_docs", "status": "connected"},
+                    {"name": "foundry_docs", "status": "ready"},
+                ],
+            },
+            "ephemeral": True,
+        },
+        {
+            "type": "session.mcp_servers_loaded",
+            "data": {
+                "servers": [{
+                    "serverName": "foundry_docs",
+                    "name": "other_server",
+                    "status": "connected",
+                }],
+            },
+            "ephemeral": True,
+        },
+        {
+            "type": "session.mcp_servers_loaded",
+            "data": {
+                "servers": [
+                    {"name": "foundry_docs", "status": "connected", "failure": None},
+                ],
+            },
+            "ephemeral": True,
+        },
+        {
+            "type": "session.mcp_servers_loaded",
+            "data": {
+                "servers": [
+                    {"name": "foundry_docs", "status": "connected"},
+                    {"status": "disabled"},
+                ],
+            },
             "ephemeral": True,
         },
         {"type": "result", "exitCode": 0},
@@ -2270,12 +2403,9 @@ def test_nested_stdout_truncation_flag_is_schema_valid():
 def test_post_result_metadata_is_schema_valid_and_preserved_by_scorer():
     row = _raw_row()
     row["diagnostics"].update({
-        "post_result_events": [{
-            "line": 42,
-            "event_type": "session.tools_updated",
-            "ephemeral": True,
-            "status": None,
-        }],
+        "post_result_events": [
+            _post_result_event_metadata("session.tools_updated")
+        ],
         "post_result_event_count": 1,
         "post_result_events_truncated": False,
     })
@@ -2288,12 +2418,11 @@ def test_post_result_metadata_is_schema_valid_and_preserved_by_scorer():
 def test_post_result_metadata_rejects_invalid_count_and_unsanitized_type():
     row = _raw_row()
     row["diagnostics"].update({
-        "post_result_events": [{
-            "line": 42,
-            "event_type": r"session.tools_updated token=LEAKME C:\Users\Alice\private",
-            "ephemeral": True,
-            "status": None,
-        }],
+        "post_result_events": [
+            _post_result_event_metadata(
+                r"session.tools_updated token=LEAKME C:\Users\Alice\private"
+            )
+        ],
         "post_result_event_count": 0,
         "post_result_events_truncated": False,
     })
@@ -2309,17 +2438,10 @@ def test_post_result_metadata_rejects_invalid_count_and_unsanitized_type():
     [
         "not-an-object",
         {
+            **_post_result_event_metadata("session.tools_updated"),
             "line": -1,
-            "event_type": "session.tools_updated",
-            "ephemeral": True,
-            "status": None,
         },
-        {
-            "line": 42,
-            "event_type": "assistant.message",
-            "ephemeral": True,
-            "status": None,
-        },
+        _post_result_event_metadata("assistant.message"),
     ],
 )
 def test_scorer_rejects_malformed_or_semantic_post_result_metadata(event):
@@ -2340,12 +2462,16 @@ def test_scorer_rejects_malformed_or_semantic_post_result_metadata(event):
 def test_scorer_requires_selected_or_builtin_identity_for_lifecycle_postamble():
     row = _raw_row()
     row["diagnostics"].update({
-        "post_result_events": [{
-            "line": 42,
-            "event_type": "session.mcp_server_status_changed",
-            "ephemeral": True,
-            "status": "other_server=connected",
-        }],
+        "post_result_events": [
+            _post_result_event_metadata(
+                "session.mcp_server_status_changed",
+                servers=[{
+                    "name": "other_server",
+                    "status": "connected",
+                    "error_present": False,
+                }],
+            )
+        ],
         "post_result_event_count": 1,
         "post_result_events_truncated": False,
     })
@@ -2353,6 +2479,92 @@ def test_scorer_requires_selected_or_builtin_identity_for_lifecycle_postamble():
     errors = validate_row_schema(row)
 
     assert "diagnostics.post_result_events[0] is not a benign post-result event" in errors
+
+
+@pytest.mark.parametrize(
+    "metadata",
+    [
+        _post_result_event_metadata(
+            "mcp.tools.list_changed",
+            servers=[{
+                "name": "other_server",
+                "status": None,
+                "error_present": False,
+            }],
+        ),
+        _post_result_event_metadata(
+            "mcp.tools.list_changed",
+            servers=[{
+                "name": None,
+                "status": None,
+                "error_present": False,
+            }],
+            server_metadata_valid=False,
+        ),
+        _post_result_event_metadata(
+            "session.mcp_servers_loaded",
+            servers=[
+                {
+                    "name": "foundry_docs",
+                    "status": "connected",
+                    "error_present": False,
+                },
+                {
+                    "name": None,
+                    "status": "disabled",
+                    "error_present": False,
+                },
+            ],
+            server_metadata_valid=False,
+        ),
+        _post_result_event_metadata(
+            "mcp.tools.list_changed",
+            servers=[{
+                "name": "foundry_docs",
+                "status": None,
+                "identity_aliases": ["foundry_docs", "other_server"],
+                "status_aliases": [],
+                "error_fields": [],
+                "error_present": False,
+            }],
+        ),
+        _post_result_event_metadata(
+            "session.mcp_server_status_changed",
+            servers=[{
+                "name": "foundry_docs",
+                "status": "connected",
+                "identity_aliases": ["foundry_docs"],
+                "status_aliases": ["connected", "failed"],
+                "error_fields": [],
+                "error_present": False,
+            }],
+        ),
+        _post_result_event_metadata(
+            "session.mcp_server_status_changed",
+            servers=[{
+                "name": "foundry_docs",
+                "status": "connected",
+                "identity_aliases": ["foundry_docs"] * 20,
+                "status_aliases": ["connected"] * 20,
+                "error_fields": [],
+                "error_present": False,
+            }],
+        ),
+    ],
+)
+def test_scorer_rejects_foreign_or_unnamed_lifecycle_metadata(metadata):
+    row = _raw_row()
+    row["diagnostics"].update({
+        "post_result_events": [metadata],
+        "post_result_event_count": 1,
+        "post_result_events_truncated": False,
+    })
+
+    errors = validate_row_schema(row)
+    scored = score_result(row)
+
+    assert "diagnostics.post_result_events[0] is not a benign post-result event" in errors
+    assert scored["row_valid"] is False
 
 
 @pytest.mark.parametrize(
@@ -2365,12 +2577,9 @@ def test_scorer_requires_selected_or_builtin_identity_for_lifecycle_postamble():
 def test_scorer_rejects_inconsistent_post_result_count_and_truncation(count, truncated):
     row = _raw_row()
     row["diagnostics"].update({
-        "post_result_events": [{
-            "line": 42,
-            "event_type": "session.tools_updated",
-            "ephemeral": True,
-            "status": None,
-        }],
+        "post_result_events": [
+            _post_result_event_metadata("session.tools_updated")
+        ],
         "post_result_event_count": count,
         "post_result_events_truncated": truncated,
     })
@@ -2382,12 +2591,10 @@ def test_scorer_rejects_truncated_post_result_tail_even_with_benign_prefix():
     row = _raw_row()
     row["diagnostics"].update({
         "post_result_events": [
-            {
-                "line": index + 1,
-                "event_type": "session.tools_updated",
-                "ephemeral": True,
-                "status": None,
-            }
+            _post_result_event_metadata(
+                "session.tools_updated",
+                line=index + 1,
+            )
             for index in range(run_docs_eval.MAX_POST_RESULT_EVENTS)
         ],
         "post_result_event_count": run_docs_eval.MAX_POST_RESULT_EVENTS + 1,

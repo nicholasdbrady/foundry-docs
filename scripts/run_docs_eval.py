@@ -150,8 +150,9 @@ BENIGN_EPHEMERAL_POST_RESULT_EVENTS = {
     "session.skills_loaded",
     "mcp.tools.list_changed",
 }
-BENIGN_POST_RESULT_MCP_STATUSES = {"connected", "disabled"}
 BUILTIN_MCP_SERVER_NAME = "github-mcp-server"
+SAFE_SELECTED_MCP_STATUSES = {"connected", "ready"}
+POST_RESULT_ERROR_FIELDS = {"error", "failure", "failed"}
 MAX_IDENTIFIER_TEXT = 256
 MAX_USAGE_METRIC = 10**15
 MAX_ENCODED_TOKEN_BYTES = 8_192
@@ -1356,69 +1357,220 @@ def _build_diagnostics(
     return diagnostics
 
 
-def _post_result_status(event_type: object, data: dict) -> str | None:
-    if event_type == "session.mcp_server_status_changed":
-        server = data.get("serverName") or data.get("server") or data.get("name")
-        status = data.get("status") or data.get("state")
-        return (
-            _sanitize_identifier(f"{server}={status.casefold()}")
-            if isinstance(server, str) and isinstance(status, str)
+def _consistent_post_result_alias(
+    value: dict,
+    fields: tuple[str, ...],
+    *,
+    required: bool,
+    casefold: bool = False,
+) -> tuple[str | None, bool]:
+    aliases = [value[field] for field in fields if field in value]
+    if not aliases:
+        return None, not required
+    if not all(isinstance(alias, str) and alias for alias in aliases):
+        return None, False
+    normalized = [
+        alias.casefold() if casefold else alias
+        for alias in aliases
+    ]
+    if len(set(normalized)) != 1:
+        return None, False
+    return normalized[0], True
+
+
+def _post_result_server_state(
+    value: object,
+    *,
+    require_status: bool,
+) -> tuple[dict, bool]:
+    if not isinstance(value, dict):
+        return ({
+            "name": None,
+            "status": None,
+            "identity_aliases": [],
+            "status_aliases": [],
+            "error_fields": ["invalid-shape"],
+            "error_present": True,
+        }, False)
+    name_fields = ("serverName", "server", "name")
+    status_fields = ("status", "state")
+    raw_name, name_valid = _consistent_post_result_alias(
+        value,
+        name_fields,
+        required=True,
+    )
+    raw_status, status_valid = _consistent_post_result_alias(
+        value,
+        status_fields,
+        required=require_status,
+        casefold=True,
+    )
+    identity_aliases = [
+        _sanitize_identifier(value[field])
+        if isinstance(value[field], str)
+        else None
+        for field in name_fields
+        if field in value
+    ]
+    status_aliases = [
+        _sanitize_identifier(value[field].casefold())
+        if isinstance(value[field], str)
+        else None
+        for field in status_fields
+        if field in value
+    ]
+    error_fields = sorted(
+        field for field in POST_RESULT_ERROR_FIELDS if field in value
+    )
+    return ({
+        "name": _sanitize_identifier(raw_name) if raw_name is not None else None,
+        "status": (
+            _sanitize_identifier(raw_status)
+            if raw_status is not None
             else None
+        ),
+        "identity_aliases": identity_aliases,
+        "status_aliases": status_aliases,
+        "error_fields": error_fields,
+        "error_present": bool(error_fields),
+    }, name_valid and status_valid)
+
+
+def _post_result_server_metadata(
+    event_type: object,
+    data: dict,
+) -> tuple[list[dict], int, bool, bool]:
+    if event_type in {
+        "mcp.tools.list_changed",
+        "session.mcp_server_status_changed",
+    }:
+        server, valid = _post_result_server_state(
+            data,
+            require_status=event_type == "session.mcp_server_status_changed",
         )
+        return [server], 1, False, valid
     if event_type == "session.mcp_servers_loaded":
         servers = data.get("servers")
         if not isinstance(servers, list):
-            return None
-        statuses = sorted({
-            f"{server.get('name')}={str(server.get('status')).casefold()}"
-            for server in servers
-            if (
-                isinstance(server, dict)
-                and isinstance(server.get("name"), str)
-                and isinstance(server.get("status"), str)
-            )
-        })
-        return _sanitize_identifier(",".join(statuses)) if statuses else None
-    return None
+            return [], 0, False, False
+        retained = [
+            _post_result_server_state(server, require_status=True)
+            for server in servers[:MAX_DIAGNOSTIC_EVENTS]
+        ]
+        return (
+            [server for server, _valid in retained],
+            len(servers),
+            len(servers) > MAX_DIAGNOSTIC_EVENTS,
+            (
+                all(isinstance(server, dict) for server in servers)
+                and all(valid for _server, valid in retained)
+            ),
+        )
+    return [], 0, False, True
+
+
+def _post_result_server_state_matches(
+    server: object,
+    expected_name: str,
+    allowed_statuses: set[str] | None,
+) -> bool:
+    if not isinstance(server, dict) or set(server) != {
+        "name",
+        "status",
+        "identity_aliases",
+        "status_aliases",
+        "error_fields",
+        "error_present",
+    }:
+        return False
+    aliases = server["identity_aliases"]
+    status_aliases = server["status_aliases"]
+    if (
+        server["name"] != expected_name
+        or not isinstance(aliases, list)
+        or not (1 <= len(aliases) <= 3)
+        or any(alias != expected_name for alias in aliases)
+        or server["error_present"] is not False
+        or server["error_fields"] != []
+        or not isinstance(status_aliases, list)
+    ):
+        return False
+    if allowed_statuses is None:
+        return server["status"] is None and status_aliases == []
+    return (
+        server["status"] in allowed_statuses
+        and 1 <= len(status_aliases) <= 2
+        and all(alias == server["status"] for alias in status_aliases)
+    )
 
 
 def _is_benign_post_result_metadata(
     event_type: object,
     ephemeral: object,
-    status: object,
+    servers: object,
+    server_count: object,
+    servers_truncated: object,
+    server_metadata_valid: object,
     expected_mcp_server: object,
 ) -> bool:
-    if ephemeral is not True or not isinstance(event_type, str):
+    if (
+        ephemeral is not True
+        or not isinstance(event_type, str)
+        or not isinstance(servers, list)
+        or type(server_count) is not int
+        or servers_truncated is not False
+        or server_metadata_valid is not True
+        or server_count != len(servers)
+    ):
         return False
-    if event_type in BENIGN_EPHEMERAL_POST_RESULT_EVENTS:
-        return status is None
-    if event_type == "session.mcp_server_status_changed":
+    if event_type in {
+        "session.tools_updated",
+        "session.skills_loaded",
+    }:
+        return server_count == 0
+    if not isinstance(expected_mcp_server, str):
+        return False
+    selected_name = _sanitize_identifier(expected_mcp_server)
+    if event_type == "mcp.tools.list_changed":
         return (
-            isinstance(expected_mcp_server, str)
-            and status
-            in {
-                f"{_sanitize_identifier(expected_mcp_server)}=connected",
-                f"{BUILTIN_MCP_SERVER_NAME}=disabled",
-            }
-        )
-    if event_type == "session.mcp_servers_loaded" and isinstance(status, str):
-        statuses = status.split(",")
-        selected_status = (
-            f"{_sanitize_identifier(expected_mcp_server)}=connected"
-            if isinstance(expected_mcp_server, str)
-            else None
-        )
-        return (
-            selected_status is not None
-            and selected_status in statuses
-            and all(
-                value
-                in {
-                    selected_status,
-                    f"{BUILTIN_MCP_SERVER_NAME}=disabled",
-                }
-                for value in statuses
+            server_count == 1
+            and _post_result_server_state_matches(
+                servers[0],
+                selected_name,
+                None,
             )
+        )
+    if event_type == "session.mcp_server_status_changed":
+        return server_count == 1 and (
+            _post_result_server_state_matches(
+                servers[0],
+                selected_name,
+                SAFE_SELECTED_MCP_STATUSES,
+            )
+            or _post_result_server_state_matches(
+                servers[0],
+                BUILTIN_MCP_SERVER_NAME,
+                {"disabled"},
+            )
+        )
+    if event_type == "session.mcp_servers_loaded":
+        if server_count == 0:
+            return False
+        names = [server.get("name") for server in servers if isinstance(server, dict)]
+        if len(set(names)) != len(names) or selected_name not in names:
+            return False
+        return all(
+            _post_result_server_state_matches(
+                server,
+                selected_name,
+                SAFE_SELECTED_MCP_STATUSES,
+            )
+            or _post_result_server_state_matches(
+                server,
+                BUILTIN_MCP_SERVER_NAME,
+                {"disabled"},
+            )
+            for server in servers
         )
     return False
 
@@ -1431,38 +1583,16 @@ def _is_benign_post_result_event(
     if event.get("ephemeral") is not True:
         return False
     event_type = event.get("type")
-    if event_type in BENIGN_EPHEMERAL_POST_RESULT_EVENTS:
-        return True
-    if event_type == "session.mcp_server_status_changed":
-        return (
-            not (data.get("error") or data.get("message"))
-            and _is_benign_post_result_metadata(
-                event_type,
-                True,
-                _post_result_status(event_type, data),
-                expected_mcp_server,
-            )
-        )
-    if event_type == "session.mcp_servers_loaded":
-        servers = data.get("servers")
-        benign = (
-            isinstance(servers, list)
-            and bool(servers)
-            and all(
-                isinstance(server, dict)
-                and str(server.get("status") or "").casefold()
-                in BENIGN_POST_RESULT_MCP_STATUSES
-                and not server.get("error")
-                for server in servers
-            )
-        )
-        return benign and _is_benign_post_result_metadata(
-            event_type,
-            True,
-            _post_result_status(event_type, data),
-            expected_mcp_server,
-        )
-    return False
+    servers, count, truncated, valid = _post_result_server_metadata(event_type, data)
+    return _is_benign_post_result_metadata(
+        event_type,
+        True,
+        servers,
+        count,
+        truncated,
+        valid,
+        expected_mcp_server,
+    )
 
 
 def _set_projected_value(target: dict, path: tuple[str, ...], value: object) -> None:
@@ -1701,12 +1831,21 @@ def parse_event_stream(
         data = event.get("data", {})
         if result_seen:
             metrics["post_result_event_count"] += 1
+            server_states, server_count, servers_truncated, server_metadata_valid = (
+                _post_result_server_metadata(
+                    etype,
+                    data if isinstance(data, dict) else {},
+                )
+            )
             if len(metrics["post_result_events"]) < MAX_POST_RESULT_EVENTS:
                 metrics["post_result_events"].append({
                     "line": line_number,
                     "event_type": _sanitize_identifier(etype),
                     "ephemeral": event.get("ephemeral") is True,
-                    "status": _post_result_status(etype, data if isinstance(data, dict) else {}),
+                    "servers": server_states,
+                    "server_count": server_count,
+                    "servers_truncated": servers_truncated,
+                    "server_metadata_valid": server_metadata_valid,
                 })
             else:
                 if not metrics["post_result_events_truncated"]:

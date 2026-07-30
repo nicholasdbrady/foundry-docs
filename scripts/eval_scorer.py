@@ -271,10 +271,64 @@ def _canonical_post_result_events(value: object) -> object:
             "line": event.get("line") if type(event.get("line")) is int else 0,
             "event_type": _sanitize_identifier(event.get("event_type", "")),
             "ephemeral": event.get("ephemeral") if type(event.get("ephemeral")) is bool else False,
-            "status": (
-                _sanitize_identifier(event["status"])
-                if isinstance(event.get("status"), str)
+            "servers": _canonical_post_result_servers(event.get("servers", [])),
+            "server_count": (
+                event.get("server_count")
+                if type(event.get("server_count")) is int
+                else 0
+            ),
+            "servers_truncated": (
+                event.get("servers_truncated")
+                if type(event.get("servers_truncated")) is bool
+                else False
+            ),
+            "server_metadata_valid": (
+                event.get("server_metadata_valid")
+                if type(event.get("server_metadata_valid")) is bool
+                else False
+            ),
+        })
+    return canonical
+
+
+def _canonical_post_result_servers(value: object) -> object:
+    if not isinstance(value, list):
+        return _sanitize_diagnostic_value(value)
+    canonical = []
+    for server in value[:MAX_DIAGNOSTIC_EVENTS]:
+        if not isinstance(server, dict):
+            canonical.append(_sanitize_diagnostic_value(server))
+            continue
+        canonical.append({
+            "name": (
+                _sanitize_identifier(server["name"])
+                if isinstance(server.get("name"), str)
                 else None
+            ),
+            "status": (
+                _sanitize_identifier(server["status"])
+                if isinstance(server.get("status"), str)
+                else None
+            ),
+            "identity_aliases": (
+                [_sanitize_identifier(value) for value in server["identity_aliases"]]
+                if isinstance(server.get("identity_aliases"), list)
+                else []
+            ),
+            "status_aliases": (
+                [_sanitize_identifier(value) for value in server["status_aliases"]]
+                if isinstance(server.get("status_aliases"), list)
+                else []
+            ),
+            "error_fields": (
+                [_sanitize_identifier(value) for value in server["error_fields"]]
+                if isinstance(server.get("error_fields"), list)
+                else ["invalid-shape"]
+            ),
+            "error_present": (
+                server.get("error_present")
+                if type(server.get("error_present")) is bool
+                else True
             ),
         })
     return canonical
@@ -490,7 +544,10 @@ def validate_row_schema(result: object) -> list[str]:
                     "line",
                     "event_type",
                     "ephemeral",
-                    "status",
+                    "servers",
+                    "server_count",
+                    "servers_truncated",
+                    "server_metadata_valid",
                 }:
                     errors.append(f"{path} must contain exactly the required metadata fields")
                     continue
@@ -503,7 +560,10 @@ def validate_row_schema(result: object) -> list[str]:
                 if not _is_benign_post_result_metadata(
                     event["event_type"],
                     event["ephemeral"],
-                    event["status"],
+                    event["servers"],
+                    event["server_count"],
+                    event["servers_truncated"],
+                    event["server_metadata_valid"],
                     result.get("selected_source_config", {}).get("name")
                     if isinstance(result.get("selected_source_config"), dict)
                     else None,
