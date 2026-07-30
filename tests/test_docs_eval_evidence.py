@@ -2518,6 +2518,30 @@ def test_scorer_requires_selected_or_builtin_identity_for_lifecycle_postamble():
             server_metadata_valid=False,
         ),
         _post_result_event_metadata(
+            "session.mcp_servers_loaded",
+            servers=[
+                {
+                    "name": "foundry_docs",
+                    "status": "connected",
+                    "error_present": False,
+                },
+                {
+                    "name": "other_server",
+                    "status": "disabled",
+                    "error_present": False,
+                },
+            ],
+        ),
+        _post_result_event_metadata(
+            "session.mcp_servers_loaded",
+            servers=[{
+                "name": "foundry_docs",
+                "status": "connected",
+                "error_fields": ["error"],
+                "error_present": True,
+            }],
+        ),
+        _post_result_event_metadata(
             "mcp.tools.list_changed",
             servers=[{
                 "name": "foundry_docs",
