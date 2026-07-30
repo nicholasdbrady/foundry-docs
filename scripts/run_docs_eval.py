@@ -21,13 +21,17 @@ import json
 import math
 import os
 import re
+import signal
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import unquote_plus, urlsplit, urlunsplit
+
+import psutil
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 SCENARIOS_FILE = PROJECT_ROOT / "tests" / "docs_eval_scenarios.json"
@@ -105,11 +109,16 @@ MAX_STDERR_EXCERPT = 4_000
 MAX_STDOUT_PARSE_BYTES = 4_000_000
 MAX_STDOUT_PARSE_LINES = 500
 MAX_STDOUT_LINE_BYTES = 64_000
+MAX_STDOUT_CAPTURE_BYTES = MAX_STDOUT_PARSE_BYTES + MAX_STDOUT_LINE_BYTES + 1
+MAX_STDERR_CAPTURE_BYTES = 64_000
+MAX_PROCESS_CLEANUP_SECONDS = 2.0
+DESCENDANT_POLL_SECONDS = 0.01
 MAX_IDENTIFIER_TEXT = 256
 MAX_USAGE_METRIC = 10**15
 MAX_ENCODED_TOKEN_BYTES = 8_192
 MAX_ENCODED_DECODE_ITERATIONS = 8
 MAX_ENCODED_DECODE_SECONDS = 0.02
+_PROCESS_FACTORY = subprocess.Popen
 _SECRET_KEY_PATTERN = re.compile(r"(?:api[_-]?key|authorization|credential|password|secret|token)", re.I)
 _AUTHORIZATION_HEADER_PATTERN = re.compile(
     r"(?im)(authorization\s*:\s*)[^\r\n]+(?:\r?\n[ \t]+[^\r\n]*)*"
@@ -185,6 +194,25 @@ def build_prompt(question: str, server_name: str) -> str:
     )
 
 
+def build_copilot_command(
+    model: str,
+    prompt: str,
+    config_path: Path,
+    source_name: str,
+) -> list[str]:
+    """Build an isolated Copilot command for one selected MCP server."""
+    return [
+        "copilot",
+        "--model", model,
+        "--prompt", prompt,
+        "--output-format", "json",
+        "--disable-builtin-mcps",
+        "--additional-mcp-config", f"@{config_path}",
+        f"--allow-tool={source_name}",
+        "--no-ask-user",
+    ]
+
+
 def build_mcp_config(server_config: dict, require_azure: bool = False) -> tuple[dict, dict]:
     """Build one isolated MCP configuration and its non-secret row descriptor."""
     config = server_config["config"]
@@ -194,6 +222,7 @@ def build_mcp_config(server_config: dict, require_azure: bool = False) -> tuple[
         mcp_server = {
             "type": "http",
             "url": config["url"],
+            "deferTools": "never",
             "tools": ["*"],
         }
     elif server_config["type"] == "stdio":
@@ -201,6 +230,7 @@ def build_mcp_config(server_config: dict, require_azure: bool = False) -> tuple[
             "type": "local",
             "command": config["command"],
             "args": list(config.get("args", [])),
+            "deferTools": "never",
             "tools": ["*"],
         }
     else:
@@ -784,6 +814,334 @@ def _bounded_stdout_excerpt(value: str | bytes | None) -> tuple[str, bool]:
     return excerpt, per_line_truncated or final_truncated
 
 
+def _drain_bounded_pipe(fd: int, sink: bytearray, max_bytes: int) -> None:
+    """Drain a process pipe while retaining only a bounded byte projection."""
+    try:
+        while chunk := os.read(fd, 64 * 1024):
+            remaining = max_bytes - len(sink)
+            if remaining > 0:
+                sink.extend(chunk[:remaining])
+    except OSError:
+        pass
+    finally:
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+
+
+def _track_descendants(
+    tracked: dict[int, float],
+    stop: threading.Event,
+) -> None:
+    """Track descendants before reparenting can detach them from the root."""
+    while not stop.wait(DESCENDANT_POLL_SECONDS):
+        for pid, create_time in tuple(tracked.items()):
+            try:
+                process = psutil.Process(pid)
+                if process.create_time() != create_time:
+                    continue
+                for child in process.children(recursive=True):
+                    tracked.setdefault(child.pid, child.create_time())
+            except (psutil.Error, OSError):
+                continue
+
+
+def _tracked_processes(tracked: dict[int, float]) -> list[psutil.Process]:
+    processes = []
+    for pid, create_time in tracked.items():
+        try:
+            process = psutil.Process(pid)
+            if process.create_time() == create_time:
+                processes.append(process)
+        except (psutil.Error, OSError):
+            continue
+    return processes
+
+
+def _process_identities(processes: list[psutil.Process]) -> dict[int, float]:
+    identities = {}
+    for process in processes:
+        try:
+            identities[process.pid] = process.create_time()
+        except (psutil.Error, OSError):
+            continue
+    return identities
+
+
+def _set_linux_child_subreaper(enabled: bool) -> bool | None:
+    """Set Linux child-subreaper ownership and return the previous state."""
+    if sys.platform != "linux":
+        return None
+    import ctypes
+
+    libc = ctypes.CDLL(None, use_errno=True)
+    current = ctypes.c_int()
+    if libc.prctl(37, ctypes.byref(current), 0, 0, 0) != 0:
+        raise OSError(ctypes.get_errno(), "unable to read child subreaper state")
+    if libc.prctl(36, int(enabled), 0, 0, 0) != 0:
+        raise OSError(ctypes.get_errno(), "unable to set child subreaper state")
+    return bool(current.value)
+
+
+def _new_adopted_processes(baseline: dict[int, float]) -> dict[int, float]:
+    current = _process_identities(psutil.Process().children(recursive=True))
+    return {
+        pid: create_time
+        for pid, create_time in current.items()
+        if baseline.get(pid) != create_time
+    }
+
+
+def _terminate_tracked_processes(tracked: dict[int, float], deadline: float) -> None:
+    """Terminate every observed descendant within one absolute cleanup deadline."""
+    processes = _tracked_processes(tracked)
+    for process in sorted(processes, key=lambda item: item.pid, reverse=True):
+        try:
+            process.terminate()
+        except psutil.Error:
+            pass
+    graceful_deadline = min(deadline, time.monotonic() + 0.25)
+    _gone, alive = psutil.wait_procs(
+        processes,
+        timeout=max(0.0, graceful_deadline - time.monotonic()),
+    )
+    for process in alive:
+        try:
+            process.kill()
+        except psutil.Error:
+            pass
+    if alive:
+        forced_deadline = min(deadline, time.monotonic() + 0.5)
+        psutil.wait_procs(alive, timeout=max(0.0, forced_deadline - time.monotonic()))
+
+
+def _kill_process_group(proc: subprocess.Popen) -> None:
+    if os.name == "nt":
+        return
+    try:
+        os.killpg(proc.pid, signal.SIGKILL)
+    except ProcessLookupError:
+        pass
+
+
+def _assign_windows_kill_on_close_job(proc: subprocess.Popen) -> int | None:
+    """Own the Windows process tree so closing the job terminates descendants."""
+    if os.name != "nt":
+        return None
+
+    import ctypes
+    from ctypes import wintypes
+
+    class IO_COUNTERS(ctypes.Structure):
+        _fields_ = [
+            ("ReadOperationCount", ctypes.c_ulonglong),
+            ("WriteOperationCount", ctypes.c_ulonglong),
+            ("OtherOperationCount", ctypes.c_ulonglong),
+            ("ReadTransferCount", ctypes.c_ulonglong),
+            ("WriteTransferCount", ctypes.c_ulonglong),
+            ("OtherTransferCount", ctypes.c_ulonglong),
+        ]
+
+    class JOBOBJECT_BASIC_LIMIT_INFORMATION(ctypes.Structure):
+        _fields_ = [
+            ("PerProcessUserTimeLimit", ctypes.c_longlong),
+            ("PerJobUserTimeLimit", ctypes.c_longlong),
+            ("LimitFlags", wintypes.DWORD),
+            ("MinimumWorkingSetSize", ctypes.c_size_t),
+            ("MaximumWorkingSetSize", ctypes.c_size_t),
+            ("ActiveProcessLimit", wintypes.DWORD),
+            ("Affinity", ctypes.c_size_t),
+            ("PriorityClass", wintypes.DWORD),
+            ("SchedulingClass", wintypes.DWORD),
+        ]
+
+    class JOBOBJECT_EXTENDED_LIMIT_INFORMATION(ctypes.Structure):
+        _fields_ = [
+            ("BasicLimitInformation", JOBOBJECT_BASIC_LIMIT_INFORMATION),
+            ("IoInfo", IO_COUNTERS),
+            ("ProcessMemoryLimit", ctypes.c_size_t),
+            ("JobMemoryLimit", ctypes.c_size_t),
+            ("PeakProcessMemoryUsed", ctypes.c_size_t),
+            ("PeakJobMemoryUsed", ctypes.c_size_t),
+        ]
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.CreateJobObjectW.argtypes = [ctypes.c_void_p, wintypes.LPCWSTR]
+    kernel32.CreateJobObjectW.restype = wintypes.HANDLE
+    kernel32.SetInformationJobObject.argtypes = [
+        wintypes.HANDLE,
+        ctypes.c_int,
+        ctypes.c_void_p,
+        wintypes.DWORD,
+    ]
+    kernel32.SetInformationJobObject.restype = wintypes.BOOL
+    kernel32.AssignProcessToJobObject.argtypes = [wintypes.HANDLE, wintypes.HANDLE]
+    kernel32.AssignProcessToJobObject.restype = wintypes.BOOL
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel32.CloseHandle.restype = wintypes.BOOL
+
+    job = kernel32.CreateJobObjectW(None, None)
+    if not job:
+        raise ctypes.WinError(ctypes.get_last_error())
+    limits = JOBOBJECT_EXTENDED_LIMIT_INFORMATION()
+    limits.BasicLimitInformation.LimitFlags = 0x00002000
+    if not kernel32.SetInformationJobObject(
+        job,
+        9,
+        ctypes.byref(limits),
+        ctypes.sizeof(limits),
+    ):
+        error = ctypes.WinError(ctypes.get_last_error())
+        kernel32.CloseHandle(job)
+        raise error
+    if not kernel32.AssignProcessToJobObject(job, wintypes.HANDLE(proc._handle)):
+        error = ctypes.WinError(ctypes.get_last_error())
+        kernel32.CloseHandle(job)
+        raise error
+    return int(job)
+
+
+def _close_windows_job(job: int | None) -> None:
+    if job is None:
+        return
+    import ctypes
+    from ctypes import wintypes
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel32.CloseHandle.restype = wintypes.BOOL
+    if not kernel32.CloseHandle(wintypes.HANDLE(job)):
+        raise ctypes.WinError(ctypes.get_last_error())
+
+
+def _run_process_bounded(
+    cmd: list[str],
+    *,
+    timeout: int,
+    cwd: str,
+    env: dict[str, str],
+) -> subprocess.CompletedProcess:
+    """Run a process while bounding retained stdout and stderr in memory."""
+    creationflags = subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0
+    baseline_children = _process_identities(psutil.Process().children(recursive=True))
+    previous_subreaper = _set_linux_child_subreaper(True)
+    try:
+        proc = _PROCESS_FACTORY(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            cwd=cwd,
+            env=env,
+            start_new_session=os.name != "nt",
+            creationflags=creationflags,
+        )
+    except BaseException:
+        if previous_subreaper is not None:
+            _set_linux_child_subreaper(previous_subreaper)
+        raise
+    windows_job = None
+    stdout_read_fd = None
+    stderr_read_fd = None
+    started_threads: list[threading.Thread] = []
+    tracking_stop = threading.Event()
+    tracked: dict[int, float] = {}
+    try:
+        windows_job = _assign_windows_kill_on_close_job(proc)
+        assert proc.stdout is not None
+        assert proc.stderr is not None
+        stdout_read_fd = os.dup(proc.stdout.fileno())
+        stderr_read_fd = os.dup(proc.stderr.fileno())
+        proc.stdout.close()
+        proc.stderr.close()
+        stdout_projection = bytearray()
+        stderr_projection = bytearray()
+        stdout_thread = threading.Thread(
+            target=_drain_bounded_pipe,
+            args=(stdout_read_fd, stdout_projection, MAX_STDOUT_CAPTURE_BYTES),
+            daemon=True,
+        )
+        stderr_thread = threading.Thread(
+            target=_drain_bounded_pipe,
+            args=(stderr_read_fd, stderr_projection, MAX_STDERR_CAPTURE_BYTES),
+            daemon=True,
+        )
+        tracked = {proc.pid: psutil.Process(proc.pid).create_time()}
+        tracking_thread = threading.Thread(
+            target=_track_descendants,
+            args=(tracked, tracking_stop),
+            daemon=True,
+        )
+        for thread in (stdout_thread, stderr_thread, tracking_thread):
+            thread.start()
+            started_threads.append(thread)
+    except BaseException:
+        cleanup_deadline = time.monotonic() + MAX_PROCESS_CLEANUP_SECONDS
+        tracking_stop.set()
+        if windows_job is not None:
+            _close_windows_job(windows_job)
+        _kill_process_group(proc)
+        if previous_subreaper is not None:
+            tracked.update(_new_adopted_processes(baseline_children))
+        _terminate_tracked_processes(tracked, cleanup_deadline)
+        if proc.poll() is None:
+            proc.kill()
+        try:
+            proc.wait(timeout=max(0.0, cleanup_deadline - time.monotonic()))
+        except subprocess.TimeoutExpired:
+            pass
+        for stream in (proc.stdout, proc.stderr):
+            if stream is not None and not stream.closed:
+                stream.close()
+        for fd in (stdout_read_fd, stderr_read_fd):
+            if fd is not None:
+                try:
+                    os.close(fd)
+                except OSError:
+                    pass
+        for thread in started_threads:
+            thread.join(max(0.0, cleanup_deadline - time.monotonic()))
+        if previous_subreaper is not None:
+            _set_linux_child_subreaper(previous_subreaper)
+        raise
+    timed_out = False
+    try:
+        returncode = proc.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        timed_out = True
+        returncode = -1
+    finally:
+        cleanup_deadline = time.monotonic() + MAX_PROCESS_CLEANUP_SECONDS
+        if timed_out:
+            _kill_process_group(proc)
+        tracking_stop.set()
+        tracking_thread.join(max(0.0, cleanup_deadline - time.monotonic()))
+        if previous_subreaper is not None:
+            tracked.update(_new_adopted_processes(baseline_children))
+        if windows_job is not None:
+            _close_windows_job(windows_job)
+        _terminate_tracked_processes(tracked, cleanup_deadline)
+        if proc.poll() is None:
+            proc.kill()
+        try:
+            returncode = proc.wait(timeout=max(0.0, cleanup_deadline - time.monotonic()))
+        except subprocess.TimeoutExpired:
+            returncode = -1
+        for thread in (stdout_thread, stderr_thread):
+            thread.join(max(0.0, cleanup_deadline - time.monotonic()))
+        drain_incomplete = stdout_thread.is_alive() or stderr_thread.is_alive()
+        if previous_subreaper is not None:
+            _set_linux_child_subreaper(previous_subreaper)
+
+    stdout = bytes(stdout_projection)
+    stderr = bytes(stderr_projection)
+    if timed_out:
+        raise subprocess.TimeoutExpired(cmd=cmd, timeout=timeout, output=stdout, stderr=stderr)
+    if drain_incomplete:
+        raise OSError("process output drain did not complete within cleanup deadline")
+    return subprocess.CompletedProcess(cmd, returncode, stdout=stdout, stderr=stderr)
+
+
 def _bounded_event_lines(value: str | bytes | None) -> tuple[list[tuple[int, str]], list[str], bool]:
     """Bound bytes, lines, and per-line size before any JSON parsing."""
     is_bytes = isinstance(value, bytes)
@@ -985,6 +1343,15 @@ def parse_event_stream(stdout: str | bytes) -> dict:
                     )
             else:
                 parse_errors.append(f"line {line_number}: output token count must be a non-negative integer")
+        elif (
+            etype == "session.info"
+            and data.get("infoType") == "configuration"
+            and isinstance(data.get("message"), str)
+            and "unknown tool name in the tool allowlist" in data["message"].lower()
+        ):
+            configuration_failure = _sanitize_text(data["message"], max_chars=MAX_DIAGNOSTIC_TEXT)[0]
+            metrics["session_failure"] = configuration_failure
+            add_diagnostic(etype, {"infoType": "configuration", "message": configuration_failure})
         elif etype == "tool.execution_start":
             tool_call_id = data.get("toolCallId")
             tool_name = data.get("toolName")
@@ -1257,33 +1624,21 @@ def run_single_eval(
             config_path.write_text(json.dumps(mcp_config), encoding="utf-8")
             config_path.chmod(0o600)
 
-            cmd = [
-                "copilot",
-                "--model", model,
-                "--prompt", prompt,
-                "--output-format", "json",
-                "--disable-builtin-mcps",
-                "--additional-mcp-config", f"@{config_path}",
-                f"--available-tools={source_name}",
-                f"--allow-tool={source_name}",
-                "--no-ask-user",
-            ]
+            cmd = build_copilot_command(model, prompt, config_path, source_name)
             process_env = os.environ.copy()
             process_env["COPILOT_HOME"] = isolated_home
 
-            proc = subprocess.run(
+            proc = _run_process_bounded(
                 cmd,
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                errors="replace",
                 timeout=timeout,
                 cwd=isolated_home,
                 env=process_env,
             )
+            proc_stdout = proc.stdout
+            proc_stderr = proc.stderr
 
         elapsed = time.monotonic() - start_time
-        parsed = parse_event_stream(_coerce_process_text(proc.stdout))
+        parsed = parse_event_stream(proc_stdout)
         response = parsed["response"]
         evidence_valid, failure_reason, azure_live_query_proven = validate_row_evidence(
             parsed,
@@ -1307,7 +1662,7 @@ def run_single_eval(
 
         result.update({
             "response": response,
-            "stderr": _bounded_excerpt(proc.stderr, MAX_STDERR_EXCERPT)[0],
+            "stderr": _bounded_excerpt(proc_stderr, MAX_STDERR_EXCERPT)[0],
             "exit_code": proc.returncode,
             "response_time_seconds": round(elapsed, 2),
             "status": status,
@@ -1328,8 +1683,8 @@ def run_single_eval(
             "event_parse_error": parsed["parse_error"],
             "diagnostics": _build_diagnostics(
                 parsed,
-                proc.stdout,
-                proc.stderr,
+                proc_stdout,
+                proc_stderr,
                 preserve_stdout=status != "success",
             ),
         })
