@@ -20,16 +20,19 @@ from pathlib import Path
 from run_docs_eval import (
     MAX_DIAGNOSTIC_EVENTS,
     MAX_DIAGNOSTIC_EVENTS_CHARS,
+    MAX_POST_RESULT_EVENTS,
     MAX_STDERR_EXCERPT,
     MAX_STDOUT_EXCERPT,
+    MAX_STDOUT_PARSE_LINES,
     MAX_USAGE_METRIC,
     MCP_SERVERS,
     _is_search_tool,
+    _is_benign_post_result_metadata,
+    _configured_tools_for_prefix,
     _sanitize_diagnostic_value,
     _sanitize_identifier,
     _sanitize_response_text,
     _sanitize_text,
-    _source_for_tool,
     serialized_diagnostic_events_size,
 )
 
@@ -238,11 +241,97 @@ def _canonical_diagnostics(value: object) -> object:
     return {
         "events": _canonical_diagnostic_events(value.get("events", [])),
         "events_truncated": value.get("events_truncated") if type(value.get("events_truncated")) is bool else False,
+        "post_result_events": _canonical_post_result_events(value.get("post_result_events", [])),
+        "post_result_event_count": (
+            value.get("post_result_event_count")
+            if type(value.get("post_result_event_count")) is int
+            else 0
+        ),
+        "post_result_events_truncated": (
+            value.get("post_result_events_truncated")
+            if type(value.get("post_result_events_truncated")) is bool
+            else False
+        ),
         "stdout_excerpt": _sanitize_text(str(value.get("stdout_excerpt", "")), max_chars=MAX_STDOUT_EXCERPT)[0],
         "stdout_truncated": value.get("stdout_truncated") if type(value.get("stdout_truncated")) is bool else False,
         "stderr_excerpt": _sanitize_text(str(value.get("stderr_excerpt", "")), max_chars=MAX_STDERR_EXCERPT)[0],
         "stderr_truncated": value.get("stderr_truncated") if type(value.get("stderr_truncated")) is bool else False,
     }
+
+
+def _canonical_post_result_events(value: object) -> object:
+    if not isinstance(value, list):
+        return _sanitize_diagnostic_value(value)
+    canonical = []
+    for event in value[:MAX_DIAGNOSTIC_EVENTS]:
+        if not isinstance(event, dict):
+            canonical.append(_sanitize_diagnostic_value(event))
+            continue
+        canonical.append({
+            "line": event.get("line") if type(event.get("line")) is int else 0,
+            "event_type": _sanitize_identifier(event.get("event_type", "")),
+            "ephemeral": event.get("ephemeral") if type(event.get("ephemeral")) is bool else False,
+            "servers": _canonical_post_result_servers(event.get("servers", [])),
+            "server_count": (
+                event.get("server_count")
+                if type(event.get("server_count")) is int
+                else 0
+            ),
+            "servers_truncated": (
+                event.get("servers_truncated")
+                if type(event.get("servers_truncated")) is bool
+                else False
+            ),
+            "server_metadata_valid": (
+                event.get("server_metadata_valid")
+                if type(event.get("server_metadata_valid")) is bool
+                else False
+            ),
+        })
+    return canonical
+
+
+def _canonical_post_result_servers(value: object) -> object:
+    if not isinstance(value, list):
+        return _sanitize_diagnostic_value(value)
+    canonical = []
+    for server in value[:MAX_DIAGNOSTIC_EVENTS]:
+        if not isinstance(server, dict):
+            canonical.append(_sanitize_diagnostic_value(server))
+            continue
+        canonical.append({
+            "name": (
+                _sanitize_identifier(server["name"])
+                if isinstance(server.get("name"), str)
+                else None
+            ),
+            "status": (
+                _sanitize_identifier(server["status"])
+                if isinstance(server.get("status"), str)
+                else None
+            ),
+            "identity_aliases": (
+                [_sanitize_identifier(value) for value in server["identity_aliases"]]
+                if isinstance(server.get("identity_aliases"), list)
+                else []
+            ),
+            "status_aliases": (
+                [_sanitize_identifier(value) for value in server["status_aliases"]]
+                if isinstance(server.get("status_aliases"), list)
+                else []
+            ),
+            "error_fields": (
+                [_sanitize_identifier(value) for value in server["error_fields"]]
+                if isinstance(server.get("error_fields"), list)
+                else ["invalid-shape"]
+            ),
+            "error_present": (
+                server.get("error_present")
+                if type(server.get("error_present")) is bool
+                else True
+            ),
+        })
+    return canonical
 
 
 def _canonical_diagnostic_events(value: object) -> object:
@@ -396,6 +485,9 @@ def validate_row_schema(result: object) -> list[str]:
     required_diagnostic_fields = {
         "events",
         "events_truncated",
+        "post_result_events",
+        "post_result_event_count",
+        "post_result_events_truncated",
         "stdout_excerpt",
         "stdout_truncated",
         "stderr_excerpt",
@@ -413,6 +505,7 @@ def validate_row_schema(result: object) -> list[str]:
             for error in diagnostic_identifier_errors
         )
         events = diagnostics["events"]
+        post_result_events = diagnostics["post_result_events"]
         if not excessive_depth:
             try:
                 canonical_events = _canonical_diagnostic_events(events)
@@ -434,7 +527,75 @@ def validate_row_schema(result: object) -> list[str]:
             else:
                 if serialized_event_chars > MAX_DIAGNOSTIC_EVENTS_CHARS:
                     errors.append("diagnostics.events exceeds its total serialized size limit")
-        for field in ("events_truncated", "stdout_truncated", "stderr_truncated"):
+        if not isinstance(post_result_events, list):
+            errors.append("diagnostics.post_result_events must be a list")
+        elif len(post_result_events) > MAX_POST_RESULT_EVENTS:
+            errors.append(
+                f"diagnostics.post_result_events must contain at most {MAX_POST_RESULT_EVENTS} entries"
+            )
+        elif post_result_events != _canonical_post_result_events(post_result_events):
+            errors.append(
+                "diagnostics.post_result_events must equal its sanitized canonical form"
+            )
+        if isinstance(post_result_events, list):
+            for index, event in enumerate(post_result_events[:MAX_POST_RESULT_EVENTS]):
+                path = f"diagnostics.post_result_events[{index}]"
+                if not isinstance(event, dict) or set(event) != {
+                    "line",
+                    "event_type",
+                    "ephemeral",
+                    "servers",
+                    "server_count",
+                    "servers_truncated",
+                    "server_metadata_valid",
+                }:
+                    errors.append(f"{path} must contain exactly the required metadata fields")
+                    continue
+                if (
+                    type(event["line"]) is not int
+                    or event["line"] < 1
+                    or event["line"] > MAX_STDOUT_PARSE_LINES
+                ):
+                    errors.append(f"{path}.line must be a bounded positive line number")
+                if not _is_benign_post_result_metadata(
+                    event["event_type"],
+                    event["ephemeral"],
+                    event["servers"],
+                    event["server_count"],
+                    event["servers_truncated"],
+                    event["server_metadata_valid"],
+                    result.get("selected_source_config", {}).get("name")
+                    if isinstance(result.get("selected_source_config"), dict)
+                    else None,
+                ):
+                    errors.append(f"{path} is not a benign post-result event")
+        if diagnostics["post_result_events_truncated"] is True:
+            errors.append("diagnostics.post_result_events must not be truncated")
+        post_result_event_count = diagnostics["post_result_event_count"]
+        if (
+            type(post_result_event_count) is not int
+            or post_result_event_count < 0
+            or post_result_event_count > MAX_USAGE_METRIC
+        ):
+            errors.append("diagnostics.post_result_event_count must be a non-negative integer")
+        elif isinstance(post_result_events, list):
+            post_result_truncated = diagnostics["post_result_events_truncated"]
+            if post_result_event_count < len(post_result_events):
+                errors.append(
+                    "diagnostics.post_result_event_count must cover retained post-result events"
+                )
+            elif post_result_truncated is False and post_result_event_count != len(
+                post_result_events
+            ):
+                errors.append(
+                    "diagnostics.post_result_event_count must equal retained events when not truncated"
+                )
+        for field in (
+            "events_truncated",
+            "post_result_events_truncated",
+            "stdout_truncated",
+            "stderr_truncated",
+        ):
             if type(diagnostics[field]) is not bool:
                 errors.append(f"diagnostics.{field} must be a Boolean")
         excerpt_limits = {
@@ -717,6 +878,7 @@ def score_result(result: object, trusted_scenarios: dict[str, dict]) -> dict:
     selected_config = result.get("selected_source_config")
     observed_tools = result.get("observed_tools")
     successful_tools = result.get("successful_tools")
+    allowed_tools = _configured_tools_for_prefix(expected_config.get("tool_prefix", ""))
     response_time = result.get("response_time_seconds")
     expected_type = "local" if expected_server.get("type") == "stdio" else "http"
     source_schema_valid = (
@@ -735,8 +897,12 @@ def score_result(result: object, trusted_scenarios: dict[str, dict]) -> dict:
         and bool(successful_tools)
         and set(successful_tools).issubset(observed_tools)
         and all(
-            isinstance(tool_name, str) and _source_for_tool(tool_name) == expected_config.get("tool_prefix")
+            isinstance(tool_name, str) and tool_name in allowed_tools
             for tool_name in observed_tools
+        )
+        and all(
+            isinstance(tool_name, str) and tool_name in allowed_tools
+            for tool_name in successful_tools
         )
         and result.get("response_present") is True
         and bool(response)
@@ -752,7 +918,7 @@ def score_result(result: object, trusted_scenarios: dict[str, dict]) -> dict:
         result.get("azure_live_query_proven") is True
         and isinstance(successful_tools, list)
         and any(
-            _source_for_tool(tool_name) == expected_config.get("tool_prefix") and _is_search_tool(tool_name)
+            tool_name in allowed_tools and _is_search_tool(tool_name)
             for tool_name in successful_tools
         )
     )

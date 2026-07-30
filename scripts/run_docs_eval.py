@@ -50,6 +50,11 @@ MCP_SERVERS = {
             "name": "MicrosoftDocs",
             "url": "https://learn.microsoft.com/api/mcp",
             "tool_prefix": "MicrosoftDocs",
+            "available_tools": (
+                "MicrosoftDocs-microsoft_docs_search",
+                "MicrosoftDocs-microsoft_docs_fetch",
+                "MicrosoftDocs-microsoft_code_sample_search",
+            ),
         },
     },
     "mintlify-hosted": {
@@ -59,6 +64,10 @@ MCP_SERVERS = {
             "name": "mintlify",
             "url": "https://hobbyist-e43fa225.mintlify.app/mcp",
             "tool_prefix": "mintlify",
+            "available_tools": (
+                "mintlify-search_microsoft_foundry_docs",
+                "mintlify-query_docs_filesystem_microsoft_foundry_docs",
+            ),
         },
     },
     "foundry-docs": {
@@ -69,6 +78,12 @@ MCP_SERVERS = {
             "command": "foundry-docs",
             "tool_prefix": "foundry_docs",
             "supports_azure": True,
+            "available_tools": (
+                "foundry_docs-search_docs",
+                "foundry_docs-get_doc",
+                "foundry_docs-get_section",
+                "foundry_docs-list_sections",
+            ),
         },
     },
     "foundry-docs-vnext": {
@@ -79,6 +94,12 @@ MCP_SERVERS = {
             "command": "foundry-docs-vnext",
             "tool_prefix": "foundry_docs_vnext",
             "supports_azure": True,
+            "available_tools": (
+                "foundry_docs_vnext-search_docs",
+                "foundry_docs_vnext-get_doc",
+                "foundry_docs_vnext-get_section",
+                "foundry_docs_vnext-list_sections",
+            ),
         },
     },
 }
@@ -103,6 +124,7 @@ KNOWN_TOOL_PREFIXES = tuple(
     )
 )
 MAX_DIAGNOSTIC_EVENTS = 20
+MAX_POST_RESULT_EVENTS = 20
 MAX_DIAGNOSTIC_EVENTS_CHARS = 50_000
 MAX_DIAGNOSTIC_TEXT = 2_000
 MAX_RESPONSE_TEXT = 50_000
@@ -123,6 +145,14 @@ DESCENDANT_POLL_SECONDS = 0.01
 MAX_SANITIZE_CANONICAL_ITERATIONS = 4
 MAX_STREAM_JSON_DEPTH = 64
 MAX_STREAM_JSON_MAP_KEYS = 10_000
+BENIGN_EPHEMERAL_POST_RESULT_EVENTS = {
+    "session.tools_updated",
+    "session.skills_loaded",
+    "mcp.tools.list_changed",
+}
+BUILTIN_MCP_SERVER_NAME = "github-mcp-server"
+SAFE_SELECTED_MCP_STATUSES = {"connected", "ready"}
+POST_RESULT_ERROR_FIELDS = {"error", "failure", "failed"}
 MAX_IDENTIFIER_TEXT = 256
 MAX_USAGE_METRIC = 10**15
 MAX_ENCODED_TOKEN_BYTES = 8_192
@@ -243,6 +273,7 @@ def build_copilot_command(
     prompt: str,
     config_path: Path,
     source_name: str,
+    available_tools: tuple[str, ...],
 ) -> list[str]:
     """Build an isolated Copilot command for one selected MCP server."""
     return [
@@ -252,6 +283,7 @@ def build_copilot_command(
         "--output-format", "json",
         "--disable-builtin-mcps",
         "--additional-mcp-config", f"@{config_path}",
+        *(f"--available-tools={tool}" for tool in available_tools),
         f"--allow-tool={source_name}",
         "--no-ask-user",
     ]
@@ -324,6 +356,15 @@ def _source_for_tool(tool_name: str) -> str | None:
 def _is_search_tool(tool_name: str) -> bool:
     normalized = tool_name.casefold().replace("-", "_").replace(".", "_").replace("/", "_").replace(":", "_")
     return "search_docs" in normalized or normalized.endswith("_search")
+
+
+def _configured_tools_for_prefix(tool_prefix: str) -> set[str]:
+    return {
+        tool
+        for server in MCP_SERVERS.values()
+        if server["config"]["tool_prefix"] == tool_prefix
+        for tool in server["config"]["available_tools"]
+    }
 
 
 def _coerce_process_text(value: str | bytes | None) -> str:
@@ -1283,6 +1324,9 @@ def _empty_diagnostics() -> dict:
     return {
         "events": [],
         "events_truncated": False,
+        "post_result_events": [],
+        "post_result_event_count": 0,
+        "post_result_events_truncated": False,
         "stdout_excerpt": "",
         "stdout_truncated": False,
         "stderr_excerpt": "",
@@ -1301,6 +1345,9 @@ def _build_diagnostics(
     if parsed is not None:
         diagnostics["events"] = parsed["diagnostic_events"]
         diagnostics["events_truncated"] = parsed["diagnostic_events_truncated"]
+        diagnostics["post_result_events"] = parsed["post_result_events"]
+        diagnostics["post_result_event_count"] = parsed["post_result_event_count"]
+        diagnostics["post_result_events_truncated"] = parsed["post_result_events_truncated"]
     if preserve_stdout:
         diagnostics["stdout_excerpt"], diagnostics["stdout_truncated"] = _bounded_stdout_excerpt(stdout)
     diagnostics["stderr_excerpt"], diagnostics["stderr_truncated"] = _bounded_excerpt(
@@ -1308,6 +1355,244 @@ def _build_diagnostics(
         MAX_STDERR_EXCERPT,
     )
     return diagnostics
+
+
+def _consistent_post_result_alias(
+    value: dict,
+    fields: tuple[str, ...],
+    *,
+    required: bool,
+    casefold: bool = False,
+) -> tuple[str | None, bool]:
+    aliases = [value[field] for field in fields if field in value]
+    if not aliases:
+        return None, not required
+    if not all(isinstance(alias, str) and alias for alias in aliases):
+        return None, False
+    normalized = [
+        alias.casefold() if casefold else alias
+        for alias in aliases
+    ]
+    if len(set(normalized)) != 1:
+        return None, False
+    return normalized[0], True
+
+
+def _post_result_server_state(
+    value: object,
+    *,
+    require_status: bool,
+) -> tuple[dict, bool]:
+    if not isinstance(value, dict):
+        return ({
+            "name": None,
+            "status": None,
+            "identity_aliases": [],
+            "status_aliases": [],
+            "error_fields": ["invalid-shape"],
+            "error_present": True,
+        }, False)
+    name_fields = ("serverName", "server", "name")
+    status_fields = ("status", "state")
+    raw_name, name_valid = _consistent_post_result_alias(
+        value,
+        name_fields,
+        required=True,
+    )
+    raw_status, status_valid = _consistent_post_result_alias(
+        value,
+        status_fields,
+        required=require_status,
+        casefold=True,
+    )
+    identity_aliases = [
+        _sanitize_identifier(value[field])
+        if isinstance(value[field], str)
+        else None
+        for field in name_fields
+        if field in value
+    ]
+    status_aliases = [
+        _sanitize_identifier(value[field].casefold())
+        if isinstance(value[field], str)
+        else None
+        for field in status_fields
+        if field in value
+    ]
+    error_fields = sorted(
+        field for field in POST_RESULT_ERROR_FIELDS if field in value
+    )
+    return ({
+        "name": _sanitize_identifier(raw_name) if raw_name is not None else None,
+        "status": (
+            _sanitize_identifier(raw_status)
+            if raw_status is not None
+            else None
+        ),
+        "identity_aliases": identity_aliases,
+        "status_aliases": status_aliases,
+        "error_fields": error_fields,
+        "error_present": bool(error_fields),
+    }, name_valid and status_valid)
+
+
+def _post_result_server_metadata(
+    event_type: object,
+    data: dict,
+) -> tuple[list[dict], int, bool, bool]:
+    if event_type in {
+        "mcp.tools.list_changed",
+        "session.mcp_server_status_changed",
+    }:
+        server, valid = _post_result_server_state(
+            data,
+            require_status=event_type == "session.mcp_server_status_changed",
+        )
+        return [server], 1, False, valid
+    if event_type == "session.mcp_servers_loaded":
+        servers = data.get("servers")
+        if not isinstance(servers, list):
+            return [], 0, False, False
+        retained = [
+            _post_result_server_state(server, require_status=True)
+            for server in servers[:MAX_DIAGNOSTIC_EVENTS]
+        ]
+        return (
+            [server for server, _valid in retained],
+            len(servers),
+            len(servers) > MAX_DIAGNOSTIC_EVENTS,
+            (
+                all(isinstance(server, dict) for server in servers)
+                and all(valid for _server, valid in retained)
+            ),
+        )
+    return [], 0, False, True
+
+
+def _post_result_server_state_matches(
+    server: object,
+    expected_name: str,
+    allowed_statuses: set[str] | None,
+) -> bool:
+    if not isinstance(server, dict) or set(server) != {
+        "name",
+        "status",
+        "identity_aliases",
+        "status_aliases",
+        "error_fields",
+        "error_present",
+    }:
+        return False
+    aliases = server["identity_aliases"]
+    status_aliases = server["status_aliases"]
+    if (
+        server["name"] != expected_name
+        or not isinstance(aliases, list)
+        or not (1 <= len(aliases) <= 3)
+        or any(alias != expected_name for alias in aliases)
+        or server["error_present"] is not False
+        or server["error_fields"] != []
+        or not isinstance(status_aliases, list)
+    ):
+        return False
+    if allowed_statuses is None:
+        return server["status"] is None and status_aliases == []
+    return (
+        server["status"] in allowed_statuses
+        and 1 <= len(status_aliases) <= 2
+        and all(alias == server["status"] for alias in status_aliases)
+    )
+
+
+def _is_benign_post_result_metadata(
+    event_type: object,
+    ephemeral: object,
+    servers: object,
+    server_count: object,
+    servers_truncated: object,
+    server_metadata_valid: object,
+    expected_mcp_server: object,
+) -> bool:
+    if (
+        ephemeral is not True
+        or not isinstance(event_type, str)
+        or not isinstance(servers, list)
+        or type(server_count) is not int
+        or servers_truncated is not False
+        or server_metadata_valid is not True
+        or server_count != len(servers)
+    ):
+        return False
+    if event_type in {
+        "session.tools_updated",
+        "session.skills_loaded",
+    }:
+        return server_count == 0
+    if not isinstance(expected_mcp_server, str):
+        return False
+    selected_name = _sanitize_identifier(expected_mcp_server)
+    if event_type == "mcp.tools.list_changed":
+        return (
+            server_count == 1
+            and _post_result_server_state_matches(
+                servers[0],
+                selected_name,
+                None,
+            )
+        )
+    if event_type == "session.mcp_server_status_changed":
+        return server_count == 1 and (
+            _post_result_server_state_matches(
+                servers[0],
+                selected_name,
+                SAFE_SELECTED_MCP_STATUSES,
+            )
+            or _post_result_server_state_matches(
+                servers[0],
+                BUILTIN_MCP_SERVER_NAME,
+                {"disabled"},
+            )
+        )
+    if event_type == "session.mcp_servers_loaded":
+        if server_count == 0:
+            return False
+        names = [server.get("name") for server in servers if isinstance(server, dict)]
+        if len(set(names)) != len(names) or selected_name not in names:
+            return False
+        return all(
+            _post_result_server_state_matches(
+                server,
+                selected_name,
+                SAFE_SELECTED_MCP_STATUSES,
+            )
+            or _post_result_server_state_matches(
+                server,
+                BUILTIN_MCP_SERVER_NAME,
+                {"disabled"},
+            )
+            for server in servers
+        )
+    return False
+
+
+def _is_benign_post_result_event(
+    event: dict,
+    data: dict,
+    expected_mcp_server: str | None,
+) -> bool:
+    if event.get("ephemeral") is not True:
+        return False
+    event_type = event.get("type")
+    servers, count, truncated, valid = _post_result_server_metadata(event_type, data)
+    return _is_benign_post_result_metadata(
+        event_type,
+        True,
+        servers,
+        count,
+        truncated,
+        valid,
+        expected_mcp_server,
+    )
 
 
 def _set_projected_value(target: dict, path: tuple[str, ...], value: object) -> None:
@@ -1466,7 +1751,11 @@ def _parse_json_event(line: str) -> tuple[dict, bool]:
     return _project_large_json_event(line)
 
 
-def parse_event_stream(stdout: str | bytes) -> dict:
+def parse_event_stream(
+    stdout: str | bytes,
+    *,
+    expected_mcp_server: str | None = None,
+) -> dict:
     """Parse `copilot --output-format json` JSONL output into operational metrics.
 
     Extracts the final assistant response text plus turn count, tool-call count,
@@ -1490,6 +1779,9 @@ def parse_event_stream(stdout: str | bytes) -> dict:
         "_successful_tools_raw": [],
         "diagnostic_events": [],
         "diagnostic_events_truncated": False,
+        "post_result_events": [],
+        "post_result_event_count": 0,
+        "post_result_events_truncated": False,
         "mcp_failure": None,
         "mcp_statuses": {},
         "session_failure": None,
@@ -1534,12 +1826,38 @@ def parse_event_stream(stdout: str | bytes) -> dict:
         if not isinstance(event, dict):
             parse_errors.append(f"line {line_number}: event must be a JSON object")
             continue
-        if result_seen:
-            parse_errors.append(f"line {line_number}: event occurred after terminal result")
-
         parsed_any = True
         etype = event.get("type")
         data = event.get("data", {})
+        if result_seen:
+            metrics["post_result_event_count"] += 1
+            server_states, server_count, servers_truncated, server_metadata_valid = (
+                _post_result_server_metadata(
+                    etype,
+                    data if isinstance(data, dict) else {},
+                )
+            )
+            if len(metrics["post_result_events"]) < MAX_POST_RESULT_EVENTS:
+                metrics["post_result_events"].append({
+                    "line": line_number,
+                    "event_type": _sanitize_identifier(etype),
+                    "ephemeral": event.get("ephemeral") is True,
+                    "servers": server_states,
+                    "server_count": server_count,
+                    "servers_truncated": servers_truncated,
+                    "server_metadata_valid": server_metadata_valid,
+                })
+            else:
+                if not metrics["post_result_events_truncated"]:
+                    parse_errors.append("post-result event evidence exceeds retained limit")
+                metrics["post_result_events_truncated"] = True
+            if not isinstance(data, dict) or not _is_benign_post_result_event(
+                event,
+                data,
+                expected_mcp_server,
+            ):
+                parse_errors.append(f"line {line_number}: event occurred after terminal result")
+            continue
         if not isinstance(data, dict):
             parse_errors.append(f"line {line_number}: event data must be a JSON object")
             continue
@@ -1735,10 +2053,22 @@ def parse_event_stream(stdout: str | bytes) -> dict:
     return {"response": last_message_content, **metrics}
 
 
+def _azure_search_proven(parsed: dict, tool_prefix: str, azure_required: bool) -> bool:
+    allowed_tools = _configured_tools_for_prefix(tool_prefix)
+    return (
+        azure_required
+        and any(
+            name in allowed_tools and _is_search_tool(name)
+            for name in parsed["_successful_tools_raw"]
+        )
+    )
+
+
 def validate_row_evidence(parsed: dict, tool_prefix: str, azure_required: bool) -> tuple[bool, str | None, bool]:
     """Validate selected-source and optional Azure evidence for one row."""
+    azure_live_query_proven = _azure_search_proven(parsed, tool_prefix, azure_required)
     if parsed["session_failure"]:
-        return False, f"session_error: {parsed['session_failure']}", False
+        return False, f"session_error: {parsed['session_failure']}", azure_live_query_proven
     selected_mcp_status = next(
         (
             status
@@ -1749,31 +2079,28 @@ def validate_row_evidence(parsed: dict, tool_prefix: str, azure_required: bool) 
     )
     if selected_mcp_status and selected_mcp_status["status"] != "connected":
         detail = selected_mcp_status["error"] or f"status is {selected_mcp_status['status'] or 'unknown'}"
-        return False, f"mcp_initialization_failure: {tool_prefix}: {detail}", False
+        return False, f"mcp_initialization_failure: {tool_prefix}: {detail}", azure_live_query_proven
     if parsed["parse_error"]:
-        return False, f"event_parse_failure: {parsed['parse_error']}", False
+        return False, f"event_parse_failure: {parsed['parse_error']}", azure_live_query_proven
     if parsed["tool_errors"]:
-        return False, f"tool_error: {parsed['tool_errors']} tool execution(s) failed", False
+        return False, f"tool_error: {parsed['tool_errors']} tool execution(s) failed", azure_live_query_proven
 
     observed_tools = parsed["_observed_tools_raw"]
-    cross_source_tools = [name for name in observed_tools if _source_for_tool(name) != tool_prefix]
+    allowed_tools = _configured_tools_for_prefix(tool_prefix)
+    cross_source_tools = [name for name in observed_tools if name not in allowed_tools]
     if cross_source_tools:
         sanitized_tools = [_sanitize_identifier(name) for name in cross_source_tools]
-        return False, f"cross_source_tool_call: {', '.join(sanitized_tools)}", False
+        return False, f"cross_source_tool_call: {', '.join(sanitized_tools)}", azure_live_query_proven
     if not observed_tools:
-        return False, "source_selection_unproven: no documentation tool calls observed", False
-    if not any(_source_for_tool(name) == tool_prefix for name in parsed["_successful_tools_raw"]):
-        return False, "source_selection_unproven: no selected-source tool completed successfully", False
-    if not parsed["response"]:
-        return False, "missing_response: no assistant response event contained content", False
-
-    azure_live_query_proven = (
-        azure_required
-        and any(
-            _tool_matches_source(name, tool_prefix) and _is_search_tool(name)
-            for name in parsed["_successful_tools_raw"]
+        return False, "source_selection_unproven: no documentation tool calls observed", azure_live_query_proven
+    if not any(name in allowed_tools for name in parsed["_successful_tools_raw"]):
+        return (
+            False,
+            "source_selection_unproven: no selected-source tool completed successfully",
+            azure_live_query_proven,
         )
-    )
+    if not parsed["response"]:
+        return False, "missing_response: no assistant response event contained content", azure_live_query_proven
     if azure_required and not azure_live_query_proven:
         return False, "azure_live_query_unproven: selected search tool did not complete successfully", False
 
@@ -1849,7 +2176,13 @@ def run_single_eval(
             config_path.write_text(json.dumps(mcp_config), encoding="utf-8")
             config_path.chmod(0o600)
 
-            cmd = build_copilot_command(model, prompt, config_path, source_name)
+            cmd = build_copilot_command(
+                model,
+                prompt,
+                config_path,
+                source_name,
+                tuple(server_config["config"]["available_tools"]),
+            )
             process_env = os.environ.copy()
             process_env["COPILOT_HOME"] = isolated_home
 
@@ -1863,7 +2196,7 @@ def run_single_eval(
             proc_stderr = proc.stderr
 
         elapsed = time.monotonic() - start_time
-        parsed = parse_event_stream(proc_stdout)
+        parsed = parse_event_stream(proc_stdout, expected_mcp_server=source_name)
         response = parsed["response"]
         evidence_valid, failure_reason, azure_live_query_proven = validate_row_evidence(
             parsed,
@@ -1918,7 +2251,20 @@ def run_single_eval(
         elapsed = time.monotonic() - start_time
         partial_stdout = exc.stdout
         partial_stderr = exc.stderr
-        parsed = parse_event_stream(partial_stdout) if partial_stdout else None
+        parsed = (
+            parse_event_stream(partial_stdout, expected_mcp_server=source_name)
+            if partial_stdout
+            else None
+        )
+        azure_live_query_proven = (
+            _azure_search_proven(
+                parsed,
+                server_config["config"]["tool_prefix"],
+                result["azure_required"],
+            )
+            if parsed
+            else False
+        )
         result.update({
             "response": "",
             "stderr": _bounded_excerpt(
@@ -1931,6 +2277,7 @@ def run_single_eval(
             "passed": False,
             "response_present": False,
             "failure_reason": f"timeout: exceeded {timeout}s",
+            "azure_live_query_proven": azure_live_query_proven,
             "observed_tools": parsed["observed_tools"] if parsed else [],
             "successful_tools": parsed["successful_tools"] if parsed else [],
             "turns": parsed["turns"] if parsed else 0,

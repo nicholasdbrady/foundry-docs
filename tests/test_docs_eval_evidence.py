@@ -124,6 +124,9 @@ def _raw_row(
         "diagnostics": {
             "events": [],
             "events_truncated": False,
+            "post_result_events": [],
+            "post_result_event_count": 0,
+            "post_result_events_truncated": False,
             "stdout_excerpt": "",
             "stdout_truncated": False,
             "stderr_excerpt": "",
@@ -136,6 +139,42 @@ def _raw_row(
         "tool_errors": 0,
         "output_tokens": 12,
         "response_time_seconds": 0.1,
+    }
+
+
+def _post_result_event_metadata(
+    event_type: str,
+    *,
+    line: int = 42,
+    ephemeral: bool = True,
+    servers: list[dict] | None = None,
+    server_count: int | None = None,
+    servers_truncated: bool = False,
+    server_metadata_valid: bool = True,
+) -> dict:
+    servers = [] if servers is None else [
+        {
+            **server,
+            "identity_aliases": server.get(
+                "identity_aliases",
+                [server["name"]] if server.get("name") else [],
+            ),
+            "status_aliases": server.get(
+                "status_aliases",
+                [server["status"]] if server.get("status") else [],
+            ),
+            "error_fields": server.get("error_fields", []),
+        }
+        for server in servers
+    ]
+    return {
+        "line": line,
+        "event_type": event_type,
+        "ephemeral": ephemeral,
+        "servers": servers,
+        "server_count": len(servers) if server_count is None else server_count,
+        "servers_truncated": servers_truncated,
+        "server_metadata_valid": server_metadata_valid,
     }
 
 
@@ -240,7 +279,14 @@ def test_run_single_eval_passes_only_selected_config_across_process_boundary(mon
 
     assert list(captured["config"]["mcpServers"]) == ["foundry_docs"]
     assert "--disable-builtin-mcps" in captured["cmd"]
-    assert not any(arg.startswith("--available-tools") for arg in captured["cmd"])
+    assert {
+        arg
+        for arg in captured["cmd"]
+        if arg.startswith("--available-tools=")
+    } == {
+        f"--available-tools={tool}"
+        for tool in MCP_SERVERS["foundry-docs"]["config"]["available_tools"]
+    }
     assert "--allow-tool=foundry_docs" in captured["cmd"]
     assert captured["cwd"] == captured["copilot_home"]
     assert result["selected_source"] == "foundry-docs"
@@ -271,7 +317,14 @@ def test_copilot_command_isolates_all_selected_mcp_servers_without_broken_availa
     config, descriptor = build_mcp_config(MCP_SERVERS[server_name])
     config_path.write_text(json.dumps(config), encoding="utf-8")
 
-    cmd = build_copilot_command("model-1", "prompt", config_path, source_name)
+    available_tools = tuple(MCP_SERVERS[server_name]["config"]["available_tools"])
+    cmd = build_copilot_command(
+        "model-1",
+        "prompt",
+        config_path,
+        source_name,
+        available_tools,
+    )
 
     assert list(config["mcpServers"]) == [source_name]
     assert config["mcpServers"][source_name]["deferTools"] == "never"
@@ -279,7 +332,18 @@ def test_copilot_command_isolates_all_selected_mcp_servers_without_broken_availa
     assert "--disable-builtin-mcps" in cmd
     assert cmd[cmd.index("--additional-mcp-config") + 1] == f"@{config_path}"
     assert f"--allow-tool={source_name}" in cmd
-    assert not any(arg.startswith("--available-tools") for arg in cmd)
+    assert {
+        arg
+        for arg in cmd
+        if arg.startswith("--available-tools=")
+    } == {f"--available-tools={tool}" for tool in available_tools}
+    assert not {
+        "bash",
+        "grep",
+        "rg",
+        "view",
+        "web_fetch",
+    } & set(available_tools)
     for other_server in MCP_SERVERS.values():
         other_name = other_server["config"]["name"]
         if other_name != source_name:
@@ -298,7 +362,7 @@ def test_unknown_tool_allowlist_warning_is_retained_and_fails_closed():
         json.dumps({"type": "result", "exitCode": 0}),
     ])
 
-    parsed = parse_event_stream(stdout)
+    parsed = parse_event_stream(stdout, expected_mcp_server="foundry_docs")
     valid, failure_reason, _azure_proven = run_docs_eval.validate_row_evidence(
         parsed,
         "foundry_docs_vnext",
@@ -314,6 +378,224 @@ def test_unknown_tool_allowlist_warning_is_retained_and_fails_closed():
             "message": 'Unknown tool name in the tool allowlist: "foundry_docs_vnext"',
         },
     }]
+
+
+def test_known_ephemeral_post_result_events_are_retained_and_ignored():
+    post_result_events = [
+        {"type": "session.tools_updated", "data": {}, "ephemeral": True},
+        {"type": "session.skills_loaded", "data": {"skills": []}, "ephemeral": True},
+        {"type": "mcp.tools.list_changed", "data": {"serverName": "foundry_docs"}, "ephemeral": True},
+        {
+            "type": "session.mcp_server_status_changed",
+            "data": {"serverName": "foundry_docs", "status": "connected"},
+            "ephemeral": True,
+        },
+        {
+            "type": "session.mcp_server_status_changed",
+            "data": {"serverName": "foundry_docs", "status": "ready"},
+            "ephemeral": True,
+        },
+        {
+            "type": "session.mcp_server_status_changed",
+            "data": {"serverName": "github-mcp-server", "status": "disabled"},
+            "ephemeral": True,
+        },
+        {
+            "type": "session.mcp_servers_loaded",
+            "data": {
+                "servers": [
+                    {"name": "foundry_docs", "status": "connected"},
+                    {"name": "github-mcp-server", "status": "disabled"},
+                ],
+            },
+            "ephemeral": True,
+        },
+    ]
+    stdout = "\n".join([
+        _event_stream(),
+        *(json.dumps(event) for event in post_result_events),
+    ])
+
+    parsed = parse_event_stream(stdout, expected_mcp_server="foundry_docs")
+    valid, failure_reason, _azure_proven = run_docs_eval.validate_row_evidence(
+        parsed,
+        "foundry_docs",
+        False,
+    )
+
+    assert valid is True
+    assert failure_reason is None
+    assert parsed["post_result_event_count"] == 7
+    assert parsed["post_result_events_truncated"] is False
+    assert [event["event_type"] for event in parsed["post_result_events"]] == [
+        event["type"] for event in post_result_events
+    ]
+    connected = parsed["post_result_events"][-4]["servers"][0]
+    assert connected["name"] == "foundry_docs"
+    assert connected["status"] == "connected"
+    assert connected["identity_aliases"] == ["foundry_docs"]
+    assert connected["status_aliases"] == ["connected"]
+    assert connected["error_fields"] == []
+    assert connected["error_present"] is False
+    loaded = parsed["post_result_events"][-1]["servers"]
+    assert [(server["name"], server["status"]) for server in loaded] == [
+        ("foundry_docs", "connected"),
+        ("github-mcp-server", "disabled"),
+    ]
+
+
+@pytest.mark.parametrize(
+    "event",
+    [
+        {"type": "assistant.message", "data": {"content": "late"}, "ephemeral": True},
+        {
+            "type": "tool.execution_start",
+            "data": {"toolCallId": "late", "toolName": "foundry_docs-search_docs"},
+            "ephemeral": True,
+        },
+        {
+            "type": "session.error",
+            "data": {"errorType": "late", "message": "failure"},
+            "ephemeral": True,
+        },
+        {"type": "unknown.postamble", "data": {}, "ephemeral": True},
+        {"type": "session.tools_updated", "data": {}, "ephemeral": False},
+        {
+            "type": "session.mcp_server_status_changed",
+            "data": {"serverName": "foundry_docs", "status": "failed"},
+            "ephemeral": True,
+        },
+        {
+            "type": "session.mcp_server_status_changed",
+            "data": {"serverName": "other_server", "status": "connected"},
+            "ephemeral": True,
+        },
+        {
+            "type": "mcp.tools.list_changed",
+            "data": {"serverName": "other_server"},
+            "ephemeral": True,
+        },
+        {
+            "type": "mcp.tools.list_changed",
+            "data": {},
+            "ephemeral": True,
+        },
+        {
+            "type": "mcp.tools.list_changed",
+            "data": {"serverName": "foundry_docs", "error": "failed"},
+            "ephemeral": True,
+        },
+        {
+            "type": "mcp.tools.list_changed",
+            "data": {"serverName": "foundry_docs", "server": "other_server"},
+            "ephemeral": True,
+        },
+        {
+            "type": "session.mcp_server_status_changed",
+            "data": {
+                "serverName": "foundry_docs",
+                "status": "connected",
+                "state": "failed",
+            },
+            "ephemeral": True,
+        },
+        {
+            "type": "session.mcp_servers_loaded",
+            "data": {
+                "servers": [
+                    {"name": "foundry_docs", "status": "connected"},
+                    {"name": "other_server", "status": "disabled"},
+                ],
+            },
+            "ephemeral": True,
+        },
+        {
+            "type": "session.mcp_servers_loaded",
+            "data": {
+                "servers": [
+                    {"name": "foundry_docs", "status": "connected"},
+                    {"name": "foundry_docs", "status": "ready"},
+                ],
+            },
+            "ephemeral": True,
+        },
+        {
+            "type": "session.mcp_servers_loaded",
+            "data": {
+                "servers": [{
+                    "serverName": "foundry_docs",
+                    "name": "other_server",
+                    "status": "connected",
+                }],
+            },
+            "ephemeral": True,
+        },
+        {
+            "type": "session.mcp_servers_loaded",
+            "data": {
+                "servers": [
+                    {"name": "foundry_docs", "status": "connected", "failure": None},
+                ],
+            },
+            "ephemeral": True,
+        },
+        {
+            "type": "session.mcp_servers_loaded",
+            "data": {
+                "servers": [
+                    {"name": "foundry_docs", "status": "connected"},
+                    {"status": "disabled"},
+                ],
+            },
+            "ephemeral": True,
+        },
+        {"type": "result", "exitCode": 0},
+    ],
+)
+def test_semantic_unknown_or_non_ephemeral_post_result_events_fail_closed(event):
+    parsed = parse_event_stream("\n".join([_event_stream(), json.dumps(event)]))
+
+    assert "event occurred after terminal result" in parsed["parse_error"]
+    assert parsed["post_result_event_count"] == 1
+    assert parsed["post_result_events"][0]["event_type"] == event["type"]
+
+
+def test_post_result_event_metadata_is_bounded_and_counts_truncation():
+    benign = json.dumps({
+        "type": "session.tools_updated",
+        "data": {},
+        "ephemeral": True,
+    })
+    parsed = parse_event_stream("\n".join([
+        _event_stream(),
+        *([benign] * 25),
+    ]))
+
+    assert "post-result event evidence exceeds retained limit" in parsed["parse_error"]
+    assert parsed["post_result_event_count"] == 25
+    assert len(parsed["post_result_events"]) == run_docs_eval.MAX_POST_RESULT_EVENTS
+    assert parsed["post_result_events_truncated"] is True
+
+
+def test_azure_proof_survives_an_independent_row_failure():
+    parsed = parse_event_stream("\n".join([
+        _event_stream(),
+        json.dumps({
+            "type": "assistant.message",
+            "data": {"content": "late"},
+            "ephemeral": True,
+        }),
+    ]))
+
+    valid, failure_reason, azure_proven = run_docs_eval.validate_row_evidence(
+        parsed,
+        "foundry_docs",
+        True,
+    )
+
+    assert valid is False
+    assert failure_reason.startswith("event_parse_failure:")
+    assert azure_proven is True
 
 
 def test_live_selected_mcp_fixture_loads_and_calls_search_without_allowlist_warning():
@@ -1063,6 +1345,43 @@ def test_timeout_projects_partial_stream_output(monkeypatch):
     assert result["status"] == "timeout"
     assert result["diagnostics"]["events"][0]["event_type"] == "session.mcp_server_status_changed"
     assert result["diagnostics"]["stderr_excerpt"] == "streamed timeout diagnostic"
+
+
+def test_timeout_retains_completed_azure_search_proof(monkeypatch):
+    monkeypatch.setenv("AZURE_SEARCH_ENDPOINT", "https://search.example")
+    monkeypatch.setenv("AZURE_AI_PROJECT_ENDPOINT", "https://project.example")
+    partial_events = "\n".join([
+        json.dumps({
+            "type": "tool.execution_start",
+            "data": {"toolCallId": "call-1", "toolName": "foundry_docs-search_docs"},
+        }),
+        json.dumps({
+            "type": "tool.execution_complete",
+            "data": {"toolCallId": "call-1", "success": True},
+        }),
+    ])
+
+    def time_out(cmd, **kwargs):
+        raise subprocess.TimeoutExpired(
+            cmd=cmd,
+            timeout=kwargs["timeout"],
+            output=partial_events.encode(),
+        )
+
+    monkeypatch.setattr(run_docs_eval, "_run_process_bounded", time_out)
+
+    result = run_single_eval(
+        SCENARIO,
+        "foundry-docs",
+        MCP_SERVERS["foundry-docs"],
+        "model-1",
+        timeout=3,
+        require_azure=True,
+    )
+
+    assert result["status"] == "timeout"
+    assert result["source_validated"] is False
+    assert result["azure_live_query_proven"] is True
 
 
 def test_bounded_process_timeout_does_not_wait_for_inheriting_descendant(tmp_path):
@@ -2081,6 +2400,275 @@ def test_nested_stdout_truncation_flag_is_schema_valid():
     assert validate_row_schema(row) == []
 
 
+def test_post_result_metadata_is_schema_valid_and_preserved_by_scorer():
+    row = _raw_row()
+    row["diagnostics"].update({
+        "post_result_events": [
+            _post_result_event_metadata("session.tools_updated")
+        ],
+        "post_result_event_count": 1,
+        "post_result_events_truncated": False,
+    })
+
+    assert validate_row_schema(row) == []
+    scored = score_result(row)
+    assert scored["diagnostics"]["post_result_events"] == row["diagnostics"]["post_result_events"]
+
+
+def test_post_result_metadata_rejects_invalid_count_and_unsanitized_type():
+    row = _raw_row()
+    row["diagnostics"].update({
+        "post_result_events": [
+            _post_result_event_metadata(
+                r"session.tools_updated token=LEAKME C:\Users\Alice\private"
+            )
+        ],
+        "post_result_event_count": 0,
+        "post_result_events_truncated": False,
+    })
+
+    errors = validate_row_schema(row)
+
+    assert "diagnostics.post_result_events must equal its sanitized canonical form" in errors
+    assert "diagnostics.post_result_event_count must cover retained post-result events" in errors
+
+
+@pytest.mark.parametrize(
+    "event",
+    [
+        "not-an-object",
+        {
+            **_post_result_event_metadata("session.tools_updated"),
+            "line": -1,
+        },
+        _post_result_event_metadata("assistant.message"),
+    ],
+)
+def test_scorer_rejects_malformed_or_semantic_post_result_metadata(event):
+    row = _raw_row()
+    row["diagnostics"].update({
+        "post_result_events": [event],
+        "post_result_event_count": 1,
+        "post_result_events_truncated": False,
+    })
+
+    errors = validate_row_schema(row)
+    scored = score_result(row)
+
+    assert errors
+    assert scored["row_valid"] is False
+
+
+def test_scorer_requires_selected_or_builtin_identity_for_lifecycle_postamble():
+    row = _raw_row()
+    row["diagnostics"].update({
+        "post_result_events": [
+            _post_result_event_metadata(
+                "session.mcp_server_status_changed",
+                servers=[{
+                    "name": "other_server",
+                    "status": "connected",
+                    "error_present": False,
+                }],
+            )
+        ],
+        "post_result_event_count": 1,
+        "post_result_events_truncated": False,
+    })
+
+    errors = validate_row_schema(row)
+
+    assert "diagnostics.post_result_events[0] is not a benign post-result event" in errors
+
+
+@pytest.mark.parametrize(
+    "metadata",
+    [
+        _post_result_event_metadata(
+            "mcp.tools.list_changed",
+            servers=[{
+                "name": "other_server",
+                "status": None,
+                "error_present": False,
+            }],
+        ),
+        _post_result_event_metadata(
+            "mcp.tools.list_changed",
+            servers=[{
+                "name": None,
+                "status": None,
+                "error_present": False,
+            }],
+            server_metadata_valid=False,
+        ),
+        _post_result_event_metadata(
+            "session.mcp_servers_loaded",
+            servers=[
+                {
+                    "name": "foundry_docs",
+                    "status": "connected",
+                    "error_present": False,
+                },
+                {
+                    "name": None,
+                    "status": "disabled",
+                    "error_present": False,
+                },
+            ],
+            server_metadata_valid=False,
+        ),
+        _post_result_event_metadata(
+            "session.mcp_servers_loaded",
+            servers=[
+                {
+                    "name": "foundry_docs",
+                    "status": "connected",
+                    "error_present": False,
+                },
+                {
+                    "name": "other_server",
+                    "status": "disabled",
+                    "error_present": False,
+                },
+            ],
+        ),
+        _post_result_event_metadata(
+            "session.mcp_servers_loaded",
+            servers=[{
+                "name": "foundry_docs",
+                "status": "connected",
+                "error_fields": ["error"],
+                "error_present": True,
+            }],
+        ),
+        _post_result_event_metadata(
+            "mcp.tools.list_changed",
+            servers=[{
+                "name": "foundry_docs",
+                "status": None,
+                "identity_aliases": ["foundry_docs", "other_server"],
+                "status_aliases": [],
+                "error_fields": [],
+                "error_present": False,
+            }],
+        ),
+        _post_result_event_metadata(
+            "session.mcp_server_status_changed",
+            servers=[{
+                "name": "foundry_docs",
+                "status": "connected",
+                "identity_aliases": ["foundry_docs"],
+                "status_aliases": ["connected", "failed"],
+                "error_fields": [],
+                "error_present": False,
+            }],
+        ),
+        _post_result_event_metadata(
+            "session.mcp_server_status_changed",
+            servers=[{
+                "name": "foundry_docs",
+                "status": "connected",
+                "identity_aliases": ["foundry_docs"] * 20,
+                "status_aliases": ["connected"] * 20,
+                "error_fields": [],
+                "error_present": False,
+            }],
+        ),
+    ],
+)
+def test_scorer_rejects_foreign_or_unnamed_lifecycle_metadata(metadata):
+    row = _raw_row()
+    row["diagnostics"].update({
+        "post_result_events": [metadata],
+        "post_result_event_count": 1,
+        "post_result_events_truncated": False,
+    })
+
+    errors = validate_row_schema(row)
+    scored = score_result(row)
+
+    assert "diagnostics.post_result_events[0] is not a benign post-result event" in errors
+    assert scored["row_valid"] is False
+
+
+@pytest.mark.parametrize(
+    ("count", "truncated"),
+    [
+        (2, False),
+        (1, True),
+    ],
+)
+def test_scorer_rejects_inconsistent_post_result_count_and_truncation(count, truncated):
+    row = _raw_row()
+    row["diagnostics"].update({
+        "post_result_events": [
+            _post_result_event_metadata("session.tools_updated")
+        ],
+        "post_result_event_count": count,
+        "post_result_events_truncated": truncated,
+    })
+
+    assert validate_row_schema(row)
+
+
+def test_scorer_rejects_truncated_post_result_tail_even_with_benign_prefix():
+    row = _raw_row()
+    row["diagnostics"].update({
+        "post_result_events": [
+            _post_result_event_metadata(
+                "session.tools_updated",
+                line=index + 1,
+            )
+            for index in range(run_docs_eval.MAX_POST_RESULT_EVENTS)
+        ],
+        "post_result_event_count": run_docs_eval.MAX_POST_RESULT_EVENTS + 1,
+        "post_result_events_truncated": True,
+    })
+
+    errors = validate_row_schema(row)
+    scored = score_result(row)
+
+    assert "diagnostics.post_result_events must not be truncated" in errors
+    assert scored["row_valid"] is False
+
+
+def test_undeclared_same_prefix_tool_cannot_validate_source_or_azure_proof():
+    parsed = parse_event_stream("\n".join([
+        json.dumps({
+            "type": "tool.execution_start",
+            "data": {
+                "toolCallId": "call-1",
+                "toolName": "foundry_docs-undeclared_search_docs",
+            },
+        }),
+        json.dumps({
+            "type": "tool.execution_complete",
+            "data": {"toolCallId": "call-1", "success": True},
+        }),
+        json.dumps({"type": "assistant.message", "data": {"content": "answer"}}),
+        json.dumps({"type": "result", "exitCode": 0}),
+    ]))
+
+    valid, failure_reason, azure_proven = run_docs_eval.validate_row_evidence(
+        parsed,
+        "foundry_docs",
+        True,
+    )
+
+    assert valid is False
+    assert failure_reason == "cross_source_tool_call: foundry_docs-undeclared_search_docs"
+    assert azure_proven is False
+
+    row = _raw_row()
+    row["observed_tools"] = ["foundry_docs-undeclared_search_docs"]
+    row["successful_tools"] = ["foundry_docs-undeclared_search_docs"]
+    row["azure_required"] = True
+    row["azure_live_query_proven"] = True
+    row["selected_source_config"]["azure_required"] = True
+    scored = score_result(row)
+    assert scored["row_valid"] is False
+
+
 def test_large_event_is_stopped_before_json_parse_and_remains_bounded():
     huge_event = b'{"type":"session.error","data":{"message":"' + (b"x" * 5_000_000) + b'"}}'
 
@@ -2775,7 +3363,7 @@ def test_diagnostic_path_keys_are_sanitized(monkeypatch):
     assert "<PATH>" in serialized
 
 
-def test_tool_name_is_validated_raw_but_persisted_sanitized(monkeypatch):
+def test_forged_same_prefix_tool_name_is_rejected_and_persisted_sanitized(monkeypatch):
     tool_name = r"foundry_docs-search_docs token=LEAKME C:\Users\Alice\private"
     stdout = _event_stream(tool_name=tool_name, response="trusted answer")
     monkeypatch.setattr(
@@ -2792,8 +3380,9 @@ def test_tool_name_is_validated_raw_but_persisted_sanitized(monkeypatch):
     )
     scored_row = score_result(raw_row)
 
-    assert raw_row["source_validated"] is True
-    assert scored_row["row_valid"] is True
+    assert raw_row["source_validated"] is False
+    assert raw_row["failure_reason"].startswith("cross_source_tool_call:")
+    assert scored_row["row_valid"] is False
     assert raw_row["observed_tools"] == ["foundry_docs-search_docs token=[REDACTED] <PATH>"]
     for row in (raw_row, scored_row):
         persisted = json.dumps(row)
