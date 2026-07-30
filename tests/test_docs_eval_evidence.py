@@ -2162,6 +2162,37 @@ def test_4mb_plus_one_json_payload_fails_with_line_terminator(terminator):
     assert parsed["response"] == ""
 
 
+@pytest.mark.parametrize("terminator", ["\n", "\r\n"])
+def test_aggregate_payload_boundary_excludes_all_line_terminators(terminator):
+    result_line = json.dumps({"type": "result", "exitCode": 0}, separators=(",", ":"))
+    filler_size = (
+        run_docs_eval.MAX_STDOUT_PARSE_BYTES
+        - len(result_line.encode())
+    )
+    filler_line = _json_event_at_size(
+        {"type": "assistant.tool_call_delta", "data": {}},
+        filler_size,
+    )
+    at_limit = terminator.join([filler_line, result_line]) + terminator
+    over_limit = terminator.join([
+        _json_event_at_size(
+            {"type": "assistant.tool_call_delta", "data": {}},
+            filler_size + 1,
+        ),
+        result_line,
+    ]) + terminator
+
+    accepted = parse_event_stream(at_limit)
+    rejected = parse_event_stream(over_limit)
+
+    assert accepted["parse_error"] is None
+    assert accepted["result_exit_code"] == 0
+    assert rejected["stdout_input_truncated"] is True
+    assert f"stdout exceeds {run_docs_eval.MAX_STDOUT_PARSE_BYTES} byte pre-parse limit" in rejected[
+        "parse_error"
+    ]
+
+
 @pytest.mark.parametrize("padding_size", [0, 600_000])
 def test_duplicate_type_cannot_suppress_session_error_in_eager_or_streaming_parser(
     padding_size,
@@ -2180,6 +2211,22 @@ def test_duplicate_type_cannot_suppress_session_error_in_eager_or_streaming_pars
     assert "invalid JSON event" in parsed["parse_error"]
     assert parsed["result_exit_code"] is None
     assert parsed["response"] == ""
+
+
+@pytest.mark.parametrize("padding_size", [0, 600_000])
+def test_nested_duplicate_keys_fail_in_eager_and_streaming_parser(padding_size):
+    padding = "x" * padding_size
+    duplicate_usage = (
+        '{"type":"result","exitCode":0,'
+        '"usage":{"premiumRequests":1,"premiumRequests":2},'
+        f'"padding":"{padding}"'
+        "}"
+    )
+
+    parsed = parse_event_stream(duplicate_usage)
+
+    assert "invalid JSON event" in parsed["parse_error"]
+    assert parsed["result_exit_code"] is None
 
 
 @pytest.mark.parametrize("constant", ["NaN", "Infinity", "-Infinity"])
