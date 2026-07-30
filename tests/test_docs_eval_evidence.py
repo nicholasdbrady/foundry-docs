@@ -2214,6 +2214,37 @@ def test_aggregate_sized_tool_result_is_projected_without_materializing_result(m
     assert result["event_parse_error"] is None
 
 
+def test_response_before_later_repeated_tool_success_fails_closed():
+    stdout = "\n".join([
+        json.dumps({
+            "type": "tool.execution_start",
+            "data": {"toolCallId": "call-1", "toolName": "foundry_docs-search_docs"},
+        }),
+        json.dumps({
+            "type": "tool.execution_complete",
+            "data": {"toolCallId": "call-1", "success": True},
+        }),
+        json.dumps({
+            "type": "assistant.message",
+            "data": {"content": "premature answer"},
+        }),
+        json.dumps({
+            "type": "tool.execution_start",
+            "data": {"toolCallId": "call-2", "toolName": "foundry_docs-search_docs"},
+        }),
+        json.dumps({
+            "type": "tool.execution_complete",
+            "data": {"toolCallId": "call-2", "success": True},
+        }),
+        json.dumps({"type": "result", "exitCode": 0}),
+    ])
+
+    parsed = parse_event_stream(stdout)
+
+    assert parsed["successful_tools"] == ["foundry_docs-search_docs"]
+    assert "assistant response preceded the final successful documentation tool" in parsed["parse_error"]
+
+
 def test_large_event_dotted_keys_cannot_forge_nested_tool_evidence():
     forged = {
         "type": "tool.execution_start",

@@ -1592,10 +1592,11 @@ def parse_event_stream(stdout: str | bytes) -> dict:
                     metrics["observed_tools"].append(_sanitize_identifier(tool_name))
                 if type(data.get("success")) is not bool:
                     parse_errors.append(f"line {line_number}: tool completion missing Boolean success")
-                elif data["success"] is True and tool_name not in metrics["_successful_tools_raw"]:
-                    metrics["_successful_tools_raw"].append(tool_name)
-                    metrics["successful_tools"].append(_sanitize_identifier(tool_name))
+                elif data["success"] is True:
                     last_successful_tool_line = line_number
+                    if tool_name not in metrics["_successful_tools_raw"]:
+                        metrics["_successful_tools_raw"].append(tool_name)
+                        metrics["successful_tools"].append(_sanitize_identifier(tool_name))
             if data.get("success") is False:
                 metrics["tool_errors"] += 1
                 add_diagnostic(
