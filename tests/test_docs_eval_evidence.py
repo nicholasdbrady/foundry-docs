@@ -1076,7 +1076,7 @@ def test_bounded_process_timeout_does_not_wait_for_inheriting_descendant(tmp_pat
     with pytest.raises(subprocess.TimeoutExpired) as exc_info:
         run_docs_eval._run_process_bounded(
             [sys.executable, "-c", script],
-            timeout=0.2,
+            timeout=0.75,
             cwd=str(tmp_path),
             env=os.environ.copy(),
         )
@@ -2094,7 +2094,26 @@ def test_large_event_is_stopped_before_json_parse_and_remains_bounded():
     assert parsed["response"] == ""
 
 
-def test_real_size_57kb_tool_result_parses_and_validates_selected_source(monkeypatch):
+def test_600kb_event_is_stopped_by_per_event_limit_before_json_parse():
+    oversized_event = (
+        b'{"type":"tool.execution_complete","data":{"toolCallId":"call-1","success":true,'
+        b'"result":{"content":"'
+        + (b"x" * 600_000)
+        + b'"}}}'
+    )
+    assert len(oversized_event) < run_docs_eval.MAX_STDOUT_PARSE_BYTES
+
+    parsed = parse_event_stream(oversized_event)
+
+    assert parsed["stdout_input_truncated"] is True
+    assert f"event exceeds {run_docs_eval.MAX_STDOUT_LINE_BYTES} byte pre-parse limit" in parsed[
+        "parse_error"
+    ]
+    assert parsed["diagnostic_events"] == []
+    assert parsed["response"] == ""
+
+
+def test_real_size_256kb_tool_result_parses_and_validates_selected_source(monkeypatch):
     completion = {
         "type": "tool.execution_complete",
         "data": {
@@ -2104,9 +2123,9 @@ def test_real_size_57kb_tool_result_parses_and_validates_selected_source(monkeyp
         },
     }
     base_size = len(json.dumps(completion, separators=(",", ":")).encode())
-    completion["data"]["result"]["content"][0]["text"] = "x" * (57_000 - base_size)
+    completion["data"]["result"]["content"][0]["text"] = "x" * (256_000 - base_size)
     completion_line = json.dumps(completion, separators=(",", ":"))
-    assert len(completion_line.encode()) == 57_000
+    assert len(completion_line.encode()) == 256_000
 
     stdout = "\n".join([
         json.dumps({
@@ -2134,6 +2153,73 @@ def test_real_size_57kb_tool_result_parses_and_validates_selected_source(monkeyp
     assert result["source_validated"] is True
     assert result["response"] == "trusted answer"
     assert result["event_parse_error"] is None
+
+
+def test_real_stream_with_750_delta_events_parses_and_validates_selected_source(monkeypatch):
+    events = [
+        {
+            "type": "tool.execution_start",
+            "data": {"toolCallId": "call-1", "toolName": "foundry_docs-search_docs"},
+        },
+        *[
+            {
+                "type": "assistant.tool_call_delta",
+                "data": {
+                    "toolCallId": "call-1",
+                    "toolName": "foundry_docs-search_docs",
+                    "inputDelta": "x",
+                },
+            }
+            for _ in range(750)
+        ],
+        {
+            "type": "tool.execution_complete",
+            "data": {"toolCallId": "call-1", "success": True, "result": {"content": "docs"}},
+        },
+        {"type": "assistant.message", "data": {"content": "trusted answer"}},
+        {"type": "result", "exitCode": 0},
+    ]
+    stdout = "\n".join(json.dumps(event, separators=(",", ":")) for event in events)
+    assert len(events) > 500
+    assert len(stdout.encode()) < run_docs_eval.MAX_STDOUT_PARSE_BYTES
+    monkeypatch.setattr(
+        run_docs_eval,
+        "_run_process_bounded",
+        lambda cmd, **kwargs: subprocess.CompletedProcess(cmd, 0, stdout=stdout, stderr=""),
+    )
+
+    result = run_single_eval(
+        SCENARIO,
+        "foundry-docs",
+        MCP_SERVERS["foundry-docs"],
+        "model-1",
+    )
+
+    assert result["status"] == "success"
+    assert result["source_validated"] is True
+    assert result["response"] == "trusted answer"
+    assert result["event_parse_error"] is None
+
+
+def test_stdout_excerpt_is_sanitized_to_a_stable_canonical_form():
+    observed_fragment = (
+        r'# Function calling ```bash curl -X POST https:<PATH>\"api-key: [REDACTED] '
+        r'\\<PATH>"Content-Type: application/json\<PATH>\'{ .'
+    )
+    stdout = json.dumps({
+        "type": "session.error",
+        "data": {"message": observed_fragment},
+    })
+
+    excerpt, truncated = run_docs_eval._bounded_stdout_excerpt(stdout)
+    canonical, canonical_truncated = run_docs_eval._sanitize_text(
+        excerpt,
+        max_chars=run_docs_eval.MAX_STDOUT_EXCERPT,
+    )
+
+    assert excerpt == canonical
+    assert truncated is False
+    assert canonical_truncated is False
 
 
 def test_multiple_real_size_tool_results_over_128kb_remain_valid(monkeypatch):

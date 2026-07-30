@@ -107,12 +107,13 @@ MAX_RESPONSE_TEXT = 50_000
 MAX_STDOUT_EXCERPT = 12_000
 MAX_STDERR_EXCERPT = 4_000
 MAX_STDOUT_PARSE_BYTES = 4_000_000
-MAX_STDOUT_PARSE_LINES = 500
-MAX_STDOUT_LINE_BYTES = 64_000
-MAX_STDOUT_CAPTURE_BYTES = MAX_STDOUT_PARSE_BYTES + MAX_STDOUT_LINE_BYTES + 1
+MAX_STDOUT_PARSE_LINES = 5_000
+MAX_STDOUT_LINE_BYTES = 512_000
+MAX_STDOUT_CAPTURE_BYTES = MAX_STDOUT_PARSE_BYTES + 1
 MAX_STDERR_CAPTURE_BYTES = 64_000
 MAX_PROCESS_CLEANUP_SECONDS = 2.0
 DESCENDANT_POLL_SECONDS = 0.01
+MAX_SANITIZE_CANONICAL_ITERATIONS = 4
 MAX_IDENTIFIER_TEXT = 256
 MAX_USAGE_METRIC = 10**15
 MAX_ENCODED_TOKEN_BYTES = 8_192
@@ -793,7 +794,20 @@ def select_servers(server: str | None, servers: list[str] | None) -> dict:
 
 
 def _bounded_excerpt(value: str | bytes | None, max_chars: int) -> tuple[str, bool]:
-    return _sanitize_text(_coerce_process_text(value), max_chars=max_chars)
+    return _canonicalize_sanitized_text(_coerce_process_text(value), max_chars=max_chars)
+
+
+def _canonicalize_sanitized_text(value: str, *, max_chars: int) -> tuple[str, bool]:
+    """Sanitize until stable under a strict iteration and output-size bound."""
+    current = value
+    truncated = False
+    for _ in range(MAX_SANITIZE_CANONICAL_ITERATIONS):
+        sanitized, pass_truncated = _sanitize_text(current, max_chars=max_chars)
+        truncated = truncated or pass_truncated
+        if sanitized == current:
+            return sanitized, truncated
+        current = sanitized
+    return "[REDACTED]", True
 
 
 def _bounded_stdout_excerpt(value: str | bytes | None) -> tuple[str, bool]:
@@ -810,7 +824,10 @@ def _bounded_stdout_excerpt(value: str | bytes | None) -> tuple[str, bool]:
         else:
             per_line_truncated = per_line_truncated or _contains_oversized_diagnostic_value(parsed_line)
             sanitized_lines.append(json.dumps(_sanitize_diagnostic_value(parsed_line), ensure_ascii=True))
-    excerpt, final_truncated = _sanitize_text("\n".join(sanitized_lines), max_chars=MAX_STDOUT_EXCERPT)
+    excerpt, final_truncated = _canonicalize_sanitized_text(
+        "\n".join(sanitized_lines),
+        max_chars=MAX_STDOUT_EXCERPT,
+    )
     return excerpt, per_line_truncated or final_truncated
 
 
