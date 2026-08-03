@@ -39,35 +39,37 @@ const C = {
 
 // ── LIVE DATA — computed from repo ────────────────────────────────────────
 const DATA = {
-  mdxDocs:           274,
-  agenticWorkflows:  26,
-  totalWorkflows:    31,
+  mdxDocs:           526,
+  agenticWorkflows:  23,
+  totalWorkflows:    39,
   slashCommands:     7,
-  workflowChains:    4,
+  workflowChains:    3,
   scheduleWorkflows: 12,
   pushWorkflows:     1,
   prWorkflows:       3,
   issueWorkflows:    25,
   dispatchWorkflows: 22,
   sdkRepos:          4,
-  docSections:       16,
+  docSections:       18,
   sections: [
-    { name: "Models",            count: 72 },
-    { name: "Agents",            count: 57 },
-    { name: "Observability",     count: 24 },
-    { name: "Setup",             count: 20 },
-    { name: "Security",          count: 20 },
-    { name: "API & SDK",         count: 17 },
-    { name: "Guardrails",        count: 15 },
-    { name: "Dev Experience",    count: 11 },
-    { name: "Manage",            count: 9  },
-    { name: "Responsible AI",    count: 8  },
-    { name: "Operate",           count: 7  },
-    { name: "Best Practices",    count: 5  },
-    { name: "Get Started",       count: 4  },
-    { name: "Overview",          count: 3  },
-    { name: "Reference",         count: 1  },
-    { name: "Glossary",          count: 1  },
+    { name: "Foundry Models",    count: 112 },
+    { name: "Agent Service",     count: 95  },
+    { name: "Agents",            count: 63  },
+    { name: "Models",            count: 75  },
+    { name: "Observability",     count: 31  },
+    { name: "Security",          count: 24  },
+    { name: "Setup",             count: 22  },
+    { name: "Developer Exp.",    count: 21  },
+    { name: "Guardrails",        count: 19  },
+    { name: "API & SDK",         count: 17  },
+    { name: "Manage",            count: 10  },
+    { name: "Responsible AI",    count: 10  },
+    { name: "Operate",           count: 8   },
+    { name: "Best Practices",    count: 7   },
+    { name: "Get Started",       count: 7   },
+    { name: "Overview",          count: 3   },
+    { name: "Reference",         count: 1   },
+    { name: "What is Foundry",   count: 1   },
   ],
 };
 
@@ -291,7 +293,7 @@ async function buildPresentation() {
     const boxes = [
       { label: "MicrosoftDocs\nupstream", sub: "azure-ai-docs", color: C.darkBg,   textCol: C.white,  subCol: C.lightTeal },
       { label: "Sync &\nConvert",         sub: "scripts/",         color: C.primary,  textCol: C.white,  subCol: C.accent },
-      { label: "docs-vnext/",             sub: "274 MDX pages",    color: C.secondary,textCol: C.white,  subCol: C.darkBg },
+      { label: "docs-vnext/",             sub: "526 MDX pages",    color: C.secondary,textCol: C.white,  subCol: C.darkBg },
       { label: "FastMCP\nServer",         sub: "foundry_docs_mcp/",color: C.primary,  textCol: C.white,  subCol: C.accent },
       { label: "AI Assistants\n& IDEs",   sub: "via MCP protocol", color: C.darkBg,   textCol: C.white,  subCol: C.lightTeal },
     ];
@@ -671,7 +673,7 @@ async function buildPresentation() {
       color: C.white, margin: 0,
     });
 
-    s.addText("300 evaluations · 4 servers · 3 frontier models · 2026-03-05", {
+    s.addText("100 evaluations · 4 servers · 1 frontier model · 2026-07-28", {
       x: 0.4, y: 0.98, w: 9.2, h: 0.28,
       fontSize: 11.5, fontFace: "Calibri",
       color: C.textMuted, margin: 0,
@@ -686,65 +688,55 @@ async function buildPresentation() {
     const tableData = [
       [
         { text: "Server",               options: { bold: true, color: "FFFFFF", fill: hdrFill, align: "left" } },
-        { text: "claude-opus-4.6",      options: { bold: true, color: "FFFFFF", fill: hdrFill, align: "center" } },
-        { text: "gemini-3-pro",         options: { bold: true, color: "FFFFFF", fill: hdrFill, align: "center" } },
-        { text: "gpt-5.3-codex",        options: { bold: true, color: "FFFFFF", fill: hdrFill, align: "center" } },
+        { text: "claude-sonnet-4.6",    options: { bold: true, color: "FFFFFF", fill: hdrFill, align: "center" } },
         { text: "Avg",                  options: { bold: true, color: "FFFFFF", fill: hdrFill, align: "center" } },
       ],
       [
         { text: "MS Learn 🥇",          options: { color: "1A2E30", fill: bodyFill } },
-        { text: "0.933",                options: { color: "1A2E30", fill: bodyFill, align: "center" } },
-        { text: "0.882",                options: { color: "1A2E30", fill: bodyFill, align: "center" } },
-        { text: "0.906",                options: { color: "1A2E30", fill: bodyFill, align: "center" } },
-        { text: "0.908",                options: { bold: true, color: "1A2E30", fill: bodyFill, align: "center" } },
+        { text: "0.873",                options: { color: "1A2E30", fill: bodyFill, align: "center" } },
+        { text: "0.873",                options: { bold: true, color: "1A2E30", fill: bodyFill, align: "center" } },
       ],
       [
-        { text: "Mintlify MCP 🥈",      options: { color: "1A2E30", fill: bodyFill } },
-        { text: "0.949",                options: { color: "1A2E30", fill: bodyFill, align: "center" } },
-        { text: "0.868",                options: { color: "1A2E30", fill: bodyFill, align: "center" } },
-        { text: "0.905",                options: { color: "1A2E30", fill: bodyFill, align: "center" } },
-        { text: "0.908",                options: { bold: true, color: "1A2E30", fill: bodyFill, align: "center" } },
+        { text: "docs-vnext/ 🥈",       options: { bold: true, color: C.accent, fill: vnextFill } },
+        { text: "0.863",                options: { bold: true, color: C.accent, fill: vnextFill, align: "center" } },
+        { text: "0.863",                options: { bold: true, color: C.accent, fill: vnextFill, align: "center" } },
       ],
       [
-        { text: "docs-vnext/ 🥉",       options: { bold: true, color: C.accent, fill: vnextFill } },
-        { text: "0.927",                options: { bold: true, color: C.accent, fill: vnextFill, align: "center" } },
-        { text: "0.879",                options: { bold: true, color: C.accent, fill: vnextFill, align: "center" } },
-        { text: "0.912",                options: { bold: true, color: C.accent, fill: vnextFill, align: "center" } },
-        { text: "0.906",                options: { bold: true, color: C.accent, fill: vnextFill, align: "center" } },
+        { text: "docs/ 🥉",             options: { color: "5A8087", fill: baseFill } },
+        { text: "0.855",                options: { color: "5A8087", fill: baseFill, align: "center" } },
+        { text: "0.855",                options: { color: "5A8087", fill: baseFill, align: "center" } },
       ],
       [
-        { text: "docs/ (baseline)",     options: { color: "5A8087", fill: baseFill } },
-        { text: "0.924",                options: { color: "5A8087", fill: baseFill, align: "center" } },
-        { text: "0.860",                options: { color: "5A8087", fill: baseFill, align: "center" } },
-        { text: "0.931",                options: { color: "5A8087", fill: baseFill, align: "center" } },
-        { text: "0.904",                options: { color: "5A8087", fill: baseFill, align: "center" } },
+        { text: "Mintlify MCP",         options: { color: "1A2E30", fill: bodyFill } },
+        { text: "0.843",                options: { color: "1A2E30", fill: bodyFill, align: "center" } },
+        { text: "0.843",                options: { bold: true, color: "1A2E30", fill: bodyFill, align: "center" } },
       ],
     ];
 
     s.addTable(tableData, {
-      x: 0.35, y: 1.3, w: 5.65, h: 1.9,
+      x: 0.35, y: 1.3, w: 5.65, h: 2.1,
       fontSize: 11, fontFace: "Calibri",
       border: { type: "solid", pt: 0.5, color: "028090" },
-      colW: [1.8, 0.97, 0.97, 0.97, 0.94],
+      colW: [3.3, 1.2, 1.15],
     });
 
     // ── Hypothesis results ────────────────────────────────────────────────
     s.addText("Hypothesis Testing", {
-      x: 0.35, y: 3.3, w: 5.65, h: 0.34,
+      x: 0.35, y: 3.52, w: 5.65, h: 0.34,
       fontSize: 12.5, fontFace: "Trebuchet MS", bold: true,
       color: C.accent, margin: 0,
     });
 
     const hyps = [
-      { id: "H1", badge: "⚠️ MARGINAL", detail: "docs-vnext (0.906) vs docs/ (0.904), δ=+0.002",  badgeColor: "C9A800" },
-      { id: "H2", badge: "❌ REJECTED",  detail: "vs Mintlify MCP (0.908), δ=−0.002",              badgeColor: "C04040" },
-      { id: "H3", badge: "❌ REJECTED",  detail: "vs MS Learn (0.908), δ=−0.002",                  badgeColor: "C04040" },
-      { id: "H4", badge: "⚠️ MIXED",     detail: "Rankings vary: gpt-5.3 ranks docs-vnext 2nd",   badgeColor: "C9A800" },
+      { id: "H1", badge: "⚠️ MARGINAL", detail: "docs-vnext (0.863) vs docs/ (0.855), δ=+0.008",   badgeColor: "C9A800" },
+      { id: "H2", badge: "⚠️ MARGINAL", detail: "vs Mintlify MCP (0.843), δ=+0.020",               badgeColor: "C9A800" },
+      { id: "H3", badge: "❌ REJECTED",  detail: "vs MS Learn (0.873), δ=−0.010",                   badgeColor: "C04040" },
+      { id: "H4", badge: "✅ SUPPORTED", detail: "Rankings consistent (single-model run)",           badgeColor: "00A896" },
     ];
 
     for (let i = 0; i < hyps.length; i++) {
       const h = hyps[i];
-      const hy = 3.72 + i * 0.43;
+      const hy = 3.94 + i * 0.43;
 
       s.addShape(pres.shapes.RECTANGLE, {
         x: 0.35, y: hy, w: 5.65, h: 0.35,
@@ -776,11 +768,11 @@ async function buildPresentation() {
     });
 
     const cats = [
-      { name: "agent-development",   vnext: 0.971, docs: 0.962, lead: true  },
-      { name: "getting-started",     vnext: 0.887, docs: 0.867, lead: true  },
-      { name: "infra-security",      vnext: 0.927, docs: 0.918, lead: true  },
-      { name: "observability",       vnext: 0.802, docs: 0.829, lead: false },
-      { name: "sdk-api",             vnext: 0.947, docs: 0.947, lead: false },
+      { name: "agent-development",   vnext: 0.823, docs: 0.823, lead: false },
+      { name: "getting-started",     vnext: 0.857, docs: 0.827, lead: true  },
+      { name: "infra-security",      vnext: 0.947, docs: 0.913, lead: true  },
+      { name: "observability",       vnext: 0.767, docs: 0.767, lead: false },
+      { name: "sdk-api",             vnext: 0.920, docs: 0.947, lead: false },
     ];
 
     const barMaxW = 3.1;
@@ -824,7 +816,7 @@ async function buildPresentation() {
       line: { color: C.primary, transparency: 70, width: 0 },
     });
     s.addText(
-      "docs-vnext leads in agent-development (0.971) and getting-started (0.887) — areas benefiting most from Mintlify MDX enhancements",
+      "docs-vnext leads in getting-started (0.857) and infra-security (0.947) — observability remains the improvement opportunity (0.767)",
       {
         x: 0.4, y: 5.24, w: 9.2, h: 0.35,
         fontSize: 10.5, fontFace: "Calibri", italic: true,
