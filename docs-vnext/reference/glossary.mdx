@@ -7,6 +7,9 @@ Key terms and concepts used throughout the Microsoft Foundry documentation.
 
 ## A
 
+### A2A Protocol (Agent-to-Agent Protocol)
+An open protocol that enables AI agents from different providers or frameworks to communicate through a standardized interface. In Foundry Agent Service, agents can call remote A2A endpoints as tools, or expose their own endpoint so other agents can call them. A2A communication keeps the calling agent in control of the conversation, in contrast to multi-agent workflows where a called agent takes over responsibility for the user interaction.
+
 ### Agent
 An AI-powered entity that can perform tasks autonomously using tools, models, and instructions. In Microsoft Foundry, agents are created via the Azure AI Projects SDK and can use built-in tools like Code Interpreter, File Search, and Function Calling.
 
@@ -19,10 +22,24 @@ The primary Python client class in the Azure AI Projects SDK for connecting to a
 ### Azure AI Search
 A cloud search service providing keyword, vector, and semantic search capabilities. Used as the underlying indexing and retrieval infrastructure for RAG patterns, Foundry IQ knowledge bases, and vector stores.
 
+## B
+
+### Basic Agent Setup
+A Foundry Agent Service deployment configuration that uses Microsoft-managed, multi-tenant Azure resources to store agent state. Conversation history, uploaded files, and vector stores are hosted by Microsoft, requiring minimal setup. Contrasts with standard agent setup, which uses customer-managed, single-tenant resources.
+
+### Browser Automation
+A built-in tool in Foundry Agent Service (preview) that enables agents to automate web browsing tasks through isolated Playwright browser sessions. The Browser Automation Tool (BAT) lets agents navigate websites, fill forms, and interact with web UIs, powered by Playwright Workspaces as the headless browser infrastructure layer.
+
 ## C
+
+### Capability Hosts
+Sub-resources configured at the Foundry account and project scopes that tell Foundry Agent Service where to store and process agent data, including conversation history, file uploads, and vector stores. Capability hosts enable standard agent setup by routing agent data to customer-managed Azure resources (Azure Storage, Azure Cosmos DB, Azure AI Search) instead of Microsoft-managed platform resources.
 
 ### Code Interpreter
 A built-in Foundry agent tool that lets agents write and execute Python code in a sandboxed environment. Useful for data analysis, mathematical calculations, chart generation, and file processing tasks.
+
+### Computer Use
+A built-in tool in Foundry Agent Service (preview) that enables agents to interpret screenshots and automate UI interactions such as clicking, typing, and scrolling. The computer use tool uses the `computer-use-preview` Foundry model to propose actions based on visual content, allowing agents to interact with desktop and browser applications through their user interfaces.
 
 ### Conversation
 A durable object in Foundry Agent Service that persists interaction state across turns and sessions. Conversations store items (messages, tool calls, tool outputs) and have unique identifiers that can be reused across sessions. Replaces the thread concept from the Assistants API.
@@ -61,6 +78,11 @@ Content retrieved from an external data source and provided to a language model 
 
 ## H
 
+## H
+
+### Hosted Agents
+Containerized agentic AI applications deployed and managed on Foundry Agent Service (preview). Unlike prompt-based agents defined through the Foundry portal, Hosted Agents package custom code as container images that run on Microsoft-managed infrastructure. The platform handles scaling, session isolation, observability, and lifecycle management. Hosted Agents can expose the Responses, Invocations, or Invocations (WebSocket) protocols, and run in per-session VM-isolated sandboxes with persistent filesystems.
+
 ### Hybrid Search
 A retrieval strategy that combines keyword (BM25) search and vector (semantic) search to improve recall. Results from both methods are merged and optionally reranked using a semantic ranker for higher relevance. Supported in Azure AI Search and used in Foundry Agent Service file search.
 
@@ -70,6 +92,9 @@ A retrieval strategy that combines keyword (BM25) search and vector (semantic) s
 A top-level Foundry IQ resource that orchestrates agentic retrieval over one or more knowledge sources. A knowledge base defines which data sources to query, the retrieval reasoning effort level, and access control behavior. Multiple agents can share the same knowledge base.
 
 ## M
+
+### Memory (Agent Memory)
+A managed, long-term memory solution in Foundry Agent Service that enables agents to retain information across sessions, devices, and workflows. Memory operates in three phases: extraction (identifying key facts from conversations), consolidation (merging duplicate or conflicting information), and retrieval (surfacing relevant memories during a session). Memories are stored as items in a managed memory store and can be scoped to user preferences, facts, or relevant context.
 
 ### MCP (Model Context Protocol)
 An open protocol that enables AI agents to connect to external data sources and tools through a standardized interface. In Microsoft Foundry, agents can use MCP servers as tools via the Model Context Protocol tool type, allowing integration with custom data sources and services.
@@ -83,6 +108,9 @@ Microsoft's cloud identity and access management service, formerly Azure Active 
 An open-source observability framework for collecting traces, metrics, and logs. Foundry Agent Service integrates with OpenTelemetry to emit agent traces to Application Insights or other compatible backends, enabling debugging, latency analysis, and production monitoring.
 
 ## R
+
+### Routines
+A Foundry Agent Service feature (preview) that enables automatic agent invocation based on time-based triggers. A routine consists of one trigger (a one-time timer or recurring cron-style schedule) and one action (invoking a prompt agent or Hosted Agent). Routines handle the trigger, dispatch, permission, and run history within the Foundry project, eliminating the need to build custom scheduler integrations. For scenarios requiring branching, multiple agents, or human approval steps, use a workflow instead.
 
 ### RAG (Retrieval Augmented Generation)
 A pattern that combines information retrieval with language model generation to produce responses grounded in external knowledge sources. RAG follows a retrieve–augment–generate flow: relevant content is fetched from an index, combined with the user query, and sent to the model to generate a cited response.
@@ -101,6 +129,11 @@ The API surface for generating agent outputs in Foundry Agent Service. The Respo
 ### Standard Agent Setup
 A Foundry Agent Service deployment configuration that uses customer-managed, single-tenant Azure resources to store all agent state. Conversation history, uploaded files, and vector stores are stored in your own Azure Storage, Azure Cosmos DB for NoSQL, and Azure AI Search resources, keeping all data within your Azure tenant. Contrasts with basic agent setup, which uses Microsoft-managed multitenant resources.
 
+## T
+
+### Toolbox
+A Foundry Agent Service feature (preview) that provides a centrally managed collection of tools — including MCP servers, web search, Azure AI Search, File Search, and Code Interpreter — exposed through a single MCP-compatible endpoint. Toolbox handles credential injection, token refresh, and enterprise policy enforcement at runtime, so developers connect their agents to one endpoint rather than wiring each tool individually. Adding, removing, or reconfiguring tools in a toolbox takes effect without code changes to consuming agents.
+
 ## V
 
 ### Vector Store
@@ -113,3 +146,6 @@ A real-time voice API in Microsoft Foundry that enables building voice agents us
 
 ### Web Search
 A built-in tool in the Responses API and Foundry Agent Service that enables models to retrieve real-time information from the public web. Declared as `{"type": "web_search"}` in a request, the tool grounds model responses with current data and inline citations. Supports three modes: direct web search (fast, single-step lookups), agentic search with reasoning models (multi-step, suited for complex workflows), and Deep Research (extended multi-source investigation using the o3-deep-research model). Uses Grounding with Bing Search as the underlying retrieval service.
+
+### Workflow
+A UI-based multi-agent orchestration tool in Microsoft Foundry that enables building declarative, predefined sequences of actions using a visual builder. Workflows support sequential, group chat, and human-in-the-loop orchestration patterns. They allow conditional logic (branching, variables) and human approval steps without writing code. For lightweight time-triggered scenarios, use routines instead.
