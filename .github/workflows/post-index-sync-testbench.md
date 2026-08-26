@@ -39,10 +39,10 @@ jobs:
       invoke_agent: ${{ steps.classify.outputs.invoke_agent }}
       status: ${{ steps.classify.outputs.status }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7.0.0
         with:
           python-version: "3.12"
           cache: pip
@@ -128,7 +128,7 @@ jobs:
           cat "$RESULT_PATH" >> "$GITHUB_STEP_SUMMARY"
       - name: Upload bounded regression evidence
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: post-index-regression-${{ github.run_id }}
           path: /tmp/post-index-regression
@@ -149,11 +149,11 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
       - name: Download original regression evidence
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v8.0.1
         with:
           name: post-index-regression-${{ github.run_id }}
           path: /tmp/post-index-regression
@@ -263,7 +263,7 @@ tools:
 
 steps:
   - name: Download bounded validated regression artifact
-    uses: actions/download-artifact@v8
+    uses: actions/download-artifact@v8.0.1
     with:
       name: post-index-regression-${{ github.run_id }}
       path: /tmp/post-index-agent-input
