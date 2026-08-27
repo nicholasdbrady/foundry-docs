@@ -42,7 +42,7 @@ Some evaluation features - including rubric generation, synthetic and trace-base
 Install the Foundry SDK and set up authentication:
 
 ```bash
-pip install "azure-ai-projects>=2.2.0" azure-identity
+pip install "azure-ai-projects>=2.4.0" azure-identity
 ```
 
 Create the project client. The following code samples assume you run them in this context:
@@ -81,28 +81,28 @@ from azure.ai.projects.models import (
     AgentEvaluatorGenerationJobSource,
     EvaluatorGenerationInputs,
     EvaluatorGenerationJob,
-    JobStatus,
 )
 
 AGENT_NAME = "my-agent"  # Replace with your agent name
-TERMINAL_STATUSES = {JobStatus.SUCCEEDED, JobStatus.FAILED, JobStatus.CANCELLED}
+poll_interval_seconds = 10
 
-generation_job = project_client.beta.evaluators.create_generation_job(
-    job=EvaluatorGenerationJob(
-        inputs=EvaluatorGenerationInputs(
-            model=model_deployment,
-            evaluator_name=f"agent-quality-{uuid.uuid4().hex[:8]}",
-            evaluator_display_name="Agent Quality",
-            sources=[AgentEvaluatorGenerationJobSource(agent_name=AGENT_NAME)],
-        ),
+job = EvaluatorGenerationJob(
+    inputs=EvaluatorGenerationInputs(
+        model=model_deployment,
+        evaluator_name=f"agent-quality-{uuid.uuid4().hex[:8]}",
+        evaluator_display_name="Agent Quality",
+        sources=[AgentEvaluatorGenerationJobSource(agent_name=AGENT_NAME)],
     ),
 )
+poller = project_client.beta.evaluators.begin_create_generation_job(job=job)
 
-while generation_job.status not in TERMINAL_STATUSES:
-    time.sleep(10)
-    generation_job = project_client.beta.evaluators.get_generation_job(generation_job.id)
+# Optional: While SDK is polling, periodically print the job status until the job is complete
+while not poller.done():
+    print(f"\tstatus=`{poller.status()}`")
+    time.sleep(poll_interval_seconds)
 
-rubric_evaluator = generation_job.result
+rubric_evaluator = poller.result()
+
 print(f"Generated rubric {rubric_evaluator.name} v{rubric_evaluator.version}")
 for dim in rubric_evaluator.definition.dimensions:
     print(f"  - {dim.id} (weight {dim.weight}): {dim.description}")
@@ -244,13 +244,13 @@ print(f"Evaluation run started: {eval_run.id}")
 
 <Tip>
 
-This sample works for both prompt agents and hosted agents that use the responses protocol. For hosted agents that use the invocations protocol, the `input_messages` format is different — provide a freeform JSON object instead of the structured template. For details and code samples, see [Hosted agent invocations protocol](/evaluation/cloud-evaluation#hosted-agent-invocations-protocol) in the cloud evaluation guide.
+This sample works for both prompt agents and hosted agents that use the responses protocol. For hosted agents that use the invocations protocol, the `input_messages` format is different — provide a freeform JSON object instead of the structured template. For details and code samples, see [Hosted agent invocations protocol](/evaluation/cloud-evaluation-targets#hosted-agent-invocations-protocol) in the cloud evaluation guide.
 
 </Tip>
 
 <Tip>
 
-To evaluate agent interactions that already occurred using traces from Application Insights, see [Trace evaluation](/evaluation/cloud-evaluation#trace-evaluation-preview) in the cloud evaluation guide.
+To evaluate agent interactions that already occurred using traces from Application Insights, see [Trace evaluation](/evaluation/cloud-evaluation-deployed-interactions#evaluate-traces-preview) in the cloud evaluation guide.
 
 </Tip>
 
@@ -412,5 +412,5 @@ Use evaluation to iterate and improve your agent:
 - [Agent Monitoring Dashboard](/agents/how-to-monitor-agents-dashboard)
 - [Agent evaluators reference](/evaluation/agent-evaluators)
 - [REST API reference](../../reference/foundry-project-rest-preview#openai-evals---list-evals)
-- [Trace evaluation in the cloud](/evaluation/cloud-evaluation#trace-evaluation-preview)
+- [Trace evaluation in the cloud](/evaluation/cloud-evaluation-deployed-interactions#evaluate-traces-preview)
 - [Set up tracing in Microsoft Foundry](/observability/trace-agent-setup)

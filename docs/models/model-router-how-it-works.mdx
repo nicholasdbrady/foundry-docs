@@ -12,11 +12,13 @@ This article explains the capabilities, routing modes, and best practices that p
 - Familiarity with LLMs and the [Chat Completions API](https://learn.microsoft.com/azure/ai-foundry/openai/how-to/chatgpt)
 - Understanding of the [model router overview](/models/model-router)
 
-## Why Model router
+## Model router as an optimization layer
 
-Choosing the right model for every prompt is hard to do manually. Model router is a purpose-built ML model trained on hundreds of thousands of examples across diverse scenarios — from simple prompts to complex agentic workflows. It automatically matches each prompt to the best-suited model, optimizing for quality, cost, and latency.
+Choosing the right model for every prompt is difficult to do manually. Traditional optimization often requires teams to compare individual models, integrate each candidate, and maintain custom routing logic. Model router encapsulates per-request model selection in one deployment, which reduces the model-navigation work required to test a multimodel architecture.
 
-Rather than relying on static rules or manual selection, model router learns from data and adapts as models evolve.
+Model router is a purpose-built ML model trained on hundreds of thousands of examples across diverse scenarios, from simple prompts to complex agentic workflows. Rather than relying on static rules or manual selection, it matches each prompt to the best-suited eligible model based on the configured routing mode and model subset.
+
+Managed routing doesn't remove the need for evaluation. Compare model router with a meaningful workload baseline, and reevaluate after you change a routing mode or model subset. For evaluation guidance, see [Evaluate model router for your workload](/models/evaluate-model-router).
 
 ## How requests are routed
 
@@ -130,6 +132,7 @@ This approach gives you broad optimization and precise control where you need it
 Follow these recommendations to get the most from model router.
 
 - **Start with Balanced mode, then tune.** Let traffic flow through Balanced mode, observe the routing distribution in Azure Monitor for a few weeks, and then adjust. Switch latency-insensitive batch pipelines to Cost mode and promote critical-path reasoning tasks to Quality mode.
+- **Change one routing lever at a time.** Keep the workload dataset, baseline, and application configuration fixed when you change the routing mode or model subset. Rerun the evaluation so that you can attribute changes in quality, cost, and latency to that configuration change.
 - **Use model subset as your compliance gate.** Get model approval from your security team, encode it in the subset, and know that new models won't appear without explicit opt-in.
 - **Monitor routing distribution.** In the Azure portal, go to **Monitoring > Metrics** for your resource, filter by your model router deployment, and split by underlying model. This view shows exactly where your tokens go.
 - **Design for the smallest context window — or raise the floor.** If your prompts consistently exceed the context window of the smallest model in the pool, use model subset to include only models that support your required context length.

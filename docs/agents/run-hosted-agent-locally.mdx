@@ -5,6 +5,8 @@ description: "Start and test a Microsoft Foundry hosted agent on your local mach
 
 Use `azd ai agent run` to start your Microsoft Foundry hosted agent on your local machine and `azd ai agent invoke --local` to test it without deploying to Azure. You also learn how to set ports, choose an agent in a multi-agent project, override startup commands, and pass local runtime secrets.
 
+If you use a coding agent like GitHub Copilot, the [Microsoft Foundry Skill](/get-started/use-microsoft-foundry-skill) can help configure local startup, ports, secrets, and test commands before you deploy.
+
 ## Prerequisites
 
 - An initialized hosted agent project. To create one, see [Initialize an agent project](/agents/init-agent-project).
@@ -24,7 +26,7 @@ Use `azd ai agent run` to start your Microsoft Foundry hosted agent on your loca
 
 <Tip>
 
-`azd ai agent run` automatically injects environment variables from your default [azd environment](/agents/azure-yaml-reference), the one you set with `azd env select` or created during `azd ai agent init`. This means variables like `FOUNDRY_PROJECT_ENDPOINT`, `AZURE_SUBSCRIPTION_ID`, and any values you've set with `azd env set` are available to your agent without manual configuration.
+`azd ai agent run` automatically injects environment variables from your default [azd environment](/agents/azure-yaml-reference), the one you set with `azd env select` or created during `azd ai agent init`. This means variables like `FOUNDRY_PROJECT_ENDPOINT`, `AZURE_SUBSCRIPTION_ID`, and any values you set with `azd env set` are available to your agent without manual configuration.
 
 See [Configure environment variables for a hosted agent](/agents/configure-hosted-agent-env-variables) for the full list.
 
@@ -54,7 +56,7 @@ See [Configure environment variables for a hosted agent](/agents/configure-hoste
    azd ai agent run --start-command "python app.py"
    ```
 
-   This overrides the `startupCommand` defined in your `azure.yaml` service configuration. The `startupCommand` is the default command used both for local development (`azd ai agent run`) and for container startup when deployed. See [azure.yaml service configuration](/agents/azure-yaml-reference) for details.
+   This command overrides the `startupCommand` defined in your `azure.yaml` service configuration. The `startupCommand` is the default command used both for local development (`azd ai agent run`) and for container startup when deployed. For more information, see [azure.yaml service configuration](/agents/azure-yaml-reference).
 
 ## Pass environment variables and secrets
 

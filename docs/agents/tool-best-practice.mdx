@@ -18,11 +18,12 @@ In your agent instructions, describe what each tool is for and when to use it. F
 - Access to a Foundry project in the Foundry portal with the **Azure AI Developer** role or equivalent permissions.
 - A model deployed in the same project.
 - Any required connections configured for the tools you plan to use (for example, Azure AI Search, SharePoint, or Bing grounding).
+- A model and project region that both support the tool. See [Tool support by region and model](/agents/limits-quotas-regions#tool-support-by-region-and-model).
 
 ## Configure and validate tool usage
 
-- Configure tools and connections in the Foundry tool catalog. See [Discover and manage tools in the Foundry tool catalog (preview)](/get-started/tool-catalog).
-- Review run traces to confirm when your agent calls tools and to inspect tool inputs and outputs. For end-to-end tracing setup, see [Trace your application](https://learn.microsoft.com/en-us/azure/foundry-classic/how-to/develop/trace-application).
+- Organize tools and connections in a toolbox. See [Create and manage a toolbox in Foundry](/toolboxes/toolbox).
+- Review traces to confirm when your agent calls tools and to inspect tool inputs and outputs. For setup guidance, see [Set up tracing for Foundry agents](/observability/trace-agent-setup).
 
 ## Improve tool-calling reliability
 
@@ -34,7 +35,7 @@ Use `tool_choice` for the most deterministic control over tool calling.
 - `required`: The model must call one or more tools.
 - `none`: The model doesn't call tools.
 
-For details, see `tool_choice` in [Foundry project REST (preview)](../../reference/foundry-project-rest-preview).
+For details, see `tool_choice` in the [Foundry project REST reference](https://ai.azure.com/api-reference/responses).
 
 ### Write effective tool instructions
 
@@ -47,11 +48,12 @@ For details, see `tool_choice` in [Foundry project REST (preview)](../../referen
 Tools send and receive data outside the model. Reduce security and privacy risks with these practices:
 
 - Treat tool outputs as untrusted input and validate critical values before acting on them.
+- Validate structured outputs against an expected schema, allow only known fields and operations, and require user approval before consequential actions.
 - Send only the information required to complete the task.
 - Don't include keys, tokens, or other credentials in prompts.
 - Avoid logging secrets in traces or application logs.
-- If you connect to non-Microsoft services (for example, third-party MCP servers), review the considerations in [Discover and manage tools in the Foundry tool catalog (preview)](/get-started/tool-catalog).
-- If you need centralized routing and policy enforcement for MCP tools, see [Tools governance with AI Gateway (preview)](/tools-and-knowledge/governance).
+- If you connect to non-Microsoft services (for example, third-party MCP servers), review the data handling considerations in [Create and manage a toolbox in Foundry](/toolboxes/toolbox).
+- If you need centralized routing and policy enforcement for MCP tools, see [Tools governance with AI Gateway (preview)](/toolboxes/governance).
 
 ## Troubleshooting
 
@@ -61,7 +63,7 @@ Use these checks to resolve common issues:
     - Confirm the tool is attached to the agent.
     - Confirm the model supports the tool.
     - If you need deterministic behavior, set `tool_choice` to `required`.
-    - Review run traces to confirm whether the model produced a tool call.
+    - Review traces to confirm whether the model produced a tool call.
 - **Tool calls return empty or irrelevant results**:
     - Improve tool descriptions and agent instructions.
     - For retrieval tools, ensure your data is ingested and searchable.
@@ -77,7 +79,7 @@ Use these checks to resolve common issues:
 
 **How do I validate whether a tool was called?**
 
-Review run traces to confirm whether your agent called a tool and to inspect tool inputs and outputs. For end-to-end tracing setup, see [Trace your application](https://learn.microsoft.com/en-us/azure/foundry-classic/how-to/develop/trace-application).
+Review traces to confirm whether your agent called a tool and to inspect tool inputs and outputs. For setup guidance, see [Set up tracing for Foundry agents](/observability/trace-agent-setup).
 
 **How do I make tool usage more reliable?**
 
@@ -87,28 +89,29 @@ Start with clear tool instructions. If you need deterministic tool calling, use 
 
 ### Tool management
 
-- [Discover and manage tools in the Foundry tool catalog (preview)](/get-started/tool-catalog)
-- [Tools governance with AI Gateway (preview)](/tools-and-knowledge/governance)
+- [What is Toolbox in Foundry?](/get-started/toolbox-overview)
+- [Create and manage a toolbox in Foundry](/toolboxes/toolbox)
+- [Tools governance with AI Gateway (preview)](/toolboxes/governance)
 
 ### Retrieval and search tools
 
-- [Azure AI Search](/agents/ai-search)
-- [File search](/agents/file-search)
-- [Web search](/tools-and-knowledge/web-search)
-- [Grounding with Bing tools](/tools-and-knowledge/bing-tools)
-- [SharePoint (preview)](/tools-and-knowledge/sharepoint)
+- [Azure AI Search](/toolboxes/ai-search)
+- [File search](/toolboxes/file-search)
+- [Web search](/toolboxes/web-search)
+- [Grounding with Bing tools](/toolboxes/bing-tools)
+- [SharePoint (preview)](/toolboxes/sharepoint)
 
 ### Data and integration tools
 
-- [Fabric data agent (preview)](/tools-and-knowledge/fabric)
-- [Model Context Protocol (MCP) (preview)](/tools-and-knowledge/model-context-protocol)
-- [OpenAPI tool](/tools-and-knowledge/openapi)
-- [Function calling](/agents/function-calling)
+- [Fabric data agent (preview)](/toolboxes/fabric)
+- [Model Context Protocol (MCP)](/toolboxes/model-context-protocol)
+- [OpenAPI tool](/toolboxes/openapi)
+- [Function calling](/toolboxes/function-calling)
 
 ### Automation and generation tools
 
-- [Code interpreter](/agents/code-interpreter)
-- [Browser automation (preview)](/tools-and-knowledge/browser-automation)
-- [Computer Use (preview)](/tools-and-knowledge/computer-use)
-- [Image generation (preview)](/tools-and-knowledge/image-generation)
-- [Agent2Agent (A2A) tool (preview)](/tools-and-knowledge/agent-to-agent)
+- [Code interpreter](/toolboxes/code-interpreter)
+- [Browser automation (preview)](/toolboxes/browser-automation)
+- [Computer Use (preview)](/toolboxes/computer-use)
+- [Image generation (preview)](/toolboxes/image-generation)
+- [Agent-to-Agent (A2A) (preview)](/toolboxes/agent-to-agent)

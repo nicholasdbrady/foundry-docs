@@ -9,7 +9,7 @@ Items marked (preview) in this article are currently in public preview. This pre
 
 </Info>
 
-In this quickstart, you ground a [hosted agent](/agents/hosted-agents) in a Foundry IQ in Foundry Tools knowledge base, and you reach that knowledge base through a [toolbox](/agents/toolbox). A knowledge base in Foundry IQ uses Azure AI Search agentic retrieval to plan a query, search your data, rerank results, and synthesize a cited answer. The toolbox exposes the knowledge base's Model Context Protocol (MCP) endpoint as a single tool, and the agent calls that tool with its own managed identity for keyless authentication.
+In this quickstart, you ground a [hosted agent](/agents/hosted-agents) in a Foundry IQ in Foundry Tools knowledge base, and you reach that knowledge base through a [toolbox](/toolboxes/toolbox). A knowledge base in Foundry IQ uses Azure AI Search agentic retrieval to plan a query, search your data, rerank results, and synthesize a cited answer. The toolbox exposes the knowledge base's Model Context Protocol (MCP) endpoint as a single tool, and the agent calls that tool with its own managed identity for keyless authentication.
 
 You complete three parts:
 
@@ -121,7 +121,7 @@ The connection uses the `agentic-identity` authentication type, which forwards t
 
 ## Step 5: Deploy to Foundry Agent Service
 
-Build and deploy the agent container:
+Deploy the agent source code. `azd` packages the source as a ZIP file and uploads it to Foundry, which resolves dependencies and builds the hosted agent remotely:
 
 ```powershell
 azd deploy
@@ -171,7 +171,7 @@ Delete the resources when you're finished so you stop incurring charges.
 
 <Warning>
 
-`azd down` permanently deletes every resource in the resource group, including the Foundry project, model deployments, Container Registry, and the hosted agent. If you provisioned into a resource group that contains other resources, those resources are deleted too.
+If the current `azd` environment created the Foundry project, `azd down` permanently deletes the project's resource group and everything in it. If you selected an existing project during initialization, `azd down` leaves the project, its resource group, the hosted agent, and other quickstart resources in place. To delete resources you no longer need from the existing project, delete them separately.
 
 </Warning>
 
@@ -202,7 +202,7 @@ In this quickstart, you:
 <Card title="Give a hosted agent persistent memory" icon="arrow-right" href="quickstart-memory-hosted-agent.md" />
 ## Related content
 
-- [What is Foundry IQ?](/tools-and-knowledge/what-is-foundry-iq)
-- [Connect a Foundry IQ knowledge base to Foundry Agent Service](/tools-and-knowledge/foundry-iq-connect)
-- [Curate an intent-based toolbox in Foundry](/agents/toolbox)
+- [What is Foundry IQ?](/toolboxes/what-is-foundry-iq)
+- [Connect a Foundry IQ knowledge base to Foundry Agent Service](/toolboxes/foundry-iq-connect)
+- [Curate an intent-based toolbox in Foundry](/toolboxes/toolbox)
 - [Quickstart: Deploy your first hosted agent](/agents/quickstart-hosted-agent)

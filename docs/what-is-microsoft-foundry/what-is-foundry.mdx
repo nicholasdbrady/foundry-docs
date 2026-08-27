@@ -1,0 +1,100 @@
+---
+title: "What is Microsoft Foundry?"
+description: "Microsoft Foundry is a trusted platform that empowers developers to build AI agents, models, and apps. Learn what you can build and how to choose your build approach."
+---
+
+Microsoft Foundry unifies agents, models, and tools under a single management grouping with built-in enterprise-readiness capabilities including tracing, monitoring, evaluations, and customizable enterprise setup configurations. The platform provides streamlined management through unified role-based access control (RBAC), networking, and policies under one Azure resource provider namespace.
+
+<Tip>
+
+* Coming from Azure OpenAI? [Upgrade your Azure OpenAI resource to a Foundry resource](./how-to/upgrade-azure-openai) while preserving your endpoint, API keys, and existing state. 
+* Using hub-based projects? Hub-based projects are accessible in the [Foundry (classic) portal](https://learn.microsoft.com/en-us/azure/foundry-classic/what-is-foundry). New investments are focused on Foundry projects in the new portal.
+
+</Tip>
+
+## Get started
+
+Build your first agent in minutes, or open the portal to explore models and tools.
+
+<Card title="Build with models and agents" icon="arrow-right" href="./quickstarts/get-started-code.md" />
+[Open the Foundry portal](https://ai.azure.com) | [Get an Azure account](https://azure.microsoft.com/pricing/purchase-options/azure-account)
+
+## What you can build
+
+| Capability | Description |
+| --- | --- |
+| **Agents** | Build declarative [prompt agents](/get-started/prompt-agent) in the portal or SDK, or deploy [hosted agents](/agents/quickstart-hosted-agent) that run your own code. Learn more in [Foundry Agent Service](/agents/overview). |
+| **Models** | Access more than 10,000 models from Microsoft, OpenAI, Anthropic, Meta, and others. Browse the [Foundry Models catalog](/models/foundry-models-overview). |
+| **Tools and knowledge** | Extend agents with built-in tools, memory, and retrieval using a [Foundry Toolbox](/get-started/toolbox-overview). |
+
+## Enterprise-ready platform
+
+Foundry brings platform capabilities to every project. Some capabilities are in preview. For current status, see the [general availability overview](./concepts/general-availability).
+
+- **Observability:** Trace and evaluate agents and models, and monitor them with built-in dashboards (preview). See [Observability](/observability/observability).
+- **Governance and security:** Apply Microsoft Entra identity, role-based access control, content filters, network isolation, and Azure Policy. See the [Foundry control plane](./control-plane/overview).
+- **One management plane:** Manage agents, models, and tools as a single Azure resource with unified access control, networking, and policies.
+
+## Start by building an agent
+
+Most projects on Foundry center on an agent: a model paired with instructions and tools that can reason over a request and take action. The main decision is how much you want to customize and control how that agent runs. Think of it as a spectrum from declarative to full code.
+
+- **Declarative, with the least to manage.** Specify instructions, choose a model, and attach tools in the Foundry portal or with the SDK. Foundry hosts and runs the agent for you, with no application code or containers to maintain. In Foundry, this is a **prompt agent**. [Create a prompt agent](/get-started/prompt-agent).
+- **Full code, with the most control.** Bring your own code or framework (for example, Microsoft Agent Framework, LangGraph, or Semantic Kernel), package it as a container, and Foundry runs it with a managed endpoint, scaling, identity, and observability. In Foundry, this is a **hosted agent**. [Deploy a hosted agent](/agents/quickstart-hosted-agent).
+
+You can start declarative and move to code as your needs grow. For a detailed comparison, see [What are hosted agents?](/agents/hosted-agents). For the end-to-end build, test, and ship cycle, see the [agent development lifecycle](/agents/development-lifecycle).
+
+Not building an agent yet? If you only need to send prompts to a model with no tools or orchestration, start with a single [model call](/get-started/get-started-code).
+
+## Choose your developer surface
+
+Foundry supports several surfaces. Many developers combine them, for example, prototyping in the portal and then moving to code.
+
+| Surface | Best for | Start here |
+| --- | --- | --- |
+| **Foundry portal** | Exploring models, prototyping prompts, and building prompt agents without writing code. | [Playgrounds and quick evaluation](/developer-tools-and-integrations/concept-playgrounds) |
+| **SDKs** | Building applications in Python, C#, JavaScript, or Java. | [Microsoft Foundry SDKs](./how-to/develop/sdk-overview) |
+| **Azure Developer CLI (azd)** | Scaffolding, running, testing, and deploying Hosted agent projects from the command line. | [Develop agents with the Azure Developer CLI](/developer-tools-and-integrations/cli-agent-development) |
+| **Visual Studio Code** | Building and debugging agents in your editor with the Foundry extension. | [Work in VS Code](/developer-tools-and-integrations/get-started-projects-visual-studio-code) |
+| **Coding agents and MCP** | Driving Foundry from coding agents (for example, GitHub Copilot or Claude Code) with the Foundry Skill and MCP server. | [Use the Microsoft Foundry Skill in coding agents](/get-started/use-microsoft-foundry-skill) |
+
+## Recommended path for new developers
+
+Follow these steps to go from zero to a working integration:
+
+1. **Make your first model call.** Set up your environment and send a prompt with the [build with models and agents quickstart](/get-started/get-started-code).
+1. **Set up your developer environment.** Install the CLI and SDK so you can build in code. See [Set up your developer environment](/developer-tools-and-integrations/install-cli-sdk).
+1. **Choose a model.** Browse the catalog and compare options in the [Foundry Models overview](/models/foundry-models-overview).
+1. **Build your first agent.** Start with a [prompt agent](/get-started/prompt-agent), or go straight to a [Hosted agent](/agents/quickstart-hosted-agent) if you want to bring your own code.
+1. **Add tools and knowledge.** Extend your agent with tools, retrieval, and memory (preview). Start with the [toolbox overview](/get-started/toolbox-overview), the recommended way to add tools to an agent.
+
+## Evolution of Foundry
+
+Foundry consolidates several previous Azure AI services and tools into a unified platform. For detailed guidance on transitioning, see [Navigate from classic to the new experience](../how-to/navigate-from-classic).
+
+<details>
+<summary>Previous concepts and their current equivalents</summary>
+
+| Dimension | Previous | Current |
+|-----------|---------|-----|
+| Brand | Azure AI Studio / Azure AI Foundry | Microsoft Foundry |
+| Brand | Azure AI Services | Foundry Tools |
+| Portal | [Foundry (classic)](https://learn.microsoft.com/azure/foundry-classic/) | [Foundry](https://learn.microsoft.com/azure/foundry) |
+| Agent API | Assistants API (Agents v0.5/v1) | Responses API (Agents v2) |
+| API versioning | Monthly `api-version` params | v1 stable routes (`/openai/v1/`) |
+| Resource model | Hub + Azure OpenAI + Azure AI Services | Foundry resource (single, with projects) |
+| SDKs & endpoints | Multiple packages (`azure-ai-inference`, `azure-ai-generative`, `azure-ai-ml`, `AzureOpenAI()`) against 5+ endpoints | Unified project client (`azure-ai-projects` 2.x) + `OpenAI()` against one project endpoint. |
+| Terminology | Threads, Messages, Runs, Assistants | Conversations, Items, Responses, Agent Versions |
+
+</details>
+
+## Related content
+
+- [What is Foundry Agent Service?](/agents/overview)
+- [Foundry Models](/models/foundry-models-overview)
+- [Microsoft Foundry architecture](./concepts/architecture)
+- [Agent development lifecycle](/agents/development-lifecycle)
+- [What's new in Microsoft Foundry](./whats-new-foundry)
+- [Microsoft Foundry portal general availability overview](concepts/general-availability)
+- [Upgrade your Azure OpenAI resource to a Foundry resource](./how-to/upgrade-azure-openai)
+- [Find hub-based projects in the Foundry (classic) portal](https://learn.microsoft.com/en-us/azure/foundry-classic/what-is-foundry)

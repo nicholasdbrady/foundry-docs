@@ -1,11 +1,19 @@
 ---
-title: "Speech to text with Whisper"
-description: "Learn how to use the Azure OpenAI Whisper model for speech to text conversion."
+title: "Speech to text with transcription models"
+description: "Learn how to use Azure OpenAI transcription models for speech to text conversion."
 ---
 import { ZoneContent, ZonePivot } from "/snippets/zone-pivot.jsx"
 
 
-In this quickstart, you transcribe speech to text using the [Azure OpenAI Whisper model](../../../ai-services/speech-service/whisper-overview). The Whisper model can transcribe human speech in numerous languages and translate other languages into English.
+In this quickstart, you transcribe speech to text by using the [OpenAI transcription model](../../../ai-services/speech-service/transcribe-overview). The transcription model can transcribe human speech in numerous languages and translate other languages into English.
+
+For offline transcription, use `gpt-transcribe`. This model uses the Audio API transcription path and isn't a Realtime API model.
+
+This quickstart uses a file upload request and response flow (one request per audio file), not a live streaming session.
+
+For offline transcription, use `gpt-transcribe`. This model uses the Audio API transcription path and isn't a Realtime API model.
+
+This quickstart uses a file upload request and response flow (one request per audio file), not a live streaming session.
 
 <Tip>
 
@@ -73,7 +81,7 @@ Create and assign persistent environment variables for your key and endpoint.
 
 ## Create a REST API request and response
 
-In a bash shell, run the following command. You need to replace `YourDeploymentName` with the deployment name you chose when you deployed the Whisper model. The deployment name isn't necessarily the same as the model name. Entering the model name results in an error unless you chose a deployment name that's identical to the underlying model name.
+In a bash shell, run the following command. Replace `YourDeploymentName` with the deployment name you chose when you deployed the transcription model. The deployment name isn't necessarily the same as the model name. Entering the model name results in an error unless you chose a deployment name that's identical to the underlying model name.
 
 ```bash
 curl $AZURE_OPENAI_ENDPOINT/openai/deployments/YourDeploymentName/audio/transcriptions?api-version=2024-02-01 \
@@ -970,7 +978,7 @@ Create and assign persistent environment variables for your key and endpoint.
 
 ## Create a PowerShell app
 
-Run the following command. You need to replace `YourDeploymentName` with the deployment name you chose when you deployed the Whisper model. The deployment name isn't necessarily the same as the model name. Entering the model name results in an error unless you chose a deployment name that is identical to the underlying model name.
+Run the following command. Replace `YourDeploymentName` with the deployment name you chose when you deployed the transcription model. The deployment name isn't necessarily the same as the model name. Entering the model name results in an error unless you chose a deployment name that is identical to the underlying model name.
 
 ```powershell-interactive
 # Azure OpenAI metadata variables
@@ -1019,7 +1027,7 @@ For information about other audio models that you can use with Azure OpenAI, see
 
 <Tip>
 
-The file size limit for the Whisper model is 25 MB. If you need to transcribe a file larger than 25 MB, you can use the Azure Speech in Foundry Tools [batch transcription](../../../ai-services/speech-service/batch-transcription-create#use-a-whisper-model) API.
+The file size limit for the transcription model is 25 MB. If you need to transcribe a file larger than 25 MB, you can use the Azure Speech in Foundry Tools [batch transcription](../../../ai-services/speech-service/batch-transcription-create#use-a-whisper-model) API.
 
 </Tip>
 
@@ -1034,7 +1042,7 @@ If you receive 401 Unauthorized errors, verify:
 
 ### File format errors
 
-The Whisper model supports mp3, mp4, mpeg, mpga, m4a, wav, and webm formats. Other formats return an error.
+The transcription model supports mp3, mp4, mpeg, mpga, m4a, wav, and webm formats. Other formats return an error.
 
 ### File size limit
 

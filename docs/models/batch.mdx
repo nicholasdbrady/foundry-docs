@@ -443,7 +443,7 @@ Once your input file is prepared, you first need to upload the file to then be a
     ```
 </CodeGroup>
 
-By uncommenting and adding `extra_body={"expires_after":{"seconds": 1209600, "anchor": "created_at"}}` you're setting our upload file to expire in 14 days. There's a max limit of 500 input batch files per resource when no expiration is set. By setting a value for expiration the number of input batch files per resource is increased to 10,000 files per resource. To remove batch input file limits use [Batch with Azure Blob Storage](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/how-to/batch-blob-storage).
+The `expires_after` object makes the input file expire 14 days after you create it. Set `seconds` to a value from `1209600` through `2592000` to select an expiration period from 14 through 30 days. Setting an expiration also increases the input file limit. For details, see [Batch limits](#batch-limits).
 
 **Output:**
 
@@ -1267,7 +1267,7 @@ curl -X POST https://YOUR_RESOURCE_NAME.openai.azure.com/openai/v1/files \
 
 The above code assumes a particular file path for your test.jsonl file. Adjust this file path as necessary for your local system. 
 
-By adding the optional `"expires_after.seconds=1209600"` and `"expires_after.anchor=created_at"` parameters  you're setting your upload file to expire in 14 days. There's a max limit of 500 batch input files per resource when no expiration is set. By setting a value for expiration the number of batch files per resource is increased to 10,000 files per resource. You can set to a number between 1209600-2592000. This is equivalent to 14-30 days. To remove batch input file limits use [Batch with Azure Blob Storage](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/how-to/batch-blob-storage).
+The optional `expires_after.seconds` and `expires_after.anchor` parameters set the input file to expire 14 days after creation. Set `expires_after.seconds` to a value from `1209600` through `2592000` to choose an expiration period from 14 through 30 days. Setting an expiration date also increases the input file limit. For details, see [Batch limits](#batch-limits).
 
 **Output:**
 
@@ -1323,13 +1323,13 @@ curl -X POST https://YOUR_RESOURCE_NAME.openai.azure.com/openai/v1/batches \
     "endpoint": "/chat/completions",
     "completion_window": "24h",
     "output_expires_after": {
-        "seconds": 1209600
-    },
-    "anchor": "created_at"
+      "anchor": "created_at",
+      "seconds": 1209600
+    }
   }'
 ```
 
-Here you can optionally add  `"output_expires_after":{"seconds": 1209600},` and `"anchor": "created_at"` so that your output files expire in 14 days.
+The optional `output_expires_after` object sets the output files to expire 14 days after they're created. Set `seconds` to a value from `1209600` through `2592000` to select an expiration period from 14 through 30 days. The `anchor` value must be `created_at`.
 
 <Note>
 
@@ -1469,15 +1469,15 @@ To avoid the error `URL rejected: Malformed input to a URL function` spaces are 
 
 | Limit name | Limit value |
 | ---------- | ----------- |
-| Maximum Batch input files - (no expiration) | 500 |
-| Maximum Batch input files - (expiration set) | 10,000 |
+| Maximum batch input files (no expiration) | 500 |
+| Maximum batch input files (expiration set) | 10,000 |
 | Maximum input file size | 200 MB |
 | Maximum input file size - [Bring your own storage (BYOS)](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/how-to/batch-blob-storage) | 1 GB |
 | Maximum requests per file | 100,000 |
 
 <Note>
 
-Batch file limits don't apply to output files (for example, `result.jsonl`, and `error.jsonl`). To remove batch input file limits, use [Batch with Azure Blob Storage](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/how-to/batch-blob-storage).
+Set expiration for input files to increase the per-resource limit and manage stored files. Batch input file limits don't apply to output files, such as `result.jsonl` and `error.jsonl`. To avoid Files API input file limits, use [Batch with Azure Blob Storage](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/how-to/batch-blob-storage).
 
 </Note>
 
@@ -1523,6 +1523,12 @@ B = billion | M = million | K = thousand
 | `gpt-5.4-mini` | 5B | 200M | 50M | N/A | N/A |
 | `gpt-5.5` | 5B | 200M | 50M | 90K | N/A |
 
+## Batch job record retention
+
+Batch job records are retained for up to 365 days after the job reaches a terminal state, such as `completed`, `failed`, `expired`, or `cancelled`. During this period, you can list and retrieve the job, and you can cancel it if it's still in a cancellable state.
+
+Generated output and error files don't have a default expiration. They remain available until you delete them or set an explicit expiration. Set `expires_after` when you upload an input file, or set `output_expires_after` when you create a batch job. Both explicit expiration settings accept 14 to 30 days and use `created_at` as the anchor. For examples, see the **Upload batch file** and **Create batch job** sections on the Python or REST API tab.
+
 ## Batch object
 
 | Property | Type | Definition |
@@ -1532,7 +1538,7 @@ B = billion | M = million | K = thousand
 | `endpoint` | string | The API endpoint used by the batch. |
 | `errors` | object | Error information for the batch, if any. |
 | `input_file_id` | string | The ID of the input file for the batch. |
-| `completion_window` | string | The time frame within which the batch should be processed. |
+| `completion_window` | string | The target time frame for processing the batch. Currently, you must set this value to `24h`. Completion within 24 hours isn't guaranteed, and a job can continue until it finishes or you cancel it. |
 | `status` | string | The current status of the batch. Possible values: `validating`, `failed`, `in_progress`, `finalizing`, `completed`, `expired`, `cancelling`, `cancelled`. |
 | `output_file_id` | string | The ID of the file containing the outputs of successfully executed requests. |
 | `error_file_id` | string | The ID of the file containing the outputs of requests with errors. |

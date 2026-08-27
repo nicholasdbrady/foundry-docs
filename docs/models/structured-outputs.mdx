@@ -5,11 +5,11 @@ description: "Learn how to improve your model responses with structured outputs"
 import { ZoneContent, ZonePivot } from "/snippets/zone-pivot.jsx"
 
 
-Structured outputs make a model follow a [JSON Schema](https://json-schema.org/overview/what-is-jsonschema) definition that you provide as part of your inference API call. This approach contrasts with the older [JSON mode](/models/json-mode) feature, which guaranteed valid JSON but couldn't ensure strict adherence to the supplied schema. Use structured outputs for function calling, extracting structured data, and building complex multi-step workflows.
+Structured outputs make a model follow a [JSON Schema](https://json-schema.org/overview/what-is-jsonschema) definition that you provide as part of your inference API call. Both the Chat Completions API and Responses API support structured outputs. For Chat Completions, define the schema in `response_format`. For Responses, define the schema in `text.format`. This approach contrasts with the older [JSON mode](/models/json-mode) feature, which guaranteed valid JSON but couldn't ensure strict adherence to the supplied schema. Use structured outputs for function calling, extracting structured data, and building complex multi-step workflows.
 
-<ZonePivot group="programming-language-csharp__programming-language-python__programming-language-rest" options={[{"id": "programming-language-python", "title": "Python"}, {"id": "programming-language-csharp", "title": "C#"}, {"id": "programming-language-rest", "title": "REST"}]} defaultValue="programming-language-python" />
+<ZonePivot group="programming-language-csharp__programming-language-javascript__programming-language-python__programming-language-rest" options={[{"id": "programming-language-python", "title": "Python"}, {"id": "programming-language-csharp", "title": "C#"}, {"id": "programming-language-javascript", "title": "JavaScript"}, {"id": "programming-language-rest", "title": "REST"}]} defaultValue="programming-language-python" />
 
-<ZoneContent group="programming-language-csharp__programming-language-python__programming-language-rest" value="programming-language-python" options={[{"id": "programming-language-python", "title": "Python"}, {"id": "programming-language-csharp", "title": "C#"}, {"id": "programming-language-rest", "title": "REST"}]} values={["programming-language-python", "programming-language-csharp", "programming-language-rest"]} defaultValue="programming-language-python">
+<ZoneContent group="programming-language-csharp__programming-language-javascript__programming-language-python__programming-language-rest" value="programming-language-python" options={[{"id": "programming-language-python", "title": "Python"}, {"id": "programming-language-csharp", "title": "C#"}, {"id": "programming-language-javascript", "title": "JavaScript"}, {"id": "programming-language-rest", "title": "REST"}]} values={["programming-language-python", "programming-language-csharp", "programming-language-javascript", "programming-language-rest"]} defaultValue="programming-language-python">
 
 ## Getting started
 
@@ -182,6 +182,44 @@ Structured outputs make a model follow a [JSON Schema](https://json-schema.org/o
   </Tab>
 </Tabs>
 
+## Use structured outputs with the Responses API
+
+For the Responses API, use OpenAI Python 2.x and pass a Pydantic model to `responses.parse` by using the `text_format` parameter. The SDK converts the model to a JSON Schema under `text.format` and returns the parsed value in `output_parsed`.
+
+```python
+from azure.identity import DefaultAzureCredential, get_bearer_token_provider
+from openai import OpenAI
+from pydantic import BaseModel
+
+# Configure access.
+endpoint = "https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/"
+token_provider = get_bearer_token_provider(
+    DefaultAzureCredential(), "https://ai.azure.com/.default"
+)
+openai = OpenAI(base_url=endpoint, api_key=token_provider)
+
+# Define the structured response.
+class CalendarEvent(BaseModel):
+    name: str
+    date: str
+    participants: list[str]
+
+# Parse the response directly into the Pydantic model.
+response = openai.responses.parse(
+    model="gpt-5-mini",
+  input="Extract the event information from: Alice and Bob are going to a science fair on Friday.",
+    text_format=CalendarEvent,
+)
+
+print(response.output_parsed)
+```
+
+Output:
+
+```output
+name='Science Fair' date='Friday' participants=['Alice', 'Bob']
+```
+
 ## Function calling with structured outputs
 
 Structured Outputs for function calling can be enabled with a single parameter, by supplying `strict: true`. 
@@ -257,8 +295,9 @@ Structured outputs are not supported with parallel function calls. When using st
     print(response.model_dump_json(indent=2))
     ```
 </CodeGroup>
+
 </ZoneContent>
-<ZoneContent group="programming-language-csharp__programming-language-python__programming-language-rest" value="programming-language-csharp" options={[{"id": "programming-language-python", "title": "Python"}, {"id": "programming-language-csharp", "title": "C#"}, {"id": "programming-language-rest", "title": "REST"}]} values={["programming-language-python", "programming-language-csharp", "programming-language-rest"]} defaultValue="programming-language-python">
+<ZoneContent group="programming-language-csharp__programming-language-javascript__programming-language-python__programming-language-rest" value="programming-language-csharp" options={[{"id": "programming-language-python", "title": "Python"}, {"id": "programming-language-csharp", "title": "C#"}, {"id": "programming-language-javascript", "title": "JavaScript"}, {"id": "programming-language-rest", "title": "REST"}]} values={["programming-language-python", "programming-language-csharp", "programming-language-javascript", "programming-language-rest"]} defaultValue="programming-language-python">
 
 ## Getting started
 
@@ -419,8 +458,294 @@ dotnet add package Azure.Identity
   </Tab>
 </Tabs>
 
+## Use structured outputs with the Responses API
+
+The .NET Responses API supports JSON Schema request configuration. It returns the structured result as JSON text rather than automatically deserializing it to a .NET type.
+
+Create a file named `calendar-event-schema.json` with the schema:
+
+```json
+{
+    "type": "object",
+    "properties": {
+        "name": { "type": "string" },
+        "date": { "type": "string" },
+        "participants": {
+            "type": "array",
+            "items": { "type": "string" }
+        }
+    },
+    "required": ["name", "date", "participants"],
+    "additionalProperties": false
+}
+```
+
+Pass the schema to `ResponseTextFormat.CreateJsonSchemaFormat`, and read the JSON from `GetOutputText`:
+
+```csharp
+#pragma warning disable OPENAI001
+using Azure.Identity;
+using OpenAI.Responses;
+using System.ClientModel.Primitives;
+
+// Create a client that uses Microsoft Entra ID.
+string endpoint = "https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1";
+ResponsesClient openAIClient = new(
+    authenticationPolicy: new BearerTokenPolicy(
+        new DefaultAzureCredential(), "https://ai.azure.com/.default"),
+    options: new ResponsesClientOptions { Endpoint = new Uri(endpoint) });
+
+// Configure and send the structured-output request.
+BinaryData calendarEventSchema = BinaryData.FromString(
+    File.ReadAllText("calendar-event-schema.json"));
+CreateResponseOptions options = new()
+{
+    Model = "gpt-5-mini",
+    InputItems = { ResponseItem.CreateUserMessageItem(
+        "Extract event information from: Alice and Bob are going to a science fair on Friday.") },
+    TextOptions = new ResponseTextOptions
+    {
+        TextFormat = ResponseTextFormat.CreateJsonSchemaFormat(
+            "CalendarEventResponse", calendarEventSchema,
+            jsonSchemaIsStrict: true)
+    }
+};
+
+ResponseResult response = await openAIClient.CreateResponseAsync(options);
+Console.WriteLine(response.GetOutputText());
+```
+
+Output:
+
+```output
+{"name":"Science Fair","date":"Friday","participants":["Alice","Bob"]}
+```
+
 </ZoneContent>
-<ZoneContent group="programming-language-csharp__programming-language-python__programming-language-rest" value="programming-language-rest" options={[{"id": "programming-language-python", "title": "Python"}, {"id": "programming-language-csharp", "title": "C#"}, {"id": "programming-language-rest", "title": "REST"}]} values={["programming-language-python", "programming-language-csharp", "programming-language-rest"]} defaultValue="programming-language-python">
+<ZoneContent group="programming-language-csharp__programming-language-javascript__programming-language-python__programming-language-rest" value="programming-language-javascript" options={[{"id": "programming-language-python", "title": "Python"}, {"id": "programming-language-csharp", "title": "C#"}, {"id": "programming-language-javascript", "title": "JavaScript"}, {"id": "programming-language-rest", "title": "REST"}]} values={["programming-language-python", "programming-language-csharp", "programming-language-javascript", "programming-language-rest"]} defaultValue="programming-language-python">
+
+## Prerequisites
+
+- An Azure subscription.
+- An Azure OpenAI resource with a `gpt-5-mini` model deployment. To create a resource and deploy a model, see [Create a resource and deploy a model with Azure OpenAI](https://learn.microsoft.com/azure/ai-foundry/openai/how-to/create-resource).
+- Your Azure OpenAI v1 endpoint, such as `https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/`.
+- For Microsoft Entra ID authentication, an identity with the `Cognitive Services OpenAI User` role assigned to the Azure OpenAI resource. Install the [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli), and then run `az login`.
+- For API key authentication, an Azure OpenAI resource key stored in the `AZURE_OPENAI_API_KEY` environment variable.
+
+## Set up
+
+The examples require Node.js 22 or later. Create a project, configure ECMAScript modules, and install the OpenAI, Zod, and Azure Identity packages:
+
+```shell
+npm init --yes
+npm pkg set type=module
+npm install openai zod @azure/identity
+npm install --save-dev typescript tsx @types/node
+```
+
+For TypeScript, save each example as `structured-outputs.ts`, and then run it:
+
+```shell
+npx tsx structured-outputs.ts
+```
+
+For JavaScript, save each example as `structured-outputs.mjs`, and then run it:
+
+```shell
+node structured-outputs.mjs
+```
+
+## Use structured outputs with Chat Completions
+
+Define the output structure with Zod. The `zodResponseFormat` helper converts the Zod object to a strict JSON Schema and validates the model response. All properties in the Zod object are required unless you define a nullable union.
+
+<CodeGroup>
+```typescript Microsoft Entra ID
+    import {
+      DefaultAzureCredential,
+      getBearerTokenProvider,
+    } from "@azure/identity";
+    import OpenAI from "openai";
+    import { zodResponseFormat } from "openai/helpers/zod";
+    import { z } from "zod/v4";
+
+    const endpoint = "https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/";
+    const tokenProvider = getBearerTokenProvider(
+      new DefaultAzureCredential(),
+      "https://ai.azure.com/.default",
+    );
+    const openai = new OpenAI({ baseURL: endpoint, apiKey: tokenProvider });
+    const CalendarEvent = z.object({
+      name: z.string(),
+      date: z.string(),
+      participants: z.array(z.string()),
+    });
+
+    const completion = await openai.chat.completions.parse({
+      model: "gpt-5-mini",
+      messages: [
+        { role: "system", content: "Extract the event information." },
+        {
+          role: "user",
+          content: "Alice and Bob are going to a science fair on Friday.",
+        },
+      ],
+      response_format: zodResponseFormat(CalendarEvent, "calendar_event"),
+    });
+    const message = completion.choices[0]?.message;
+    if (message?.refusal) throw new Error(`Request refused: ${message.refusal}`);
+    if (!message?.parsed) throw new Error("The response wasn't parsed.");
+    console.log(message.parsed);
+    ```
+
+```typescript API Key
+    import OpenAI from "openai";
+    import { zodResponseFormat } from "openai/helpers/zod";
+    import { z } from "zod/v4";
+
+    const endpoint = "https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/";
+    const apiKey = process.env["AZURE_OPENAI_API_KEY"];
+    if (!apiKey) throw new Error("AZURE_OPENAI_API_KEY is required.");
+    const openai = new OpenAI({ baseURL: endpoint, apiKey });
+    const CalendarEvent = z.object({
+      name: z.string(),
+      date: z.string(),
+      participants: z.array(z.string()),
+    });
+
+    const completion = await openai.chat.completions.parse({
+      model: "gpt-5-mini",
+      messages: [
+        { role: "system", content: "Extract the event information." },
+        {
+          role: "user",
+          content: "Alice and Bob are going to a science fair on Friday.",
+        },
+      ],
+      response_format: zodResponseFormat(CalendarEvent, "calendar_event"),
+    });
+    const message = completion.choices[0]?.message;
+    if (message?.refusal) throw new Error(`Request refused: ${message.refusal}`);
+    if (!message?.parsed) throw new Error("The response wasn't parsed.");
+    console.log(message.parsed);
+    ```
+</CodeGroup>
+
+The output is similar to:
+
+```output
+{
+  name: 'Science Fair',
+  date: 'Friday',
+  participants: [ 'Alice', 'Bob' ]
+}
+```
+
+## Use structured outputs with the Responses API
+
+For the Responses API, pass the result of `zodTextFormat` under `text.format`. The parsed value is available through `output_parsed` after the response completes.
+
+```typescript
+import {
+  DefaultAzureCredential,
+  getBearerTokenProvider,
+} from "@azure/identity";
+import OpenAI from "openai";
+import { zodTextFormat } from "openai/helpers/zod";
+import { z } from "zod/v4";
+
+const endpoint = "https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/";
+const tokenProvider = getBearerTokenProvider(
+  new DefaultAzureCredential(),
+  "https://ai.azure.com/.default",
+);
+const openai = new OpenAI({ baseURL: endpoint, apiKey: tokenProvider });
+const CalendarEvent = z.object({
+  name: z.string(),
+  date: z.string(),
+  participants: z.array(z.string()),
+});
+
+const response = await openai.responses.parse({
+  model: "gpt-5-mini",
+  input:
+    "Extract the event information: Alice and Bob are going to a science " +
+    "fair on Friday.",
+  text: { format: zodTextFormat(CalendarEvent, "calendar_event") },
+});
+if (response.status !== "completed") {
+  const details = response.error ?? response.incomplete_details;
+  throw new Error(JSON.stringify(details));
+}
+const refusal = response.output
+  .flatMap((item) => item.type === "message" ? item.content : [])
+  .find((content) => content.type === "refusal");
+if (refusal) throw new Error(`Request refused: ${refusal.refusal}`);
+if (!response.output_parsed) throw new Error("The response wasn't parsed.");
+console.log(response.output_parsed);
+```
+
+The output is similar to:
+
+```output
+{
+  name: 'Science Fair',
+  date: 'Friday',
+  participants: [ 'Alice', 'Bob' ]
+}
+```
+
+## Use structured outputs for function calling
+
+Use `zodFunction` to create a strict function tool and parse its arguments. Azure OpenAI doesn't support parallel function calls with structured outputs, so set `parallel_tool_calls` to `false`.
+
+```typescript
+import {
+  DefaultAzureCredential,
+  getBearerTokenProvider,
+} from "@azure/identity";
+import OpenAI from "openai";
+import { zodFunction } from "openai/helpers/zod";
+import { z } from "zod/v4";
+
+const endpoint = "https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/";
+const tokenProvider = getBearerTokenProvider(
+  new DefaultAzureCredential(),
+  "https://ai.azure.com/.default",
+);
+const openai = new OpenAI({ baseURL: endpoint, apiKey: tokenProvider });
+const DeliveryRequest = z.object({ order_id: z.string() });
+
+const completion = await openai.chat.completions.parse({
+  model: "gpt-5-mini",
+  messages: [
+    { role: "system", content: "Use the supplied tool to help the user." },
+    { role: "user", content: "When will order 12345 be delivered?" },
+  ],
+  tools: [zodFunction({
+    name: "get_delivery_date",
+    description: "Get the delivery date for an order.",
+    parameters: DeliveryRequest,
+  })],
+  parallel_tool_calls: false,
+});
+const toolCall = completion.choices[0]?.message.tool_calls?.[0];
+if (toolCall?.type !== "function") {
+  throw new Error("No function call returned.");
+}
+console.log(toolCall.function.parsed_arguments);
+```
+
+The output is similar to:
+
+```output
+{ order_id: '12345' }
+```
+
+For the underlying request shapes without Zod, use the JSON Schema examples in the REST language option.
+
+</ZoneContent>
+<ZoneContent group="programming-language-csharp__programming-language-javascript__programming-language-python__programming-language-rest" value="programming-language-rest" options={[{"id": "programming-language-python", "title": "Python"}, {"id": "programming-language-csharp", "title": "C#"}, {"id": "programming-language-javascript", "title": "JavaScript"}, {"id": "programming-language-rest", "title": "REST"}]} values={["programming-language-python", "programming-language-csharp", "programming-language-javascript", "programming-language-rest"]} defaultValue="programming-language-python">
 
 ## Getting started
 
@@ -496,6 +821,50 @@ Output:
   "system_fingerprint": "fp_1c2eaec9fe"
 }
 
+```
+
+## Use structured outputs with the Responses API
+
+For the Responses API, define the JSON Schema under `text.format`. Set `type`, `name`, `schema`, and `strict` as sibling properties of `format`. Before you run the request, set `AZURE_OPENAI_AUTH_TOKEN` to a Microsoft Entra ID access token.
+
+```bash
+curl -X POST https://YOUR_RESOURCE_NAME.openai.azure.com/openai/v1/responses \
+  -H "Authorization: Bearer $AZURE_OPENAI_AUTH_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-5-mini",
+    "input": "Extract the event information from: Alice and Bob are going to a science fair on Friday.",
+    "text": {
+      "format": {
+        "type": "json_schema",
+        "name": "CalendarEventResponse",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "name": {"type": "string"},
+            "date": {"type": "string"},
+            "participants": {
+              "type": "array",
+              "items": {"type": "string"}
+            }
+          },
+          "required": ["name", "date", "participants"],
+          "additionalProperties": false
+        },
+        "strict": true
+      }
+    }
+  }'
+```
+
+The `output_text` content contains:
+
+```json
+{
+  "name": "Science Fair",
+  "date": "Friday",
+  "participants": ["Alice", "Bob"]
+}
 ```
 
 ## Function calling with structured outputs
@@ -600,7 +969,7 @@ curl -X POST  https://YOUR_RESOURCE_NAME.openai.azure.com/openai/v1/chat/complet
 
 ## JSON Schema support and limitations
 
-Azure OpenAI structured outputs support the same subset of the [JSON Schema](https://json-schema.org/docs) as OpenAI.
+Azure OpenAI structured outputs support a subset of [JSON Schema](https://json-schema.org/docs). The following Azure-specific limits and unsupported keywords apply to both the Chat Completions API and Responses API.
 
 ### Supported types
 

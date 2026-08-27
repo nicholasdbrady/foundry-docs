@@ -9,46 +9,41 @@ Model router is a trained language model that selects the best large language mo
 
 <Note>
 
-You don't need to separately deploy the supported LLMs for use with model router, with the exception of the Claude models. To use model router with your Claude models, first deploy them from the model catalog. The deployments will get invoked by Model router if they're selected for routing.
+You don't need to separately deploy the supported large language models for use with model router, except for the Claude models. To use model router with your Claude models, first deploy them from the model catalog. Model router invokes the deployments if you select them for routing.
 
 </Note>
 
 ### Model router version `2025-11-18` (latest)
 
 | Format | Model | Version |
-|:---|:---|:---:|
-| OpenAI | `gpt-4.0` | `2024-11-20` |
-| OpenAI | `gpt-4.0-mini` | `2024-07-18` |
+| :--- | :--- | :---: |
+| OpenAI | `gpt-5.6-sol` | `2026-07-09` |
+| OpenAI | `gpt-5.6-terra` | `2026-07-09` |
+| OpenAI | `gpt-5.6-luna` | `2026-07-09` |
+| OpenAI | `gpt-5.5` | `2026-04-24` |
+| OpenAI | `gpt-5.4` | `2026-03-05` |
+| OpenAI | `gpt-5.4-mini` | `2026-03-17` |
+| OpenAI | `gpt-5.4-nano` | `2026-03-17` |
+| OpenAI | `gpt-5.2` | `2025-12-11` |
+| OpenAI | `gpt-5` | `2025-08-07` |
+| OpenAI | `gpt-5-mini` | `2025-08-07` |
+| OpenAI | `gpt-5-nano` | `2025-08-07` |
+| OpenAI | `o4-mini` | `2025-04-16` |
 | OpenAI | `gpt-4.1` | `2025-04-14` |
 | OpenAI | `gpt-4.1-mini` | `2025-04-14` |
 | OpenAI | `gpt-4.1-nano` | `2025-04-14` |
-| OpenAI | `o4-mini` | `2025-04-16` |
-| OpenAI | `gpt-5-nano` | `2025-08-07` |
-| OpenAI | `gpt-5-mini` | `2025-08-07` |
-| OpenAI | `gpt-5` | `2025-08-07` |
-| OpenAI | `gpt-5-chat` | `2025-08-07` |
-| OpenAI | `gpt-5.2` | `2025-12-11` |
-| OpenAI | `gpt-5.2-chat` | `2025-12-11` |
-| OpenAI | `gpt-5.3-chat` | `2026-03-03` |
-| OpenAI | `gpt-5.4-nano` | `2026-03-17` |
-| OpenAI | `gpt-5.4-mini` | `2026-03-17` |
-| OpenAI | `gpt-5.4` | `2026-03-05` |
-| OpenAI | `gpt-5.5` | `2026-04-24` |
-| DeepSeek | `Deepseek-V3.1`<sup>2</sup> | `1` |
-| DeepSeek | `Deepseek-V3.2`<sup>2</sup> | `1` |
-| OpenAI | `gpt-oss-120b`<sup>2</sup> | `1` |
-| Meta | `Llama-4-Maverick-17B-128E-Instruct-FP8`<sup>2</sup> | `1` |
-| xAI | `grok-4`<sup>2</sup> | `1` |
-| xAI | `grok-4-fast-reasoning`<sup>2</sup> | `1` |
-| Anthropic | `claude-haiku-4-5`<sup>3</sup> | `20251001` |
-| Anthropic | `claude-sonnet-4-5`<sup>3</sup> | `20250929` |
-| Anthropic | `claude-opus-4-1`<sup>3</sup> | `20250805` |
-| Anthropic | `claude-opus-4-6`<sup>3</sup> | `1` |
-| Anthropic | `claude-opus-4-7`<sup>3</sup> | `1` |
-
-- <sup>1</sup>Requires registration.
-- <sup>2</sup>Model router support is in preview.
-- <sup>3</sup>Model router support is in preview. Requires deployment of model for use with Model router.
+| OpenAI | `gpt-4o` | `2024-11-20` |
+| OpenAI | `gpt-4o-mini` | `2024-07-18` |
+| OpenAI | `gpt-oss-120b` | `1` |
+| Anthropic | `claude-opus-4-8` | `1` |
+| Anthropic | `claude-opus-4-7` | `1` |
+| Anthropic | `claude-opus-4-6` | `1` |
+| Anthropic | `claude-sonnet-4-5` | `20250929` |
+| Anthropic | `claude-haiku-4-5` | `20251001` |
+| xAI | `grok-4-1-fast-reasoning` | `1` |
+| xAI | `grok-4` | `1` |
+| DeepSeek | `DeepSeek-V3.2` | `1` |
+| Meta | `Llama-4-Maverick-17B-128E-Instruct-FP8` | `1` |
 
 {/*
 ### Model router version `2025-08-07`
@@ -59,12 +54,10 @@ You don't need to separately deploy the supported LLMs for use with model router
 | OpenAI | `gpt-4.1-mini` | `2025-04-14` |
 | OpenAI | `gpt-4.1-nano` | `2025-04-14` |
 | OpenAI | `o4-mini` | `2025-04-16` |
-| OpenAI | `gpt-5`<sup>1</sup> | `2025-08-07` |
+| OpenAI | `gpt-5` | `2025-08-07` |
 | OpenAI | `gpt-5-mini` | `2025-08-07` |
 | OpenAI | `gpt-5-nano` | `2025-08-07` |
 | OpenAI | `gpt-5-chat` | `2025-08-07` |
-
-- <sup>1</sup>Requires registration.
 
 ### Model router version `2025-05-19`
 
@@ -212,19 +205,13 @@ curl -X PUT "https://management.azure.com/subscriptions/00000000-0000-0000-0000-
             "mode": "balanced",
             "models": [
                 {"format": "OpenAI", "name": "gpt-4.1", "version": "2025-04-14"},
-                {"format": "OpenAI", "name": "gpt-5.2-chat", "version": "2025-12-11"},
+                {"format": "OpenAI", "name": "gpt-5.6-sol", "version": "2026-07-09"},
                 {"format": "Meta", "name": "Llama-4-Maverick-17B-128E-Instruct-FP8", "version": "1"}
             ]
         }
     }
 }'
 ```
-
-<Tip>
-
-For the full runnable sample and other deployment options (routing mode only, model subset only), see the [Model Router REST sample](https://github.com/microsoft-foundry/foundry-samples/blob/main/samples/REST/model-router/deploy-model-router-all-configs.sh) in the foundry-samples repository.
-
-</Tip>
 
 <Info>
 
@@ -398,11 +385,11 @@ If you've created an AI agent in Foundry, you can connect your model router depl
 
 For detailed guidance on routing patterns, supported tool types, cost implications, and code examples for agents, see [Use model router with Foundry agents](/models/model-router-agents).
 
-<Info>
+<Note>
 
-If you use Agent service tools in your flows, only OpenAI models will be used for routing.
+For agentic requests, model router can select eligible OpenAI, open-source (OSS), and Anthropic models from your routing pool. Model and tool compatibility determine which models are eligible for each request. For current compatibility, see [Tool support by region and model](/agents/limits-quotas-regions#tool-support-by-region-and-model).
 
-</Info>
+</Note>
 
 ### Output format 
 
@@ -512,42 +499,7 @@ If your organization restricts which models developers can deploy, model router 
 
 ## Evaluate model router for your workload
 
-Before you commit production traffic to model router, benchmark it against your current baseline model on three dimensions: quality, cost, and latency. The Foundry Evaluations service doesn't integrate with model router directly, so use the purpose-built evaluation toolkit described here.
-
-### Quality
-
-Use an LLM-as-a-judge approach where a separate, capable model scores responses from both model router and your baseline:
-
-- Run pairwise comparisons with response order swapped to eliminate position bias.
-- Score each response independently on accuracy, completeness, clarity, and helpfulness (1–5 scale).
-- Use at least 100 prompts from your actual workload for statistically reliable results. Fewer than 30 prompts gives only directional signal.
-
-### Cost
-
-Compare per-request cost using token counts and per-model pricing:
-
-- Account for the router markup on input tokens plus the underlying model's input and output pricing.
-- Aggregate savings as a percentage: `1 − (router_cost / baseline_cost)`.
-- Check cost savings per category if your dataset includes prompt categories (for example, code generation vs. summarization).
-
-### Latency
-
-Measure wall-clock response time for both endpoints:
-
-- Compare percentiles (p50, p90, p95) rather than averages — percentiles reflect real user experience better than mean values that can be skewed by outliers.
-- Call endpoints sequentially per prompt so neither is disadvantaged by concurrent load.
-
-### Evaluation toolkit
-
-Use the [Model Router Auto Evaluation toolkit](https://github.com/microsoft-foundry/Model-Router-Auto-Evaluation) to run this benchmark with your own prompts. The toolkit supports:
-
-- A no-keys demo with mock data so you can explore the dashboard before configuring endpoints.
-- Live evaluation against your model router and baseline deployments.
-- JSONL, CSV, or SQL dataset input.
-- A self-contained HTML report with quality, cost, and latency charts.
-- Checkpoint and resume for large-scale runs (500+ prompts).
-
-For methodology details — including the cost formula, judge configuration, and sample-size guidance — see the toolkit's [methodology documentation](https://github.com/microsoft-foundry/Model-Router-Auto-Evaluation/blob/main/docs/methodology.md).
+Treat your initial deployment as a starting configuration. Before you send production traffic to model router, benchmark it against your current model for response quality, estimated cost, and latency. Use the results to decide whether to retain the configuration, change one routing lever, or keep a direct model deployment for part of the workload. For guidance, see [Evaluate model router for your workload](/models/evaluate-model-router).
 
 ## Monitor model router metrics
 

@@ -11,11 +11,7 @@ Items marked (preview) in this article are currently in public preview. This pre
 
 You can expose your Foundry Agent Service agent as an Agent2Agent (A2A) endpoint so that other agents can discover and call it through the [A2A protocol](https://a2a-protocol.org/latest/). When incoming A2A is enabled, Foundry publishes an agent card for your agent and accepts inbound A2A requests from external callers.
 
-<Note>
-
 Foundry Agent Service supports A2A protocol **version 1.0** and **version 0.3**. New integrations should target version 1.0. For details about how clients select a version, see [A2A protocol versions](#a2a-protocol-versions).
-
-</Note>
 
 ## Supported agent types
 
@@ -26,7 +22,7 @@ Incoming A2A requires the responses protocol. The following agent types support 
 
 <Tip>
 
-This article covers how to **expose** your agent as an A2A endpoint that other agents can call. If you want your agent to **call** a remote A2A endpoint, see [Connect to an A2A agent endpoint from Foundry Agent Service](/tools-and-knowledge/agent-to-agent).
+This article covers how to **expose** your agent as an A2A endpoint that other agents can call. If you want your agent to **call** a remote A2A endpoint, see [Connect to an A2A agent endpoint from Foundry Agent Service](/toolboxes/agent-to-agent).
 
 </Tip>
 
@@ -145,45 +141,40 @@ Enabling incoming A2A requires two things: an **agent card** that describes your
     pip install "azure-ai-projects>=2.3.0"
     ```
 
-    Use the `update_details` method to add the A2A protocol to your agent's endpoint:
+    Use the `update_details` method to add the agent card and A2A protocol to your agent's endpoint:
 
     ```python
     from azure.identity import DefaultAzureCredential
     from azure.ai.projects import AIProjectClient
     from azure.ai.projects.models import (
-        A2AProtocolConfiguration,
-        AgentEndpointConfig,
-        ProtocolConfiguration,
-        ResponsesProtocolConfiguration,
+        A2AProtocolConfiguration, AgentCard, AgentCardSkill, AgentEndpointConfig,
+        ProtocolConfiguration, ResponsesProtocolConfiguration,
     )
-
-    # Format: "https://{account}.ai.azure.com/api/projects/{project}"
-    PROJECT_ENDPOINT = "your_project_endpoint"
-    AGENT_NAME = "your_agent_name"
-
-    project_client = AIProjectClient(
-        endpoint=PROJECT_ENDPOINT,
+    # Create the project client.
+    project = AIProjectClient(
+        endpoint="your_project_endpoint",
         credential=DefaultAzureCredential(),
     )
-
-    endpoint_config = AgentEndpointConfig(
-        protocol_configuration=ProtocolConfiguration(
-            responses=ResponsesProtocolConfiguration(),
-            a2a=A2AProtocolConfiguration(),
+    # Add the agent card and enable the A2A protocol.
+    patched_agent = project.agents.update_details(
+        agent_name="your_agent_name",
+        agent_endpoint=AgentEndpointConfig(
+            protocol_configuration=ProtocolConfiguration(
+                responses=ResponsesProtocolConfiguration(),
+                a2a=A2AProtocolConfiguration(),
+            ),
+        ),
+        agent_card=AgentCard(
+            version="1.0",
+            description="A helpful assistant that answers questions.",
+            skills=[AgentCardSkill(
+                id="general-qa", name="General Q&A",
+                description="Answers general questions.",
+            )],
         ),
     )
-
-    patched_agent = project_client.agents.update_details(
-        agent_name=AGENT_NAME,
-        agent_endpoint=endpoint_config,
-    )
+    print(f"Enabled incoming A2A for agent: {patched_agent.name}")
     ```
-
-    <Note>
-
-    Setting the agent card through the Python SDK isn't supported yet. Use the REST API to configure the agent card.
-
-    </Note>
 
   </Tab>
 </Tabs>
@@ -388,7 +379,7 @@ The connection stores the target agent's A2A endpoint URL and authentication det
       --header "Content-Type: application/json" \
       --data '{
         "properties": {
-          "authType": "AgenticIdentity",
+          "authType": "AgenticIdentityToken",
           "category": "RemoteA2A",
           "target": "'"$TARGET_A2A_URL"'",
           "audience": "https://ai.azure.com",
@@ -420,7 +411,7 @@ The connection stores the target agent's A2A endpoint URL and authentication det
     ```powershell
     $body = @{
         properties = @{
-            authType = "AgenticIdentity"
+            authType = "AgenticIdentityToken"
             category = "RemoteA2A"
             target = $TARGET_A2A_URL
             audience = "https://ai.azure.com"
@@ -439,7 +430,7 @@ The connection stores the target agent's A2A endpoint URL and authentication det
   </Tab>
 </Tabs>
 
-For other authentication options (key-based, OAuth, managed identity), see [Create an A2A connection by using the REST API](/tools-and-knowledge/agent-to-agent#create-an-a2a-connection-by-using-the-rest-api).
+For other authentication options (key-based, OAuth, managed identity), see [Create an A2A connection by using the REST API](/toolboxes/agent-to-agent#create-an-a2a-connection-by-using-the-rest-api).
 
 ### Step 2: Create the calling agent with the A2A tool
 
@@ -505,7 +496,7 @@ project.agents.delete_version(
 )
 ```
 
-For more language examples (C#, JavaScript, Java, REST), see [Connect to an A2A agent endpoint from Foundry Agent Service](/tools-and-knowledge/agent-to-agent).
+For more language examples (C#, JavaScript, Java, REST), see [Connect to an A2A agent endpoint from Foundry Agent Service](/toolboxes/agent-to-agent).
 
 ## Limitations
 
@@ -518,7 +509,7 @@ For more language examples (C#, JavaScript, Java, REST), see [Connect to an A2A 
 
 ## Related content
 
-- [Connect to an A2A agent endpoint from Foundry Agent Service](/tools-and-knowledge/agent-to-agent)
-- [Agent2Agent (A2A) authentication](/tools-and-knowledge/agent-to-agent-authentication)
+- [Connect to an A2A agent endpoint from Foundry Agent Service](/toolboxes/agent-to-agent)
+- [Agent2Agent (A2A) authentication](/toolboxes/agent-to-agent-authentication)
 - [Build with agents, conversations, and responses](/agents/runtime-components)
 - [A2A protocol specification](https://a2a-protocol.org/latest/)
