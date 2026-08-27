@@ -10,11 +10,17 @@ Key terms and concepts used throughout the Microsoft Foundry documentation.
 ### Agent
 An AI-powered entity that can perform tasks autonomously using tools, models, and instructions. In Microsoft Foundry, agents are created via the Azure AI Projects SDK and can use built-in tools like Code Interpreter, File Search, and Function Calling.
 
+### Agent Optimizer
+A Foundry Agent Service capability that evaluates a hosted agent against a task dataset, generates candidate configurations, and recommends improvements. It can optimize system instructions, skills, tool descriptions, and model selection.
+
 ### Agentic Retrieval
 A multi-query retrieval pipeline that uses a language model to decompose complex questions into focused subqueries, executes them in parallel, applies semantic reranking, and returns structured grounding data with citations. Used in Foundry IQ and Azure AI Search to improve retrieval quality over classic single-query RAG patterns.
 
 ### AIProjectClient
 The primary Python client class in the Azure AI Projects SDK for connecting to a Microsoft Foundry project. Used to access agents, models, connections, and other project resources programmatically.
+
+### Autopilot
+A persistent, named agent that acts under its own identity as a member of an organization. Each autopilot is created from an approved blueprint and has a Microsoft Entra agent user account, which enables it to perform Microsoft 365 actions as itself.
 
 ### Azure AI Search
 A cloud search service providing keyword, vector, and semantic search capabilities. Used as the underlying indexing and retrieval infrastructure for RAG patterns, Foundry IQ knowledge bases, and vector stores.
@@ -64,18 +70,35 @@ Content retrieved from an external data source and provided to a language model 
 ### Hybrid Search
 A retrieval strategy that combines keyword (BM25) search and vector (semantic) search to improve recall. Results from both methods are merged and optionally reranked using a semantic ranker for higher relevance. Supported in Azure AI Search and used in Foundry Agent Service file search.
 
+### Hosted Agent
+An agent implemented with custom code or an agent framework and deployed to Foundry Agent Service as a managed containerized service. Foundry manages hosting, scaling, identity integration, observability, and deployment lifecycle operations.
+
+### Human-in-the-Loop
+An agent workflow pattern that pauses automated work for a person to approve an action, answer a question, or provide missing input before execution resumes. Long-running hosted agents can persist this state without keeping a request open.
+
 ## K
 
 ### Knowledge Base (Foundry IQ)
 A top-level Foundry IQ resource that orchestrates agentic retrieval over one or more knowledge sources. A knowledge base defines which data sources to query, the retrieval reasoning effort level, and access control behavior. Multiple agents can share the same knowledge base.
+
+## L
+
+### Long-Running Agent
+A hosted agent designed for work that can span multiple turns or survive process interruptions. Durable task state and checkpoints let the agent recover after restarts, pause indefinitely for input, and resume under the same task identifier.
 
 ## M
 
 ### MCP (Model Context Protocol)
 An open protocol that enables AI agents to connect to external data sources and tools through a standardized interface. In Microsoft Foundry, agents can use MCP servers as tools via the Model Context Protocol tool type, allowing integration with custom data sources and services.
 
+### Microsoft Agent 365
+Microsoft's IT administration control plane for discovering, governing, securing, and managing AI agents across an organization. Foundry agents appear in its registry, where administrators can apply identity, access, security, and lifecycle controls.
+
 ### Microsoft Entra ID
 Microsoft's cloud identity and access management service, formerly Azure Active Directory. Used in Foundry for keyless authentication (instead of API keys) and as the identity provider for role-based access control (RBAC) assignments.
+
+### Model Router
+A deployable Foundry chat model that selects an underlying large language model for each request. Routing modes and model subsets let applications balance response quality, cost, latency, and governance through a single deployment.
 
 ## O
 
@@ -100,6 +123,11 @@ The API surface for generating agent outputs in Foundry Agent Service. The Respo
 
 ### Standard Agent Setup
 A Foundry Agent Service deployment configuration that uses customer-managed, single-tenant Azure resources to store all agent state. Conversation history, uploaded files, and vector stores are stored in your own Azure Storage, Azure Cosmos DB for NoSQL, and Azure AI Search resources, keeping all data within your Azure tenant. Contrasts with basic agent setup, which uses Microsoft-managed multitenant resources.
+
+## T
+
+### Toolbox
+A managed Foundry resource that packages a curated set of tools behind one MCP-compatible endpoint. It centralizes tool configuration, authentication, credential handling, policy enforcement, versioning, and discovery for use by multiple agents.
 
 ## V
 
