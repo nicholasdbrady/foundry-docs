@@ -1,0 +1,87 @@
+---
+title: "Resilient long-running hosted agents"
+description: "Understand how hosted agents preserve long-running work, recover after process interruptions, replay output, and accept later user input."
+---
+
+Long-running hosted agents continue work after the request that started them disconnects. With resilient execution, they can also recover after a container restart, crash, out-of-memory termination, or redeployment.
+
+<Note>
+
+Long-running and resilient hosted-agent capabilities are in preview. APIs and package versions can change.
+
+</Note>
+
+## Choose the capability you need
+
+Background execution, resilient execution, and stream replay solve different problems. Enabling one doesn't automatically provide the others.
+
+| Capability | Use it when | Boundary |
+| --- | --- | --- |
+| Background execution | Work must continue after the original HTTP connection closes. | The work doesn't automatically survive the process that owns it. |
+| Resilient execution | A later process must recover work after an interruption. | The platform reenters the handler; it doesn't restore local variables or the call stack. |
+| Stream replay | A client must reconnect without losing retained events. | Replayed events don't restore the agent's internal workflow state. |
+
+For the Responses protocol, crash recovery applies to stored background responses when the server enables resilient background execution. Foreground responses remain tied to the client connection. With the Invocations protocol, the application defines its own polling or streaming contract and uses AgentServer task primitives for durable execution.
+
+## Understand recovery
+
+The runtime persists each input before the handler starts and uses a lease to detect process loss. If a process stops and abandons the lease, another process can claim the same work and invoke the registered handler again with the original work identity, input identity, and input.
+
+Recovery starts the handler again from its entry point. It isn't deterministic replay and doesn't restore in-memory state. Design the handler so it can either:
+
+- Safely repeat completed operations.
+- Read a durable checkpoint and resume from a known boundary.
+
+Use a stable work identity for the logical job or conversation. Use a separate input identity for each turn and a separate stream identity for each request. Reusing a conversation ID as a stream ID prevents later turns from getting independent stream lifecycles.
+
+## Divide platform and application responsibilities
+
+| Foundry and the AgentServer SDK provide | Your agent provides |
+| --- | --- |
+| Durable work and input identities | Stable identifiers that map to the application's job or conversation |
+| Persisted input and lease-based handler reentry | Idempotent operations or a checkpoint-based recovery path |
+| Small durable metadata values | Checkpoint references, step numbers, and side-effect watermarks |
+| Optional steering queues and cooperative cancellation | Clear behavior for queued, interrupted, canceled, and rejected turns |
+| Retained events and cursor-based replay | Per-turn stream identities and reconnect-aware clients |
+| Runtime-record cleanup | Cleanup for external checkpoints, artifacts, and application data |
+
+Keep metadata small and JSON-serializable. Treat it as a checkpoint index, not as a checkpoint store. Put conversation history, model output, tool results, framework checkpoints, and generated artifacts in the Foundry state store or application-owned storage.
+
+## Select a work shape
+
+| Work shape | Use it for | Lifecycle |
+| --- | --- | --- |
+| One-shot resilient task | A single operation that must survive interruption | One input produces one terminal result |
+| Multi-turn task | A conversation or workflow that accepts later input | The same work identity remains suspended between turns |
+| Steerable multi-turn task | A user must redirect an active turn | New input queues while the active handler cooperatively winds down |
+
+A suspended multi-turn task supports human approval without holding a request open. Return an approval request, then resume the same task identity when the person responds. Persist only the references needed to continue safely.
+
+Steering remains sequential. It doesn't fork the conversation or allow two handlers to modify the same state concurrently. A steerable handler should check the cooperative cancellation signal at safe boundaries and preserve any progress required by the queued turn.
+
+## Design for safe interruption
+
+Before deploying long-running work:
+
+1. Choose stable work, input, and stream identities.
+2. Decide whether each operation can safely repeat or requires a checkpoint.
+3. Persist a watermark before a side effect that can't be deduplicated.
+4. Store large inputs and intermediate artifacts outside task metadata.
+5. Use a replay-capable stream backing when clients can reconnect.
+6. Treat a recovered Responses `response.in_progress` event as a snapshot reset, not an additive delta.
+7. Handle shutdown and cancellation cooperatively without writing a false terminal state.
+
+<Warning>
+
+Resilient tasks don't provide workflow orchestration, bulk storage, or exactly-once side effects. Use a workflow engine for fan-out, durable timers, or child workflows, and use downstream idempotency controls whenever they're available.
+
+</Warning>
+
+## Related content
+
+- [Hosted agents in Foundry Agent Service](/agent-service/hosted-agents)
+- [Resilience for long-running hosted agents](https://learn.microsoft.com/azure/foundry/agents/concepts/long-running-agent-resilience)
+- [Manage state for long-running agents](https://learn.microsoft.com/azure/foundry/agents/how-to/manage-task-state)
+- [Stream long-running output with reconnect](https://learn.microsoft.com/azure/foundry/agents/how-to/stream-with-reconnect)
+- [Add a human-in-the-loop approval step](https://learn.microsoft.com/azure/foundry/agents/how-to/add-human-in-the-loop)
+- [Steer an in-flight agent turn](https://learn.microsoft.com/azure/foundry/agents/how-to/steer-hosted-agent)
