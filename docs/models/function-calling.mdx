@@ -1,11 +1,17 @@
 ---
-title: "How to use function calling with Azure OpenAI in Microsoft Foundry Models"
-description: "Learn how to use function calling with OpenAI models."
+title: "How to use function calling with Microsoft Foundry Models"
+description: "Learn how to use function calling with Foundry Models that support the Chat Completions API."
 ---
 
-If one or more functions are included in your request, the model determines if any of the functions should be called based on the context of the prompt. When the model determines thatodel a function should be called, it responds with a JSON object including the arguments for the function.
+<Note>
 
-The models formulate API calls and structure data outputs, all based on the functions you specify. It's important to note that while the models can generate these calls, it's up to you to execute them, ensuring you remain in control.
+This example uses the OpenAI-compatible Chat Completions API through a Foundry Models endpoint. Function calling through the Responses API uses a different request and response format. For more information, see [Use the Azure OpenAI Responses API](/models/responses).
+
+</Note>
+
+If you include one or more functions in your request, the model decides whether to call any of the functions based on the context of the prompt. When the model decides to call a function, it responds with a JSON object that includes the arguments for the function.
+
+The model generates function calls and structured arguments based on the functions you specify. Your application executes the functions and returns the results to the model, so you remain in control of the actions taken.
 
 At a high level, you can break down working with functions into three steps:
 
@@ -15,14 +21,15 @@ At a high level, you can break down working with functions into three steps:
 
 ## Prerequisites
 
-- An Azure OpenAI model deployed 
+- A Foundry Model deployment that supports function calling through the Chat Completions API.
+- A Foundry resource endpoint in the format `https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/`.
 - For Microsoft Entra ID authentication:
     - A custom subdomain configured. For more information, see [Custom subdomain names](../../../ai-services/cognitive-services-custom-subdomains).
     - Packages: `pip install openai azure-identity`.
 
 ## Single tool/function calling example
 
-First demonstrate a toy function call that can check the time in three hardcoded locations with a single tool/function defined. We have added print statements to help make the code execution easier to follow:
+This example demonstrates a toy function call that checks the time in three hardcoded locations with a single tool/function defined. Print statements make the code execution easier to follow:
 
 <CodeGroup>
 ```python Microsoft Entra ID
@@ -148,10 +155,10 @@ First demonstrate a toy function call that can check the time in three hardcoded
     from datetime import datetime
     from zoneinfo import ZoneInfo
 
-    # Initialize the Azure OpenAI client
+    # Initialize the client
     client = OpenAI(
         base_url="https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/",
-        api_key=os.getenv("AZURE_OPENAI_API_KEY")
+        api_key=os.getenv("AZURE_INFERENCE_CREDENTIAL")
     )
 
     # Define the deployment you want to use for your chat completions API calls
@@ -498,10 +505,10 @@ Now we demonstrate another toy function calling example this time with two diffe
     from datetime import datetime, timedelta
     from zoneinfo import ZoneInfo
 
-    # Initialize the Azure OpenAI client
+    # Initialize the client
     client = OpenAI(
         base_url="https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/",
-        api_key=os.getenv("AZURE_OPENAI_API_KEY")
+        api_key=os.getenv("AZURE_INFERENCE_CREDENTIAL")
     )
 
     # Provide the model deployment name you want to use for this example
@@ -758,66 +765,30 @@ Here are a few tips to help you use functions safely and securely:
 *	**Consider Real-World Impact**: Be aware of the real-world impact of function calls that you plan to execute, especially those that trigger actions such as executing code, updating databases, or sending notifications.
 *	**Implement User Confirmation Steps**: Particularly for functions that take actions, we recommend including a step where the user confirms the action before execution.
 
-To learn more about our recommendations on how to use Azure OpenAI models responsibly, see the [Overview of Responsible AI practices for Azure OpenAI models](https://learn.microsoft.com/azure/ai-foundry/responsible-ai/openai/overview).
+To learn more about responsible AI practices for Foundry Models, see the [Overview of responsible AI practices](../../responsible-use-of-ai-overview).
 
 <Info>
 
-The `functions` and `function_call` parameters have been deprecated with the release of the [`2023-12-01-preview`](https://github.com/Azure/azure-rest-api-specs/blob/main/specification/cognitiveservices/data-plane/AzureOpenAI/inference/preview/2023-12-01-preview/inference.json) version of the API. The replacement for `functions` is the [`tools`](https://learn.microsoft.com/rest/api/microsoft-foundry/azureopenai/chat) parameter. The replacement for `function_call` is the [`tool_choice`](https://learn.microsoft.com/rest/api/microsoft-foundry/azureopenai/chat) parameter.
+In the Chat Completions API, the `functions` and `function_call` parameters are deprecated. Use the [`tools`](https://learn.microsoft.com/rest/api/microsoft-foundry/azureopenai/chat?view=rest-microsoft-foundry-v1-preview&preserve-view=true) parameter instead of `functions`, and use the [`tool_choice`](https://learn.microsoft.com/rest/api/microsoft-foundry/azureopenai/chat?view=rest-microsoft-foundry-v1-preview&preserve-view=true) parameter instead of `function_call`.
 
 </Info>
 
 ## Function calling support
 
-### Parallel function calling
+Foundry Models support function calling through the Chat Completions API or the Responses API. Support varies by model, API, deployment type, and model version.
 
-* `gpt-4` (`2024-04-09`)
-* `gpt-4o` (`2024-05-13`)
-* `gpt-4o` (`2024-08-06`)
-* `gpt-4o` (`2024-11-20`)
-* `gpt-4o-mini` (`2024-07-18`)
-* `gpt-4.1` (`2025-04-14`)
-* `gpt-4.1-mini` (`2025-04-14`)
-* `gpt-5` (`2025-08-07`)
-* `gpt-5-mini` (`2025-08-07`)
-* `gpt-5-nano` (`2025-08-07`)
-* `gpt-5-codex` (`2025-09-11`)
-* `gpt-5.1` (`2025-11-13`)
-* `gpt-5.1-chat` (`2025-11-13`)
-* `gpt-5.1-codex` (`2025-11-13`)
-* `gpt-5.1-codex-mini` (`2025-11-13`)
-* `gpt-5.1-codex-max` (`2025-12-04`)
-* `gpt-5.2` (`2025-12-11`)
-* `gpt-5.2-chat` (`2025-12-11`)
-* `gpt-5.2-codex` (`2026-01-14`)
-* `gpt-5.2-chat` (`2026-02-10`)
-* `gpt-5.3-codex` (`2026-02-24`)
-* `gpt-5.3-chat` (`2026-03-03`)
-* `gpt-5.4` (`2026-03-05`)
-* `gpt-5.4` (`2026-03-05`)
-* `gpt-5.4-mini` (`2026-03-17`)
-* `gpt-5.4-nano` (`2026-03-17`)
-* `gpt-5.5` (`2026-04-24`)
-* `gpt-5.6-sol` (`2026-07-09`)
-* `gpt-5.6-terra` (`2026-07-09`)
-* `gpt-5.6-luna` (`2026-07-09`)
-* `gpt-chat-latest` (`2026-05-05`)
-* `gpt-chat-latest` (`2026-05-28`)
-* `gpt-chat-latest` (`2026-06-24`)
+To find a model that supports function calling, review the following catalogs:
 
-Support for parallel function was first added in API version [`2023-12-01-preview`](https://github.com/Azure/azure-rest-api-specs/blob/main/specification/cognitiveservices/data-plane/AzureOpenAI/inference/preview/2023-12-01-preview/inference.json)
+- [Foundry Models sold by Azure](/models/models-sold-directly-by-azure)
+- [Foundry Models from partners and community](/models/models-from-partners)
 
-### Basic function calling with tools
+In the model details, look for the following capabilities:
 
-* All the models that support parallel function calling
-* `gpt-5.4-pro` (`2026-03-05`)
-* `gpt-5-pro` (`2025-10-06`)
-* `codex-mini` (`2025-05-16`)
-* `o3-pro` (`2025-06-10`)
-* `o4-mini` (`2025-04-16`)
-* `o3` (`2025-04-16`)
-* `gpt-4.1-nano` (`2025-04-14`)
-* `o3-mini` (`2025-01-31`)
-* `o1` (`2024-12-17`)
+- **Chat Completions API** or **Responses API**, depending on the API you plan to use.
+- **Functions** or **tools** for function calling support.
+- **Parallel tool calling** if your application needs the model to request multiple function calls in one response.
+
+This article shows how to implement function calling with the Chat Completions API. For the Responses API request and response format, see [Use the Azure OpenAI Responses API](/models/responses).
 
 <Note>
 
@@ -827,11 +798,12 @@ The `tool_choice` parameter is now supported with `o3-mini` and `o1`. For more i
 
 <Info>
 
-Tool/function descriptions are currently limited to 1,024 characters with Azure OpenAI. We'll update this article if this limit is changed.
+Tool and function descriptions are currently limited to 1,024 characters. We'll update this article if this limit changes.
 
 </Info>
 
 ## Next steps
 
-* [Learn more about Azure OpenAI](/models/models-sold-directly-by-azure).
-* For more examples on working with functions, check out the [Azure OpenAI Samples GitHub repository](https://aka.ms/oai/functions-samples)
+- [Use multi-agent orchestration with the Responses API](/models/responses-multi-agent).
+- [Learn more about Foundry Models](/models/models-sold-directly-by-azure).
+- For more examples on working with functions, check out the [OpenAI Samples GitHub repository](https://aka.ms/oai/functions-samples).

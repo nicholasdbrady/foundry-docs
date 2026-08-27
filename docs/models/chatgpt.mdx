@@ -1,11 +1,14 @@
 ---
 title: "Work with chat completion models"
-description: "Learn how to use Azure OpenAI chat completions in Python and .NET, manage multi-turn conversations, and handle context windows and common errors."
+description: "Learn how to use Azure OpenAI chat completions in Python, C#, and TypeScript, manage conversations, and handle context windows and common errors."
 ---
 import { ZoneContent, ZonePivot } from "/snippets/zone-pivot.jsx"
 
+{/* markdownlint-disable MD044 */}
 
-In this article, you use Python or .NET to send chat completion requests, build a multi-turn conversation, and manage the conversation's token budget.
+# Work with chat completion models
+
+In this article, you send chat completion requests, build a multi-turn conversation, and manage the conversation's token budget.
 
 Chat models are language models optimized for conversational interfaces. Unlike older text-in and text-out completion models, chat models accept a transcript of messages and return a model-generated message. This format supports multi-turn conversations and nonchat scenarios.
 
@@ -13,16 +16,22 @@ Use the message format described in this article instead of prompting chat model
 
 <Tip>
 
-For new apps, consider building on the [Responses API](/models/responses) instead of Chat Completions. To upgrade an existing app, see [Azure OpenAI To Responses](https://aka.ms/azure-openai-to-responses).
+For new apps, consider building on the [Responses API](/models/responses) instead of Chat Completions. To upgrade an existing app, see [Azure OpenAI To Responses](https://aka.ms/azure-openai-to-responses) and [Upgrade your Azure OpenAI app from Chat Completions to the Responses API](https://learn.microsoft.com/azure/developer/ai/how-to/azure-openai-to-responses).
 
 </Tip>
+
+<Note>
+
+Reasoning models, such as the GPT-5 series, behave differently on this API. They use `max_completion_tokens` instead of `max_tokens`, and they don't support `temperature`, `top_p`, or the penalty parameters. On the `gpt-5.6` and later models, a Chat Completions request that includes function tools fails unless you set `reasoning_effort` to `none`. Use the [Responses API](/models/responses) for tool calling with reasoning models. For details, see [Azure OpenAI reasoning models](/models/reasoning).
+
+</Note>
 
 ## Prerequisites
 
 - An Azure OpenAI resource with a chat completion model deployment. To create a resource and deploy a model, see [Create a resource and deploy a model with Azure OpenAI](https://learn.microsoft.com/azure/ai-foundry/openai/how-to/create-resource).
-<ZonePivot group="programming-language-dotnet__programming-language-python" options={[{"id": "programming-language-python", "title": "Python"}, {"id": "programming-language-dotnet", "title": "C#"}]} defaultValue="programming-language-python" />
+<ZonePivot group="programming-language-dotnet__programming-language-javascript__programming-language-python" options={[{"id": "programming-language-python", "title": "Python"}, {"id": "programming-language-dotnet", "title": "C#"}, {"id": "programming-language-javascript", "title": "JavaScript"}]} defaultValue="programming-language-python" />
 
-<ZoneContent group="programming-language-dotnet__programming-language-python" value="programming-language-python" options={[{"id": "programming-language-python", "title": "Python"}, {"id": "programming-language-dotnet", "title": "C#"}]} values={["programming-language-python", "programming-language-dotnet"]} defaultValue="programming-language-python">
+<ZoneContent group="programming-language-dotnet__programming-language-javascript__programming-language-python" value="programming-language-python" options={[{"id": "programming-language-python", "title": "Python"}, {"id": "programming-language-dotnet", "title": "C#"}, {"id": "programming-language-javascript", "title": "JavaScript"}]} values={["programming-language-python", "programming-language-dotnet", "programming-language-javascript"]} defaultValue="programming-language-python">
 
 - Install the OpenAI Python library: `pip install openai`.
 - For Microsoft Entra ID authentication, install Azure Identity (`pip install azure-identity`) and the [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli). Assign the `Cognitive Services User` role to your user account, and then run `az login`.
@@ -30,17 +39,24 @@ For new apps, consider building on the [Responses API](/models/responses) instea
 - If you use API keys, set the `AZURE_OPENAI_API_KEY` environment variable.
 
 </ZoneContent>
-<ZoneContent group="programming-language-dotnet__programming-language-python" value="programming-language-dotnet" options={[{"id": "programming-language-python", "title": "Python"}, {"id": "programming-language-dotnet", "title": "C#"}]} values={["programming-language-python", "programming-language-dotnet"]} defaultValue="programming-language-python">
+<ZoneContent group="programming-language-dotnet__programming-language-javascript__programming-language-python" value="programming-language-dotnet" options={[{"id": "programming-language-python", "title": "Python"}, {"id": "programming-language-dotnet", "title": "C#"}, {"id": "programming-language-javascript", "title": "JavaScript"}]} values={["programming-language-python", "programming-language-dotnet", "programming-language-javascript"]} defaultValue="programming-language-python">
 
 - [The .NET 8.0 SDK](https://dotnet.microsoft.com/download) or later.
 - For Microsoft Entra ID authentication, install the [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) and assign the `Cognitive Services User` role to your user account.
 - If you use API keys, set the `AZURE_OPENAI_API_KEY` environment variable.
 
 </ZoneContent>
+<ZoneContent group="programming-language-dotnet__programming-language-javascript__programming-language-python" value="programming-language-javascript" options={[{"id": "programming-language-python", "title": "Python"}, {"id": "programming-language-dotnet", "title": "C#"}, {"id": "programming-language-javascript", "title": "JavaScript"}]} values={["programming-language-python", "programming-language-dotnet", "programming-language-javascript"]} defaultValue="programming-language-python">
+
+- Node.js 22 or later.
+- For Microsoft Entra ID authentication, install the [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli), assign the `Cognitive Services User` role to your user account, and then run `az login`.
+- If you use API keys, set the `AZURE_OPENAI_API_KEY` environment variable.
+
+</ZoneContent>
 
 In the code samples, replace `YOUR-RESOURCE-NAME` with your Azure OpenAI resource name and `YOUR-DEPLOYMENT-NAME` with your model deployment name.
 
-<ZoneContent group="programming-language-dotnet__programming-language-python" value="programming-language-python" options={[{"id": "programming-language-python", "title": "Python"}, {"id": "programming-language-dotnet", "title": "C#"}]} values={["programming-language-python", "programming-language-dotnet"]} defaultValue="programming-language-python">
+<ZoneContent group="programming-language-dotnet__programming-language-javascript__programming-language-python" value="programming-language-python" options={[{"id": "programming-language-python", "title": "Python"}, {"id": "programming-language-dotnet", "title": "C#"}, {"id": "programming-language-javascript", "title": "JavaScript"}]} values={["programming-language-python", "programming-language-dotnet", "programming-language-javascript"]} defaultValue="programming-language-python">
 
 ## Set up
 
@@ -576,7 +592,7 @@ The token counting portion of the code demonstrated previously is a simplified v
 - **Invalid URL**: Confirm that `base_url` ends with `/openai/v1/`.
 
 </ZoneContent>
-<ZoneContent group="programming-language-dotnet__programming-language-python" value="programming-language-dotnet" options={[{"id": "programming-language-python", "title": "Python"}, {"id": "programming-language-dotnet", "title": "C#"}]} values={["programming-language-python", "programming-language-dotnet"]} defaultValue="programming-language-python">
+<ZoneContent group="programming-language-dotnet__programming-language-javascript__programming-language-python" value="programming-language-dotnet" options={[{"id": "programming-language-python", "title": "Python"}, {"id": "programming-language-dotnet", "title": "C#"}, {"id": "programming-language-javascript", "title": "JavaScript"}]} values={["programming-language-python", "programming-language-dotnet", "programming-language-javascript"]} defaultValue="programming-language-python">
 
 ## Set up
 
@@ -1061,9 +1077,305 @@ An alternative approach is to limit the conversation duration to the maximum tok
 - **Invalid endpoint**: Confirm that the `Endpoint` URI in `OpenAIClientOptions` points to `https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/`.
 
 </ZoneContent>
+<ZoneContent group="programming-language-dotnet__programming-language-javascript__programming-language-python" value="programming-language-javascript" options={[{"id": "programming-language-python", "title": "Python"}, {"id": "programming-language-dotnet", "title": "C#"}, {"id": "programming-language-javascript", "title": "JavaScript"}]} values={["programming-language-python", "programming-language-dotnet", "programming-language-javascript"]} defaultValue="programming-language-python">
+
+## Set up
+
+1. Install [Node.js 22](https://nodejs.org/download) or later.
+
+1. Create a TypeScript project and install the required packages.
+
+    ```shell
+    npm init --yes
+    npm install openai @azure/identity
+    npm install --save-dev typescript tsx @types/node
+    ```
+
+1. Save each complete example as `chat.ts`, and then run it.
+
+    ```shell
+    npx tsx chat.ts
+    ```
+
+## Work with chat completion models
+
+The following examples show the basic way to interact with models that use the Chat Completions API.
+
+<Note>
+
+The [Responses API](/models/responses) uses the same chat style of interaction, but supports the latest features that aren't available with the older Chat Completions API.
+
+</Note>
+
+<CodeGroup>
+```typescript Microsoft Entra ID
+    import {
+      DefaultAzureCredential,
+      getBearerTokenProvider,
+    } from "@azure/identity";
+    import OpenAI from "openai";
+
+    const tokenProvider = getBearerTokenProvider(
+      new DefaultAzureCredential(),
+      "https://ai.azure.com/.default",
+    );
+    const openai = new OpenAI({
+      baseURL: "https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/",
+      apiKey: tokenProvider,
+    });
+
+    const completion = await openai.chat.completions.create({
+      model: "YOUR-DEPLOYMENT-NAME",
+      messages: [
+        { role: "system", content: "You are a helpful assistant." },
+        { role: "user", content: "Who were the founders of Microsoft?" },
+      ],
+    });
+
+    console.log(completion.choices[0]?.message.content);
+    console.log(`Finish reason: ${completion.choices[0]?.finish_reason}`);
+    ```
+
+```typescript API Key
+    import OpenAI from "openai";
+
+    const apiKey = process.env["AZURE_OPENAI_API_KEY"];
+    if (!apiKey) throw new Error("AZURE_OPENAI_API_KEY is required.");
+
+    const openai = new OpenAI({
+      baseURL: "https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/",
+      apiKey,
+    });
+
+    const completion = await openai.chat.completions.create({
+      model: "YOUR-DEPLOYMENT-NAME",
+      messages: [
+        { role: "system", content: "You are a helpful assistant." },
+        { role: "user", content: "Who were the founders of Microsoft?" },
+      ],
+    });
+
+    console.log(completion.choices[0]?.message.content);
+    console.log(`Finish reason: ${completion.choices[0]?.finish_reason}`);
+    ```
+</CodeGroup>
+
+The following output is representative. The exact wording might vary:
+
+```output
+Microsoft was founded by Bill Gates and Paul Allen.
+Finish reason: stop
+```
+
+For the complete Azure OpenAI v1 client pattern, see the OpenAI Node [Azure Chat Completions example](https://github.com/openai/openai-node/blob/main/examples/azure/chat.ts).
+
+Every response includes `finish_reason`. The possible values are:
+
+* **stop**: The API returned complete model output.
+* **length**: The model stopped because of `max_completion_tokens` or the token limit.
+* **content_filter**: A content filter omitted content.
+* **tool_calls**: The model called a tool.
+* **function_call**: The model called a function. This value is deprecated.
+
+For streaming responses, `finish_reason` is `null` until the final chunk completes the response.
+
+Set `max_completion_tokens` high enough for the expected response. A higher value helps prevent the model from stopping before it reaches the end of the message.
+
+## Work with the Chat Completions API
+
+Chat completion models accept input formatted as a conversation. The `messages` parameter takes an array of message objects with a conversation organized by role. Type the array as `OpenAI.Chat.ChatCompletionMessageParam[]` when you define it outside the request.
+
+The format of a basic chat completion is:
+
+```typescript
+const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+  { role: "system", content: "Provide context or instructions to the model." },
+  { role: "user", content: "The user's message goes here." },
+];
+```
+
+A conversation with one example answer followed by a question looks like this:
+
+```typescript
+const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+  { role: "system", content: "Provide context or instructions to the model." },
+  { role: "user", content: "Example question goes here." },
+  { role: "assistant", content: "Example answer goes here." },
+  { role: "user", content: "First question for the model to answer." },
+];
+```
+
+### System role
+
+Include the system role, also known as the system message, at the beginning of the array. This message provides the initial instructions to the model. It can define the assistant's purpose, behavior, rules, or grounding data.
+
+The system message is optional, but include at least a basic one to get the best results.
+
+### Messages
+
+After the system role, include a series of messages between the `user` and the `assistant`:
+
+```typescript
+const message: OpenAI.Chat.ChatCompletionUserMessageParam = {
+  role: "user",
+  content: "What is thermodynamics?",
+};
+```
+
+End with a user message to indicate that it's the assistant's turn to respond. You can also include example messages between the user and the assistant for few-shot learning.
+
+### Message prompt examples
+
+Use these examples as starting points for prompts that you can adapt to your application.
+
+#### Basic example
+
+```typescript
+const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+  { role: "system", content: "You are a helpful assistant." },
+  { role: "user", content: "Who were the founders of Microsoft?" },
+];
+```
+
+#### Example with instructions
+
+Use the system message to define boundaries for the model's responses:
+
+```typescript
+const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+  {
+    role: "system",
+    content: `You help users answer tax-related questions.
+Only answer questions about taxes.
+If you don't know an answer, recommend the IRS website.`,
+  },
+  { role: "user", content: "When are my taxes due?" },
+];
+```
+
+#### Use data for grounding
+
+Include a small amount of relevant data in the system message to ground the model's answer:
+
+```typescript
+const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+  {
+    role: "system",
+    content: `Answer only from this context. If the answer isn't present,
+say "I don't know."
+
+Context: Azure OpenAI provides REST API access to OpenAI models.`,
+  },
+  { role: "user", content: "What does Azure OpenAI provide?" },
+];
+```
+
+For larger grounding datasets, use [embeddings](/models/embeddings) or Azure AI Search to retrieve relevant information at request time.
+
+#### Use few-shot learning
+
+Include example user and assistant messages before the final question:
+
+```typescript
+const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+  { role: "system", content: "You help users answer tax questions." },
+  { role: "user", content: "When do I need to file my taxes?" },
+  { role: "assistant", content: "Check the current deadline at irs.gov." },
+  { role: "user", content: "How can I check my refund status?" },
+];
+```
+
+#### Use chat completion for nonchat scenarios
+
+The Chat Completions API also supports nonchat tasks, such as entity extraction:
+
+```typescript
+const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+  {
+    role: "system",
+    content: "Extract names and companies. Return a JSON object.",
+  },
+  {
+    role: "user",
+    content: "Robert Smith is calling from Contoso Insurance.",
+  },
+];
+```
+
+## Create a basic conversation loop
+
+The following example reads questions from the console, sends the complete conversation to the model, and adds each answer to the conversation history. Because the model has no memory, send the updated history with every request.
+
+```typescript
+import { stdin, stdout } from "node:process";
+import { createInterface } from "node:readline/promises";
+import {
+  DefaultAzureCredential,
+  getBearerTokenProvider,
+} from "@azure/identity";
+import OpenAI from "openai";
+
+const tokenProvider = getBearerTokenProvider(
+  new DefaultAzureCredential(),
+  "https://ai.azure.com/.default",
+);
+const openai = new OpenAI({
+  baseURL: "https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/",
+  apiKey: tokenProvider,
+});
+const conversation: OpenAI.Chat.ChatCompletionMessageParam[] = [
+  { role: "system", content: "You are a helpful assistant." },
+];
+const consoleInput = createInterface({ input: stdin, output: stdout });
+
+while (true) {
+  const question = await consoleInput.question("Q: ");
+  if (!question.trim()) break;
+  conversation.push({ role: "user", content: question });
+  const response = await openai.chat.completions.create({
+    model: "YOUR-DEPLOYMENT-NAME",
+    messages: conversation,
+  });
+  const answer =
+    response.choices[0]?.message.content ?? "No response returned.";
+  conversation.push({ role: "assistant", content: answer });
+  console.log(`\n${answer}\n`);
+}
+consoleInput.close();
+```
+
+When you run the code, enter a question at the `Q:` prompt. Enter a blank line to close the application.
+
+## Manage conversations
+
+The conversation loop runs until the conversation reaches the model's context window. The combined token count of `messages` and the requested output must stay within the model's limit. For current token limits, see the [models page](/models/models-sold-directly-by-azure).
+The OpenAI Node SDK reports token usage after each request through `response.usage`, but it doesn't include a tokenizer for estimating the next request. To estimate token usage before a request, choose a tokenizer that supports your model and encoding, and evaluate it before adoption.
+
+For longer conversations, use one of these approaches:
+
+* Remove the oldest complete user and assistant turns while preserving the system message. Keep a conservative safety margin because character or turn counts aren't exact token counts.
+* Start a new conversation after a fixed number of turns.
+* Use the [Responses API](/models/responses), which supports server-managed conversation state and truncation.
+
+## Troubleshooting
+
+### Failed to create completion as the model generated invalid Unicode output
+
+- **Error code:** 500
+- **Error message:** `Failed to create completion as the model generated invalid Unicode output`
+- **Workaround:** For models that support it, set `temperature` to less than 1. The OpenAI Node SDK retries connection errors and selected HTTP errors twice by default. Set `maxRetries` on the `OpenAI` client to change this behavior.
+
+### Common errors
+
+- **401/403 (authentication)**: Verify the API key, or confirm that the signed-in identity can access the Azure OpenAI resource.
+- **400/404 (deployment not found)**: Confirm that `model` matches the deployment name.
+- **Invalid URL**: Confirm that `baseURL` ends with `/openai/v1/`.
+
+</ZoneContent>
 
 ## Related content
 
 - [Use the Responses API](/models/responses)
+- [Azure OpenAI reasoning models](/models/reasoning)
 - [Explore Foundry Models sold by Azure](/models/models-sold-directly-by-azure)
 - [Generate embeddings](/models/embeddings)

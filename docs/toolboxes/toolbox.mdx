@@ -1,0 +1,1834 @@
+---
+title: "Create and manage a toolbox in Microsoft Foundry"
+description: "Learn how to create and manage a Microsoft Foundry toolbox that provides hosted agents with tools through a single managed endpoint."
+---
+import { ZoneContent, ZonePivot } from "/snippets/zone-pivot.jsx"
+
+
+<Warning>
+
+When you connect to non-Foundry tools, you might incur costs and data might be sent outside Foundry's compliance boundary and processed according to the applicable terms and data handling policies. See the tool's documentation to learn how to manage access to the tool.
+
+</Warning>
+
+This article shows you how to create a toolbox, add and configure tools, verify that they load, integrate the toolbox into a hosted agent, and manage toolbox versions. For a conceptual introduction to toolboxes, see [What is Toolbox in Foundry?](/get-started/toolbox-overview). For tool configuration syntax and authentication options for each tool type, see [Configure tools](#configure-tools).
+
+## Prerequisites
+
+- An active [Microsoft Foundry project](../../../how-to/create-projects).
+- **RBAC**: Grant the **Foundry User** role on the Foundry project to each identity that applies to your scenario:
+  - **Developer** (always required) — the identity that creates, updates, and manages toolbox versions.
+  - **Agent identity** (required if using a prompt agent) — the agent's managed identity that calls tools at runtime.
+  - **End user** (required only for OAuth flows) — any user whose identity is proxied through OAuth or UserEntraToken connections (for example, OAuth-based MCP or user Entra token (managed user identity passthrough) flows).
+
+  For step-by-step instructions to assign the **Foundry User** role to an agent identity, see [Assign permissions to the agent identity](/agents/agent-identity#assign-permissions-to-the-agent-identity).
+- Your Foundry project needs to be at one of the supported [regions](/agents/limits-quotas-regions#supported-regions). Individual tool types within a toolbox are further limited by region and model – not all tool types are available in every region or with every model. See [Region and model compatibility](#region-and-model-compatibility).
+- [Visual Studio Code (VS Code)](https://code.visualstudio.com/).
+- Install the [Microsoft Foundry Toolkit for Visual Studio Code extension](https://aka.ms/foundrytk) from the Visual Studio Code Marketplace.
+- **Python SDK**: `pip install azure-ai-projects azure-identity`
+- **.NET SDK**: Install the coherent preview package set and Azure Identity:
+
+  ```bash
+  dotnet add package Azure.AI.Projects --version 2.1.0-beta.4
+  dotnet add package Azure.AI.Projects.Agents --version 2.1.0-beta.4
+  dotnet add package Azure.AI.Extensions.OpenAI --version 2.1.0-beta.4
+  dotnet add package Azure.Identity
+  ```
+- **JavaScript SDK**: `npm install @azure/ai-projects @azure/identity`
+- **Azure Developer CLI**: [Install the Azure Developer CLI](https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd) (`azd`, 1.25 or later) and the unified Foundry CLI extension bundle:
+
+  ```bash
+  # Install the unified bundle (provides azd ai agent, connection, inspector,
+  # project, routine, skill, and toolbox).
+  azd ext install microsoft.foundry
+  ```
+
+<Info>
+
+- A toolbox supports at most **one tool without a `name` field** (Web Search, Azure AI Search, Code Interpreter, File Search). To include more than one instance of the same tool type, set a unique `name` on each instance to differentiate them. Including two instances of the same type without a `name` returns an `invalid_payload` error. For details, see [Multiple tool types](#multiple-tool-types).
+- Add a `description` to every tool in your toolbox to help the model select the right tool for each request.
+- Carefully review each tool's documentation to learn more about individual tool setup, limitations, and warnings.
+
+</Info>
+
+If you're using GitHub Copilot for Azure to scaffold a hosted agent that consumes the toolbox, the following skill references describe the same endpoint contract (env var, headers, MCP protocol, citation patterns, and troubleshooting) that the agent must implement:
+
+- [Toolbox reference](https://github.com/microsoft/GitHub-Copilot-for-Azure/blob/main/plugins/azure-skills/skills/microsoft-foundry/foundry-agent/toolbox/toolbox.md) for guidance on endpoint format, MCP protocol, OAuth consent handling, citation patterns, and troubleshooting.
+- [Use toolbox in a hosted agent](https://github.com/microsoft/GitHub-Copilot-for-Azure/blob/main/plugins/azure-skills/skills/microsoft-foundry/foundry-agent/create/references/use-toolbox-in-hosted-agent.md) to find guidance on endpoint resolution, env-var contract, payload shape, code integration patterns, and tracing.
+
+**Quick path**
+
+1. **Create:** [Create a toolbox version](#create-a-toolbox-version) with one or more tools. Keep each snippet focused on one task and within 30 lines; use the linked maintained samples for complete applications.
+1. **Publish or select a version:** The first version becomes the default automatically. For later versions, [test and promote a version](#manage-toolbox-versions) when you're ready to make it the default.
+1. **Attach and consume:** Copy the [toolbox consumer endpoint](#get-the-toolbox-mcp-endpoint), and then [integrate it into your agent](#integrate-the-toolbox-into-your-agent).
+1. **Verify:** Use the version-specific endpoint to [list the available tools](#verify-tool-availability), and then run one agent request that calls an expected tool.
+
+## Feature support
+
+SDKs and tooling support toolbox management operations, as shown in the following table.
+
+| Operation | Python SDK | REST API | .NET SDK | JavaScript SDK | Azure Developer CLI | Foundry Toolkit |
+| --------- | ---------- | -------- | -------- | -------------- | --- | --------------- |
+| Toolbox update, list, get, and delete | ✔️ | ✔️ | ✔️ | ✔️ | N/A | ✔️ |
+| Toolbox version create | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ |
+| Toolbox version list, get, and delete | ✔️ | ✔️ | ✔️ | ✔️ | N/A | No. UI shows the latest version only. |
+| Guardrail (RAI policy) | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ |
+
+You can also manage toolboxes conversationally with Foundry MCP Server. See [Manage toolboxes with Foundry MCP Server](#manage-toolboxes-with-foundry-mcp-server).
+
+You can add the following tools to a toolbox. This table shows SDK and tooling support for each tool and whether the tool can also be attached directly to an agent (outside a toolbox). For how each tool's traffic flows when your project uses network isolation, see [Network isolation for a toolbox](/toolboxes/toolbox-network-isolation).
+
+| Tool | In a toolbox | Direct tool integration | Python SDK | REST API | .NET SDK | JavaScript SDK | Azure Developer CLI | Foundry Toolkit |
+| ---- | ------------ | ----------------------- | ---------- | -------- | -------- | -------------- | --- | --------------- |
+| [Model Context Protocol (MCP)](/toolboxes/model-context-protocol) | ✅ Yes | ✅ Yes | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ |
+| [Web search](/toolboxes/web-search) | ✅ Yes | ✅ Yes | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ |
+| [Azure AI Search](/toolboxes/ai-search) | ✅ Yes | ✅ Yes | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ |
+| [Code interpreter](/toolboxes/code-interpreter) | ✅ Yes | ✅ Yes | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ |
+| [File search](/toolboxes/file-search) | ✅ Yes | ✅ Yes | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ |
+| [OpenAPI](/toolboxes/openapi) | ✅ Yes | ✅ Yes | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ | No |
+| [Agent-to-agent (A2A)](/toolboxes/agent-to-agent) | ✅ Yes | ✅ Yes | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ | No |
+| [Browser automation](/toolboxes/browser-automation) | ✅ Yes | ✅ Yes | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ | No |
+| [Fabric IQ](/toolboxes/fabric-iq) | ✅ Yes | ✅ Yes | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ |
+| [Work IQ](/toolboxes/work-iq) | ✅ Yes | ✅ Yes | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ |
+| [Tool search](/toolboxes/tool-search) | ✅ Yes | ❌ No | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ |
+| [Skills](/toolboxes/skills) | ✅ Yes | ❌ No | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ | No |
+
+Tool availability also depends on your project's region and model. Before you deploy a toolbox, verify that your target region supports the tool types you plan to use. See [Tool support by region and model](/agents/limits-quotas-regions#tool-support-by-region-and-model).
+
+## Create a toolbox version
+
+Create a toolbox version based on the tools you need.
+
+<ZonePivot group="azd__dotnet__javascript__python__rest-api__vscode" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} defaultValue="python" />
+
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="python" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+```python
+from azure.identity import DefaultAzureCredential
+from azure.ai.projects import AIProjectClient
+from azure.ai.projects.models import MCPToolboxTool, ToolSearchToolboxTool, WebSearchToolboxTool
+
+# Create Foundry project client
+endpoint = "https://<your-foundry-account>.services.ai.azure.com/api/projects/<your-project>"
+project = AIProjectClient(
+    endpoint=endpoint,
+    credential=DefaultAzureCredential(),
+)
+
+# Create toolbox version with web search and MCP tools
+toolbox_version = project.toolboxes.create_version(
+    name="my-toolbox",
+    description="Toolbox with web search and an MCP server",
+    tools=[
+        WebSearchToolboxTool(),
+        MCPToolboxTool(
+            server_label="myserver",
+            server_url="https://your-mcp-server.example.com",
+            require_approval="never",
+            project_connection_id="my-key-auth-connection",
+        ),
+        ToolSearchToolboxTool(),
+    ],
+)
+print(f"Created toolbox: {toolbox_version.name}, version: {toolbox_version.version}")
+```
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="dotnet" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+```csharp
+using Azure.Identity;
+using Azure.AI.Projects;
+
+// Create Foundry project client
+var projectEndpoint = "https://<your-foundry-account>.services.ai.azure.com/api/projects/<your-project>";
+AIProjectClient projectClient = new(new Uri(projectEndpoint), new DefaultAzureCredential());
+AgentToolboxes toolboxClient = projectClient.AgentAdministrationClient.GetAgentToolboxes();
+
+WebSearchToolboxTool webTool = new();
+MCPToolboxTool mcpTool = new(serverLabel: "myserver")
+{
+  ServerUri = new Uri("https://your-mcp-server.example.com"),
+  ToolCallApprovalPolicy = new McpToolCallApprovalPolicy(
+    GlobalMcpToolCallApprovalPolicy.NeverRequireApproval),
+};
+
+ToolSearchToolboxTool searchTool = new() { Name = "ToolBoxSearch" };
+
+ToolboxVersion toolboxVersion = await toolboxClient.CreateVersionAsync(
+  name: "my-toolbox",
+    tools: [webTool, mcpTool, searchTool],
+    description: "Toolbox with web search, MCP, and tool search"
+);
+Console.WriteLine($"Created toolbox: {toolboxVersion.Name}, version: {toolboxVersion.Version}");
+```
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="rest-api" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+```http
+POST {project_endpoint}/toolboxes/my-toolbox/versions?api-version=v1
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "description": "Toolbox with web search, MCP, and tool search",
+  "tools": [
+    {
+      "type": "web_search",
+      "description": "Search the web for current information"
+    },
+    {
+      "type": "mcp",
+      "server_label": "myserver",
+      "server_url": "https://your-mcp-server.example.com",
+      "require_approval": "never",
+      "project_connection_id": "my-key-auth-connection"
+    },
+    {
+      "type": "toolbox_search"
+    }
+  ]
+}
+```
+
+<Note>
+
+Use token scope `https://ai.azure.com/.default` when getting the bearer token.
+
+</Note>
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="javascript" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+```javascript
+import { DefaultAzureCredential } from "@azure/identity";
+import { AIProjectClient } from "@azure/ai-projects";
+
+// Create Foundry project client
+const projectEndpoint = "https://<your-foundry-account>.services.ai.azure.com/api/projects/<your-project>";
+
+const project = new AIProjectClient(projectEndpoint, new DefaultAzureCredential());
+
+const toolboxVersion = await project.toolboxes.createVersion(
+  "my-toolbox",
+  [
+    {
+      type: "web_search",
+      description: "Search the web for current information",
+    },
+    {
+      type: "mcp",
+      server_label: "myserver",
+      server_url: "https://your-mcp-server.example.com",
+      require_approval: "never",
+      project_connection_id: "my-key-auth-connection",
+    },
+    { type: "toolbox_search" },
+  ],
+  {
+    description: "Toolbox with web search, MCP, and tool search",
+  },
+);
+console.log(`Created toolbox: ${toolboxVersion.name}, version: ${toolboxVersion.version}`);
+```
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="vscode" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+Use the Microsoft Foundry Toolkit for Visual Studio Code extension to create and publish a toolbox from the **Tools** view.
+
+1. Select **Foundry Toolkit** in the Activity Bar.
+1. Under **My Resources**, expand **Your project name** > **Tools**.
+1. Select the **+ Add Toolbox** icon.
+1. On the **Build a Custom Toolbox** tab, enter the toolbox name and description, and add the tools you want.
+1. To enable intent-based tool routing, select **Tool search**.
+1. Select **Publish**.
+
+Publishing a new toolbox creates its first version. That version becomes the default version automatically.
+
+<Frame>
+  <img src="/images/toolbox-vscode-create.png" alt="Screenshot of Foundry Toolkit showing the toolbox name, description, tools, and Publish action." />
+</Frame>
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="azd" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+With the unified `microsoft.foundry` extension bundle (see [Prerequisites](#prerequisites)), create a toolbox in two steps:
+
+1. Use `azd ai connection create` to register each project connection that the toolbox references (one call per credential record).
+1. Use `azd ai toolbox create --from-file <toolbox.yaml>` to create the toolbox. The YAML references connections by name and never embeds credentials.
+
+The pattern is the same for every connection kind and auth type:
+
+1. Set the active project once per shell:
+
+   ```bash
+   azd ai project set $PROJECT_ENDPOINT
+   ```
+
+1. Create a connection with `azd ai connection create`. The flags differ per auth type, but the command shape is always:
+
+   ```bash
+   azd ai connection create <name> \
+     --kind <remote-tool|remote-a2a|cognitive-search|GroundingWithCustomSearch> \
+     --target <endpoint-url> \
+     --auth-type <none|custom-keys|api-key|oauth2|user-entra-token|project-managed-identity|agentic-identity> \
+     [--custom-key "Header=Value" | --key <key> | --client-id ... --client-secret ... --authorization-url ... --token-url ... | --audience <aad-resource-uri>]
+   ```
+
+   Use `azd ai connection list` and `azd ai connection show <name>` to inspect connections, and `azd ai connection delete <name> --force` to remove them.
+
+3. Author a toolbox YAML that references one or more existing connections by name. The YAML never embeds credentials:
+
+   ```yaml
+   # my-toolbox.yaml
+   description: <human-readable description>
+   connections:
+     - name: <project-connection-name>   # must already exist in the project
+   # Optional: add connectionless built-in tools and policies.
+   tools:
+     - type: web_search
+       name: web
+     - type: code_interpreter
+       container: { type: auto }
+       name: code
+     # Tool search is connectionless.
+     - type: toolbox_search
+     # For Azure AI Search, set the index in the tool entry:
+     # - type: azure_ai_search
+     #   name: search
+     #   azure_ai_search:
+     #     indexes:
+     #       - project_connection_id: <azure-ai-search-connection-name>
+     #         index_name: <search-index-name>
+     # For Bing Custom Search, set the instance in the tool entry:
+     # - type: web_search
+     #   name: bing
+     #   custom_search_configuration:
+     #     project_connection_id: <bing-connection-name>
+     #     instance_name: <bing-instance-name>
+   # Optional: attach existing project skills as MCP resources.
+   skills:
+     - name: <skill-name>          # uses the skill's default version
+     - name: <other-skill>
+       version: "2"               # pin to a specific skill version (string)
+   policies:
+     rai_config:
+       rai_policy_name: <policy-name>    # must already exist on the project
+   ```
+
+   At least one of `connections`, `skills`, or `tools` must be non-empty. Skill references must point to skills that already exist in the same Foundry project; see [Use skills in Foundry](/toolboxes/skills) to create them with `azd ai skill create`. For end-to-end Tool Search setup details, see [Use tool search](/toolboxes/tool-search).
+
+4. Create the toolbox from that file:
+
+   ```bash
+   azd ai toolbox create <toolbox-name> --from-file ./my-toolbox.yaml
+   ```
+
+   The first version becomes the default automatically. Use `azd ai toolbox list`, `azd ai toolbox show <name>`, `azd ai toolbox version list <name>`, and `azd ai toolbox delete <name> --force` to manage toolboxes.
+
+**Example: MCP server with key-based auth**
+
+```bash
+# 1. Create the connection
+azd ai connection create my-gh-conn \
+  --kind remote-tool \
+  --target https://api.githubcopilot.com/mcp/ \
+  --auth-type custom-keys \
+  --custom-key "Authorization=Bearer $GITHUB_PAT"
+
+# 2. Create the toolbox
+azd ai toolbox create my-toolbox \
+  --from-file ./my-toolbox.yaml \
+  --no-prompt
+```
+
+```yaml
+# my-toolbox.yaml
+description: GitHub MCP toolbox
+connections:
+  - name: my-gh-conn
+```
+
+</ZoneContent>
+
+## Get the toolbox MCP endpoint
+
+Two endpoint patterns exist depending on your role:
+
+| Role | Endpoint | When to use |
+| ---- | -------- | ----------- |
+| **Toolbox developer** | `{project_endpoint}/toolboxes/{toolbox_name}/versions/{version}/mcp?api-version=v1` | Test or validate a specific version before promoting it to default. |
+| **Toolbox consumer** | `{project_endpoint}/toolboxes/{toolbox_name}/mcp?api-version=v1` | Connect agents to the toolbox. Always serves the `default_version`. The first version you create is automatically set as the default. |
+
+Replace the placeholders with your own values:
+
+- `{project_endpoint}` is your Foundry project endpoint, in the form `https://<your-foundry-account>.services.ai.azure.com/api/projects/<your-project>`. Copy it from the **Overview** page of your project in the [Foundry portal](https://ai.azure.com), or from the **Endpoint URL** column in the **Toolboxes** view of the Microsoft Foundry Toolkit for Visual Studio Code.
+- `{toolbox_name}` and `{version}` are the toolbox name and version you created in [Create a toolbox version](#create-a-toolbox-version).
+
+<Tip>
+
+Connect agents to the **toolbox consumer** endpoint. It always serves the `default_version`, so you can promote new versions without changing agent code or redeploying. Reserve the **toolbox developer** (version-specific) endpoint for testing a version before you promote it.
+
+</Tip>
+
+<Note>
+
+The first version of a new toolbox is automatically promoted to `default_version` (v1). If you need to change the default later, see [Promote a version to default](#promote-a-version-to-default).
+
+</Note>
+
+In the Microsoft Foundry Toolkit for Visual Studio Code extension, copy the toolbox consumer endpoint from the **Toolboxes** view.
+
+1. Select **Foundry Toolkit** in the Activity Bar.
+1. Under **My Resources**, expand **Your project name** > **Tools**.
+1. On the **Toolboxes** tab, locate your toolbox.
+1. In the **Endpoint URL** column, copy the endpoint.
+
+The **Endpoint URL** value is the toolbox consumer endpoint. To construct a version-specific endpoint, use the developer pattern shown in the previous table.
+
+## Verify tool availability
+
+Before running the full agent, confirm that the toolbox loads the expected tools by using an MCP client SDK against the endpoint. Use the **version-specific endpoint** to validate a version before promoting it to default.
+
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="python" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+Install the MCP client SDK:
+
+```bash
+pip install mcp
+```
+
+### Connect to the toolbox and list tools
+
+```python
+import asyncio
+from azure.identity import DefaultAzureCredential
+from mcp.client.streamable_http import streamablehttp_client
+from mcp import ClientSession
+
+url = "https://<account>.services.ai.azure.com/api/projects/<proj>/toolboxes/<name>/versions/<version>/mcp?api-version=v1"
+
+token = DefaultAzureCredential().get_token("https://ai.azure.com/.default").token
+headers = {
+    "Authorization": f"Bearer {token}",
+}
+
+async def verify_toolbox():
+    async with streamablehttp_client(url, headers=headers) as (read, write, _):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+
+            # List available tools
+            tools_result = await session.list_tools()
+            print(f"Tools found: {len(tools_result.tools)}")
+            for tool in tools_result.tools:
+                print(f"  - {tool.name}: {(tool.description or '')[:80]}")
+
+            # Call a tool (replace with actual tool name and arguments)
+            result = await session.call_tool("<tool_name>", arguments={})
+            print(result)
+
+asyncio.run(verify_toolbox())
+```
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="dotnet" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+<Note>
+
+Use the REST API tab to verify tool availability from .NET, or use the Python MCP client SDK.
+
+</Note>
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="rest-api" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+Use the version-specific endpoint (`/versions/{version}/mcp`) to validate a version before promoting it.
+
+**1. Initialize the MCP session**:
+
+```http
+POST {project_endpoint}/toolboxes/{toolbox_name}/versions/{version}/mcp?api-version=v1
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}
+```
+
+**2. Send the initialized notification**:
+
+```http
+POST {project_endpoint}/toolboxes/{toolbox_name}/versions/{version}/mcp?api-version=v1
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{"jsonrpc":"2.0","method":"notifications/initialized"}
+```
+
+**3. List available tools**:
+
+```http
+POST {project_endpoint}/toolboxes/{toolbox_name}/versions/{version}/mcp?api-version=v1
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}
+```
+
+**4. Call a tool**:
+
+```http
+POST {project_endpoint}/toolboxes/{toolbox_name}/versions/{version}/mcp?api-version=v1
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"<TOOL_NAME>","arguments":{}}}
+```
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="javascript" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+Install the MCP client SDK:
+
+```bash
+npm install @modelcontextprotocol/sdk
+```
+
+### Connect to the toolbox and list tools
+
+```javascript
+import { DefaultAzureCredential } from "@azure/identity";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+
+const url = "https://<account>.services.ai.azure.com/api/projects/<proj>/toolboxes/<name>/versions/<version>/mcp?api-version=v1";
+
+const credential = new DefaultAzureCredential();
+const token = await credential.getToken("https://ai.azure.com/.default");
+
+const transport = new StreamableHTTPClientTransport(
+  new URL(url),
+  {
+    requestInit: {
+      headers: {
+        Authorization: `Bearer ${token.token}`,
+      },
+    },
+  },
+);
+
+const client = new Client({ name: "test", version: "1.0" });
+await client.connect(transport);
+
+// List available tools
+const toolsResult = await client.listTools();
+console.log(`Tools found: ${toolsResult.tools.length}`);
+for (const tool of toolsResult.tools) {
+  console.log(`  - ${tool.name}: ${(tool.description || "").slice(0, 80)}`);
+}
+
+// Call a tool (replace with actual tool name and arguments)
+const result = await client.callTool({ name: "<tool_name>", arguments: {} });
+console.log(result);
+
+await client.close();
+```
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="vscode" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+Use the [toolbox MCP endpoint](#get-the-toolbox-mcp-endpoint) with a scaffolded hosted agent sample to validate toolbox loading in VS Code.
+
+1. In **Foundry Toolkit**, under **My Resources** > **Your project name** > **Tools**, locate the toolbox you want to test.
+1. Select **Scaffold code template**.
+1. Choose a project folder when prompted.
+1. Follow the generated `README.md` to install dependencies, configure environment variables, and run the sample locally.
+1. Use **Agent Inspector** or run `python main.py` to confirm the toolbox tools load and respond.
+
+For version-specific validation before you promote a new toolbox version, use the Python or REST API tab in this step.
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="azd" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+<Note>
+
+Use the REST API tab to verify tool availability, or use the Python MCP client SDK.
+
+</Note>
+
+</ZoneContent>
+
+**Check — initialize**: HTTP 200. If you skip the initialize step, subsequent calls fail.
+
+**Check — `tools/list`**:
+
+- `len(tools) > 0` — empty means the toolbox version wasn't provisioned correctly.
+- Each tool has `name`, `description`, and `inputSchema`. For tool naming conventions, see the [MCP specification](https://modelcontextprotocol.io/specification/2025-03-26/server/tools).
+- `inputSchema` has a `properties` field (some MCP servers omit this field, which breaks OpenAI).
+- Tool names are namespaced by tool type:
+
+  | Tool type | Tool name format | Example |
+  | --------- | ---------------- | ------- |
+  | MCP | `{server_label}.{tool_name}` | `myserver.some_tool` |
+  | OpenAPI | `{openapi_name}.{operationId}` | `weatherapi.getForecast` |
+  | A2A | The tool's `name` (agent name), or the connection name if `name` is omitted | `myagent` |
+  | All other tool types | The `name` field value or the default tool name | `web_search` |
+
+- MCP tools include a `_meta.tool_configuration` block containing runtime settings such as `require_approval`. See [Enforce tool approval](/agents/use-toolbox-hosted-agent#enforce-tool-approval).
+- Note the exact parameter names for the call step (for example `query` vs `queries`).
+
+**Check - `tools/call`**:
+
+- No top-level `error` field. If present, inspect `error.code`. For standard MCP error codes, see the [MCP specification](https://modelcontextprotocol.io/specification/2025-03-26/server/tools#error-handling):
+  - `-32006` → OAuth consent required (extract URL from `error.message`).
+  - Other codes → server-side failure.
+- `result.content[]` contains entries with `"type": "text"` - this is the tool output.
+- For AI Search, check `result.structuredContent.documents[]` for chunk metadata (`title`, `url`, `id`, `score`).
+- For File Search, check `result.content[].resource._meta` for chunk metadata (`title`, `file_id`, `document_chunk_id`, `score`).
+- For Web Search, check `result.content[].resource._meta.annotations[]` for URL citations (`type`, `url`, `title`, `start_index`, `end_index`).
+- For Fabric IQ, check `result.structuredContent.documents[]` for citation chunks. Each document includes `title` and `url` fields pointing back to the Fabric item (Ontology, data agent, or Power BI semantic model) used to ground the response.
+- Watch for `"ServerError"` in text content - the tool executed but hit an internal error.
+
+Tool-specific `tools/call` argument examples:
+
+| Tool type | Arguments |
+| --------- | --------- |
+| AI Search | `{"query": "search text"}` |
+| File Search | `{"queries": ["search text"]}` — or `{"queries": ["search text"], "vector_store_ids": ["<VECTOR_STORE_ID>"]}` when vector store is passed dynamically |
+| Code Interpreter | `{"code": "print(2 ** 100)"}` |
+| Web Search | `{"search_query": "weather in seattle"}` |
+| A2A | `{"message": {"parts": [{"type": "text", "text": "Hello"}]}}` |
+| Fabric IQ | Varies by exposed tool — typically `{"query": "..."}` for query tools |
+| Work IQ | `{"message": {"parts": [{"type": "text", "text": "Hello"}]}}` |
+| MCP | `{"query": "what is agent service"}` |
+
+## Integrate the toolbox into your agent
+
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="python" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+### LangGraph
+
+**Hosted integration fragment requirements:** Install `langchain-azure-ai[tools]>1.2.3`. The fragment uses `AzureAIProjectToolbox`; use the [maintained LangGraph sample](https://aka.ms/foundry-toolbox-langgraph) for the complete agent, package set, and deployment files.
+
+**`.env` file**:
+
+```
+FOUNDRY_PROJECT_ENDPOINT=https://<account>.services.ai.azure.com/api/projects/<project>
+TOOLBOX_ENDPOINT=https://<account>.services.ai.azure.com/api/projects/<project>/toolboxes/<toolbox-name>/versions/<version>/mcp?api-version=v1
+TOOLBOX_NAME=agent-tools
+AZURE_AI_MODEL_DEPLOYMENT_NAME=gpt-4o
+```
+
+**`main.py`** (key pattern):
+
+```python
+from langchain_azure_ai.tools import AzureAIProjectToolbox
+
+toolbox = AzureAIProjectToolbox(toolbox_name=TOOLBOX_NAME)
+tools = await toolbox.get_tools()
+```
+
+<Info>
+
+Class `langchain_azure_ai.tools.AzureAIProjectToolbox` requires `langchain-azure-ai[tools]>1.2.3`.
+
+</Info>
+
+### Microsoft Agent Framework
+
+Install `agent-framework-foundry` in addition to the prerequisite Azure Identity package. For the complete implementation, see the [maintained Agent Framework sample](https://github.com/microsoft/agent-framework/tree/main/python/samples/04-hosting/foundry-hosted-agents/responses/foundry_toolbox).
+
+Use `FoundryToolbox` from the Agent Framework SDK to connect to the toolbox endpoint. The class handles toolbox authentication and forwards the hosted-agent call context.
+
+**`.env` file**:
+
+```
+FOUNDRY_PROJECT_ENDPOINT=https://<account>.services.ai.azure.com/api/projects/<project>
+TOOLBOX_ENDPOINT=https://<account>.services.ai.azure.com/api/projects/<project>/toolboxes/<toolbox-name>/versions/<version>/mcp?api-version=v1
+AZURE_AI_MODEL_DEPLOYMENT_NAME=gpt-4o
+```
+
+**`main.py`** (key pattern):
+
+```python
+from agent_framework.foundry import FoundryToolbox
+from azure.identity import DefaultAzureCredential
+
+credential = DefaultAzureCredential()
+
+# Toolbox MCP endpoint (platform-injected at runtime via TOOLBOX_ENDPOINT)
+TOOLBOX_ENDPOINT = "https://<account>.services.ai.azure.com/api/projects/<project>/toolboxes/<toolbox-name>/versions/<version>/mcp?api-version=v1"
+
+toolbox = FoundryToolbox(
+    credential,
+    url=TOOLBOX_ENDPOINT,
+)
+
+agent = chat_client.as_agent(
+    name="my-toolbox-agent",
+    instructions="You are a helpful assistant with access to Foundry toolbox tools.",
+    tools=[toolbox],
+)
+ResponsesAgentServerHost().run()
+```
+
+### Copilot SDK
+
+**Hosted integration fragment requirements:** Install the GitHub Copilot SDK for your runtime. The outline depends on application-owned `McpBridge` and `_get_toolbox_token` helpers that aren't implemented here. Follow the existing [toolbox endpoint and authentication contract](https://github.com/microsoft/GitHub-Copilot-for-Azure/blob/main/plugins/azure-skills/skills/microsoft-foundry/foundry-agent/toolbox/toolbox.md) and [hosted-agent integration patterns](https://github.com/microsoft/GitHub-Copilot-for-Azure/blob/main/plugins/azure-skills/skills/microsoft-foundry/foundry-agent/create/references/use-toolbox-in-hosted-agent.md). A maintained full sample isn't yet available.
+
+Use the GitHub Copilot SDK to build a toolbox-powered agent that bridges Copilot's tool invocation to the Foundry toolbox MCP endpoint.
+
+<Note>
+
+The Copilot SDK rejects tool names containing dots. The bridge automatically replaces `.` with `_` in tool names. For example, `myserver.get_info` becomes `myserver_get_info`.
+
+</Note>
+
+**`.env` file**:
+
+```
+GITHUB_TOKEN=<your-github-token>
+TOOLBOX_ENDPOINT=https://<account>.services.ai.azure.com/api/projects/<project>/toolboxes/<toolbox-name>/versions/<version>/mcp?api-version=v1
+```
+
+**`agent.py`** (key pattern — MCP bridge):
+
+```python
+# 1. Open an MCP session to the toolbox endpoint
+bridge = McpBridge(endpoint=TOOLBOX_ENDPOINT, token=_get_toolbox_token())
+await bridge.initialize()
+mcp_tools = await bridge.list_tools()
+
+# 2. Map MCP tool list to Copilot SDK tool definitions
+#    Dots in tool names are replaced with underscores (Copilot SDK requirement)
+copilot_tools = [
+    {
+        "name": t["name"].replace(".", "_"),
+        "description": t.get("description", ""),
+        "parameters": t.get("inputSchema", {}),
+    }
+    for t in mcp_tools
+]
+
+# 3. Wire tool calls back to the MCP session
+async def tool_handler(name: str, arguments: dict) -> str:
+    return await bridge.call_tool(name.replace("_", ".", 1), arguments)
+
+# 4. Run the Copilot SDK agent
+agent = Agent(
+    tools=copilot_tools,
+    tool_handler=tool_handler,
+    token=os.environ["GITHUB_TOKEN"],
+)
+```
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="dotnet" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+### Microsoft Agent Framework
+
+Install `Microsoft.Agents.AI.Foundry.Hosting` and `Azure.Identity`. For a complete project, see the public [Agent Framework hosted-toolbox sample](https://github.com/microsoft/agent-framework/tree/main/dotnet/samples/04-hosting/FoundryHostedAgents/responses/Hosted-Toolbox).
+
+Use `AddFoundryToolboxes` to register one or more toolboxes with the hosted agent. The integration resolves the managed MCP endpoint, authenticates requests, and includes toolbox health in the readiness probe.
+
+**Environment variables**:
+
+```
+AZURE_AI_PROJECT_ENDPOINT=https://<account>.services.ai.azure.com/api/projects/<project>
+AZURE_AI_MODEL_DEPLOYMENT_NAME=gpt-4o
+TOOLBOX_NAME=<toolbox-name>
+```
+
+**`Program.cs`** (key pattern):
+
+```csharp
+using Azure.AI.Projects;
+using Azure.Identity;
+using Microsoft.Agents.AI;
+using Microsoft.Agents.AI.Foundry.Hosting;
+
+string projectEndpoint = Environment.GetEnvironmentVariable("AZURE_AI_PROJECT_ENDPOINT")
+    ?? throw new InvalidOperationException("AZURE_AI_PROJECT_ENDPOINT is not set.");
+string deploymentName = Environment.GetEnvironmentVariable(
+    "AZURE_AI_MODEL_DEPLOYMENT_NAME") ?? "gpt-4o";
+string toolboxName = Environment.GetEnvironmentVariable("TOOLBOX_NAME")
+    ?? throw new InvalidOperationException("TOOLBOX_NAME is not set.");
+
+var credential = new DefaultAzureCredential();
+AIAgent agent = new AIProjectClient(new Uri(projectEndpoint), credential)
+    .AsAIAgent(
+        model: deploymentName,
+        instructions: "You are a helpful assistant with access to toolbox tools.",
+        name: "hosted-toolbox-agent");
+
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddFoundryResponses(agent);
+builder.Services.AddFoundryToolboxes(credential, toolboxName);
+
+var app = builder.Build();
+app.MapFoundryResponses();
+app.Run();
+```
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="rest-api" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+<Note>
+
+Integration samples for this step are available for Python and .NET only.
+
+</Note>
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="javascript" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+<Note>
+
+Integration samples for this step are available for Python and .NET only.
+
+</Note>
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="vscode" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+Use the Microsoft Foundry Toolkit for Visual Studio Code extension to scaffold a Hosted agent sample that's already wired to your toolbox.
+
+1. Select **Foundry Toolkit** in the Activity Bar.
+1. Under **My Resources**, expand **Your project name** > **Tools**.
+1. On the **Toolboxes** tab, locate the toolbox you want to consume, and then select **Scaffold code template**.
+1. In the Command Palette, choose a project folder when prompted.
+1. Open the generated `README.md` and follow the setup, local run, and deployment steps for the scaffold.
+
+The generated project includes the Hosted agent entry point, deployment files, and a `README.md` with the exact setup, run, and deployment steps.
+
+If you want to integrate a toolbox into an existing hosted agent project instead of generating a new sample, use the [toolbox MCP endpoint](#get-the-toolbox-mcp-endpoint) with the Python or .NET patterns in this section.
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="azd" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+### Pass the toolbox endpoint to your agent
+
+After you [create the toolbox](#create-a-toolbox-version), retrieve its MCP endpoint by using `azd ai toolbox show` and pass that endpoint to your agent code as an environment variable. The agent reads the variable at startup and uses it to connect to the toolbox.
+
+1. Get the toolbox endpoint:
+
+   ```bash
+   azd ai toolbox show <toolbox-name> --output json
+   ```
+
+    The `endpoint` field in the response identifies the selected version. Use it to test that version before promotion. For an agent that should follow `default_version`, construct the unversioned consumer endpoint shown in [Get the toolbox MCP endpoint](#get-the-toolbox-mcp-endpoint).
+
+1. Set the endpoint as an environment variable that your agent reads at startup:
+
+   ```bash
+   # .env (or however your runtime loads environment variables)
+   TOOLBOX_ENDPOINT=https://<account>.services.ai.azure.com/api/projects/<project>/toolboxes/<toolbox-name>/mcp?api-version=v1
+   ```
+
+1. In your agent code, read `TOOLBOX_ENDPOINT` and connect to it with an MCP client. Use the Python or .NET integration patterns earlier in this section as a reference for the client setup, and the Entra token (`https://ai.azure.com/.default` scope).
+
+</ZoneContent>
+
+### Handle tool approval requirements
+
+The toolbox returns a `_meta.tool_configuration` object into every tool entry returned by `tools/list`. When a tool has `require_approval` set to `"always"`, the agent runtime must present the pending action to the user and wait for confirmation before invoking the tool. The MCP endpoint doesn't block `tools/call`. Enforcement is entirely the agent runtime's responsibility.
+
+After your toolbox is created and tested, connect it to an agent. The integration pattern depends on the agent type:
+
+- **Hosted agent** (your own code running in Foundry Agent Service): see [Use a toolbox with a hosted agent](/agents/use-toolbox-hosted-agent) for Agent Framework, LangGraph, Visual Studio Code, and Azure Developer CLI integration patterns and runtime approval requirements.
+
+## Configure `require_approval` on a tool
+
+Set `require_approval` when you create a toolbox version. The MCP tool examples in [Create a toolbox version](#create-a-toolbox-version) show both `"always"` and `"never"` values. To set it through the SDK:
+
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="python" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+```python
+from azure.ai.projects.models import MCPToolboxTool
+
+# Set require_approval on an MCP tool
+toolbox_version = project.toolboxes.create_version(
+    name="my-toolbox",
+    tools=[
+        MCPToolboxTool(
+            server_label="myserver",
+            server_url="https://your-mcp-server.example.com",
+            require_approval="always",  # "always" | "never"
+            project_connection_id="my-connection",
+        )
+    ],
+)
+```
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="rest-api" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+```json
+{
+  "tools": [
+    {
+      "type": "mcp",
+      "server_label": "myserver",
+      "server_url": "https://your-mcp-server.example.com",
+      "require_approval": "always",
+      "project_connection_id": "my-connection"
+    }
+  ]
+}
+```
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="dotnet" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+```csharp
+MCPToolboxTool mcpTool = new(serverLabel: "myserver")
+{
+  ServerUri = new Uri("https://your-mcp-server.example.com"),
+  ToolCallApprovalPolicy = new McpToolCallApprovalPolicy(
+    GlobalMcpToolCallApprovalPolicy.AlwaysRequireApproval),
+};
+```
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="javascript" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+```javascript
+const tools = [
+  {
+    type: "mcp",
+    server_label: "myserver",
+    server_url: "https://your-mcp-server.example.com",
+    require_approval: "always",
+    project_connection_id: "my-connection",
+  },
+];
+```
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="vscode" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+Use the Python, .NET, JavaScript, REST API, or Azure Developer CLI tab to configure `require_approval` in your toolbox definition. The Microsoft Foundry Toolkit for Visual Studio Code extension workflow in this article focuses on creating and consuming the toolbox in Visual Studio Code.
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="azd" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+```yaml
+resources:
+  - kind: toolbox
+    name: my-toolbox
+    tools:
+      - type: mcp
+        server_label: myserver
+        server_url: https://your-mcp-server.example.com
+        require_approval: always
+        project_connection_id: my-connection
+```
+
+</ZoneContent>
+
+## Manage toolbox versions
+
+<Note>
+
+You can delete toolbox versions only through the Python SDK, .NET SDK, JavaScript SDK, and REST API. The Azure Developer CLI supports list, get, and publish (default-version promotion) operations.
+
+</Note>
+
+Toolbox versions are immutable snapshots of a toolbox's tool configuration. Every call to the create endpoint produces a new `ToolboxVersionObject`. The parent `ToolboxObject` has a `default_version` field that controls which version the MCP endpoint serves. Creating a new version doesn't automatically promote it - you decide when to update `default_version`. This process lets you stage changes, test a new version independently, and promote it to production on your own schedule.
+
+<Note>
+
+For the Azure Developer CLI, every mutating operation that targets the current default version &mdash; `azd ai toolbox connection add/remove` and `azd ai toolbox skill add/remove` &mdash; creates a **new** toolbox version that carries forward all previously attached connections and skills with the requested change applied. None of these commands automatically change `default_version`; run `azd ai toolbox publish <toolbox-name> <version>` when you're ready to make the new version active. To inspect a pending (non-default) version, use `azd ai toolbox show <name> --version <n>`.
+
+</Note>
+
+| Object | Key fields | Description |
+|--------|-----------|-------------|
+| `ToolboxObject` | `id`, `name`, `default_version` | The toolbox container. `default_version` points to the active version. |
+| `ToolboxVersionObject` | `id`, `name`, `version`, `description`, `created_at`, `tools[]`, `policies` | An immutable snapshot of the toolbox's tool list at a point in time. `policies.rai_config.rai_policy_name` specifies the optional guardrail applied to this version. |
+
+### Create a new version
+
+Each create call produces a new version. If the toolbox doesn't exist yet, the process automatically creates it. When you create the first version of a new toolbox, the default version is `v1` until you **manually** update to another version.
+
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="python" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+```python
+# Create a new toolbox version
+toolbox_version = project.toolboxes.create_version(
+    name="my-toolbox",
+    description="Updated tools v2",
+    tools=[...],
+)
+print(f"Created version: {toolbox_version.version}")
+```
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="dotnet" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+```csharp
+ToolboxVersion toolboxVersion = await toolboxClient.CreateVersionAsync(
+  name: "<toolbox-name>",
+    tools: [tool],
+    description: "Updated tools v2"
+);
+Console.WriteLine($"Created version: {toolboxVersion.Version}");
+```
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="rest-api" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+```
+
+POST {project_endpoint}/toolboxes/<toolbox-name>/versions?api-version=v1
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "description": "Updated tools v2",
+  "tools": [...]
+}
+```
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="javascript" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+```javascript
+const toolboxVersion = await project.toolboxes.createVersion(
+  "<toolbox-name>",
+  [/* tools array */],
+  { description: "Updated tools v2" },
+);
+console.log(`Created version: ${toolboxVersion.version}`);
+```
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="vscode" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+Use the Python, .NET, JavaScript, or REST API tab to create a new toolbox version. The Microsoft Foundry Toolkit for Visual Studio Code extension workflow in this article focuses on creating a toolbox and scaffolding a Hosted agent that consumes it.
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="azd" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+This operation isn't supported with the Azure Developer CLI. To create a toolbox version, use the **Python**, **.NET**, **REST API**, or **JavaScript** tab.
+
+</ZoneContent>
+
+The response is a `ToolboxVersionObject` containing the new `version` identifier.
+
+### List versions
+
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="python" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+```python
+# List all toolbox versions
+versions = list(project.toolboxes.list_toolbox_versions(name="<toolbox-name>"))
+for v in versions:
+    print(f"{v.version} — created {v.created_at}")
+```
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="dotnet" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+```csharp
+List<ToolboxVersion> versions = await toolboxClient
+    .GetToolboxVersionsAsync("<toolbox-name>")
+    .ToListAsync();
+Console.WriteLine($"Found {versions.Count} toolbox version(s).");
+foreach (ToolboxVersion v in versions)
+{
+    Console.WriteLine($"  - {v.Name} ({v.Version})");
+}
+```
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="rest-api" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+```http
+GET {project_endpoint}/toolboxes/<toolbox-name>/versions?api-version=v1
+Authorization: Bearer {token}
+```
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="javascript" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+```javascript
+const versions = project.toolboxes.listVersions("<toolbox-name>");
+for await (const v of versions) {
+  console.log(`${v.version} — created ${v.created_at}`);
+}
+```
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="vscode" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+Use the Python, .NET, JavaScript, or REST API tab to list toolbox versions.
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="azd" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+```bash
+# The current default version is marked with *
+azd ai toolbox version list <toolbox-name>
+```
+
+</ZoneContent>
+
+### Get a specific version
+
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="python" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+```python
+# Get a specific toolbox version
+version_obj = project.toolboxes.get_toolbox_version(
+    toolbox_name="<toolbox-name>",
+    version="<version_id>",
+)
+```
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="dotnet" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+```csharp
+ToolboxVersion versionObj = await toolboxClient.GetToolboxVersionAsync(
+    "<toolbox-name>",
+    "<version_id>"
+);
+Console.WriteLine($"Retrieved toolbox: {versionObj.Name} ({versionObj.Id})");
+```
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="rest-api" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+```http
+GET {project_endpoint}/toolboxes/<toolbox-name>/versions/{version}?api-version=v1
+Authorization: Bearer {token}
+```
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="javascript" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+```javascript
+const versionObj = await project.toolboxes.getVersion(
+  "<toolbox-name>",
+  "<version_id>",
+);
+console.log(`Retrieved version: ${versionObj.version}`);
+```
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="vscode" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+Use the Python, .NET, JavaScript, or REST API tab to get a specific toolbox version.
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="azd" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+```bash
+azd ai toolbox version get <toolbox-name> <version_id>
+```
+
+</ZoneContent>
+
+### Promote a version to default
+
+The MCP endpoint always serves the `default_version`. To switch which version is active, update the toolbox:
+
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="python" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+```python
+# Promote a version to default
+toolbox = project.toolboxes.update(
+    toolbox_name="<toolbox-name>",
+    default_version="<version_id>",
+)
+print(f"Active version: {toolbox.default_version}")
+```
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="dotnet" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+```csharp
+ToolboxRecord record = await toolboxClient.UpdateToolboxAsync(
+    "<toolbox-name>",
+    "<version_id>"
+);
+Console.WriteLine($"Active version: {record.DefaultVersion}");
+```
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="rest-api" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+```http
+PATCH {project_endpoint}/toolboxes/<toolbox-name>?api-version=v1
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "default_version": "<version_id>"
+}
+```
+
+`default_version` can't be empty. Replace it with a new version.
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="javascript" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+```javascript
+const toolbox = await project.toolboxes.update(
+  "<toolbox-name>",
+  "<version_id>",
+);
+console.log(`Active version: ${toolbox.default_version}`);
+```
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="vscode" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+Use the Python, .NET, JavaScript, or REST API tab to promote a toolbox version to default.
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="azd" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+Toolbox versions are immutable. Use `publish` to make any existing version the new default:
+
+```bash
+# Roll back or forward to a specific version
+azd ai toolbox publish <toolbox-name> <version_id> --no-prompt
+```
+
+`publish` is the only path that changes `default_version` from the CLI; mutating verbs (`connection add/remove`, `skill add/remove`) always create a new version without promoting it.
+
+</ZoneContent>
+
+### Delete a version
+
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="python" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+```python
+# Delete a toolbox version
+project.toolboxes.delete_toolbox_version(
+    toolbox_name="<toolbox-name>",
+    version="<version_id>",
+)
+```
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="dotnet" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+```csharp
+await toolboxClient.DeleteToolboxVersionAsync(
+    "<toolbox-name>",
+    "<version_id>"
+);
+```
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="rest-api" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+```http
+DELETE {project_endpoint}/toolboxes/<toolbox-name>/versions/{version}?api-version=v1
+Authorization: Bearer {token}
+```
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="javascript" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+```javascript
+await project.toolboxes.deleteVersion(
+  "<toolbox-name>",
+  "<version_id>",
+);
+```
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="vscode" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+Use the Python, .NET, JavaScript, or REST API tab to delete a toolbox version.
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="azd" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+This operation isn't supported with the Azure Developer CLI. To delete a toolbox version, use the **Python**, **.NET**, **REST API**, or **JavaScript** tab.
+
+</ZoneContent>
+
+## Manage toolboxes with Foundry MCP Server
+
+Foundry MCP Server (preview) exposes toolbox management as MCP tools, so you can retrieve, version, update, and delete toolboxes from an MCP client such as GitHub Copilot in Visual Studio Code. To set up the server, see [Get started with Foundry MCP Server (preview)](/developer-tools-and-integrations/get-started).
+
+| Tool | Access | Description |
+| --- | --- | --- |
+| `toolbox_get` | read | Retrieve a toolbox and its current default version. |
+| `toolbox_version_get` | read | List toolbox versions, or retrieve a specific version. |
+| `toolbox_version_create` | write | Create an immutable toolbox version. If the toolbox doesn't exist, this tool also creates it. |
+| `toolbox_update` | write | Create or update a toolbox, including its default version. |
+| `toolbox_delete` | write | Delete a toolbox. |
+| `toolbox_version_delete` | write | Delete a specific toolbox version. |
+
+The same versioning rules apply as with the SDKs. Creating a version for an existing toolbox doesn't change the default version. To promote a version, call `toolbox_update` with `defaultVersion` set to the new version. Before you delete the current default version, set another version as the default.
+
+Example prompts:
+
+- "Show me the `customer-support-tools` toolbox."
+- "Get version 2 of `customer-support-tools`."
+- "Create a new version of `customer-support-tools`."
+- "Set version 2 of `customer-support-tools` as the default."
+- "Set version 1 of `customer-support-tools` as the default, then delete version 2."
+- "Delete the `old-support-tools` toolbox."
+
+For the full tool reference, see [Available tools and example prompts for Foundry MCP Server](/developer-tools-and-integrations/available-tools).
+
+## Configure tools
+
+Choose the tool type and authentication pattern that match your scenario. Select the tab for your preferred SDK or deployment method.
+
+Each tool's **azd** tab below shows declarative toolbox YAML. To create a toolbox imperatively without an agent project, use the [`azd ai toolbox create --from-file` workflow](#create-a-toolbox-version) and apply the per-tool data shown in the following sections. To deploy a toolbox with a hosted agent, model it as an `azure.ai.toolbox` service in `azure.yaml` and wire the agent to it with `uses:` or `toolboxes:`.
+
+### Multiple tool types
+
+A single toolbox can bundle different tool types. The following example combines Web Search, Azure AI Search, and an MCP server in one toolbox:
+
+```json
+{
+  "description": "Web search, knowledge base search, and custom MCP server",
+  "tools": [
+    {
+      "type": "web_search",
+      "description": "Search the web for current information"
+    },
+    {
+      "type": "azure_ai_search",
+      "name": "my_aisearch",
+      "description": "Search internal product documentation",
+      "azure_ai_search": {
+        "indexes": [
+          {
+            "index_name": "<INDEX_NAME>",
+            "project_connection_id": "<CONNECTION_NAME>"
+          }
+        ]
+      }
+    },
+    {
+      "type": "mcp",
+      "server_label": "myserver",
+      "server_url": "https://your-mcp-server.example.com",
+      "require_approval": "never",
+      "project_connection_id": "my-key-auth-connection"
+    }
+  ]
+}
+```
+
+<Note>
+
+Each tool type (`web_search`, `azure_ai_search`, `code_interpreter`, `file_search`) can appear at most once without a `name` field. To include multiple instances of the same type, set a unique `name` on each instance - see the next example.
+
+</Note>
+
+#### Multi-tool restrictions
+
+You can include at most one instance of each built-in tool type without a `name` field in a toolbox. If you include two instances of the same type without a `name`, the API returns:
+
+```
+400 invalid_payload: Multiple tools without identifiers found...
+```
+
+### Two instances of the same tool type
+
+Use the `name` field to include multiple instances of the same tool type in one toolbox. Each named instance is treated as a separate tool and must have a unique name.
+
+```json
+{
+  "description": "Two Azure AI Search indexes in a single toolbox",
+  "tools": [
+    {
+      "type": "azure_ai_search",
+      "name": "product-search",
+      "description": "Search product catalog and specifications",
+      "azure_ai_search": {
+        "indexes": [
+          {
+            "index_name": "<PRODUCT_INDEX_NAME>",
+            "project_connection_id": "<PRODUCT_CONNECTION_NAME>"
+          }
+        ]
+      }
+    },
+    {
+      "type": "azure_ai_search",
+      "name": "support-search",
+      "description": "Search support tickets and troubleshooting guides",
+      "azure_ai_search": {
+        "indexes": [
+          {
+            "index_name": "<SUPPORT_INDEX_NAME>",
+            "project_connection_id": "<SUPPORT_CONNECTION_NAME>"
+          }
+        ]
+      }
+    }
+  ]
+}
+```
+
+Each tool type has its own toolbox configuration - connection authentication types, per-language SDK snippets, and any toolbox-specific behavior. Those details live in each tool's reference article. See the [Feature support](#feature-support) table for a link to each tool.
+
+For toolbox-specific behavior - such as File Search dynamic vector store (parameter override) or resource-level file uploads for Code Interpreter and File Search - see the linked article for each tool.
+
+## Configure guardrails
+
+Apply a named [guardrail policy](../../../guardrails/guardrails-overview) to a toolbox version to enforce responsible AI content filtering on tool inputs and outputs. The guardrail runs at the toolbox layer, independently of any model-level content filter.
+
+Reference a guardrail by its policy name, which you configure in the Foundry portal under **Guardrails**. Set `policies.rai_config.rai_policy_name` to the name of the policy when creating a toolbox version.
+
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="python" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+```python
+from azure.identity import DefaultAzureCredential
+from azure.ai.projects import AIProjectClient
+from azure.ai.projects.models import WebSearchToolboxTool
+
+endpoint = "https://<your-foundry-account>.services.ai.azure.com/api/projects/<your-project>"
+project = AIProjectClient(endpoint=endpoint, credential=DefaultAzureCredential())
+
+toolbox_version = project.toolboxes.create_version(
+    name="my-toolbox",
+    description="Toolbox with guardrail",
+    tools=[WebSearchToolboxTool()],
+    policies={
+        "rai_config": {
+            "rai_policy_name": "/subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.CognitiveServices/accounts/<account-name>/raiPolicies/<policy-name>"
+        }
+    },
+)
+print(f"Created version: {toolbox_version.version}")
+```
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="rest-api" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+```http
+POST {endpoint}/toolboxes/{toolbox_name}/versions?api-version=v1
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "description": "Toolbox with guardrail",
+  "tools": [{ "type": "web_search" }],
+  "policies": {
+    "rai_config": {
+      "rai_policy_name": "/subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.CognitiveServices/accounts/<account-name>/raiPolicies/<policy-name>"
+    }
+  }
+}
+```
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="dotnet" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+```csharp
+#pragma warning disable AAIP001
+using Azure.AI.Projects;
+using Azure.AI.Projects.Agents;
+using Azure.Identity;
+
+var projectEndpoint = Environment.GetEnvironmentVariable("FOUNDRY_PROJECT_ENDPOINT");
+DefaultAzureCredential credential = new();
+AIProjectClient projectClient = new(endpoint: new Uri(projectEndpoint), tokenProvider: credential);
+AgentToolboxes toolboxClient = projectClient.AgentAdministrationClient.GetAgentToolboxes();
+
+var toolboxVersion = toolboxClient.CreateVersion(
+  name: "my-toolbox",
+    description: "Toolbox with guardrail",
+    tools: [new WebSearchToolboxTool()],
+    policies: new ToolboxPolicies
+    {
+        RaiConfig = new RaiConfig { RaiPolicyName = "/subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.CognitiveServices/accounts/<account-name>/raiPolicies/<policy-name>" }
+    });
+Console.WriteLine($"Created version: {toolboxVersion.Version}");
+```
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="javascript" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+```javascript
+const toolboxVersion = await project.toolboxes.createVersion(
+  "my-toolbox",
+  [{ type: "web_search" }],
+  {
+    description: "Toolbox with guardrail",
+    policies: {
+      rai_config: {
+        rai_policy_name: "/subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.CognitiveServices/accounts/<account-name>/raiPolicies/<policy-name>",
+      },
+    },
+  },
+);
+console.log(`Created version: ${toolboxVersion.version}`);
+```
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="azd" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+```yaml
+name: my-toolbox
+description: Toolbox with guardrail
+policies:
+  rai_config:
+    rai_policy_name: /subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.CognitiveServices/accounts/<account-name>/raiPolicies/<policy-name>
+tools:
+  - type: web_search
+```
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="vscode" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+Guardrail configuration isn't yet available in the VS Code extension. Use the REST API, SDK, or Azure Developer CLI to configure guardrails.
+
+</ZoneContent>
+
+## Attach skills to a toolbox
+
+Attach [skills](/toolboxes/skills) to a toolbox version to make them available to agents through the toolbox MCP endpoint. Each skill reference specifies the skill name and an optional version. Omit `version` to use the skill's `default_version`; pin a `version` string to use an immutable snapshot.
+
+A toolbox version can contain tools, skills, or both. The following examples create a toolbox version that contains a single skill reference. To add skills to a toolbox that already has tools, include the same `tools` you used in [Create a toolbox version](#create-a-toolbox-version) along with the `skills` array.
+
+<Info>
+
+Skills attached to a toolbox must exist in the same Foundry project. Cross-project references aren't supported.
+
+</Info>
+
+When an agent or MCP client connects to the toolbox endpoint, skills are exposed as [MCP Resources](https://modelcontextprotocol.io/docs/concepts/resources). The MCP client or agent framework must support the MCP Resources protocol to auto-discover and load skills. To verify that skills are discoverable, call `resources/list` on the toolbox MCP endpoint and confirm your skill names appear in the response.
+
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="rest-api" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+```http
+POST {endpoint}/toolboxes/{toolbox_name}/versions?api-version=v1
+Authorization: Bearer {token}
+Content-Type: application/json
+Accept: application/json
+Foundry-Features: Skills=V1Preview
+
+{
+  "description": "Toolbox with a skill reference",
+  "tools": [],
+  "skills": [
+    {
+      "type": "skill_reference",
+      "name": "greeting"
+    }
+  ]
+}
+```
+
+To pin a specific version:
+
+```json
+{
+  "skills": [
+    {
+      "type": "skill_reference",
+      "name": "greeting",
+      "version": "v1"
+    }
+  ]
+}
+```
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="python" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+```python
+from azure.ai.projects.models import ToolboxSkillReference
+
+toolbox_version = project.toolboxes.create_version(
+    name="my-toolbox",
+    description="Toolbox with a skill reference",
+    tools=[],
+    skills=[
+        ToolboxSkillReference(name="greeting"),              # use default version
+        # ToolboxSkillReference(name="greeting", version="1"),  # pin to version 1
+    ],
+)
+print(f"Created toolbox version: {toolbox_version.id}")
+```
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="dotnet" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+```csharp
+#pragma warning disable AAIP001
+// Reuse the AgentToolboxes client (toolboxClient) from Step 1.
+ToolboxSkillReference skillRef = new("greeting");
+// To pin a version: new ToolboxSkillReference("greeting") { Version = "1" }
+
+ToolboxVersion toolboxVersion = toolboxClient.CreateVersion(
+    name: "my-toolbox",
+    tools: [],
+    skills: [skillRef],
+    description: "Toolbox with a skill reference"
+);
+Console.WriteLine($"Created toolbox version: {toolboxVersion.Id}");
+```
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="javascript" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+```javascript
+const toolboxVersion = await project.toolboxes.createVersion(
+  "my-toolbox",
+  [],
+  {
+    description: "Toolbox with a skill reference",
+    skills: [
+      { type: "skill_reference", name: "greeting" },
+      // { type: "skill_reference", name: "greeting", version: "v1" },  // pin to v1
+    ],
+  },
+);
+console.log(`Created toolbox version: ${toolboxVersion.id}`);
+```
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="azd" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+The Azure Developer CLI supports skill references in two places: declaratively as a top-level `skills:` block in the `azd ai toolbox create --from-file` YAML, and imperatively with the `azd ai toolbox skill add/list/remove` verbs. Each reference takes a `name` (required) and an optional `version` (string). Omit `version` to follow the skill's `default_version`; pin a version string to lock the toolbox to an immutable snapshot.
+
+**Declare skills when you create the toolbox**
+
+```yaml
+# my-toolbox.yaml
+description: Toolbox with skill references
+connections:
+  - name: my-gh-conn
+skills:
+  - name: greeting              # follows the skill's default version
+  - name: review-checklist
+    version: "2"               # pin to skill version 2
+```
+
+```bash
+azd ai toolbox create my-toolbox --from-file ./my-toolbox.yaml --no-prompt
+```
+
+**Add, list, and remove skills on an existing toolbox**
+
+```bash
+# Add a skill (follows default version)
+azd ai toolbox skill add my-toolbox greeting
+
+# Add a skill pinned to a specific version
+azd ai toolbox skill add my-toolbox review-checklist@2
+
+# Add multiple skills from a file (same shape as the create YAML's skills block)
+azd ai toolbox skill add my-toolbox --from-file ./skills.yaml
+
+# List skill references on the current default version
+azd ai toolbox skill list my-toolbox --output table
+
+# Remove a skill (--force skips the confirmation prompt; multiple names allowed)
+azd ai toolbox skill remove my-toolbox greeting --force
+```
+
+`skill list` shows only the default version. Pinned skills show their version; unpinned skills show `(default)`. To inspect skills on a pending version, run `azd ai toolbox show <toolbox> --version <n> --output json` and read the `skills` array.
+
+<Info>
+
+`skill add` and `skill remove` each create a new toolbox version that carries forward every previously attached connection and skill with the requested change applied. **They don't promote the new version to default**, so changes aren't visible to MCP clients until you run `azd ai toolbox publish <toolbox> <version>`. To change the pinned version of a skill that's already attached &mdash; for example, upgrade `greeting` from v1 to v2 &mdash; run three commands in order: `skill remove`, `publish` the new version, then `skill add <name>@<new-version>` (`skill add` blocks duplicates when checked against the current default version).
+
+</Info>
+
+Skill names must match `^[a-z0-9]([a-z0-9/-]*[a-z0-9])?$` (lowercase letters, digits, and hyphens; max 64 characters; no leading or trailing hyphen). A trailing `@` in `<name>@<version>` (an empty version) is rejected.
+
+</ZoneContent>
+<ZoneContent group="azd__dotnet__javascript__python__rest-api__vscode" value="vscode" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}, {"id": "rest-api", "title": "REST API"}, {"id": "javascript", "title": "JavaScript"}, {"id": "vscode", "title": "VS Code"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["python", "dotnet", "rest-api", "javascript", "vscode", "azd"]} defaultValue="python">
+
+Skill references aren't currently configurable through the VS Code extension. Use the REST API or SDK to configure skills.
+
+</ZoneContent>
+<ZonePivot group="dotnet__python" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}]} defaultValue="python" />
+
+<ZoneContent group="dotnet__python" value="python" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}]} values={["python", "dotnet"]} defaultValue="python">
+
+### Validate skill discovery
+
+After attaching skills to a toolbox version, verify that you can discover them through the toolbox MCP endpoint by using the MCP Python SDK:
+
+```python
+import asyncio
+from azure.identity import DefaultAzureCredential
+from mcp import ClientSession
+from mcp.client.streamable_http import streamablehttp_client
+
+async def list_skills():
+    credential = DefaultAzureCredential()
+    token = credential.get_token("https://ai.azure.com/.default").token
+    toolbox_url = "{endpoint}/toolboxes/my-toolbox/mcp?api-version=v1"
+    headers = {
+        "Authorization": f"Bearer {token}",
+    }
+    async with streamablehttp_client(toolbox_url, headers=headers) as (read, write, _):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            resources = await session.list_resources()
+            for resource in resources.resources:
+                print(f"Skill: {resource.uri} - {resource.name}")
+
+asyncio.run(list_skills())
+```
+
+Skills appear as MCP resources with URIs in the format `skill://{name}`.
+
+</ZoneContent>
+<ZoneContent group="dotnet__python" value="dotnet" options={[{"id": "python", "title": "Python"}, {"id": "dotnet", "title": ".NET"}]} values={["python", "dotnet"]} defaultValue="python">
+
+### Consume skills from an agent (Microsoft Agent Framework, .NET)
+
+In .NET, use `AgentSkillsProviderBuilder().UseMcpSkills(mcpClient)` from the Microsoft Agent Framework SDK to discover MCP-based skills from a toolbox endpoint and inject them as `AIContextProviders` on the agent. The agent then loads each skill's instructions at runtime when the model decides it's relevant. The following `Program.cs` hosts the agent with the Responses hosting layer (`AddFoundryResponses` and `MapFoundryResponses`).
+
+```csharp
+using System.Net.Http.Headers;
+using Azure.AI.Projects;
+using Azure.Core;
+using Azure.Identity;
+using DotNetEnv;
+using Microsoft.Agents.AI;
+using Microsoft.Agents.AI.Foundry.Hosting;
+using Microsoft.Extensions.AI;
+using ModelContextProtocol.Client;
+
+// Load .env file if present (for local development).
+Env.TraversePath().Load();
+
+string projectEndpoint = Environment.GetEnvironmentVariable("FOUNDRY_PROJECT_ENDPOINT")
+    ?? throw new InvalidOperationException("FOUNDRY_PROJECT_ENDPOINT environment variable is not set.");
+
+string deployment = Environment.GetEnvironmentVariable("AZURE_AI_MODEL_DEPLOYMENT_NAME")
+    ?? throw new InvalidOperationException("AZURE_AI_MODEL_DEPLOYMENT_NAME environment variable is not set.");
+
+string toolboxName = Environment.GetEnvironmentVariable("TOOLBOX_NAME")
+    ?? throw new InvalidOperationException("TOOLBOX_NAME environment variable is not set.");
+
+// Build the Foundry Toolbox MCP URL from the project endpoint and toolbox name.
+string toolboxMcpServerUrl = $"{projectEndpoint.TrimEnd('/')}/toolboxes/{toolboxName}/mcp?api-version=v1";
+
+TokenCredential credential = new DefaultAzureCredential();
+
+// HttpClient that attaches a fresh Foundry bearer token to every request.
+// CheckCertificateRevocationList = true satisfies CA5399.
+using var httpClient = new HttpClient(
+    new BearerTokenHandler(credential, "https://ai.azure.com/.default")
+    {
+        CheckCertificateRevocationList = true,
+    });
+
+Console.WriteLine($"Connecting to Foundry Toolbox '{toolboxName}' MCP server...");
+
+// Connect to the Foundry Toolbox MCP endpoint.
+await using var mcpClient = await McpClient.CreateAsync(
+    new HttpClientTransport(
+        new HttpClientTransportOptions
+        {
+            Endpoint = new Uri(toolboxMcpServerUrl),
+            Name = toolboxName,
+            TransportMode = HttpTransportMode.StreamableHttp,
+        },
+        httpClient));
+
+// AgentSkillsProvider implements progressive disclosure over the MCP-discovered skills:
+// names and descriptions are advertised in the system prompt, and the full skill body
+// (and any supplementary resources) is loaded on demand when the model decides it is
+// relevant.
+var skillsProvider = new AgentSkillsProviderBuilder()
+    .UseMcpSkills(mcpClient)
+    .Build();
+
+AIAgent agent = new AIProjectClient(new Uri(projectEndpoint), credential)
+    .AsAIAgent(new ChatClientAgentOptions
+    {
+        Name = "foundry-toolbox-mcp-skills",
+        Description = "Agent that discovers MCP-based skills from a Foundry Toolbox and exposes them via AgentSkillsProvider.",
+        ChatOptions = new ChatOptions
+        {
+            ModelId = deployment,
+            Instructions = "You are a helpful assistant.",
+        },
+        AIContextProviders = [skillsProvider],
+    });
+
+var builder = AgentHost.CreateBuilder(args);
+builder.Services.AddFoundryResponses(agent);
+builder.RegisterProtocol("responses", endpoints => endpoints.MapFoundryResponses());
+
+var app = builder.Build();
+app.Run();
+
+// HttpClientHandler that attaches a fresh Foundry bearer token to every outgoing request.
+internal sealed class BearerTokenHandler(TokenCredential credential, string scope) : HttpClientHandler
+{
+    private readonly TokenRequestContext _tokenContext = new([scope]);
+
+    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        AccessToken token = await credential.GetTokenAsync(this._tokenContext, cancellationToken).ConfigureAwait(false);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token.Token);
+        return await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
+    }
+}
+```
+
+For the complete sample, including project files and deployment steps, see the [Skills in Toolbox sample](https://github.com/microsoft-foundry/foundry-samples/tree/main/samples/csharp/hosted-agents/agent-framework/foundry-toolbox-mcp-skills).
+
+</ZoneContent>
+
+### Reminder
+
+The `reminder_preview` tool enables a hosted agent to schedule *itself* to run again at a future time. When the agent calls this tool, it specifies a delay in minutes. After that delay, Foundry re-invokes the same agent on the same conversation.
+
+## Troubleshoot
+
+| Symptom | Likely cause | Fix |
+| ------- | ------------ | --- |
+| `tools/list` returns zero tools for MCP or A2A tools | Invalid or missing connection credentials for the remote MCP server or A2A agent. The toolbox can't retrieve tool manifests from the remote endpoint without valid auth. | Verify the `project_connection_id` exists in your Foundry project and the credentials are correct. Try connecting to the MCP server directly to test the auth setup. If using managed identity (PMI, agent identity, or MI), verify the correct RBAC role assignments for the caller on the target resource. |
+| `tools/list` returns zero tools for OpenAPI tools | Invalid OpenAPI spec. The toolbox constructs the tool manifest from the spec, which fails if the spec is malformed. | Validate your OpenAPI spec content. Check that it conforms to OpenAPI 3.0 or 3.1 and includes valid `paths`, `operationId` values, and parameter schemas. If using managed identity auth, also verify RBAC role assignments on the target service. |
+| `tools/list` returns fewer tools than expected | The `allowed_tools` filter contains incorrect or misspelled tool names. Tool names are case-sensitive and must follow the [MCP specification for tool names](https://modelcontextprotocol.io/specification/2025-03-26/server/tools) (no whitespace or special characters). | Remove `allowed_tools` temporarily and call `tools/list` to get the full tool list. Use the exact names from the response to set values for `allowed_tools`. |
+| `tools/list` returns zero tools (other tool types) | Toolbox not fully provisioned or tool type unsupported in region. For built-in tools (Web Search, AI Search, Code Interpreter, File Search), tool manifests are constructed server-side and don't require auth — if they return empty, the toolbox version might not be provisioned yet. | Wait 10 seconds and retry. |
+| `400 Multiple tools without identifiers` | Two unnamed tool types in one toolbox | Keep at most one unnamed type; add `server_label` to all MCP tools. |
+| `CONSENT_REQUIRED` (code `-32006`) | OAuth connection requires user consent | Open the consent URL in a browser and complete the OAuth flow, then retry. |
+| `401` on MCP calls | Expired token or wrong scope | Use scope `https://ai.azure.com/.default` and refresh the token. |
+| Tool names not matching | MCP tool names are prefixed with `server_label` | Use `{server_label}.{tool_name}` format (for example, `myserver.get_info`). |
+| `500` on `send_ping()` | Toolbox MCP server doesn't implement the MCP `ping` method. | Use the Microsoft Agent Framework `FoundryToolbox` class, which handles the toolbox connection. Don't call `send_ping()` directly. |
+| `500` on `prompts/list` | The Foundry MCP server doesn't implement `prompts/list`. | Pass `load_prompts=False` (or equivalent) to your MCP client constructor. |
+| `500` with non-streaming `tools/call` | Non-streaming mode (`stream=False`) isn't supported for toolbox MCP endpoints. | Always use `stream=True` when calling toolbox MCP tools. |
+| `500` on `tools/list` | Transient server error | Retry after a few seconds. |
+| Environment variables overwritten at runtime | The platform reserves all environment variables prefixed with `FOUNDRY_` and might silently overwrite user-defined values. | Rename custom environment variables to avoid the `FOUNDRY_` prefix (for example, use `TOOLBOX_MCP_ENDPOINT` instead of `FOUNDRY_TOOLBOX_ENDPOINT`). |
+
+The reminder tool is available only for hosted agents. You can't use the reminder tool with prompt agents.
+
+For full setup instructions, usage examples, and limitations, see [Reminder tool for self-scheduling agents](/toolboxes/reminder-tool).
+
+## Region and model compatibility
+
+Toolbox availability depends on two factors beyond the project region:
+
+- **Region**: Some tool types aren't available in every region that supports the agent service. For example, a region that supports the toolbox endpoint might not support all built-in tool types.
+
+Before deploying a toolbox, verify that your target region supports the tool types you plan to use. For the full compatibility tables, see [Tool support by region and model](/agents/limits-quotas-regions#tool-support-by-region-and-model).
+
+## Related content
+
+- [Connect agents to Model Context Protocol servers](/toolboxes/model-context-protocol)
+- [Available tools and example prompts for Foundry MCP Server](/developer-tools-and-integrations/available-tools)
+- [Add MCP server authentication](/toolboxes/mcp-authentication)
+- [Web search tool](/toolboxes/web-search)
+- [Azure AI Search tool](/toolboxes/ai-search)
+- [Guardrails overview](../../../guardrails/guardrails-overview)
+- [Manage skills](/toolboxes/skills)
+- [Deploy a Hosted agent](/agents/deploy-hosted-agent)
+- [Add a connection to your project](../../../how-to/connections-add)
+- [Configure network isolation for Microsoft Foundry](../../../how-to/configure-private-link)

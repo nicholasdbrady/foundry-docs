@@ -9,27 +9,38 @@ This article contains a quick reference and a detailed description of the quotas
 
 Quotas and limits aren't enforced at the tenant level. Instead, the highest level of quota restrictions is scoped at the Azure subscription level.
 
-## Regional quota allocation
+## Subscription-level quota management
 
-Tokens per minute (TPM) and requests per minute (RPM) limits are defined *per region*, *per subscription*, and *per model or deployment type*.
+<Info>
 
-For example, if the `gpt-4.1` Global Standard model is listed with a quota of *5 million TPM* and *5,000 RPM*, then *each region* where that [model or deployment type is available](../../foundry-models/concepts/models-sold-directly-by-azure) has its own dedicated quota pool of that amount for *each* of your Azure subscriptions. Within a single Azure subscription, it's possible to use a larger quantity of total TPM and RPM quota for a given model and deployment type, as long as you have resources and model deployments spread across multiple regions.
+Subscription-level quota management in Microsoft Foundry started after **May 7, 2026**.
+
+</Info>
+
+Starting with Realtime Translate and Realtime Whisper, and soon all models, Foundry tracks quota for deployments at the subscription level rather than per resource or per region. This approach brings consistency and predictability to how quota is managed across deployments, since all resources and regions in a subscription share the same quota pool.
+
+This change consolidates quota into shared pools:
+
+* **Global Standard**: Deployments of the same model and version share one quota pool across all regions in a subscription.
+* **Data Zone Standard**: Deployments of the same model and version share one quota pool per data zone (for example, US or EU).
+
+To learn more about quota allocation at the subscription level, see [Microsoft Foundry Models quotas and limits](../../foundry-models/quotas-limits).
 
 ## Quota tiers
 
-We are introducing Quota Tiers to improve the Foundry Models experience and reduce friction as workloads scale. Quotas will now increase automatically with usage, helping avoid rate limit errors while also creating a fairer environment for all users. Seven tiers will be made available: Free Tier and Tiers 1 through 6 - with Tier 6 offering the highest quotas. A customer’s initial assigned tier is based on their current usage of that model and their current relationship with Microsoft, such as Enterprise Agreement (EA or MCA-E) status.  
+Microsoft is introducing quota tiers to improve the Foundry Models experience and reduce friction as workloads scale. Quotas now increase automatically with usage, helping avoid rate limit errors while also creating a fairer environment for all users. Seven tiers are available: Free Tier and Tiers 1 through 6 - with Tier 6 offering the highest quotas. A customer's initial assigned tier is based on their current usage of that model and their current relationship with Microsoft, such as Enterprise Agreement (EA or MCA-E) status.  
 
-### What’s changing for me? 
+### What's changing for me? 
 
 Previously, Foundry offered only Default and Enterprise quota levels for pay as you go offer type, with a large gap between each level and a longer process to request increases. With Quota Tiers, all users are assigned a tier with quotas equal to or higher than their previous levels. Any previously approved quota increases are retained and will not be reduced. As usage grows, Foundry automatically increases quotas by moving users to higher tiers, and additional quota can still be requested through the quota form.  
 
 ### How will a customer automatically move from one tier to another, for example what are the tier change criteria?  
 
-Automatic tier upgrades are based primarily on customer consumption trends across Foundry Models over time. If a customer’s usage increases such that their current quota tier is limiting their ability to use Foundry Models the system will automatically upgrade the customer to the next higher tier. A customer’s relationship with Microsoft is also taken into account. Customers with Enterprise relationships (including EA and MCA-E) with Microsoft are assigned higher quota tiers. In addition, Microsoft will also consider a customer's payment history to determine eligibility for automatic upgrades.  
+Automatic tier upgrades primarily depend on customer consumption trends across Foundry Models over time. If a customer's usage increases such that their current quota tier limits their ability to use Foundry Models, the system automatically upgrades the customer to the next higher tier. The system also considers a customer's relationship with Microsoft. Customers with Enterprise relationships (including EA and MCA-E) with Microsoft are assigned higher quota tiers. In addition, Microsoft also considers a customer's payment history to determine eligibility for automatic upgrades.  
 
 ### Can I opt out of auto upgrades? 
 
-Yes, you can opt out of auto upgrades and you'll remain in your current tier regardless of changes in your consumption. We recognize that some of our customers use quota to manage their billing. This isn't the Azure best practice, however, we understand that if your system is configured that way we don’t want to break it. You can learn more about billing management and best practices here: [Cost Management](../../concepts/manage-costs). 
+Yes, you can opt out of auto upgrades to stay in your current tier regardless of changes in your consumption. Some customers use quota to manage their billing. Using quota to manage billing isn't the Azure best practice, but if your system is configured that way, you might not want to break it. To learn more about billing management and best practices, see [Cost Management](../../concepts/manage-costs). 
 
 To opt out, you can set the following flag to `NoAutoUpgrade`: 
 
@@ -114,6 +125,8 @@ You can currently check you quota tier with the [control plane API](https://lear
 
 ### Quota tier reference
 
+All `gpt-chat-latest` versions use the same tier-level TPM limit shown in each tier. Versions `2026-05-05`, `2026-05-28`, and `2026-06-24`<sup>1</sup> use 10 RPM per 1,000 TPM. Version `2026-08-06`<sup>2</sup> uses 1 RPM per 1,000 TPM, so the tables list the versions separately.
+
 <Tabs>
   <Tab title="Tier 1">
 
@@ -166,15 +179,16 @@ You can currently check you quota tier with the [control plane API](https://lear
     | gpt-5.4-mini                   | GlobalStandard    | 1,000       | 1,000,000   |
     | gpt-5.4-nano                   | DataZoneStandard  | 2,000       | 2,000,000   |
     | gpt-5.4-nano                   | GlobalStandard    | 5,000       | 5,000,000   |
-    | gpt-5.5                        | DataZoneStandard  | 0           | 0           |
-    | gpt-5.5                        | GlobalStandard    | 0           | 0           |
+    | gpt-5.5                        | DataZoneStandard  | 333         | 333,000     |
+    | gpt-5.5                        | GlobalStandard    | 1,000       | 1,000,000   |
     | gpt-5.6-luna                   | DataZoneStandard  | 333         | 333,000     |
     | gpt-5.6-luna                   | GlobalStandard    | 1,000       | 1,000,000   |
     | gpt-5.6-sol                    | DataZoneStandard  | 333         | 333,000     |
     | gpt-5.6-sol                    | GlobalStandard    | 1,000       | 1,000,000   |
     | gpt-5.6-terra                  | DataZoneStandard  | 333         | 333,000     |
     | gpt-5.6-terra                  | GlobalStandard    | 1,000       | 1,000,000   |
-    | gpt-chat-latest                | GlobalStandard    | 10,000      | 1,000,000   |
+    | gpt-chat-latest<sup>1</sup>    | GlobalStandard    | 10,000      | 1,000,000   |
+    | gpt-chat-latest<sup>2</sup>    | GlobalStandard    | 1,000       | 1,000,000   |
     | gpt-audio                      | GlobalStandard    | 30000 / 10s | 30,000,000  |
     | gpt-image-1                    | GlobalStandard    | 9           | -           |
     | gpt-image-1-mini               | GlobalStandard    | 12          | -           |
@@ -252,15 +266,16 @@ You can currently check you quota tier with the [control plane API](https://lear
     | gpt-5.4-mini                   | GlobalStandard    | 2,000       | 2,000,000   |
     | gpt-5.4-nano                   | DataZoneStandard  | 6,000       | 6,000,000   |
     | gpt-5.4-nano                   | GlobalStandard    | 16,000      | 16,000,000  |
-    | gpt-5.5                        | DataZoneStandard  | 0           | 0           |
-    | gpt-5.5                        | GlobalStandard    | 0           | 0           |
+    | gpt-5.5                        | DataZoneStandard  | 667         | 667,000     |
+    | gpt-5.5                        | GlobalStandard    | 2,000       | 2,000,000   |
     | gpt-5.6-luna                   | DataZoneStandard  | 667         | 667,000     |
     | gpt-5.6-luna                   | GlobalStandard    | 2,000       | 2,000,000   |
     | gpt-5.6-sol                    | DataZoneStandard  | 667         | 667,000     |
     | gpt-5.6-sol                    | GlobalStandard    | 2,000       | 2,000,000   |
     | gpt-5.6-terra                  | DataZoneStandard  | 667         | 667,000     |
     | gpt-5.6-terra                  | GlobalStandard    | 2,000       | 2,000,000   |
-    | gpt-chat-latest                | GlobalStandard    | 20,000      | 2,000,000   |
+    | gpt-chat-latest<sup>1</sup>    | GlobalStandard    | 20,000      | 2,000,000   |
+    | gpt-chat-latest<sup>2</sup>    | GlobalStandard    | 2,000       | 2,000,000   |
     | gpt-audio                      | GlobalStandard    | 30000 / 10s | 30,000,000  |
     | gpt-image-1                    | GlobalStandard    | 18          | -           |
     | gpt-image-1-mini               | GlobalStandard    | 27          | -           |
@@ -338,15 +353,16 @@ You can currently check you quota tier with the [control plane API](https://lear
     | gpt-5.4-mini                   | GlobalStandard    | 4,000       | 4,000,000   |
     | gpt-5.4-nano                   | DataZoneStandard  | 16,000      | 16,000,000  |
     | gpt-5.4-nano                   | GlobalStandard    | 46,000      | 46,000,000  |
-    | gpt-5.5                        | DataZoneStandard  | 0           | 0           |
-    | gpt-5.5                        | GlobalStandard    | 0           | 0           |
+    | gpt-5.5                        | DataZoneStandard  | 1,333       | 1,333,000   |
+    | gpt-5.5                        | GlobalStandard    | 4,000       | 4,000,000   |
     | gpt-5.6-luna                   | DataZoneStandard  | 1,333       | 1,333,000   |
     | gpt-5.6-luna                   | GlobalStandard    | 4,000       | 4,000,000   |
     | gpt-5.6-sol                    | DataZoneStandard  | 1,333       | 1,333,000   |
     | gpt-5.6-sol                    | GlobalStandard    | 4,000       | 4,000,000   |
     | gpt-5.6-terra                  | DataZoneStandard  | 1,333       | 1,333,000   |
     | gpt-5.6-terra                  | GlobalStandard    | 4,000       | 4,000,000   |
-    | gpt-chat-latest                | GlobalStandard    | 20,000      | 2,000,000   |
+    | gpt-chat-latest<sup>1</sup>    | GlobalStandard    | 30,000      | 3,000,000   |
+    | gpt-chat-latest<sup>2</sup>    | GlobalStandard    | 3,000       | 3,000,000   |
     | gpt-audio                      | GlobalStandard    | 30000 / 10s | 30,000,000  |
     | gpt-image-1                    | GlobalStandard    | 30          | -           |
     | gpt-image-1-mini               | GlobalStandard    | 54          | -           |
@@ -424,15 +440,16 @@ You can currently check you quota tier with the [control plane API](https://lear
     | gpt-5.4-mini                   | GlobalStandard    | 7,000       | 7,000,000   |
     | gpt-5.4-nano                   | DataZoneStandard  | 31,000      | 31,000,000  |
     | gpt-5.4-nano                   | GlobalStandard    | 90,000      | 90,000,000  |
-    | gpt-5.5                        | DataZoneStandard  | 0           | 0           |
-    | gpt-5.5                        | GlobalStandard    | 0           | 0           |
+    | gpt-5.5                        | DataZoneStandard  | 2,333       | 2,333,000   |
+    | gpt-5.5                        | GlobalStandard    | 7,000       | 7,000,000   |
     | gpt-5.6-luna                   | DataZoneStandard  | 2,333       | 2,333,000   |
     | gpt-5.6-luna                   | GlobalStandard    | 7,000       | 7,000,000   |
     | gpt-5.6-sol                    | DataZoneStandard  | 2,333       | 2,333,000   |
     | gpt-5.6-sol                    | GlobalStandard    | 7,000       | 7,000,000   |
     | gpt-5.6-terra                  | DataZoneStandard  | 2,333       | 2,333,000   |
     | gpt-5.6-terra                  | GlobalStandard    | 7,000       | 7,000,000   |
-    | gpt-chat-latest                | GlobalStandard    | 40,000      | 4,000,000   |
+    | gpt-chat-latest<sup>1</sup>    | GlobalStandard    | 40,000      | 4,000,000   |
+    | gpt-chat-latest<sup>2</sup>    | GlobalStandard    | 4,000       | 4,000,000   |
     | gpt-audio                      | GlobalStandard    | 30000 / 10s | 30,000,000  |
     | gpt-image-1                    | GlobalStandard    | 45          | -           |
     | gpt-image-1-mini               | GlobalStandard    | 84          | -           |
@@ -518,7 +535,8 @@ You can currently check you quota tier with the [control plane API](https://lear
     | gpt-5.6-sol                    | GlobalStandard    | 10,000      | 10,000,000  |
     | gpt-5.6-terra                  | DataZoneStandard  | 3,333       | 3,333,000   |
     | gpt-5.6-terra                  | GlobalStandard    | 10,000      | 10,000,000  |
-    | gpt-chat-latest                | GlobalStandard    | 50,000      | 5,000,000   |
+    | gpt-chat-latest<sup>1</sup>    | GlobalStandard    | 50,000      | 5,000,000   |
+    | gpt-chat-latest<sup>2</sup>    | GlobalStandard    | 5,000       | 5,000,000   |
     | gpt-audio                      | GlobalStandard    | 30000 / 10s | 30,000,000  |
     | gpt-image-1                    | GlobalStandard    | 60          | -           |
     | gpt-image-1-mini               | GlobalStandard    | 120         | -           |
@@ -596,7 +614,7 @@ You can currently check you quota tier with the [control plane API](https://lear
     | gpt-5.4-mini                   | GlobalStandard    | 15,000      | 15,000,000  |
     | gpt-5.4-nano                   | DataZoneStandard  | 75,000      | 75,000,000  |
     | gpt-5.4-nano                   | GlobalStandard    | 225,000     | 225,000,000 |
-    | gpt-5.5                        | DataZoneStandard  | 4,000       | 4,000,000   |
+    | gpt-5.5                        | DataZoneStandard  | 5,000       | 5,000,000   |
     | gpt-5.5                        | GlobalStandard    | 15,000      | 15,000,000  |
     | gpt-5.6-luna                   | DataZoneStandard  | 5,000       | 5,000,000   |
     | gpt-5.6-luna                   | GlobalStandard    | 15,000      | 15,000,000  |
@@ -604,7 +622,8 @@ You can currently check you quota tier with the [control plane API](https://lear
     | gpt-5.6-sol                    | GlobalStandard    | 15,000      | 15,000,000  |
     | gpt-5.6-terra                  | DataZoneStandard  | 5,000       | 5,000,000   |
     | gpt-5.6-terra                  | GlobalStandard    | 15,000      | 15,000,000  |
-    | gpt-chat-latest                | GlobalStandard    | 80,000      | 8,000,000   |
+    | gpt-chat-latest<sup>1</sup>    | GlobalStandard    | 80,000      | 8,000,000   |
+    | gpt-chat-latest<sup>2</sup>    | GlobalStandard    | 8,000       | 8,000,000   |
     | gpt-audio                      | GlobalStandard    | 45000 / 10s | 45,000,000  |
     | gpt-image-1                    | GlobalStandard    | 90          | -           |
     | gpt-image-1-mini               | GlobalStandard    | 180         | -           |
@@ -651,7 +670,7 @@ The following section provides you with a quick guide to the default quotas and 
 
 | Limit name | Limit value |
 |--|--|
-| Azure OpenAI resources per region, per Azure subscription | 30. |
+| Azure OpenAI resources per Azure subscription | 30. |
 | Default GPT-image-1 quota limits | 9 requests per minute |
 | Default GPT-image-1-mini quota limits | 12 requests per minute |
 | Default GPT-image-1.5 quota limits | 9 requests per minute |
@@ -701,15 +720,15 @@ Quota limits are subject to change.
 
 | Limit name | Limit value |
 | ---------- | ----------- |
-| Maximum Batch input files - (no expiration) | 500 |
-| Maximum Batch input files - (expiration set) | 10,000 |
+| Maximum batch input files (no expiration) | 500 |
+| Maximum batch input files (expiration set) | 10,000 |
 | Maximum input file size | 200 MB |
 | Maximum input file size - [Bring your own storage (BYOS)](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/how-to/batch-blob-storage) | 1 GB |
 | Maximum requests per file | 100,000 |
 
 <Note>
 
-Batch file limits don't apply to output files (for example, `result.jsonl`, and `error.jsonl`). To remove batch input file limits, use [Batch with Azure Blob Storage](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/how-to/batch-blob-storage).
+Set expiration for input files to increase the per-resource limit and manage stored files. Batch input file limits don't apply to output files, such as `result.jsonl` and `error.jsonl`. To avoid Files API input file limits, use [Batch with Azure Blob Storage](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/how-to/batch-blob-storage).
 
 </Note>
 
@@ -774,7 +793,7 @@ Azure OpenAI usage tiers are designed to provide consistent performance for most
 - This variability is most noticeable for customers with high sustained usage or bursty traffic patterns.
 
 ### Recommended actions if you exceed your usage tier
-If you encounter 429 errors or notice increased latency variability, here’s what you should do:
+If you encounter 429 errors or notice increased latency variability, take the following steps:
 
 - Request a quota increase: visit the Azure portal to request a higher quota for your subscription.
 - Consider upgrading to a premium offer (PTU): for latency-critical or high-volume workloads, upgrade to Provisioned Throughput Units (PTU). PTU provides dedicated resources, guaranteed capacity, and predictable latency—even at scale. This is the best choice for mission-critical applications that require consistent performance.
@@ -808,6 +827,15 @@ Usage tiers apply only to Standard, Data Zone Standard, and Global Standard depl
 | `gpt-4.1` | 30 billion tokens |
 | `gpt-4.1-mini` | 150 billion tokens |
 | `gpt-4.1-nano` | 550 billion tokens |
+| `gpt-5.1` | 86 billion tokens |
+| `gpt-5.1-codex` | 86 billion tokens |
+| `gpt-5.2` | 60 billion tokens |
+| `gpt-5.3-codex` | 60 billion tokens |
+| `gpt-5.4` | 50 billion tokens |
+| `gpt-5.4-mini` | 165 billion tokens |
+| `gpt-5.4-nano` | 605 billion tokens |
+| `gpt-5.5` | 25 billion tokens |
+| `gpt-5.6-sol` | 25 billion tokens |
 
 ### General best practices to remain within rate limits
 

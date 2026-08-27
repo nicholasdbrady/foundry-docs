@@ -36,6 +36,7 @@ The GPT real-time models are available for global deployments.
 - `gpt-realtime-2` (`2026-05-07`)
 - `gpt-realtime-translate` (`2026-05-06`)
 - `gpt-realtime-whisper` (`2026-05-06`)
+- `gpt-live-transcribe` (`2026-07-29`)
 
 For more information, see the [models and versions documentation](https://learn.microsoft.com/azure/ai-foundry/foundry-models/concepts/models-sold-directly-by-azure).
 
@@ -43,7 +44,7 @@ For region-by-region model support, see [Region availability for Foundry Models 
 
 <Note>
 
-Azure OpenAI prices `gpt-realtime-translate` and `gpt-realtime-whisper` models by the hour. For current rates, see the **Audio Models** section on the [Azure OpenAI pricing page](https://azure.microsoft.com/pricing/details/cognitive-services/openai-service/).
+Azure OpenAI prices `gpt-realtime-translate`, `gpt-realtime-whisper`, and `gpt-live-transcribe` models by duration. For current rates, see the **Audio Models** section on the [Azure OpenAI pricing page](https://azure.microsoft.com/pricing/details/cognitive-services/openai-service/).
 
 </Note>
 
@@ -60,7 +61,7 @@ The realtime translation and transcription models are designed for multilingual 
 The WebRTC, WebSocket, and SIP quickstarts in this documentation work with these models. Use the same sample code, and change only your deployment name:
 
 - Set `AZURE_OPENAI_DEPLOYMENT_NAME` to your `gpt-realtime-translate` deployment for real-time translation scenarios.
-- Set `AZURE_OPENAI_DEPLOYMENT_NAME` to your `gpt-realtime-whisper` deployment for real-time transcription scenarios.
+- Set `AZURE_OPENAI_DEPLOYMENT_NAME` to your `gpt-realtime-whisper` or `gpt-live-transcribe` deployment for real-time transcription scenarios.
 
 The Realtime API supports up to 32,000 input tokens and 4,096 output tokens.
 
@@ -114,7 +115,7 @@ The Realtime API has specific rate limits for audio tokens and concurrent sessio
 Often, the first event sent by the caller on a newly established `/realtime` session is a `session.update` payload. This event controls a wide set of input and output behavior, with output and response generation properties then later overridable using the `response.create` event.
 
 The `session.update` event can be used to configure the following aspects of the session:
-- Transcription of user input audio is opted into via the session's `input_audio_transcription` property. Specifying a transcription model (such as `whisper-1`) in this configuration enables the delivery of `conversation.item.audio_transcription.completed` events.
+- Opt in to transcription of user input audio by using the session's `input_audio_transcription` property. If you specify a transcription model deployment name in this configuration, you enable the delivery of `conversation.item.audio_transcription.completed` events.
 - Turn handling is controlled by the `turn_detection` property. This property's type can be set to `none`, `semantic_vad`, or `server_vad` as described in the [voice activity detection (VAD) and the audio buffer](#voice-activity-detection-vad-and-the-audio-buffer) section.
 - Tools can be configured to enable the server to call out to external services or functions to enrich the conversation. Tools are defined as part of the `tools` property in the session configuration.
 
@@ -125,10 +126,10 @@ An example `session.update` that configures several aspects of the session, incl
   "type": "session.update",
   "session": {
     "voice": "alloy",
-    "instructions": "",
+    "instructions": "Your custom system instructions.",
     "input_audio_format": "pcm16",
     "input_audio_transcription": {
-      "model": "whisper-1"
+      "model": "<your-transcription-deployment-name>"
     },
     "turn_detection": {
       "type": "server_vad",
@@ -197,9 +198,9 @@ You can also construct a custom context that the model uses outside of the sessi
           {
             "type": "input_text",
             "text": "The capital/major city of France is Paris."
-          },
-        ],
-      },
+          }
+        ]
+      }
     ]
   }
 }
@@ -454,10 +455,8 @@ Here's the client `response.create` event in JSON format:
   "event_id": null,
   "type": "response.create",
   "response": {
-    "commit": true,
-    "cancel_previous": true,
     "instructions": "Please assist the user.",
-    "modalities": ["text", "audio"],
+    "modalities": ["text", "audio"]
   }
 }
 ```

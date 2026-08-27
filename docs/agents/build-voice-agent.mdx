@@ -277,7 +277,7 @@ Voice agents have native access to the Foundry ecosystem. The agent container au
 - **Realtime models.** GPT-4o Realtime and GPT Realtime for speech-to-speech pipelines.
 - **Text models.** GPT-4o, GPT-4.1, and the GPT-5 series for cascaded pipelines.
 - **Speech models.** Azure AI Speech for STT and TTS.
-- **Tools.** Access Foundry-managed tools (Web Search, File Search, Code Interpreter, Azure AI Search, custom MCP servers, A2A) through the Toolbox MCP endpoint in your Foundry project. See [Curate intent-based toolbox in Foundry](/agents/toolbox).
+- **Tools.** Access Foundry-managed tools (Web Search, File Search, Code Interpreter, Azure AI Search, custom MCP servers, A2A) through the Toolbox MCP endpoint in your Foundry project. See [Curate intent-based toolbox in Foundry](/toolboxes/toolbox).
 
 ## Observability
 
@@ -304,7 +304,7 @@ Traces and metrics appear in the linked Application Insights resource alongside 
 | Maximum WebSocket frame size | 1 MB | Enforced by the platform proxy (close code `1009`). |
 | Maximum connection duration | ~30 minutes | The platform sends close code `1001` on shutdown drain. Reconnect with the same `agent_session_id`. |
 | Sandbox resources | Up to 2 vCPU / 4 GiB | At least 1 vCPU / 2 GiB recommended for voice. |
-| Session idle timeout | 15 minutes | Compute is deprovisioned; session state is persisted. |
+| Session idle timeout | 5-60 minutes (15-minute default) | Compute is deprovisioned; session state is persisted. |
 
 The platform doesn't replay missed frames. Your container is responsible for any application-level resume protocol.
 
