@@ -5,7 +5,7 @@ description: "Learn how to use prompt engineering to optimize your work with Azu
 
 These techniques aren't recommended for reasoning models like gpt-5 and o-series models.
 
-Prompt construction can be difficult. In practice, the prompt acts to help the model complete the desired task, but it's more of an art than a science, often requiring experience and intuition to craft a successful prompt. The goal of this article is to help get you started with this learning process. This article attempts to capture general concepts and patterns that apply to all GPT models. However, it's important to understand that each model behaves differently, so the learnings might not apply equally to all models.
+Prompt engineering helps a model complete a task reliably, but effective prompts vary by model and scenario. This article introduces general patterns to test and adapt for the model you use.
 
 <Note>
 
@@ -17,20 +17,18 @@ For current API guidance and examples, see [Responses API](/foundry-models/respo
 
 This section covers the basic concepts and elements of GPT prompts.
 
-Text prompts are how users interact with GPT models. As with all generative language models, GPT models attempt to produce the next series of words that are most likely to follow from the previous text. It's as if we're saying *What is the first thing that comes to your mind when I say `<prompt>`?* The examples below demonstrate this behavior. Given the first words of famous content, the model is able to accurately continue the text.
+Text prompts provide the context from which GPT models predict the next likely sequence of words. The following examples show how a model continues familiar text.
 
 | Prompt | Completion |
 | ------ | ---------- |
 | Four score and seven years ago our | fathers brought forth on this continent, a new nation, conceived in Liberty, and dedicated to the proposition that all men are created equal. […] |
 | "Call me Ishmael."                 | "Some years ago—never mind how long precisely—having little or no money in my purse, and nothing particular to interest me on shore, I thought I would sail about a little and see the watery part of the world." […] |
 
-As you develop more complex prompts, it's helpful to keep this fundamental behavior in mind. Regardless of the prompt that is provided, the model is simply responding with what it determines is most likely (given its training data and training targets). If you ask a question in your prompt, the model isn't following a separate “Q&A” code path, but rather it appears to answer the question because an answer is the most likely sort of response for the given question as input.
+Keep this predictive behavior in mind when designing complex prompts. A model answers a question because an answer is the likely continuation of that input, not because questions follow a separate processing path.
 
 ### Prompt components
 
-When you use the Completion API and there's no differentiation between different parts of the prompt, it can still be useful for learning and discussion to identify the underlying prompt components. With the [Chat Completion API](/foundry-models/chatgpt), distinct sections of the prompt are sent to the API as an array of dictionaries with associated roles: system, user, and assistant. This guidance focuses more generally on how to think about prompt construction rather than providing prescriptive guidance that is specific to one API over another.
-
-It's also important to understand that while there could be other valid ways to dissect prompts, the goal of this breakdown is to provide a relatively simple way to think about prompt construction. With the Completion API, all the components are optional, but at least one must be present and most prompts include more than one component. There can be some grey area between components as well. The order presented in the following section roughly corresponds to how commonly each component is used, from most to least.
+Prompts contain conceptual components even when an API doesn't distinguish them. The [Chat Completion API](/foundry-models/chatgpt) represents system, user, and assistant content as separate messages. The following breakdown provides a simple, API-independent way to design prompts; most prompts combine several components.
 
 #### Instructions
 
@@ -65,7 +63,7 @@ GPT models can also handle primary content that is structured. In the following 
 
 ### Examples
 
-Successful prompts often rely on the practice of "one-shot" or "few-shot" learning. This practice involves including one or more examples of the desired behavior of the model, typically by including input and output pairs. This approach isn't learning in the sense that the model is permanently changed, but rather that the examples better condition the model to respond as desired for only the current inference. The use of prompts with no examples is sometimes referred to as "zero-shot" learning. Note that with the Chat Completion API, you typically add few-shot learning examples to the `messages` array in the form of example user and assistant interactions after the initial system message.
+One-shot and few-shot prompts include one or more input-output examples to demonstrate the desired behavior for the current inference; they don't permanently change the model. A prompt without examples is zero-shot. With the Chat Completion API, add examples to the `messages` array as user and assistant interactions after the initial system message.
 
 | Learning Type|  Prompt| Completion|
 |------------------------------------- |-------|-----|
@@ -119,17 +117,9 @@ When using the Chat Completions API, a series of messages between the User and A
 
 The table above describes the basic prompt structure, but for a detailed explanation of the exact prompt format you'll need to refer to the [Chat Completion guide](/foundry-models/chatgpt). 
 
-## Non chat scenarios
-
-While the Chat Completion API is optimized to work with multi-turn conversations, it also can be used for non chat scenarios. For example, for a sentiment analysis scenario, you might use the following prompt:
-
-| System message |User     | Assistant  |
-|----------------|---------|------------|
-|You're an assistant designed to analyze sentiment from speech data. Users will paste in a string of text and you'll respond with an assessment of the response of the speaker. Rate on a scale of 1-10 (10 being highest). Explain why this rating was given.|hi thank you for calling contoso pharmacy who am i speaking with today i understand your frustration mary um can you tell me what exactly you're trying to accomplish OK uh certainly happy to check that for you one moment please i see here that you were on a generic form of lipitor is that right OK uh so i see that your doctor stopped prescribing these drugs in twenty twenty one actually OK uh yeah i'd be happy to check that for you uh because sometimes there's a gap in the system and it just doesn't get reported so let me take a look here just a moment so i'm seeing here that your doctor had these drugs prescribed to you from twenty twelve through twenty twenty one OK um yeah according to the latest records uh provided by doctor's office you're now on a different drug metformin would you like us to go ahead and fill that prescription for you for pick up a bit of form in five hundred milligrams uh you're very welcome mary please let us know if there's anything else we can do for you today.| Sentiment rating: 8<br />The speaker in this text seems to be polite, helpful, and patient while addressing the concerns of the customer. They take the time to check the information, provide clear explanations, and offer assistance. However, the rating isn't a 10 because there's still a hint of uncertainty in some parts of the conversation, which might not convey complete confidence to the customer.|
-
 ## Start with clear instructions
 
-The sequence information appears in the prompt matters. This is because GPT style models are built in a certain way that defines how they process the input. Our research suggests that telling the model the task you want it to do at the beginning of the prompt, before sharing additional contextual information or examples, can help produce higher-quality outputs.
+The order of information in a prompt matters. Put the task before supporting context or examples to help the model produce higher-quality output.
 
 <Note>
 
@@ -187,19 +177,15 @@ One simple way to use an affordance is to stop generation once the affordance ca
 |----------------|---------|------------|
 | You're an AI assistant that helps people find information. | You'll read a paragraph, extract factual claims, and then use search engine results to fact-check them<br />---<br />PARAGRAPH<br />John Smith is married to Lucy Smith. They have five kids, and he works as a software engineer at Microsoft. What search queries should I do to fact-check this?<br />---<br />FACTUAL CLAIMS<br />- John Smith is married to Lucy Smith<br />- John and Lucy have five kids<br />- John works as a software engineer at Microsoft<br />---<br />Here are various search queries issued to research the claims above:<br />SEARCH QUERIES<br />- John Smith married to Lucy Smith<br />- John Smith number of children<br />- John Smith software engineer Microsoft<br />---<br />Here are snippets of the search results:<br />SNIPPETS:<br />[1] … John Smith’s wedding was on September 25, 2012 …<br />[2] … John Smith was accompanied by his wife Lucy to a party<br />[3]John was accompanied to the soccer game by his two daughters and three sons<br />[4] … After spending 10 years at Microsoft, Smith founded his own startup, Tailspin Toys<br />[5] John M is the town smith, and he married Fiona. They have a daughter named Lucy<br />---<br />Given the snippets, fact check each of the factual claims above:| - John Smith is married to Lucy Smith: Confirmed. Snippet [1] and [2] both mention John Smith's wife as Lucy.<br /><br />- John and Lucy have five kids: Confirmed. Snippet [3] mentions that John was accompanied by his two daughters and three sons.<br /><br />- John works as a software engineer at Microsoft: Partially confirmed. Snippet [4] mentions that John spent 10 years at Microsoft, but it doesn't explicitly state that he currently works there. Further research might be needed to confirm his current employment status.|
 
-## Chain of thought prompting
+## Request intermediate results
 
 <Info>
 
-This technique is only applicable non-reasoning models. Attempting to extract model reasoning through methods other than the reasoning summary parameter aren't supported, may violate the Acceptable Use Policy, and may result in throttling or suspension when detected.
+This technique applies only to non-reasoning models. Don't attempt to extract hidden model reasoning. Use the reasoning summary parameter where supported; other methods may violate the Acceptable Use Policy and result in throttling or suspension.
 
 </Info>
 
-This is a variation on the **break the task down** technique. Instead of splitting a task into smaller steps, in this approach, the model response is instructed to proceed step-by-step and present all the steps involved. Doing so reduces the possibility of inaccuracy of outcomes and makes assessing the model response easier.
-
-| System message |User     | Assistant  |
-|----------------|---------|------------|
-|You're an AI assistant that helps people find information.|Who was the most decorated (maximum medals) individual athlete in the Olympic games that were held at Sydney? Take a step-by-step approach in your response, cite sources and give reasoning before sharing final answer in the below format: ANSWER is: `<name>`|Step 1: Determine the year of the Sydney Olympic games. The Sydney Olympic games were held in the year 2000.<br /><br />Step 2: Find a list of individual athletes who won multiple medals in the 2000 Sydney Olympics.<br /><br />According to the official website of the Olympic Games, there were several individual athletes who won multiple medals in the 2000 Sydney Olympics. Some of the notable names include:<br />• Ian Thorpe (Australia) - 3 gold, 2 silver, 0 bronze<br />• Pieter van den Hoogenband (Netherlands) - 2 gold, 0 silver, 2 bronze<br />• Lenny Krayzelburg (USA) - 3 gold, 0 silver, 0 bronze<br />• Inge de Bruijn (Netherlands) - 3 gold, 1 silver, 0 bronze<br /><br />Step 3: Determine the athlete with the most medals. After reviewing the list of individual athletes who won multiple medals in the 2000 Sydney Olympics, we can see that the athlete with the most medals is Ian Thorpe from Australia, who won a total of 5 medals (3 gold and 2 silver).<br /><br />Therefore, the ANSWER is: Ian Thorpe.|
+For non-reasoning models, requesting intermediate results can make an output easier to verify. Ask for concise, task-relevant evidence or calculations rather than hidden reasoning. For complex tasks, prefer the explicit subtasks described in [Break the task down](#break-the-task-down).
 
 ## Specifying the output structure
 
@@ -209,11 +195,7 @@ If you instruct the model to cite the source material when it makes statements, 
 
 Similarly, if you ask the model to extract factual statements from a paragraph, it might extract compound statements such as ‘X is doing Y AND Z’ (which can be harder to verify). This can be avoided by specifying an output structure such as (entity1, relationship, entity2).
 
-This example shows the use of citations and directing the model response to fit a defined structure.
-
-| System message | User     | Assistant  |
-|----------------|---------|-------------|
-|You're an AI assistant that helps people find information | List down the different behaviors exhibited by the Customer Support agent in the following conversation.<br />---<br />hi thank you for calling contoso pharmacy who am i speaking with today i understand your frustration mary um can you tell me what exactly you're trying to accomplish OK uh certainly happy to check that for you one moment please i see here that you were on a generic form of lipitor is that right OK uh so i see that your doctor stopped prescribing these drugs in twenty twenty one actually OK uh yeah i'd be happy to check that for you uh because sometimes there's a gap in the system and it just doesn't get reported so let me take a look here just a moment so i'm seeing here that your doctor had these drugs prescribed to you from twenty twelve through twenty twenty one OK um yeah according to the latest records uh provided by doctor's office you're now on a different drug metformin would you like us to go ahead and fill that prescription for you for pick up a bit of form in five hundred milligrams uh you're very welcome mary please let us know if there's anything else we can do for you today.<br />---<br />How was the response of the Customer Support agent?<br /> Classify and list down their various behaviors and cite the reason behind the classification, using the format BEHAVIOR("reason")| 1. Polite Greeting BEHAVIOR("Agent starts the conversation with a polite greeting and asks for the caller's name")<br />2. Empathetic BEHAVIOR("Agent acknowledges Mary's frustration and tries to understand her concern")<br />3. Attentive BEHAVIOR("Agent listens to the customer's problem and asks for more details")<br />4.	Proactive BEHAVIOR("Agent offers to check the issue for the customer")<br />5. Informative BEHAVIOR("Agent provides the relevant information about the customer's prescription history")<br />6. Thorough BEHAVIOR("Agent checks for any possible gaps in the system and provides a complete response")<br />7. Confirmatory BEHAVIOR("Agent confirms the current medication with the customer")<br />8. Solution-oriented BEHAVIOR("Agent offers to fill the new prescription for the customer")<br />9.	Courteous BEHAVIOR("Agent thanks the customer and offers further assistance if needed")|
+The following example combines a defined JSON structure with an explanation for each classification.
 
 | System message | User     | Assistant  |
 |----------------|---------|-------------|
@@ -237,11 +219,7 @@ Here's an example where the system is provided a blog describing the [launch of 
 
 ## Best practices
 
-- **Be specific**. Leave as little to interpretation as possible. Restrict the operational space.
-- **Be descriptive**. Use analogies.
-- **Double down**. Sometimes you might need to repeat yourself to the model. Give instructions before and after your primary content, use an instruction and a cue, and so on. 
-- **Order matters**. The order in which you present information to the model might impact the output. Whether you put instructions before your content (“summarize the following…”) or after (“summarize the above…”) can make a difference in output. Even the order of few-shot examples can matter. This difference is referred to as recency bias.
-- **Give the model an “out”**. It can sometimes be helpful to give the model an alternative path if it's unable to complete the assigned task. For example, when asking a question over a piece of text, you might include something like "respond with 'not found' if the answer isn't present." This addition can help the model avoid generating false responses.
+Be specific about the task, constraints, and desired output. Order matters because instructions and examples can be affected by recency bias; test whether repeating critical instructions at the end improves results. Provide an explicit fallback such as `not found` when the source material doesn't contain an answer.
 
 ## Space efficiency
 
@@ -251,7 +229,4 @@ While the input size increases with each new generation of GPT models, you can s
   <img src="/images/space-efficiency.png" alt="Screenshot of a string of text with highlighted colors delineating token boundaries." />
 </Frame>
 
-Given this limited space, it's important to use it as efficiently as possible.
-
-- Tables – As shown in the examples in the previous section, GPT models can easily understand tabular formatted data. This format can be a space-efficient way to include data, rather than preceding every field with a name (such as with JSON). 
-- White space – Consecutive white spaces are treated as separate tokens, which can waste space. Spaces preceding a word, on the other hand, are typically treated as part of the same token as the word. Carefully watch your usage of white space and don't use punctuation when a space alone will do.
+Use context space efficiently. Tables can represent repeated fields more compactly than formats such as JSON. Avoid consecutive whitespace and unnecessary punctuation because they consume tokens without adding information.
