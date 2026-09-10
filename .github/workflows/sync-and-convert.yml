@@ -21,16 +21,16 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0
-          token: ${{ secrets.AZURE_AI_DOCS_PR_TOKEN }}
 
-      - name: Require pull-request automation token
+      - name: Validate pull-request automation token
         env:
-          SYNC_TOKEN: ${{ secrets.AZURE_AI_DOCS_PR_TOKEN }}
+          GH_TOKEN: ${{ secrets.AZURE_AI_DOCS_PR_TOKEN }}
         run: |
-          if [[ -z "$SYNC_TOKEN" ]]; then
+          if [[ -z "$GH_TOKEN" ]]; then
             echo "::error::AZURE_AI_DOCS_PR_TOKEN is required so the sync PR can trigger required checks."
             exit 1
           fi
+          gh api user --jq .login >/dev/null
 
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
