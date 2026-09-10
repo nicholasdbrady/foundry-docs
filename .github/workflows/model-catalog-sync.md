@@ -93,6 +93,7 @@ safe-outputs:
     expires: 7d
     draft: false
     max-patch-size: 10240
+  github-token: ${{ secrets.AZURE_AI_DOCS_PR_TOKEN }}
   report-incomplete:
   noop:
     report-as-issue: false
