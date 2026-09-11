@@ -1,0 +1,66 @@
+---
+title: "Evaluation datasets in Microsoft Foundry"
+description: "Learn how evaluation datasets are structured, how to prepare them, and how Microsoft Foundry uses them in evaluation runs."
+---
+
+An evaluation dataset is a reusable collection of test cases for measuring
+model or agent quality. Evaluation datasets typically use JSONL, with one JSON
+object per line. This article explains when to use a reusable dataset, how
+evaluation data is organized, and the available ways to prepare it.
+
+## Do you need an evaluation dataset?
+
+Create a dataset when you want a stable test set that you can rerun against
+different model, prompt, or agent versions. Reusable datasets work well for
+regression testing, CI/CD quality gates, and comparisons across evaluation
+runs.
+
+You don't always need a dataset. If your Foundry agent already has
+responses or your application emits traces to Application Insights, you can
+evaluate that data where it exists. See
+[Evaluate interactions by response ID](/evaluation/cloud-evaluation-deployed-interactions#evaluate-interactions-by-response-id)
+and [Evaluate traces](/evaluation/cloud-evaluation-deployed-interactions#evaluate-traces-preview).
+
+## How Foundry uses evaluation data
+
+In a JSONL dataset, the `messages` field represents model or agent
+interactions. Each message identifies a role and its content.
+
+If your dataset contains completed responses, Foundry evaluates those
+responses directly. If you run the evaluation against a model or agent,
+Foundry generates a new response for each input and evaluates that response.
+Any response already stored in the dataset is ignored.
+
+For example, consider a user who can't sign in. The agent asks which error
+appears, the user says their password is rejected, and the agent recommends a
+password reset. Turn-level evaluation scores an individual agent response,
+such as the password-reset guidance, by using preceding messages as context.
+Conversation-level evaluation scores the complete interaction.
+
+The `evaluation_level` setting on the run controls the scoring granularity.
+The dataset and selected evaluators must support that level. For details, see
+[Choose an evaluation level](/evaluation/cloud-evaluation-conversations#choose-an-evaluation-level).
+For standard columns and examples, see
+[Evaluation dataset schema](/evaluation/evaluation-dataset-schema).
+
+## Choose how to prepare evaluation data
+
+| Situation | Recommended approach |
+|---|---|
+| **You have curated evaluation data** | Upload it as a versioned Foundry dataset or provide a small dataset inline. See [Prepare input data](/evaluation/cloud-evaluation-datasets#prepare-input-data). |
+| **You want to review and reuse generated test cases before running an evaluation** | [Generate a synthetic evaluation dataset](/evaluation/evaluation-dataset-synthetic) from an agent definition, inline prompt, or reference file. |
+| **You want a reusable dataset based on production traffic** | [Convert traces into a dataset](/observability/traces-to-dataset). |
+| **You want to test simulated multi-turn scenarios** | [Generate a simulation seed dataset](/evaluation/evaluation-dataset-synthetic#generate-a-simulation-seed-dataset-sdk) or author test case scenarios as JSONL, and then [simulate conversations](/evaluation/cloud-evaluation-simulate-conversations). |
+| **You have Foundry response IDs** | [Evaluate interactions by response ID](/evaluation/cloud-evaluation-deployed-interactions#evaluate-interactions-by-response-id) without creating a dataset. |
+| **You want to evaluate existing Application Insights traces** | [Evaluate traces](/evaluation/cloud-evaluation-deployed-interactions#evaluate-traces-preview) without creating a dataset. |
+| **You want to generate queries, invoke a target, and evaluate its responses in one workflow** | [Generate synthetic queries](/evaluation/cloud-evaluation-synthetic-data#generate-synthetic-queries) during the evaluation run. Foundry saves the generated queries as a dataset for reuse. |
+
+## Next step
+
+<Card title="Review the evaluation dataset schema" icon="arrow-right" href="evaluation-dataset-schema.md" />
+## Related content
+
+- [Run evaluations from the SDK](/evaluation/cloud-evaluation)
+- [Generate a synthetic evaluation dataset](/evaluation/evaluation-dataset-synthetic)
+- [Convert agent traces into evaluation datasets](/observability/traces-to-dataset)
+- [Evaluate your agent](/evaluation/evaluate-agent)
