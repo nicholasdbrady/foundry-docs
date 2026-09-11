@@ -18,19 +18,29 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
+      - name: Create repository automation token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.FOUNDRY_DEVX_APP_CLIENT_ID }}
+          private-key: ${{ secrets.FOUNDRY_DEVX_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: foundry-docs
+
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
 
-      - name: Validate pull-request automation token
+      - name: Validate private upstream token
         env:
           GH_TOKEN: ${{ secrets.AZURE_AI_DOCS_PR_TOKEN }}
         run: |
           if [[ -z "$GH_TOKEN" ]]; then
-            echo "::error::AZURE_AI_DOCS_PR_TOKEN is required so the sync PR can trigger required checks."
+            echo "::error::AZURE_AI_DOCS_PR_TOKEN is required to read MicrosoftDocs/azure-ai-docs-pr."
             exit 1
           fi
-          gh api user --jq .login >/dev/null
+          gh api repos/MicrosoftDocs/azure-ai-docs-pr --jq .full_name >/dev/null
 
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
@@ -43,11 +53,13 @@ jobs:
       - name: Extract manifest
         run: python scripts/extract_manifest.py
         env:
+          FOUNDRY_DOCS_UPSTREAM_REPO: azure-ai-docs-pr
           GH_TOKEN: ${{ secrets.AZURE_AI_DOCS_PR_TOKEN }}
 
       - name: Download docs
         run: python scripts/download_docs.py
         env:
+          FOUNDRY_DOCS_UPSTREAM_REPO: azure-ai-docs-pr
           GH_TOKEN: ${{ secrets.AZURE_AI_DOCS_PR_TOKEN }}
 
       - name: Download code samples
@@ -129,7 +141,7 @@ jobs:
       - name: Commit changes and open pull request
         if: steps.changes.outputs.changed == 'true'
         env:
-          GH_TOKEN: ${{ secrets.AZURE_AI_DOCS_PR_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           set -euo pipefail
           branch="automation/upstream-docs-sync"
@@ -140,7 +152,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git commit -m "docs: sync and convert from upstream
 
-          Automated daily sync from MicrosoftDocs/azure-ai-docs
+          Automated daily sync from MicrosoftDocs/azure-ai-docs-pr
 
           Co-authored-by: github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
           git push --force-with-lease origin "HEAD:$branch"
@@ -157,7 +169,7 @@ jobs:
               --base main \
               --head "$branch" \
               --title "docs: sync and convert from upstream" \
-              --body "Automated daily sync from \`MicrosoftDocs/azure-ai-docs\`. Required repository checks must pass before merge.")
+              --body "Automated daily sync from \`MicrosoftDocs/azure-ai-docs-pr\`. Required repository checks must pass before merge.")
             pr_number="${pr_url##*/}"
           fi
 

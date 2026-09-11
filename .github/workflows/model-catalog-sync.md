@@ -86,6 +86,11 @@ steps:
       fi
 
 safe-outputs:
+  github-app:
+    client-id: ${{ secrets.FOUNDRY_DEVX_APP_CLIENT_ID }}
+    private-key: ${{ secrets.FOUNDRY_DEVX_APP_PRIVATE_KEY }}
+    owner: ${{ github.repository_owner }}
+    repositories: [foundry-docs]
   create-pull-request:
     title-prefix: "[model-catalog] "
     labels: [automation, model-catalog]
@@ -93,7 +98,6 @@ safe-outputs:
     expires: 7d
     draft: false
     max-patch-size: 10240
-  github-token: ${{ secrets.AZURE_AI_DOCS_PR_TOKEN }}
   report-incomplete:
   noop:
     report-as-issue: false
