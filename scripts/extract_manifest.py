@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Extract manifest from Microsoft Foundry TOC files.
 
-Parses the root toc.yml and all sub-TOC YAML files from MicrosoftDocs/azure-ai-docs,
+Parses the root toc.yml and all sub-TOC YAML files from MicrosoftDocs/azure-ai-docs-pr,
 resolves paths, deduplicates, and outputs manifest.json.
 """
 
@@ -19,7 +19,7 @@ from urllib.request import urlopen
 import yaml
 
 REPO_OWNER = "MicrosoftDocs"
-REPO_NAME = os.environ.get("FOUNDRY_DOCS_UPSTREAM_REPO", "azure-ai-docs")
+REPO_NAME = os.environ.get("FOUNDRY_DOCS_UPSTREAM_REPO", "azure-ai-docs-pr")
 ROOT_TOC_PATH = "articles/foundry/toc.yml"
 FETCH_TIMEOUT_SECONDS = 30
 MAX_SCAN_WORKERS = int(os.environ.get("FOUNDRY_MANIFEST_SCAN_WORKERS", "8"))
