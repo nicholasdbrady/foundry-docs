@@ -41,9 +41,9 @@ You get this isolation by default. The following sections show the default path,
 
 Invoke the agent as the signed-in identity. The platform creates a session scoped to that identity and returns its `agent_session_id`.
 
-<ZonePivot group="azd__python__rest" options={[{"id": "azd", "title": "Azure Developer CLI"}, {"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}]} defaultValue="azd" />
+<ZonePivot group="azd__javascript__python__rest" options={[{"id": "azd", "title": "Azure Developer CLI"}, {"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}]} defaultValue="azd" />
 
-<ZoneContent group="azd__python__rest" value="azd" options={[{"id": "azd", "title": "Azure Developer CLI"}, {"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}]} values={["azd", "rest", "python"]} defaultValue="azd">
+<ZoneContent group="azd__javascript__python__rest" value="azd" options={[{"id": "azd", "title": "Azure Developer CLI"}, {"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}]} values={["azd", "rest", "python", "javascript"]} defaultValue="azd">
 
 ```bash
 azd ai agent invoke "Summarize the latest support tickets"
@@ -52,7 +52,7 @@ azd ai agent invoke "Summarize the latest support tickets"
 The session belongs to the identity from `azd auth login`. A different signed-in user that runs the same command gets a separate, private session.
 
 </ZoneContent>
-<ZoneContent group="azd__python__rest" value="rest" options={[{"id": "azd", "title": "Azure Developer CLI"}, {"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}]} values={["azd", "rest", "python"]} defaultValue="azd">
+<ZoneContent group="azd__javascript__python__rest" value="rest" options={[{"id": "azd", "title": "Azure Developer CLI"}, {"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}]} values={["azd", "rest", "python", "javascript"]} defaultValue="azd">
 
 Set up the shared variables that the REST examples use:
 
@@ -74,7 +74,7 @@ az rest --method POST \
 The Microsoft Entra token on the request identifies the caller. The response payload includes the `agent_session_id` that the platform created and scoped to that identity.
 
 </ZoneContent>
-<ZoneContent group="azd__python__rest" value="python" options={[{"id": "azd", "title": "Azure Developer CLI"}, {"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}]} values={["azd", "rest", "python"]} defaultValue="azd">
+<ZoneContent group="azd__javascript__python__rest" value="python" options={[{"id": "azd", "title": "Azure Developer CLI"}, {"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}]} values={["azd", "rest", "python", "javascript"]} defaultValue="azd">
 
 ```python
 openai_client = project.get_openai_client(agent_name="my-agent")
@@ -84,6 +84,23 @@ response = openai_client.responses.create(
 )
 session_id = response.model_extra.get("agent_session_id")
 print(f"Session: {session_id}")
+```
+
+The OpenAI client authenticates with the caller's Microsoft Entra credential, so the session is scoped to that identity.
+
+</ZoneContent>
+<ZoneContent group="azd__javascript__python__rest" value="javascript" options={[{"id": "azd", "title": "Azure Developer CLI"}, {"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}]} values={["azd", "rest", "python", "javascript"]} defaultValue="azd">
+
+```typescript
+const openAIClient = project.getOpenAIClient({
+    azureConfig: { allowPreview: true, agentName: "my-agent" },
+});
+
+const response = await openAIClient.responses.create({
+    input: "Summarize the latest support tickets",
+});
+const sessionId = (response as any).agent_session_id;
+console.log(`Session: ${sessionId}`);
 ```
 
 The OpenAI client authenticates with the caller's Microsoft Entra credential, so the session is scoped to that identity.
@@ -106,7 +123,7 @@ Within delegation, the platform doesn't fence one delegated end user from anothe
 
 </Warning>
 
-<ZoneContent group="azd__python__rest" value="rest" options={[{"id": "azd", "title": "Azure Developer CLI"}, {"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}]} values={["azd", "rest", "python"]} defaultValue="azd">
+<ZoneContent group="azd__javascript__python__rest" value="rest" options={[{"id": "azd", "title": "Azure Developer CLI"}, {"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}]} values={["azd", "rest", "python", "javascript"]} defaultValue="azd">
 
 ```bash
 az rest --method POST \
@@ -122,7 +139,7 @@ az rest --method POST \
 Replace `<stable-end-user-id>` with the identifier your service assigns to the signed-in end user, such as a tenant-scoped user ID.
 
 </ZoneContent>
-<ZoneContent group="azd__python__rest" value="python" options={[{"id": "azd", "title": "Azure Developer CLI"}, {"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}]} values={["azd", "rest", "python"]} defaultValue="azd">
+<ZoneContent group="azd__javascript__python__rest" value="python" options={[{"id": "azd", "title": "Azure Developer CLI"}, {"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}]} values={["azd", "rest", "python", "javascript"]} defaultValue="azd">
 
 ```python
 openai_client = project.get_openai_client(agent_name="my-agent")
@@ -136,7 +153,24 @@ response = openai_client.responses.create(
 Replace `<stable-end-user-id>` with the identifier your service assigns to the signed-in end user. The session is scoped to that end user rather than to the calling service.
 
 </ZoneContent>
-<ZoneContent group="azd__python__rest" value="azd" options={[{"id": "azd", "title": "Azure Developer CLI"}, {"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}]} values={["azd", "rest", "python"]} defaultValue="azd">
+<ZoneContent group="azd__javascript__python__rest" value="javascript" options={[{"id": "azd", "title": "Azure Developer CLI"}, {"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}]} values={["azd", "rest", "python", "javascript"]} defaultValue="azd">
+
+```typescript
+const openAIClient = project.getOpenAIClient({
+    azureConfig: { allowPreview: true, agentName: "my-agent" },
+});
+
+const response = await openAIClient.responses.create(
+    { input: "Summarize my open tickets" },
+    { headers: { "x-ms-user-identity": "<stable-end-user-id>" } },
+);
+console.log(response.output_text);
+```
+
+Replace `<stable-end-user-id>` with the identifier your service assigns to the signed-in end user. The session is scoped to that end user rather than to the calling service.
+
+</ZoneContent>
+<ZoneContent group="azd__javascript__python__rest" value="azd" options={[{"id": "azd", "title": "Azure Developer CLI"}, {"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}]} values={["azd", "rest", "python", "javascript"]} defaultValue="azd">
 
 The Azure Developer CLI invokes the agent as your own signed-in identity, so it doesn't pass a delegated end-user identity. Use the REST or SDK path from your service to send `x-ms-user-identity`.
 

@@ -1,5 +1,5 @@
 ---
-title: "Run cloud evaluations with the Microsoft Foundry SDK"
+title: "Introduction to cloud evaluation with Microsoft Foundry SDK"
 description: "Set up the Microsoft Foundry SDK and choose a cloud evaluation workflow for datasets, targets, interactions, conversations, or synthetic data."
 ---
 
@@ -23,13 +23,7 @@ Some evaluation features have regional restrictions. Review the [supported regio
 
 ## Set up the SDK client
 
-Install the SDK.
-
-```bash
-pip install "azure-ai-projects>=2.2.0"
-```
-
-Set these shared environment variables:
+Install the SDK for your language. Set these shared environment variables:
 
 - `AZURE_AI_PROJECT_ENDPOINT`: Your Foundry project endpoint, for example, `https://<account_name>.services.ai.azure.com/api/projects/<project_name>`.
 - `AZURE_AI_MODEL_DEPLOYMENT_NAME`: The model deployment used by AI-assisted evaluators.
@@ -37,32 +31,124 @@ Set these shared environment variables:
 
 Authenticate with `DefaultAzureCredential`, create the project client, and get the OpenAI client used by the evaluation API.
 
-```python
-import os
-from azure.identity import DefaultAzureCredential
-from azure.ai.projects import AIProjectClient
-from azure.ai.projects.models import TestingCriterionAzureAIEvaluator
-from openai.types.eval_create_params import DataSourceConfigCustom
-from openai.types.evals.create_eval_jsonl_run_data_source_param import (
-    CreateEvalJSONLRunDataSourceParam,
-    SourceFileContent,
-    SourceFileContentContent,
-    SourceFileID,
-)
+<Tabs>
+  <Tab title="Python">
 
-endpoint = os.environ["AZURE_AI_PROJECT_ENDPOINT"]
-model_deployment_name = os.environ.get(
-    "AZURE_AI_MODEL_DEPLOYMENT_NAME", ""
-)
-dataset_name = os.environ.get("DATASET_NAME", "")
-dataset_version = os.environ.get("DATASET_VERSION", "1")
+    ```bash
+    pip install "azure-ai-projects>=2.2.0"
+    ```
 
-project_client = AIProjectClient(
-    endpoint=endpoint,
-    credential=DefaultAzureCredential(),
-)
-openai_client = project_client.get_openai_client()
-```
+    ```python
+    import os
+    from azure.identity import DefaultAzureCredential
+    from azure.ai.projects import AIProjectClient
+    from azure.ai.projects.models import TestingCriterionAzureAIEvaluator
+    from openai.types.eval_create_params import DataSourceConfigCustom
+    from openai.types.evals.create_eval_jsonl_run_data_source_param import (
+        CreateEvalJSONLRunDataSourceParam,
+        SourceFileContent,
+        SourceFileContentContent,
+        SourceFileID,
+    )
+
+    endpoint = os.environ["AZURE_AI_PROJECT_ENDPOINT"]
+    model_deployment_name = os.environ.get(
+        "AZURE_AI_MODEL_DEPLOYMENT_NAME", ""
+    )
+    dataset_name = os.environ.get("DATASET_NAME", "")
+    dataset_version = os.environ.get("DATASET_VERSION", "1")
+
+    project_client = AIProjectClient(
+        endpoint=endpoint,
+        credential=DefaultAzureCredential(),
+    )
+    openai_client = project_client.get_openai_client()
+    ```
+
+    Reference: [`AIProjectClient`](https://learn.microsoft.com/python/api/azure-ai-projects/azure.ai.projects.aiprojectclient), [`DefaultAzureCredential`](https://learn.microsoft.com/python/api/azure-identity/azure.identity.defaultazurecredential)
+
+  </Tab>
+  <Tab title="C#">
+
+    ```dotnetcli
+    dotnet add package Azure.AI.Projects --prerelease
+    dotnet add package Azure.Identity
+    ```
+
+    ```csharp
+    using System.ClientModel;
+    using System.Collections.Generic;
+    using System.Text.Json;
+    using Azure.AI.Extensions.OpenAI;
+    using Azure.AI.Projects;
+    using Azure.Identity;
+    using OpenAI.Evals;
+    using OpenAI.Responses;
+
+    #pragma warning disable OPENAI001
+
+    static string GetString(ClientResult result, string propertyName)
+    {
+      using JsonDocument document = JsonDocument.Parse(
+        result.GetRawResponse().Content.ToMemory());
+      return document.RootElement.GetProperty(propertyName).GetString()
+        ?? throw new InvalidOperationException(
+          $"The response doesn't contain {propertyName}.");
+    }
+
+    var projectEndpoint = Environment.GetEnvironmentVariable(
+      "AZURE_AI_PROJECT_ENDPOINT")
+      ?? throw new InvalidOperationException(
+        "AZURE_AI_PROJECT_ENDPOINT isn't set.");
+    var modelDeploymentName = Environment.GetEnvironmentVariable(
+      "AZURE_AI_MODEL_DEPLOYMENT_NAME")
+      ?? throw new InvalidOperationException(
+        "AZURE_AI_MODEL_DEPLOYMENT_NAME isn't set.");
+    var datasetName = Environment.GetEnvironmentVariable("DATASET_NAME")
+      ?? "evaluation-data";
+    var datasetVersion = Environment.GetEnvironmentVariable("DATASET_VERSION")
+      ?? "1";
+
+    AIProjectClient projectClient = new(
+      endpoint: new Uri(projectEndpoint),
+      tokenProvider: new DefaultAzureCredential());
+    EvaluationClient evaluationClient = projectClient.ProjectOpenAIClient
+      .GetEvaluationClient();
+    ```
+
+    Reference: [`AIProjectClient`](https://learn.microsoft.com/dotnet/api/azure.ai.projects.aiprojectclient),
+    [`DefaultAzureCredential`](https://learn.microsoft.com/dotnet/api/azure.identity.defaultazurecredential),
+    and [`EvaluationClient`](https://github.com/openai/openai-dotnet/blob/main/OpenAI/src/Custom/Evals/EvaluationClient.Protocol.cs)
+
+  </Tab>
+  <Tab title="JavaScript/TypeScript">
+
+    ```bash
+    npm install @azure/ai-projects @azure/identity dotenv
+    ```
+
+    ```javascript
+    import { AIProjectClient } from "@azure/ai-projects";
+    import { DefaultAzureCredential } from "@azure/identity";
+    import "dotenv/config";
+
+    const projectEndpoint = process.env["AZURE_AI_PROJECT_ENDPOINT"] || "";
+    const modelDeploymentName =
+      process.env["AZURE_AI_MODEL_DEPLOYMENT_NAME"] || "";
+    const datasetName = process.env["DATASET_NAME"] || "";
+    const datasetVersion = process.env["DATASET_VERSION"] || "1";
+
+    const projectClient = new AIProjectClient(
+      projectEndpoint,
+      new DefaultAzureCredential(),
+    );
+    const openaiClient = projectClient.getOpenAIClient();
+    ```
+
+    Reference: [AIProjectClient class](https://learn.microsoft.com/javascript/api/@azure/ai-projects/aiprojectclient)
+
+  </Tab>
+</Tabs>
 
 To use a model connected through admin connections as a target, judge model, or conversation simulator, see [Use admin-connected models in cloud evaluations](/evaluation/evaluate-admin-connected-models).
 
@@ -71,8 +157,8 @@ To use a model connected through admin connections as a target, judge model, or 
 A cloud evaluation has three steps:
 
 1. Define the data shape and the evaluators that score it.
-1. Create the evaluation with `openai_client.evals.create()`.
-1. Start a run with `openai_client.evals.runs.create()`, poll until it completes, and retrieve the scored results.
+1. Create the evaluation with the evaluation client.
+1. Start a run, poll until it completes, and retrieve the scored results.
 
 Cloud evaluation results are stored in your Foundry project. You can retrieve them through the SDK, review them in the portal, or route them to Application Insights when it's connected.
 
@@ -84,14 +170,16 @@ Review the [built-in evaluators](/evaluation/built-in-evaluators) and [custom ev
 
 ## Choose your starting point
 
-| Starting point | Workflow |
-|---|---|
-| You have JSONL or CSV test data with query and response. | [Evaluate datasets in the cloud](/evaluation/cloud-evaluation-datasets) |
-| You have queries and want a model or agent to generate responses. | [Evaluate models and agents in the cloud](/evaluation/cloud-evaluation-targets) |
-| You have deployed model or agent with Application Insights traces. | [Evaluate deployed agent and model interactions](/evaluation/cloud-evaluation-deployed-interactions) |
-| You have complete conversations data or production conversation traces. | [Evaluate conversations in the cloud](/evaluation/cloud-evaluation-conversations) |
-| You need synthetic queries or simulated conversations. | [Generate synthetic data](/evaluation/cloud-evaluation-synthetic-data) |
-| You need to poll, interpret, cancel, or troubleshoot a run. | [Get cloud evaluation results](/evaluation/cloud-evaluation-results) |
+| Evaluation unit | Starting point | Workflow |
+|---|---|---|
+| Individual turn | You have JSONL or CSV test data with a query and response. | [Evaluate query-response datasets](/evaluation/cloud-evaluation-datasets) |
+| Individual turn | You have queries and want a model or agent to generate responses. | [Evaluate model and agent responses](/evaluation/cloud-evaluation-targets) |
+| Individual turn | You have stored responses or traces from individual interactions with a deployed model or agent. | [Evaluate deployed model and agent interactions](/evaluation/cloud-evaluation-deployed-interactions) |
+| Individual turn | You need to generate synthetic queries. | [Generate synthetic queries](/evaluation/cloud-evaluation-synthetic-data#generate-synthetic-queries) |
+| Complete conversation | You have a dataset of complete conversations. | [Evaluate conversation datasets](/evaluation/cloud-evaluation-conversations) |
+| Complete conversation | You have traces that capture complete conversations with a deployed model or agent. | [Evaluate deployed model and agent conversations](/evaluation/cloud-evaluation-deployed-conversations) |
+| Complete conversation | You need to generate and evaluate simulated agent conversations. | [Simulate agent conversations](/evaluation/cloud-evaluation-simulate-conversations) |
+| Any evaluation unit | You need to poll, interpret, cancel, or troubleshoot a run. | [Get evaluation results](/evaluation/cloud-evaluation-results) |
 
 For adversarial safety testing, use [AI red teaming](/evaluation/run-ai-red-teaming-cloud). To create a standalone dataset, see [Generate a synthetic evaluation dataset](/evaluation/evaluation-dataset-synthetic).
 
@@ -101,4 +189,5 @@ For adversarial safety testing, use [AI red teaming](/evaluation/run-ai-red-team
 - [View evaluation results in the Foundry portal](/evaluation/evaluate-results)
 - [Set up continuous evaluation](/agents/how-to-monitor-agents-dashboard#set-up-continuous-evaluation)
 - [Complete Python SDK evaluation samples](https://github.com/Azure/azure-sdk-for-python/tree/main/sdk/ai/azure-ai-projects/samples/evaluations)
+- [.NET evaluation samples](https://github.com/Azure/azure-sdk-for-net/tree/main/sdk/ai/Azure.AI.Projects/samples/Evaluations)
 - [REST API reference](https://ai.azure.com/api-reference)

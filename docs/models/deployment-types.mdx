@@ -5,13 +5,13 @@ description: "Compare Microsoft Foundry deployment types including Global Standa
 
 When you deploy a model in Microsoft Foundry, you choose a deployment type that determines:
 
-- **Where your data is processed** (global, data zone, or single region)
+- **Where your data is processed** (global, data zone, or Azure geography)
 - **How you pay** (pay-per-token or reserved capacity)
 - **Performance characteristics** (latency variance, throughput limits)
 
 These deployment types apply to the **Serverless API** deployment option. Open-source and custom models that use **managed compute** don't use these types. For how the options differ, see [Deployment overview for Microsoft Foundry Models](/models/deployments-overview).
 
-The service offers three main categories: *standard* (pay-per-token), *provisioned* (reserved capacity), and *batch* (discounted asynchronous processing). A *Developer* type is also available for fine-tuned model evaluation. Within the standard and provisioned categories, you can choose global, data zone, or regional processing based on your compliance requirements.
+The service offers three main categories: *standard* (pay-per-token), *provisioned* (reserved capacity), and *batch* (discounted asynchronous processing). A *Developer* type is also available for fine-tuned model evaluation. Within the standard and provisioned categories, you can choose global, data zone, or geography-based processing based on your compliance requirements.
 
 <Tip>
 
@@ -28,7 +28,7 @@ You don't always need to create a deployment. With [instant access (preview)](..
 **Data residency for all deployment types**: Data stored at rest remains in the designated Azure geography. However, inferencing data is processed as follows:
 - **Global** types: May be processed in any Azure region
 - **Data Zone** types: The service processes data only within the Microsoft-specified data zone (US, EU, or Asia Pacific (APAC)).
-- **Standard (single region)** types: The service processes data in the deployment region.
+- **Standard and Regional Provisioned** types: Prompts and responses are processed within the customer-specified Azure geography and might be processed between regions within that geography for operational purposes.
 
 [Learn more about data residency](https://azure.microsoft.com/explore/global-infrastructure/data-residency/).
 
@@ -38,7 +38,7 @@ You don't always need to create a deployment. With [instant access (preview)](..
 
 For most workloads, start with **Global Standard**. It launches first when a new model releases, has the lowest price, and offers the broadest region coverage. Move to another deployment type only when you have a specific reason, such as data residency, reserved throughput, or asynchronous batch processing.
 
-New deployment types become available in a set order: Global, then Data Zone, then single region. Single-region deployment types arrive last, have no guaranteed availability date, and depend on capacity that frees up as older models retire. For the authoritative launch order, see [Model launch and availability](/models/model-retirements#model-launch-and-availability).
+New deployment types become available in a set order: Global, then Data Zone, then geography-based. Geography-based deployment types arrive last, have no guaranteed availability date, and depend on capacity that frees up as older models retire. For the authoritative launch order, see [Model launch and availability](/models/model-retirements#model-launch-and-availability).
 
 ## Deployment type comparison
 
@@ -52,8 +52,8 @@ Instant models let you run inference without creating a deployment, so they aren
 | [Data Zone Standard](#data-zone-standard) | `DataZoneStandard` | Within data zone | Pay-per-token | EU/US/APAC data zone compliance |
 | [Data Zone Provisioned](#data-zone-provisioned) | `DataZoneProvisionedManaged` | Within data zone | Reserved PTU | Data zone + predictable throughput |
 | [Data Zone Batch](#data-zone-batch) | `DataZoneBatch` | Within data zone | 50% discount | Large async jobs with data zone |
-| [Standard](#standard) | `Standard` | Single region | Pay-per-token | Regional compliance, low volume |
-| [Regional Provisioned](#regional-provisioned) | `ProvisionedManaged` | Single region | Reserved PTU | Regional compliance + throughput |
+| [Standard](#standard) | `Standard` | Within Azure geography | Pay-per-token | Geography compliance, low volume |
+| [Regional Provisioned](#regional-provisioned) | `ProvisionedManaged` | Within Azure geography | Reserved PTU | Geography compliance + throughput |
 | [Developer](#developer-for-fine-tuned-models) | `DeveloperTier` | Any Azure region | Pay-per-token | Fine-tuned model evaluation only (24-hour lifetime, no SLA or data-residency guarantee) |
 
 <Note>
@@ -80,7 +80,7 @@ Use the following table for a quick recommendation, then refine it with the crit
 | Reserved, predictable throughput | Global Provisioned |
 | Keep processing within a data zone | Data Zone Standard or Data Zone Provisioned |
 | Data residency plus reserved throughput | Data Zone Provisioned |
-| Pin processing to a single region | Standard or Regional Provisioned (where supported) |
+| Keep processing within an Azure geography | Standard or Regional Provisioned (where supported) |
 | Large asynchronous jobs at lower cost | Global Batch or Data Zone Batch (where supported) |
 | Evaluate a fine-tuned model (temporary, no SLA) | Developer |
 
@@ -88,7 +88,7 @@ Use the following table for a quick recommendation, then refine it with the crit
 
 - **No restrictions**: Use Global Standard or Global Provisioned
 - **EU, US, or APAC data zone**: Use Data Zone Standard or Data Zone Provisioned in a region within that data zone
-- **Single region only**: Use Standard or Regional Provisioned
+- **Azure geography**: Use Standard or Regional Provisioned
 
 For the exact regions in each data zone, see [Data Zone deployments](#data-zone-deployments).
 
@@ -108,7 +108,7 @@ For the exact regions in each data zone, see [Data Zone deployments](#data-zone-
 
 ## Data processing locations
 
-Standard and provisioned deployments both offer three data-processing options: global, data zone, and single region (Azure geography). Global standard is a common starting point for most workloads.
+Standard and provisioned deployments both offer three data-processing options: global, data zone, and Azure geography. Global Standard is a common starting point for most workloads.
 
 ### Global deployments
 
@@ -177,7 +177,7 @@ Batch deployments trade real-time responsiveness for cost savings. Batch request
 
 - SKU name in code: `DataZoneStandard`
 
-Data Zone Standard deployments dynamically route traffic to datacenters within the Microsoft-defined data zone (US, EU, or APAC). This deployment type provides higher default quotas than single-region deployment types while keeping data within the specified zone.
+Data Zone Standard deployments dynamically route traffic to datacenters within the Microsoft-defined data zone (US, EU, or APAC). This deployment type provides higher default quotas than geography-based deployment types while keeping data within the specified zone.
 
 Customers with high consistent volume might experience greater latency variability. The threshold is set per model. To learn more, see the [quotas and limits page](/models/quotas-limits). For workloads that require low latency variance at large volume, consider provisioned deployment types.
 

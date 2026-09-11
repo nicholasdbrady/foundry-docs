@@ -1,11 +1,10 @@
 ---
 title: "Prepare your development environment"
-description: "Set up your development environment with Foundry DevPack, language runtimes, Azure CLI, and Git."
+description: "Set up your development environment with Foundry DevPack, language runtimes, and Git."
 ---
 
-Prepare your development environment to build with the Microsoft Foundry. You need a
-supported programming language, the Azure CLI for authentication, Git, and Foundry developer
-tools.
+Prepare your development environment to build with Microsoft Foundry. You need a supported
+programming language, Git, and the Foundry developer tools that fit your workflow.
 
 <Tip>
 
@@ -16,193 +15,153 @@ also install each tool separately.
 
 <Info>
 
-This article covers general prerequisites, global tools, and Visual Studio Code setup. It
-doesn't cover scenario-specific SDK packages or authentication code. When your environment is
-ready, continue to the [quickstart](../tutorials/quickstart-create-foundry-resources).
+This article covers general prerequisites and developer tools. It doesn't cover
+scenario-specific SDK packages or authentication code. When your environment is ready, continue
+to the [quickstart](../tutorials/quickstart-create-foundry-resources).
 
 </Info>
 
 ## Prerequisites
 
 - An Azure account with an active subscription. If you don't have one, create a [free Azure account, which includes a free trial subscription](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
-- Download, install, and configure [Visual Studio Code](https://code.visualstudio.com/Download),
-  or use the IDE of your choice.
-- To create and manage Foundry resources, use one of these Azure RBAC roles:
-    - **Foundry Project Manager** to manage Foundry projects.
-
-<Info>
-
-</Info>
-
-> The Foundry RBAC roles were recently renamed. **Foundry User**, **Foundry Owner**, **Foundry Account Owner**, and **Foundry Project Manager** were previously named Azure AI User, Azure AI Owner, Azure AI Account Owner, and Azure AI Project Manager. You might still see the previous names in some places while the rename rolls out. The role IDs and core permissions are unchanged by the rename.
-    - **Owner** for subscription-level permissions and role assignments required by some
-    scenarios.
-- To use an existing project without creating resources, you need at least **Foundry User** on
-  the project.
-
-For details about each role, see
-[Role-based access control for Microsoft Foundry](../concepts/rbac-foundry).
+- Access to the Foundry resource or project that you plan to use. For setup guidance, see
+  [Minimum role assignments to get started](../concepts/rbac-foundry#minimum-role-assignments-to-get-started).
 
 ## Install Foundry DevPack
 
-Foundry DevPack installs the Foundry developer tools for your editor, terminal, and coding agent.
-Run the command for your operating system.
-
-### Windows
-
-```powershell
-winget install Microsoft.FoundryDevPack
-```
-
-### macOS
-
-```bash
-brew install --cask microsoft/foundry/devpack && foundry-devpack install
-```
-
-### Linux
-
-```bash
-curl -fsSL https://aka.ms/foundry-devpack-install.sh | bash
-```
-
-DevPack installs these tools:
-
-| Tool | What you can do |
-| --- | --- |
-| [Microsoft Foundry Toolkit for Visual Studio Code](../how-to/develop/get-started-projects-visual-studio-code) | Build, test, evaluate, and deploy from Visual Studio Code. |
-| [`azd` and `azd ai`](../agents/concepts/cli-agent-development) | Scaffold, deploy, evaluate, and automate from the terminal. |
-| [Foundry Canvas (preview)](../agents/concepts/foundry-canvas) | Design and deploy hosted agents with a guided Copilot canvas. |
-| [Microsoft Foundry Skill](../how-to/develop/use-microsoft-foundry-skill) | Give coding agents reusable guidance for Foundry workflows. |
-
-Continue with the following sections to set up your programming language, sign in with the Azure
-CLI, and install Git.
-
-## Work with a programming language
-
-Use the language that your application requires. Expand a section if you need to install its
-runtime or Visual Studio Code extension.
-
-<details>
-<summary>Python</summary>
-
-Install [Python 3.10 or later](https://www.python.org/downloads/). Python 3.9 is the minimum
-supported version. Create a virtual environment for your project instead of installing packages
-globally.
-
-**Windows**
-
-```powershell
-py -3 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-```
-
-**macOS and Linux**
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-```
-
-For editor support, install the
-[Python extension for Visual Studio Code](https://marketplace.visualstudio.com/items?itemName=ms-python.python).
-
-</details>
-
-<details>
-<summary>Java</summary>
-
-Install JDK 17 or later. The
-[Microsoft Build of OpenJDK](https://learn.microsoft.com/java/openjdk/download) is a free Long-Term Support distribution.
-For editor support, install the
-[Visual Studio Code Extension Pack for Java](https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-pack).
-
-</details>
-
-<details>
-<summary>JavaScript/TypeScript</summary>
-
-Install [Node.js](https://nodejs.org/). Version 20 or later is recommended.
-
-</details>
-
-<details>
-<summary>C#</summary>
-
-Install the latest Long-Term Support version of the
-[.NET SDK](https://dotnet.microsoft.com/download). For editor support, install
-[C# Dev Kit for Visual Studio Code](https://marketplace.visualstudio.com/items?itemName=ms-dotnettools.csdevkit).
-
-</details>
-
-## Install the Azure CLI and sign in
-
-You install the [Azure CLI](https://learn.microsoft.com/cli/azure/what-is-azure-cli) and sign in from your local development environment so that your code can use your user credentials to call Azure services through Foundry.
-
-In most cases you can install Azure CLI from your terminal using the following command: 
+Foundry DevPack installs the Foundry developer tools for your terminal, editor, and coding agent.
+Select your operating system.
 
 <CodeGroup>
 ```powershell Windows
-    winget install -e --id Microsoft.AzureCLI
-    ```
-
-```bash Linux
-    curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+    winget install Microsoft.FoundryDevPack
     ```
 
 ```bash macOS
-    brew update && brew install azure-cli
+    brew install --cask microsoft/foundry/devpack && foundry-devpack install
+    ```
+
+```bash Linux
+    curl -fsSL https://aka.ms/foundry-devpack-install.sh | bash
     ```
 </CodeGroup>
 
-You can follow instructions [How to install the Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) if these commands don't work for your particular operating system or setup.
+DevPack installs its core tools and adds host extensions only when their apps are present:
 
-After you install the Azure CLI, sign in using the ``az login`` command and sign-in using the browser:
+| Tool | What you can do |
+| --- | --- |
+| [`azd` and `azd ai`](../agents/concepts/cli-agent-development) | Scaffold, deploy, evaluate, and automate from the terminal. |
+| [Microsoft Foundry Skill](../how-to/develop/use-microsoft-foundry-skill) | Give coding agents reusable guidance for Foundry workflows. |
+| [Microsoft Foundry Toolkit for Visual Studio Code](../how-to/develop/get-started-projects-visual-studio-code) | Installed only when Visual Studio Code is present. Build, test, evaluate, and deploy from the editor. |
+| [Foundry Canvas (preview)](../agents/concepts/foundry-canvas) | Installed only when GitHub Copilot App is present. Design and deploy hosted agents from a guided canvas. |
 
-```
-az login
-```
+DevPack doesn't install Visual Studio Code or GitHub Copilot App.
 
-Alternatively, you can sign in manually via the browser with a device code.
+Continue with the following sections to set up your programming language and install Git.
 
-```
-az login --use-device-code
-```
+## Work with a programming language
 
-Keep this terminal open to run scripts after you sign in.
+Use the language that your application requires. Select a tab to install its runtime or Visual
+Studio Code extension.
+
+<Tabs>
+  <Tab title="Python">
+
+    Install [Python 3.10 or later](https://www.python.org/downloads/). Python 3.10 is the minimum
+    supported version. Create a virtual environment for your project instead of installing packages
+    globally.
+
+    **Windows**
+
+    ```powershell
+    py -3 -m venv .venv
+    .\.venv\Scripts\Activate.ps1
+    ```
+
+    **macOS and Linux**
+
+    ```bash
+    python3 -m venv .venv
+    source .venv/bin/activate
+    ```
+
+    For editor support, install the
+    [Python extension for Visual Studio Code](https://marketplace.visualstudio.com/items?itemName=ms-python.python).
+
+  </Tab>
+  <Tab title="C#">
+
+    Install the latest Long-Term Support version of the
+    [.NET SDK](https://dotnet.microsoft.com/download). For editor support, install
+    [C# Dev Kit for Visual Studio Code](https://marketplace.visualstudio.com/items?itemName=ms-dotnettools.csdevkit).
+
+  </Tab>
+  <Tab title="JavaScript/TypeScript">
+
+    Install [Node.js](https://nodejs.org/). Version 20 or later is recommended.
+
+  </Tab>
+  <Tab title="Java">
+
+    Install JDK 17 or later. The
+    [Microsoft Build of OpenJDK](https://learn.microsoft.com/java/openjdk/download) is a free Long-Term Support distribution.
+    For editor support, install the
+    [Visual Studio Code Extension Pack for Java](https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-pack).
+
+  </Tab>
+</Tabs>
 
 ## Install Git
 
 To clone Foundry SDK samples, you need Git. If you don't have Git installed, download and
 install it from the [Git website](https://git-scm.com/downloads).
 
-## Install developer tools individually
+## Install developer tools separately
 
-If you don't use Foundry DevPack, install each developer tool separately:
+If you don't use Foundry DevPack, select a tab to install only the tooling that you need.
 
-1. [Install the Azure Developer CLI](https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd).
-1. Install all Foundry extensions for `azd`:
-   ```bash
-   azd ext install microsoft.foundry
-   ```
-   To install individual extensions instead, see
-   [Install the Azure Developer CLI Foundry extensions](../agents/how-to/install-cli-foundry-extensions).
-1. Install the editor and coding-agent tools:
-   - [Install and set up the Microsoft Foundry Toolkit for Visual Studio Code](https://code.visualstudio.com/docs/intelligentapps/overview#_install-and-setup).
-   - [Use Foundry Canvas](../agents/concepts/foundry-canvas) to design and deploy hosted agents.
-   - [Use the Microsoft Foundry Skill](../how-to/develop/use-microsoft-foundry-skill) in your
-     coding agent.
+<Tabs>
+  <Tab title="`azd` and `azd ai`">
 
-Many [AI solution templates](../how-to/develop/ai-template-get-started) support deployment with
-`azd`.
+    1. [Install the Azure Developer CLI](https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd).
+    1. Install the Foundry extensions:
+
+       ```bash
+       azd ext install microsoft.foundry
+       ```
+
+    To install individual extensions instead of the full bundle, see
+    [Install the Azure Developer CLI Foundry extensions](../agents/how-to/install-cli-foundry-extensions).
+
+    For direct, granular management of individual Azure resources, use the Azure CLI (`az`). See
+    [Azure Developer CLI vs Azure CLI](https://learn.microsoft.com/azure/developer/azure-developer-cli/azure-developer-cli-vs-azure-cli).
+
+  </Tab>
+  <Tab title="Microsoft Foundry Skill">
+
+    Install the [Microsoft Foundry Skill](../how-to/develop/use-microsoft-foundry-skill) in your
+    coding agent. The installation steps vary by coding-agent host.
+
+  </Tab>
+  <Tab title="Microsoft Foundry Toolkit">
+
+    If you use Visual Studio Code, [install Microsoft Foundry Toolkit](https://code.visualstudio.com/docs/intelligentapps/overview#_install-and-setup).
+
+  </Tab>
+  <Tab title="Foundry Canvas">
+
+    If you use GitHub Copilot App, [install Foundry Canvas](../agents/concepts/foundry-canvas) to
+    design and deploy hosted agents from a guided canvas.
+
+  </Tab>
+</Tabs>
 
 ## Troubleshooting
 
 | Issue | Resolution |
 | --- | --- |
-| Command not found after installation | Close and reopen your terminal, or restart Visual Studio Code, so that PATH changes take effect. |
-| `az login` fails with a browser error | Run `az login --use-device-code` to authenticate with a device code. |
-| Python isn't found | Use `python3` instead of `python` on macOS or Linux, or install Python 3.9 or later. |
+| Command not found after installation | Close and reopen your terminal. If you use Visual Studio Code, restart it so that PATH changes take effect. |
+| Python isn't found | Use `python3` instead of `python` on macOS or Linux, or install Python 3.10 or later. |
 | Permission denied during Python package installation | On macOS or Linux, don't use `sudo pip install`. Use a virtual environment instead. |
 
 ## Related content

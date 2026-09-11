@@ -41,24 +41,56 @@ Some evaluation features - including rubric generation, synthetic and trace-base
 
 Install the Foundry SDK and set up authentication:
 
-```bash
-pip install "azure-ai-projects>=2.4.0" azure-identity
-```
+<Tabs>
+  <Tab title="Python">
 
-Create the project client. The following code samples assume you run them in this context:
+    ```bash
+    pip install "azure-ai-projects>=2.4.0" azure-identity
+    ```
 
-```python
-import os
-from azure.identity import DefaultAzureCredential
-from azure.ai.projects import AIProjectClient
+    Create the project client. The following code samples assume you run them in this context:
 
-endpoint = os.environ["AZURE_AI_PROJECT_ENDPOINT"]
-model_deployment = os.environ["AZURE_AI_MODEL_DEPLOYMENT_NAME"]
+    ```python
+    import os
+    from azure.identity import DefaultAzureCredential
+    from azure.ai.projects import AIProjectClient
 
-credential = DefaultAzureCredential()
-project_client = AIProjectClient(endpoint=endpoint, credential=credential)
-client = project_client.get_openai_client()
-```
+    endpoint = os.environ["AZURE_AI_PROJECT_ENDPOINT"]
+    model_deployment = os.environ["AZURE_AI_MODEL_DEPLOYMENT_NAME"]
+
+    credential = DefaultAzureCredential()
+    project_client = AIProjectClient(endpoint=endpoint, credential=credential)
+    client = project_client.get_openai_client()
+    ```
+
+  </Tab>
+  <Tab title="JavaScript/TypeScript">
+
+    ```bash
+    npm install @azure/ai-projects @azure/identity dotenv
+    ```
+
+    Create the project client. The following code samples assume you run them in this context:
+
+    ```typescript
+    import { DefaultAzureCredential } from "@azure/identity";
+    import { AIProjectClient } from "@azure/ai-projects";
+    import "dotenv/config";
+
+    const endpoint = process.env["AZURE_AI_PROJECT_ENDPOINT"] || "";
+    const modelDeployment = process.env["AZURE_AI_MODEL_DEPLOYMENT_NAME"] || "";
+
+    const projectClient = new AIProjectClient(
+      endpoint,
+      new DefaultAzureCredential(),
+    );
+    const client = projectClient.getOpenAIClient();
+    ```
+
+    Reference: [AIProjectClient class](https://learn.microsoft.com/javascript/api/@azure/ai-projects/aiprojectclient)
+
+  </Tab>
+</Tabs>
 
 ## Choose evaluators
 
@@ -128,13 +160,32 @@ If you don't have a hand-curated dataset, you can bootstrap one. Use [Generate a
 
 Upload this file as a dataset in your project:
 
-```python
-dataset = project_client.datasets.upload_file(
-    name="agent-test-queries",
-    version="1",
-    file_path="./test-queries.jsonl",
-)
-```
+<Tabs>
+  <Tab title="Python">
+
+    ```python
+    dataset = project_client.datasets.upload_file(
+        name="agent-test-queries",
+        version="1",
+        file_path="./test-queries.jsonl",
+    )
+    ```
+
+  </Tab>
+  <Tab title="JavaScript/TypeScript">
+
+    ```typescript
+    const dataset = await projectClient.datasets.uploadFile(
+      "agent-test-queries",
+      "1",
+      "./test-queries.jsonl",
+    );
+    ```
+
+    Reference: [datasets.uploadFile](https://learn.microsoft.com/javascript/api/@azure/ai-projects/aiprojectclient)
+
+  </Tab>
+</Tabs>
 
 ## Run an evaluation
 
@@ -147,100 +198,187 @@ First, configure your testing criteria. Reference the generated rubric evaluator
 - `{{sample.output_text}}` references just the response message text.
 - `initialization_parameters={"deployment_name": <model>}` supplies the judge model. Typically required for LLM judge evaluators. For per-evaluator parameters, see [built-in evaluators](/observability/observability#what-are-evaluators).
 
-```python
-from azure.ai.projects.models import TestingCriterionAzureAIEvaluator
+<Tabs>
+  <Tab title="Python">
 
-testing_criteria = [
-    TestingCriterionAzureAIEvaluator(
-        type="azure_ai_evaluator",
-        name="Agent Quality",
-        evaluator_name=rubric_evaluator.name,
-        initialization_parameters={"deployment_name": model_deployment},
-        data_mapping={
-            "query": "{{item.query}}",
-            "response": "{{sample.output_items}}",
-        },
-    ),
-]
-```
+    ```python
+    from azure.ai.projects.models import TestingCriterionAzureAIEvaluator
 
-To layer in built-in evaluators alongside the rubric, append entries with the same shape but `evaluator_name="builtin.<name>"`. For example, add Violence (content safety) and Coherence (LLM judge quality):
+    testing_criteria = [
+        TestingCriterionAzureAIEvaluator(
+            type="azure_ai_evaluator",
+            name="Agent Quality",
+            evaluator_name=rubric_evaluator.name,
+            initialization_parameters={"deployment_name": model_deployment},
+            data_mapping={
+                "query": "{{item.query}}",
+                "response": "{{sample.output_items}}",
+            },
+        ),
+    ]
+    ```
 
-```python
-testing_criteria.append(
-    TestingCriterionAzureAIEvaluator(
-        type="azure_ai_evaluator",
-        name="Violence",
-        evaluator_name="builtin.violence",
-        data_mapping={
-            "query": "{{item.query}}",
-            "response": "{{sample.output_text}}",
-        },
+    To layer in built-in evaluators alongside the rubric, append entries with the same shape but `evaluator_name="builtin.<name>"`. For example, add Violence (content safety) and Coherence (LLM judge quality):
+
+    ```python
+    testing_criteria.append(
+        TestingCriterionAzureAIEvaluator(
+            type="azure_ai_evaluator",
+            name="Violence",
+            evaluator_name="builtin.violence",
+            data_mapping={
+                "query": "{{item.query}}",
+                "response": "{{sample.output_text}}",
+            },
+        )
     )
-)
 
-testing_criteria.append(
-    TestingCriterionAzureAIEvaluator(
-        type="azure_ai_evaluator",
-        name="Coherence",
-        evaluator_name="builtin.coherence",
-        initialization_parameters={"deployment_name": model_deployment},
-        data_mapping={
-            "query": "{{item.query}}",
-            "response": "{{sample.output_text}}",
-        },
+    testing_criteria.append(
+        TestingCriterionAzureAIEvaluator(
+            type="azure_ai_evaluator",
+            name="Coherence",
+            evaluator_name="builtin.coherence",
+            initialization_parameters={"deployment_name": model_deployment},
+            data_mapping={
+                "query": "{{item.query}}",
+                "response": "{{sample.output_text}}",
+            },
+        )
     )
-)
-```
+    ```
+
+  </Tab>
+  <Tab title="JavaScript/TypeScript">
+
+    The JavaScript/TypeScript SDK samples don't yet demonstrate rubric evaluator generation, so this example starts directly with built-in evaluators: Violence (content safety) and Coherence (LLM judge quality). Use the same `data_mapping` pattern to add more built-in evaluators:
+
+    ```typescript
+    const testingCriteria = [
+      {
+        type: "azure_ai_evaluator",
+        name: "Violence",
+        evaluator_name: "builtin.violence",
+        data_mapping: {
+          query: "{{item.query}}",
+          response: "{{sample.output_text}}",
+        },
+      },
+      {
+        type: "azure_ai_evaluator",
+        name: "Coherence",
+        evaluator_name: "builtin.coherence",
+        initialization_parameters: { deployment_name: modelDeployment },
+        data_mapping: {
+          query: "{{item.query}}",
+          response: "{{sample.output_text}}",
+        },
+      },
+    ];
+    ```
+
+  </Tab>
+</Tabs>
 
 Next, create the evaluation. An evaluation defines the test data schema and testing criteria. It serves as a container for multiple runs. All runs under the same evaluation conform to the same schema and produce the same set of metrics. This consistency is important for comparing results across runs.
 
-```python
-from openai.types.eval_create_params import DataSourceConfigCustom
+<CodeGroup>
+```python Python
+    from openai.types.eval_create_params import DataSourceConfigCustom
 
-data_source_config = DataSourceConfigCustom(
-    type="custom",
-    item_schema={
-        "type": "object",
-        "properties": {"query": {"type": "string"}},
-        "required": ["query"],
-    },
-    include_sample_schema=True,
-)
+    data_source_config = DataSourceConfigCustom(
+        type="custom",
+        item_schema={
+            "type": "object",
+            "properties": {"query": {"type": "string"}},
+            "required": ["query"],
+        },
+        include_sample_schema=True,
+    )
 
-evaluation = client.evals.create(
-    name="Agent Quality Evaluation",
-    data_source_config=data_source_config,
-    testing_criteria=testing_criteria,
-)
-```
+    evaluation = client.evals.create(
+        name="Agent Quality Evaluation",
+        data_source_config=data_source_config,
+        testing_criteria=testing_criteria,
+    )
+    ```
+
+```typescript JavaScript/TypeScript
+    const dataSourceConfig = {
+      type: "custom",
+      item_schema: {
+        type: "object",
+        properties: { query: { type: "string" } },
+        required: ["query"],
+      },
+      include_sample_schema: true,
+    };
+
+    const evaluation = await client.evals.create({
+      name: "Agent Quality Evaluation",
+      data_source_config: dataSourceConfig,
+      testing_criteria: testingCriteria,
+    });
+    ```
+</CodeGroup>
 
 Finally, create a run that sends your test queries to the agent and applies the evaluators:
 
-```python
-eval_run = client.evals.runs.create(
-    eval_id=evaluation.id,
-    name="Agent Evaluation Run",
-    data_source={
-        "type": "azure_ai_target_completions",
-        "source": {
-            "type": "file_id",
-            "id": dataset.id,
+<CodeGroup>
+```python Python
+    eval_run = client.evals.runs.create(
+        eval_id=evaluation.id,
+        name="Agent Evaluation Run",
+        data_source={
+            "type": "azure_ai_target_completions",
+            "source": {
+                "type": "file_id",
+                "id": dataset.id,
+            },
+            "input_messages": {
+                "type": "template",
+                "template": [{"type": "message", "role": "user", "content": {"type": "input_text", "text": "{{item.query}}"}}],
+            },
+            "target": {
+                "type": "azure_ai_agent",
+                "name": AGENT_NAME,
+                "version": "1",  # Optional; omit to use latest version
+            },
         },
-        "input_messages": {
-            "type": "template",
-            "template": [{"type": "message", "role": "user", "content": {"type": "input_text", "text": "{{item.query}}"}}],
-        },
-        "target": {
-            "type": "azure_ai_agent",
-            "name": AGENT_NAME,
-            "version": "1",  # Optional; omit to use latest version
-        },
-    },
-)
+    )
 
-print(f"Evaluation run started: {eval_run.id}")
-```
+    print(f"Evaluation run started: {eval_run.id}")
+    ```
+
+```typescript JavaScript/TypeScript
+    const evalRun = await client.evals.runs.create(evaluation.id, {
+      name: "Agent Evaluation Run",
+      data_source: {
+        type: "azure_ai_target_completions",
+        source: {
+          type: "file_id",
+          id: dataset.id,
+        },
+        input_messages: {
+          type: "template",
+          template: [
+            {
+              type: "message",
+              role: "user",
+              content: { type: "input_text", text: "{{item.query}}" },
+            },
+          ],
+        },
+        target: {
+          type: "azure_ai_agent",
+          name: agentName,
+          version: "1", // Optional; omit to use latest version
+        },
+      },
+    });
+
+    console.log(`Evaluation run started: ${evalRun.id}`);
+    ```
+</CodeGroup>
 
 <Tip>
 
@@ -258,19 +396,35 @@ To evaluate agent interactions that already occurred using traces from Applicati
 
 Evaluations typically complete in a few minutes, depending on the number of queries. Poll for completion and retrieve the report URL to view the results in the Microsoft Foundry portal under the **Evaluations** tab:
 
-```python
-import time
+<CodeGroup>
+```python Python
+    import time
 
-# Wait for completion
-while True:
-    run = client.evals.runs.retrieve(run_id=eval_run.id, eval_id=evaluation.id)
-    if run.status in ["completed", "failed"]:
-        break
-    time.sleep(5)
+    # Wait for completion
+    while True:
+        run = client.evals.runs.retrieve(run_id=eval_run.id, eval_id=evaluation.id)
+        if run.status in ["completed", "failed"]:
+            break
+        time.sleep(5)
 
-print(f"Status: {run.status}")
-print(f"Report URL: {run.report_url}")
-```
+    print(f"Status: {run.status}")
+    print(f"Report URL: {run.report_url}")
+    ```
+
+```typescript JavaScript/TypeScript
+    // Wait for completion
+    let run = evalRun;
+    while (!["completed", "failed"].includes(run.status)) {
+      run = await client.evals.runs.retrieve(run.id, {
+        eval_id: evaluation.id,
+      });
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+    }
+
+    console.log(`Status: ${run.status}`);
+    console.log(`Report URL: ${run.report_url}`);
+    ```
+</CodeGroup>
 
 <Frame>
   <img src="/images/agent-evaluation-results.png" alt="Screenshot showing evaluation results for an agent in the Microsoft Foundry portal." />

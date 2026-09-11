@@ -221,18 +221,24 @@ If you include Anthropic Claude models in the `routing.models` array, you must f
 
 ## Test model router with Foundry Responses and Chat Completions
 
-Call model router the same way you call any OpenAI chat model. Set the `model` parameter to the name of your model router deployment. You can use either the Microsoft Foundry SDK with the Responses API or the OpenAI Python SDK with the Chat Completions API.
+Call model router the same way you call any OpenAI chat model. Set the `model` parameter to the name of your model router deployment. You can use the Microsoft Foundry SDK with the Responses API or the OpenAI SDK with the Chat Completions API, in either Python or JavaScript/TypeScript.
 
 <Note>
 
 Install the required packages before you run the samples:
-- **Foundry Responses**: `pip install azure-ai-projects>=2.0.0 azure-identity`
-- **Chat Completions**: `pip install openai>=1.75.0`
+- **Foundry Responses (Python)**: `pip install azure-ai-projects>=2.0.0 azure-identity`
+- **Foundry Responses (JavaScript/TypeScript)**: `npm install @azure/ai-projects @azure/identity`
+- **Chat Completions (Python)**: `pip install openai>=1.75.0`
+- **Chat Completions (JavaScript/TypeScript)**: `npm install openai @azure/identity`
 
 </Note>
 
-<CodeGroup>
-```python Foundry Responses
+<Tabs>
+  <Tab title="Foundry Responses">
+
+    **Python**
+
+    ```python
     """
     Foundry Model Router - Foundry Responses SDK (AIProjectClient) Example
 
@@ -288,7 +294,35 @@ Install the required packages before you run the samples:
         )
     ```
 
-```python Chat Completions
+    **JavaScript/TypeScript**
+
+    ```typescript
+    import { DefaultAzureCredential } from "@azure/identity";
+    import { AIProjectClient } from "@azure/ai-projects";
+
+    const project = new AIProjectClient(
+      process.env["FOUNDRY_PROJECT_ENDPOINT"]!,
+      new DefaultAzureCredential(),
+    );
+
+    // Get an OpenAI-compatible client that works with all Foundry models
+    const client = project.getOpenAIClient();
+
+    const response = await client.responses.create({
+      model: process.env["MODEL_ROUTER_DEPLOYMENT_NAME"] || "model-router",
+      input: "Explain retrieval-augmented generation in one sentence.",
+    });
+
+    // The "model" field reveals which underlying model was selected
+    console.log(`Responded model: ${response.model}`);
+    console.log(response.output_text);
+    ```
+
+  </Tab>
+  <Tab title="Chat Completions">
+    **Python**
+
+    ```python
     """
     Foundry Model Router - Chat Completions API Example
 
@@ -346,7 +380,51 @@ Install the required packages before you run the samples:
         f"\nUsage: {response.usage.prompt_tokens} prompt + {response.usage.completion_tokens} completion = {response.usage.total_tokens} total tokens"
     )
     ```
-</CodeGroup>
+
+    **JavaScript/TypeScript**
+
+    ```typescript
+    import { AzureOpenAI } from "openai";
+    import {
+      DefaultAzureCredential,
+      getBearerTokenProvider,
+    } from "@azure/identity";
+
+    const endpoint = process.env["AZURE_OPENAI_ENDPOINT"]!;
+    const deploymentName =
+      process.env["MODEL_ROUTER_DEPLOYMENT_NAME"] || "model-router";
+    const apiVersion = "2025-11-18";
+
+    const credential = new DefaultAzureCredential();
+    const azureADTokenProvider = getBearerTokenProvider(
+      credential,
+      "https://cognitiveservices.azure.com/.default",
+    );
+
+    const client = new AzureOpenAI({
+      endpoint,
+      azureADTokenProvider,
+      apiVersion,
+      deployment: deploymentName,
+    });
+
+    const completion = await client.chat.completions.create({
+      model: deploymentName,
+      messages: [
+        {
+          role: "user",
+          content: "Explain retrieval-augmented generation in one sentence.",
+        },
+      ],
+    });
+
+    // The "model" field reveals which underlying model was selected
+    console.log(`Responded model: ${completion.model}`);
+    console.log(completion.choices[0].message.content);
+    ```
+
+  </Tab>
+</Tabs>
 
 <Tip>
 
@@ -354,8 +432,385 @@ For the full runnable samples, see [Model Router samples](https://github.com/mic
 
 </Tip>
 
+- Reference: [OpenAI Responses API](https://platform.openai.com/docs/api-reference/responses) (`responses.create`, both languages)
+- Reference: [OpenAI Chat Completions API](https://platform.openai.com/docs/api-reference/chat) (`chat.completions.create`, both languages)
+- Reference: [`AIProjectClient`](https://learn.microsoft.com/python/api/azure-ai-projects/azure.ai.projects.aiprojectclient) (Python)
+- Reference: [`AIProjectClient`](https://learn.microsoft.com/javascript/api/@azure/ai-projects/aiprojectclient) (JavaScript/TypeScript)
 - Reference: [`AzureOpenAI` (OpenAI Python SDK)](https://pypi.org/project/openai/)
-- Reference: [`AIProjectClient`](https://learn.microsoft.com/python/api/azure-ai-projects/azure.ai.projects.aiprojectclient)
+- Reference: [`AzureOpenAI` (OpenAI JavaScript/TypeScript SDK)](https://www.npmjs.com/package/openai)
+
+## Keep Chat Completions requests on the same model (preview)
+
+The Chat Completions API is stateless, so your application sends the conversation history with each request. By default, model router evaluates each request independently and might select a different underlying model for a later turn. Session affinity lets your application identify related requests and asks model router to try the same eligible model first.
+
+Session affinity can improve the opportunity for prompt-cache reuse when consecutive requests have overlapping prompt prefixes. It doesn't inspect cache state or guarantee a cache hit.
+
+### Configure session affinity
+
+After your application reads the endpoint, API key, and deployment name, create the client with the preview feature header. Then create an opaque, application-owned session ID that doesn't contain secrets or personal information:
+
+```python
+"""
+Foundry Model Router - Chat Completions Session Affinity Example
+
+This example demonstrates how to use one session ID across separate
+Chat Completions requests so Model Router can keep using the associated
+eligible model while preserving normal fallback behavior.
+
+Prerequisites:
+  - An Azure OpenAI resource with a "model-router" deployment
+  - A .env file beside this script with AZURE_OPENAI_ENDPOINT,
+    AZURE_OPENAI_API_KEY, and MODEL_DEPLOYMENT_NAME
+
+Usage:
+    pip install -r requirements.txt
+    python model-router-chat-completions-session-affinity.py
+"""
+
+import os
+import uuid
+from pathlib import Path
+
+from dotenv import load_dotenv
+from openai import AzureOpenAI
+
+load_dotenv(Path(__file__).resolve().parent / ".env", override=True)
+
+endpoint = os.environ["AZURE_OPENAI_ENDPOINT"]
+api_key = os.environ["AZURE_OPENAI_API_KEY"]
+deployment = os.environ["MODEL_DEPLOYMENT_NAME"]
+
+# <session_affinity_enable>
+client = AzureOpenAI(
+    azure_endpoint=endpoint,
+    api_key=api_key,
+    api_version="2024-10-21",
+    default_headers={"Foundry-Features": "ModelRouterControls=V1Preview"},
+)
+
+# Use an opaque application-owned ID without secrets or personal information.
+# A fresh value makes the first request in each run establish a new association.
+session_id = f"trip-planner-{uuid.uuid4()}"
+session_affinity = {
+    "routing_config": {
+        "session_affinity": {
+            "mode": "sticky",
+            "session_id": session_id,
+        }
+    }
+}
+# </session_affinity_enable>
+
+messages = [
+    {"role": "system", "content": "You are a helpful travel planner."},
+    {"role": "user", "content": "Plan a one-day family trip to Seattle."},
+]
+
+# <session_affinity_turns>
+first_response = client.chat.completions.create(
+    model=deployment,
+    messages=messages,
+    extra_body=session_affinity,
+)
+
+messages.extend(
+    [
+        {"role": "assistant", "content": first_response.choices[0].message.content},
+        {
+            "role": "user",
+            "content": "Add restaurant suggestions and indoor activities.",
+        },
+    ]
+)
+
+second_response = client.chat.completions.create(
+    model=deployment,
+    messages=messages,
+    extra_body=session_affinity,
+)
+# </session_affinity_turns>
+
+def print_response(turn, response):
+    print(f"\n--- {turn} ---")
+    print(f"Serving model: {response.model}")
+
+    model_selection_details = getattr(response, "model_selection_details", None)
+    if not model_selection_details:
+        print("No model selection details were returned.")
+    else:
+        model_router_details = model_selection_details.get("model_router_details", {})
+
+        # <session_affinity_extract>
+        affinity_details = model_router_details.get("session_affinity")
+        if not affinity_details:
+            print("No session affinity details were returned.")
+        else:
+            print(f"Affinity mode: {affinity_details.get('mode', 'unknown')}")
+            print(f"Affinity source: {affinity_details.get('source', 'unknown')}")
+            print(f"Affinity decision: {affinity_details.get('decision', 'not reported')}")
+        # </session_affinity_extract>
+
+    print(f"Response:\n{response.choices[0].message.content}")
+
+print_response("First turn", first_response)
+print_response("Second turn", second_response)
+```
+
+Use the same session ID for every turn in one conversation. Use a different session ID for an unrelated conversation.
+
+You can alternatively provide the application-owned identifier in the `x-ms-session-id` request header. When a request contains valid identifiers in both locations, `routing_config.session_affinity.session_id` takes precedence. A session ID must contain 1 through 256 Unicode code points, including at least one non-whitespace character. Model router ignores an invalid body identifier and tries a valid header identifier. If neither identifier is valid, Chat Completions uses normal routing.
+
+### Send related conversation turns
+
+Send the first request, append its response and the next user message to the conversation history, and send the next request with the same session affinity configuration:
+
+```python
+"""
+Foundry Model Router - Chat Completions Session Affinity Example
+
+This example demonstrates how to use one session ID across separate
+Chat Completions requests so Model Router can keep using the associated
+eligible model while preserving normal fallback behavior.
+
+Prerequisites:
+  - An Azure OpenAI resource with a "model-router" deployment
+  - A .env file beside this script with AZURE_OPENAI_ENDPOINT,
+    AZURE_OPENAI_API_KEY, and MODEL_DEPLOYMENT_NAME
+
+Usage:
+    pip install -r requirements.txt
+    python model-router-chat-completions-session-affinity.py
+"""
+
+import os
+import uuid
+from pathlib import Path
+
+from dotenv import load_dotenv
+from openai import AzureOpenAI
+
+load_dotenv(Path(__file__).resolve().parent / ".env", override=True)
+
+endpoint = os.environ["AZURE_OPENAI_ENDPOINT"]
+api_key = os.environ["AZURE_OPENAI_API_KEY"]
+deployment = os.environ["MODEL_DEPLOYMENT_NAME"]
+
+# <session_affinity_enable>
+client = AzureOpenAI(
+    azure_endpoint=endpoint,
+    api_key=api_key,
+    api_version="2024-10-21",
+    default_headers={"Foundry-Features": "ModelRouterControls=V1Preview"},
+)
+
+# Use an opaque application-owned ID without secrets or personal information.
+# A fresh value makes the first request in each run establish a new association.
+session_id = f"trip-planner-{uuid.uuid4()}"
+session_affinity = {
+    "routing_config": {
+        "session_affinity": {
+            "mode": "sticky",
+            "session_id": session_id,
+        }
+    }
+}
+# </session_affinity_enable>
+
+messages = [
+    {"role": "system", "content": "You are a helpful travel planner."},
+    {"role": "user", "content": "Plan a one-day family trip to Seattle."},
+]
+
+# <session_affinity_turns>
+first_response = client.chat.completions.create(
+    model=deployment,
+    messages=messages,
+    extra_body=session_affinity,
+)
+
+messages.extend(
+    [
+        {"role": "assistant", "content": first_response.choices[0].message.content},
+        {
+            "role": "user",
+            "content": "Add restaurant suggestions and indoor activities.",
+        },
+    ]
+)
+
+second_response = client.chat.completions.create(
+    model=deployment,
+    messages=messages,
+    extra_body=session_affinity,
+)
+# </session_affinity_turns>
+
+def print_response(turn, response):
+    print(f"\n--- {turn} ---")
+    print(f"Serving model: {response.model}")
+
+    model_selection_details = getattr(response, "model_selection_details", None)
+    if not model_selection_details:
+        print("No model selection details were returned.")
+    else:
+        model_router_details = model_selection_details.get("model_router_details", {})
+
+        # <session_affinity_extract>
+        affinity_details = model_router_details.get("session_affinity")
+        if not affinity_details:
+            print("No session affinity details were returned.")
+        else:
+            print(f"Affinity mode: {affinity_details.get('mode', 'unknown')}")
+            print(f"Affinity source: {affinity_details.get('source', 'unknown')}")
+            print(f"Affinity decision: {affinity_details.get('decision', 'not reported')}")
+        # </session_affinity_extract>
+
+    print(f"Response:\n{response.choices[0].message.content}")
+
+print_response("First turn", first_response)
+print_response("Second turn", second_response)
+```
+
+Model router creates or updates a model association only after a successful request. The association expires after 30 minutes without a successful create or update.
+
+### Verify the affinity decision
+
+Inspect `model_selection_details.model_router_details.session_affinity` to determine how model router applied affinity:
+
+```python
+"""
+Foundry Model Router - Chat Completions Session Affinity Example
+
+This example demonstrates how to use one session ID across separate
+Chat Completions requests so Model Router can keep using the associated
+eligible model while preserving normal fallback behavior.
+
+Prerequisites:
+  - An Azure OpenAI resource with a "model-router" deployment
+  - A .env file beside this script with AZURE_OPENAI_ENDPOINT,
+    AZURE_OPENAI_API_KEY, and MODEL_DEPLOYMENT_NAME
+
+Usage:
+    pip install -r requirements.txt
+    python model-router-chat-completions-session-affinity.py
+"""
+
+import os
+import uuid
+from pathlib import Path
+
+from dotenv import load_dotenv
+from openai import AzureOpenAI
+
+load_dotenv(Path(__file__).resolve().parent / ".env", override=True)
+
+endpoint = os.environ["AZURE_OPENAI_ENDPOINT"]
+api_key = os.environ["AZURE_OPENAI_API_KEY"]
+deployment = os.environ["MODEL_DEPLOYMENT_NAME"]
+
+# <session_affinity_enable>
+client = AzureOpenAI(
+    azure_endpoint=endpoint,
+    api_key=api_key,
+    api_version="2024-10-21",
+    default_headers={"Foundry-Features": "ModelRouterControls=V1Preview"},
+)
+
+# Use an opaque application-owned ID without secrets or personal information.
+# A fresh value makes the first request in each run establish a new association.
+session_id = f"trip-planner-{uuid.uuid4()}"
+session_affinity = {
+    "routing_config": {
+        "session_affinity": {
+            "mode": "sticky",
+            "session_id": session_id,
+        }
+    }
+}
+# </session_affinity_enable>
+
+messages = [
+    {"role": "system", "content": "You are a helpful travel planner."},
+    {"role": "user", "content": "Plan a one-day family trip to Seattle."},
+]
+
+# <session_affinity_turns>
+first_response = client.chat.completions.create(
+    model=deployment,
+    messages=messages,
+    extra_body=session_affinity,
+)
+
+messages.extend(
+    [
+        {"role": "assistant", "content": first_response.choices[0].message.content},
+        {
+            "role": "user",
+            "content": "Add restaurant suggestions and indoor activities.",
+        },
+    ]
+)
+
+second_response = client.chat.completions.create(
+    model=deployment,
+    messages=messages,
+    extra_body=session_affinity,
+)
+# </session_affinity_turns>
+
+def print_response(turn, response):
+    print(f"\n--- {turn} ---")
+    print(f"Serving model: {response.model}")
+
+    model_selection_details = getattr(response, "model_selection_details", None)
+    if not model_selection_details:
+        print("No model selection details were returned.")
+    else:
+        model_router_details = model_selection_details.get("model_router_details", {})
+
+        # <session_affinity_extract>
+        affinity_details = model_router_details.get("session_affinity")
+        if not affinity_details:
+            print("No session affinity details were returned.")
+        else:
+            print(f"Affinity mode: {affinity_details.get('mode', 'unknown')}")
+            print(f"Affinity source: {affinity_details.get('source', 'unknown')}")
+            print(f"Affinity decision: {affinity_details.get('decision', 'not reported')}")
+        # </session_affinity_extract>
+
+    print(f"Response:\n{response.choices[0].message.content}")
+
+print_response("First turn", first_response)
+print_response("Second turn", second_response)
+```
+
+A typical run produces output similar to the following example:
+
+```output
+--- First turn ---
+Serving model: <model-name>
+Affinity mode: sticky
+Affinity source: session_id_payload
+Affinity decision: initialize
+Response:
+<first-response>
+
+--- Second turn ---
+Serving model: <model-name>
+Affinity mode: sticky
+Affinity source: session_id_payload
+Affinity decision: retain
+Response:
+<second-response>
+```
+
+The first successful request typically returns `initialize`. A later request returns `retain` when the associated model serves the response. It returns `switch` when eligibility or fallback causes another model to serve the response. Policy, safety, capability, quota, availability, and fallback requirements take precedence over affinity.
+
+To disable affinity for one request, set `routing_config.session_affinity.mode` to `none`. Model router uses normal routing for that request and doesn't read or update the model association. The response reports `mode` as `none` and omits `source` and `decision`.
+
+Session affinity is best-effort. An affinity lookup or persistence failure doesn't fail inference. In that case, model router uses normal routing and omits the complete `session_affinity` response object. Session affinity doesn't store conversation content, prevent fallback, or provide adaptive cache-aware switching.
+
+For the response fields and fallback diagnostics, see [Monitor model router](/models/monitor-model-router#interpret-session-affinity-metadata).
 
 ## Test model router in the playground
 
@@ -393,9 +848,9 @@ For agentic requests, model router can select eligible OpenAI, open-source (OSS)
 
 ### Output format 
 
-The JSON response you receive from a model router model is identical to the standard chat completions API response. Note that the `"model"` field reveals which underlying model was selected to respond to the prompt.
+The standard Chat Completions response includes a `"model"` field that identifies the underlying model that served the request. You can also opt in to preview per-request metadata for routing attempts, status, and reported latency. For details, see [Monitor model router](/models/monitor-model-router).
 
-The following example response was generated using API version `2025-11-18`:
+The following example response was generated by using model router model version `2025-11-18`:
 
 ```json
 
@@ -503,6 +958,8 @@ Treat your initial deployment as a starting configuration. Before you send produ
 
 ## Monitor model router metrics
 
+To inspect the serving model, routing attempts, status, and reported latency for an individual Chat Completions request, see [Monitor model router](/models/monitor-model-router).
+
 ### Monitor performance
 
 Monitor the performance of your model router deployment in Azure Monitor (AzMon) in the Azure portal.
@@ -541,7 +998,7 @@ The following open-source repositories demonstrate model router in different sce
 |---|---|---|
 | [Model Router Capabilities Interactive Demo](https://github.com/leestott/router-demo-app/) (Python) | Compare Balanced, Cost, and Quality routing modes with custom prompts. View live benchmark data for cost savings, latency, and routing distribution. | Add your own prompt sets, integrate with your CI pipeline, or connect to your deployment for A/B testing. |
 | [Routed Models Distribution Analysis](https://github.com/guygregory/ModelRouter-Distribution) (Python) | Run batches of prompts across routing profiles and model subsets. See which models the router selects and in what proportions. | Plug in representative prompt logs to evaluate tradeoffs before adopting a routing policy at scale. |
-| [Multi-team sceanrios with Quality & Cost benchmarking](https://github.com/microsoft/aitour26-LTG153-automate-model-selection-with-microsoft-foundry-model-router) (Python, workshop) | Deploy model router, run benchmarks against fixed-model deployments, and analyze cost and latency optimization in a multi-team enterprise scenario. | Swap in your own models, prompts, and routing profiles to benchmark against your workload patterns. |
+| [Multi-team scenarios with Quality & Cost benchmarking](https://github.com/microsoft/aitour26-LTG153-automate-model-selection-with-microsoft-foundry-model-router) (Python, workshop) | Deploy model router, run benchmarks against fixed-model deployments, and analyze cost and latency optimization in a multi-team enterprise scenario. | Swap in your own models, prompts, and routing profiles to benchmark against your workload patterns. |
 | [On-Call Copilot Multi-Agent Demo](https://github.com/leestott/On-Call-Copilot-Multi-Agent) (Python) | See how model router dynamically selects the right model per agent step — a fast, low-cost model for classification and a reasoning model for root-cause analysis. | Adapt the multi-agent architecture, agent roles, and escalation paths for your own operations or support scenarios. |
 
 <Info>
