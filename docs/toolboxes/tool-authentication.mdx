@@ -173,8 +173,10 @@ Each tool references its connection by ID. That single reference is the entire d
 
 This example requires `azure-ai-projects` (Python) or `@azure/ai-projects` (TypeScript) version 2.3.0 or later.
 
-<CodeGroup>
-```python Python
+<Tabs>
+  <Tab title="Python">
+
+    ```python
     from azure.identity import DefaultAzureCredential
     from azure.ai.projects import AIProjectClient
     from azure.ai.projects.models import MCPToolboxTool, WorkIQPreviewToolboxTool
@@ -200,7 +202,47 @@ This example requires `azure-ai-projects` (Python) or `@azure/ai-projects` (Type
     print(f"Created toolbox: {toolbox_version.name}, version: {toolbox_version.version}")
     ```
 
-```typescript JavaScript/TypeScript
+  </Tab>
+  <Tab title="C#">
+
+    Install the prerelease packages with `dotnet add package Azure.AI.Projects --prerelease` and `dotnet add package Azure.Identity`.
+
+    ```csharp
+    using Azure.AI.Projects;
+    using Azure.AI.Projects.Agents;
+    using Azure.Identity;
+    using OpenAI.Responses;
+
+    #pragma warning disable AAIP001, OPENAI001
+
+    var endpoint = "https://<your-foundry-account>.services.ai.azure.com/api/projects/<your-project>";
+    AIProjectClient projectClient = new(new Uri(endpoint), new DefaultAzureCredential());
+    AgentToolboxes toolboxes = projectClient.AgentAdministrationClient.GetAgentToolboxes();
+
+    // Connection IDs from the connections you created earlier.
+    var ordersConnectionId = "orders-mcp";
+    var workiqConnectionId = "workiq-conn";
+
+    ToolboxVersion toolbox = toolboxes.CreateVersion(
+        name: "employee-toolbox",
+        tools:
+        [
+            new MCPToolboxTool(serverLabel: "orders")
+            {
+                ServerUri = new Uri("https://orders-mcp.example.com/mcp"),
+                ProjectConnectionId = ordersConnectionId,
+                ToolCallApprovalPolicy = new McpToolCallApprovalPolicy(GlobalMcpToolCallApprovalPolicy.NeverRequireApproval),
+            },
+            new WorkIQPreviewToolboxTool(workiqConnectionId),
+        ],
+        description: "Private orders MCP + Work IQ, both via OAuth identity passthrough.");
+    Console.WriteLine($"Created toolbox: {toolbox.Name}, version: {toolbox.Version}");
+    ```
+
+  </Tab>
+  <Tab title="JavaScript/TypeScript">
+
+    ```typescript
     import { DefaultAzureCredential } from "@azure/identity";
     import { AIProjectClient } from "@azure/ai-projects";
 
@@ -236,7 +278,9 @@ This example requires `azure-ai-projects` (Python) or `@azure/ai-projects` (Type
       `Created toolbox: ${toolboxVersion.name}, version: ${toolboxVersion.version}`,
     );
     ```
-</CodeGroup>
+
+  </Tab>
+</Tabs>
 
 For JavaScript, see the maintained [toolbox project-connection sample](https://github.com/Azure/azure-sdk-for-js/blob/main/sdk/ai/ai-projects/samples/v2/javascript/agents/tools/agentToolboxSearchPreview.js) and [Work IQ sample](https://github.com/Azure/azure-sdk-for-js/blob/main/sdk/ai/ai-projects/samples/v2/javascript/agents/tools/agentWorkIQ.js). The first sample creates an MCP-backed toolbox that uses a project connection and attaches it to an agent. The second sample shows how to reference the Work IQ project connection.
 

@@ -182,39 +182,74 @@ Voice agents follow the same deployment flow as any hosted agent. The only diffe
 
 When you create the agent version, include `invocations_ws` in `protocol_versions`. You can declare it alone or alongside `responses` and `invocations`.
 
-```python
-from azure.ai.projects import AIProjectClient
-from azure.ai.projects.models import (
-    AgentEndpointProtocol,
-    ContainerConfiguration,
-    HostedAgentDefinition,
-    ProtocolVersionRecord,
-)
-from azure.identity import DefaultAzureCredential
+<Tabs>
+  <Tab title="Python">
 
-project = AIProjectClient(
-    endpoint="https://<resource>.services.ai.azure.com/api/projects/<project>",
-    credential=DefaultAzureCredential(),
-    allow_preview=True,
-)
+    ```python
+    from azure.ai.projects import AIProjectClient
+    from azure.ai.projects.models import (
+        AgentEndpointProtocol,
+        ContainerConfiguration,
+        HostedAgentDefinition,
+        ProtocolVersionRecord,
+    )
+    from azure.identity import DefaultAzureCredential
 
-agent = project.agents.create_version(
-    agent_name="my-voice-agent",
-    definition=HostedAgentDefinition(
-        protocol_versions=[
-            ProtocolVersionRecord(protocol=AgentEndpointProtocol.INVOCATIONS_WS, version="1.0.0"),
-        ],
-        cpu="1",
-        memory="2Gi",
-        container_configuration=ContainerConfiguration(
-            image="your-registry.azurecr.io/your-voice-agent:v1"
+    project = AIProjectClient(
+        endpoint="https://<resource>.services.ai.azure.com/api/projects/<project>",
+        credential=DefaultAzureCredential(),
+        allow_preview=True,
+    )
+
+    agent = project.agents.create_version(
+        agent_name="my-voice-agent",
+        definition=HostedAgentDefinition(
+            protocol_versions=[
+                ProtocolVersionRecord(protocol=AgentEndpointProtocol.INVOCATIONS_WS, version="1.0.0"),
+            ],
+            cpu="1",
+            memory="2Gi",
+            container_configuration=ContainerConfiguration(
+                image="your-registry.azurecr.io/your-voice-agent:v1"
+            ),
+            environment_variables={
+                "MODEL_DEPLOYMENT_NAME": "gpt-realtime",
+            },
         ),
-        environment_variables={
-            "MODEL_DEPLOYMENT_NAME": "gpt-realtime",
-        },
-    ),
-)
-```
+    )
+    ```
+
+  </Tab>
+  <Tab title="C#">
+
+    Install the prerelease package with `dotnet add package Azure.AI.Projects.Agents --prerelease`.
+
+    ```csharp
+    using System;
+    using Azure.AI.Projects.Agents;
+    using Azure.Identity;
+
+    AgentAdministrationClient agentsClient = new(
+        endpoint: new Uri("https://<resource>.services.ai.azure.com/api/projects/<project>"),
+        tokenProvider: new DefaultAzureCredential());
+
+    // Declare the invocations_ws protocol for full-duplex voice streaming.
+    var definition = new HostedAgentDefinition(
+        versions: new[] { new ProtocolVersionRecord(ProjectsAgentProtocol.InvocationsWs, "1.0.0") },
+        cpu: "1",
+        memory: "2Gi")
+    {
+        ContainerConfiguration = new ContainerConfiguration("your-registry.azurecr.io/your-voice-agent:v1"),
+        EnvironmentVariables = { ["MODEL_DEPLOYMENT_NAME"] = "gpt-realtime" },
+    };
+    ProjectsAgentVersion agent = agentsClient.CreateAgentVersion(
+        agentName: "my-voice-agent",
+        options: new ProjectsAgentVersionCreationOptions(definition));
+    Console.WriteLine($"Created hosted agent: {agent.Name}, version: {agent.Version}");
+    ```
+
+  </Tab>
+</Tabs>
 
 For the full deployment flow (build, push, RBAC, polling for status), see [Deploy a hosted agent](/agents/deploy-hosted-agent).
 
