@@ -1,0 +1,186 @@
+---
+title: "Delegate work in GPT-Live"
+description: "Delegate GPT-Live work to an application or Responses API model and complete client-actionable function calls."
+sidebarTitle: "Delegate work in GPT-Live"
+---
+
+When a GPT-Live conversation requires search, deeper reasoning, or another external action, the live model can delegate that work while the interaction continues.
+
+| Mode | Description |
+|---|---|
+| **Client delegation** | GPT-Live hands work to your application. Your backend performs the work and returns context. |
+| **Responses delegation** | GPT-Live routes work to a configured [Responses API](/models/capabilities/responses) deployment. Hosted tools run server-side, while client-actionable function calls return to your application. |
+
+Omitting `delegation` or setting it to `null` selects client delegation.
+
+## Choose a delegation mode
+
+Start with Responses delegation when its managed workflow fits the task. Choose client delegation when the application must control backend context, execution, or returned results.
+
+| Consideration | Responses delegation | Client delegation |
+|---|---|---|
+| Implementation | GPT-Live prepares backend requests and manages the connection. | Your application builds and operates the integration. |
+| Result review | Backend output can return directly to GPT-Live. | Your application validates, redacts, combines, or rejects results. |
+| Capabilities | The Responses model and supported tools fit the workflow. | You need another backend, multiple models, or custom capabilities. |
+| Context | GPT-Live can choose the conversation context. | Your application must choose the exact history, memory, and state. |
+| Execution policy | A configured model-and-tool loop is sufficient. | You need custom routing, fallbacks, checkpoints, or budgets. |
+
+Choose the mode when you create the session. To switch modes, start a new session. In both modes, your application must enforce permissions and required confirmations before running tools.
+
+## Configure delegation
+
+Client delegation:
+
+```json
+{
+  "delegation": { "type": "client" }
+}
+```
+
+Responses delegation with hosted and function tools:
+
+```json
+{
+  "delegation": {
+    "type": "responses",
+    "responses": {
+      "model": "gpt-5.5",
+      "instructions": "Use tools when current information is required.",
+      "tools": [
+        { "type": "web_search" },
+        {
+          "type": "function",
+          "name": "get_weather",
+          "description": "Get current weather for a location.",
+          "parameters": {
+            "type": "object",
+            "properties": { "location": { "type": "string" } },
+            "required": ["location"],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "tool_choice": "auto",
+      "parallel_tool_calls": true
+    }
+  }
+}
+```
+
+`delegation.responses.service_tier` accepts `auto`, `default`, `flex`, or `priority`. A later `session.update` replaces `delegation` as a complete object; nested fields aren't patched independently.
+
+## Handle client delegation
+
+`session.delegation.created` identifies a client task with a delegation `id`. The object contains metadata rather than task text, so use transcript events and application state to determine the requested work.
+
+```json
+{
+  "type": "session.delegation.created",
+  "event_id": "event_delegation",
+  "offset_ms": 1000,
+  "delegation": {
+    "id": "item_delegation_123",
+    "type": "delegation",
+    "target": "client"
+  }
+}
+```
+
+Return quiet context with `session.thinking.append` or information the model should say aloud with `session.commentary.append`. Set `delegation_id` to the delegation ID.
+
+```json
+{
+  "type": "session.commentary.append",
+  "event_id": "event_result_1",
+  "delegation_id": "item_delegation_123",
+  "content": "It is 62 degrees and raining in Seattle."
+}
+```
+
+The corresponding `session.commentary.appended` event confirms context injection, not that the model spoke the result or an external action succeeded.
+
+## Handle Responses delegation
+
+For Responses delegation, `session.delegation.created` has `target: "responses"` and a `response_id`. GPT-Live manages the backend call; don't send a separate Responses request into the GPT-Live event stream.
+
+```json
+{
+  "type": "session.delegation.created",
+  "event_id": "event_delegation",
+  "offset_ms": 1000,
+  "delegation": {
+    "id": "item_delegation_456",
+    "type": "delegation",
+    "target": "responses",
+    "response_id": "resp_123"
+  }
+}
+```
+
+Responses events arrive inside a `response.event` envelope. Dispatch on the nested `event.type` and preserve the outer `delegation_id`.
+
+```json
+{
+  "type": "response.event",
+  "event_id": "event_response_1",
+  "delegation_id": "item_delegation_456",
+  "event": {
+    "type": "response.output_text.delta",
+    "item_id": "msg_123",
+    "delta": "The forecast is"
+  }
+}
+```
+
+Delegated output is also injected into the live session. A completed backend response doesn't guarantee that the user heard the answer.
+
+### Complete a client-actionable function call
+
+Read completed calls from the nested `response.output_item.done` event.
+
+```json
+{
+  "type": "response.event",
+  "delegation_id": "item_delegation_456",
+  "event": {
+    "type": "response.output_item.done",
+    "item": {
+      "type": "function_call",
+      "call_id": "call_123",
+      "name": "get_weather",
+      "arguments": "{\"location\":\"Seattle\"}"
+    }
+  }
+}
+```
+
+Run the authorized handler, then submit its result with `response.item.create`.
+
+```json
+{
+  "type": "response.item.create",
+  "event_id": "event_function_output_1",
+  "item": {
+    "type": "function_call_output",
+    "call_id": "call_123",
+    "output": "{\"temperature\":62,\"conditions\":\"rain\"}"
+  }
+}
+```
+
+Submit a result for every pending tool call, then continue the backend response explicitly:
+
+```json
+{
+  "type": "response.create",
+  "event_id": "event_continue_1"
+}
+```
+
+Keep reading `response.event` envelopes until the nested lifecycle reaches a terminal event such as `response.completed` or an error.
+
+## Related content
+
+- [Use GPT-Live over WebSocket](/models/capabilities/gpt-live)
+- [Use GPT-Live via WebRTC](/models/capabilities/gpt-live-webrtc)
+- [GPT-Live event API reference](https://learn.microsoft.com/azure/foundry/openai/gpt-live-reference)
