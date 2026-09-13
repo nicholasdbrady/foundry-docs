@@ -46,41 +46,115 @@ The following table shows common evaluation surfaces and the field that accepts 
 
 Set `initialization_parameters.model` when you configure an AI-assisted evaluator. This example uses the admin-connected model as the judge for the coherence evaluator:
 
-```python
-from azure.ai.projects.models import TestingCriterionAzureAIEvaluator
+<CodeGroup>
+```python Python
+    from azure.ai.projects.models import TestingCriterionAzureAIEvaluator
 
-admin_connected_model = "my-apim-connection/gpt-4o"
+    admin_connected_model = "my-apim-connection/gpt-4o"
 
-testing_criteria = [
-    TestingCriterionAzureAIEvaluator(
-        type="azure_ai_evaluator",
-        name="coherence",
-        evaluator_name="builtin.coherence",
-        initialization_parameters={"model": admin_connected_model},
-        data_mapping={
-            "query": "{{item.query}}",
-            "response": "{{item.response}}",
+    testing_criteria = [
+        TestingCriterionAzureAIEvaluator(
+            type="azure_ai_evaluator",
+            name="coherence",
+            evaluator_name="builtin.coherence",
+            initialization_parameters={"model": admin_connected_model},
+            data_mapping={
+                "query": "{{item.query}}",
+                "response": "{{item.response}}",
+            },
+        ),
+    ]
+    ```
+
+```csharp C#
+    string adminConnectedModel = "my-apim-connection/gpt-4o";
+
+    object[] testingCriteria =
+    [
+        new
+        {
+            type = "azure_ai_evaluator",
+            name = "coherence",
+            evaluator_name = "builtin.coherence",
+            initialization_parameters = new { model = adminConnectedModel },
+            data_mapping = new
+            {
+                query = "{{item.query}}",
+                response = "{{item.response}}"
+            }
+        }
+    ];
+    ```
+
+```typescript JavaScript/TypeScript
+    const adminConnectedModel = "my-apim-connection/gpt-4o";
+
+    const testingCriteria = [
+        {
+            type: "azure_ai_evaluator",
+            name: "coherence",
+            evaluator_name: "builtin.coherence",
+            initialization_parameters: { model: adminConnectedModel },
+            data_mapping: {
+                query: "{{item.query}}",
+                response: "{{item.response}}",
+            },
         },
-    ),
-]
-```
+    ];
+    ```
+</CodeGroup>
+
+- Reference: [`TestingCriterionAzureAIEvaluator`](https://learn.microsoft.com/python/api/azure-ai-projects/azure.ai.projects.models.testingcriterionazureaievaluator) (Python)
+- Reference: [OpenAI Evals API](https://platform.openai.com/docs/api-reference/evals) (`testing_criteria`, all languages)
 
 ## Use an admin-connected model as a target
 
 Set `target.model` to send each evaluation input to the admin-connected model:
 
-```python
-admin_connected_model = "my-apim-connection/gpt-4o"
+<CodeGroup>
+```python Python
+    admin_connected_model = "my-apim-connection/gpt-4o"
 
-target = {
-    "type": "azure_ai_model",
-    "model": admin_connected_model,
-    "sampling_params": {
-        "top_p": 1.0,
-        "max_completion_tokens": 2048,
-    },
-}
-```
+    target = {
+        "type": "azure_ai_model",
+        "model": admin_connected_model,
+        "sampling_params": {
+            "top_p": 1.0,
+            "max_completion_tokens": 2048,
+        },
+    }
+    ```
+
+```csharp C#
+    string adminConnectedModel = "my-apim-connection/gpt-4o";
+
+    object target = new
+    {
+        type = "azure_ai_model",
+        model = adminConnectedModel,
+        sampling_params = new
+        {
+            top_p = 1.0f,
+            max_completion_tokens = 2048
+        }
+    };
+    ```
+
+```typescript JavaScript/TypeScript
+    const adminConnectedModel = "my-apim-connection/gpt-4o";
+
+    const target = {
+        type: "azure_ai_model",
+        model: adminConnectedModel,
+        sampling_params: {
+            top_p: 1.0,
+            max_completion_tokens: 2048,
+        },
+    };
+    ```
+</CodeGroup>
+
+- Reference: [OpenAI Evals API](https://platform.openai.com/docs/api-reference/evals) (`data_source.target`, all languages)
 
 Use this target with the [model target evaluation flow described in Run evaluations in the cloud](/evaluation/cloud-evaluation-targets#evaluate-a-model-target).
 

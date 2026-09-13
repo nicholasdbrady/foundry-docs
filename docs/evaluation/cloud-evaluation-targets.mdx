@@ -33,75 +33,171 @@ You can use the [model router](/models/model-router) as the target model. Model 
 
 The `input_messages` template controls how queries are sent to the model. Use `{{item.query}}` to reference fields from your input data. Specify the model to evaluate and optional sampling parameters:
 
-```python
-input_messages = {
-    "type": "template",
-    "template": [
-        {
-            "type": "message",
-            "role": "user",
-            "content": {
-                "type": "input_text",
-                "text": "{{item.query}}"
-            }
-        }
-    ]
-}
+<Tabs>
+  <Tab title="Python">
 
-target = {
-    "type": "azure_ai_model",
-    "model": "gpt-5-mini",
-    "sampling_params": {
-        "top_p": 1.0,
-        "max_completion_tokens": 2048,
-    },
-}
-```
+    ```python
+    input_messages = {
+        "type": "template",
+        "template": [
+            {
+                "type": "message",
+                "role": "user",
+                "content": {
+                    "type": "input_text",
+                    "text": "{{item.query}}"
+                }
+            }
+        ]
+    }
+
+    target = {
+        "type": "azure_ai_model",
+        "model": "gpt-5-mini",
+        "sampling_params": {
+            "top_p": 1.0,
+            "max_completion_tokens": 2048,
+        },
+    }
+    ```
+
+  </Tab>
+  <Tab title="C#">
+
+    The C# sample defines the message template and model target in [Create evaluation and run](#create-evaluation-and-run).
+
+  </Tab>
+  <Tab title="JavaScript/TypeScript">
+
+    ```javascript
+    const inputMessages = {
+      type: "template",
+      template: [
+        {
+          type: "message",
+          role: "user",
+          content: { type: "input_text", text: "{{item.query}}" },
+        },
+      ],
+    };
+
+    const target = {
+      type: "azure_ai_model",
+      model: "gpt-5-mini",
+      sampling_params: {
+        top_p: 1.0,
+        max_completion_tokens: 2048,
+      },
+    };
+    ```
+
+  </Tab>
+  <Tab title="cURL">
+
+    Define the message template and target directly in the JSON request body shown in the cURL tab under [Create evaluation and run](#create-evaluation-and-run).
+
+  </Tab>
+</Tabs>
 
 ### Set up evaluators and data mappings
 
-When the model generates responses at runtime, use `{{sample.output_text}}` in `data_mapping` to reference the model's output. Use `{{item.field}}` to reference fields from your input data.
+Use `{{item.field}}` in `data_mapping` to reference input data and `{{sample.output_text}}` to reference the model's generated response. Include the inputs required by each evaluator.
 
-```python
-data_source_config = DataSourceConfigCustom(
-    type="custom",
-    item_schema={
-        "type": "object",
-        "properties": {
-            "query": {"type": "string"},
-        },
-        "required": ["query"],
-    },
-    include_sample_schema=True,
-)
+<Tabs>
+  <Tab title="Python">
 
-testing_criteria = [
-    TestingCriterionAzureAIEvaluator(
-        type="azure_ai_evaluator",
-        name="coherence",
-        evaluator_name="builtin.coherence",
-        initialization_parameters={"model": model_deployment_name},
-        data_mapping={
-            "query": "{{item.query}}",
-            "response": "{{sample.output_text}}",
+    ```python
+    data_source_config = DataSourceConfigCustom(
+        type="custom",
+        item_schema={
+            "type": "object",
+            "properties": {
+                "query": {"type": "string"},
+            },
+            "required": ["query"],
         },
-    ),
-    TestingCriterionAzureAIEvaluator(
-        type="azure_ai_evaluator",
-        name="violence",
-        evaluator_name="builtin.violence",
-        data_mapping={
-            "query": "{{item.query}}",
-            "response": "{{sample.output_text}}",
+        include_sample_schema=True,
+    )
+
+    testing_criteria = [
+        TestingCriterionAzureAIEvaluator(
+            type="azure_ai_evaluator",
+            name="coherence",
+            evaluator_name="builtin.coherence",
+            initialization_parameters={"model": model_deployment_name},
+            data_mapping={
+                "query": "{{item.query}}",
+                "response": "{{sample.output_text}}",
+            },
+        ),
+        TestingCriterionAzureAIEvaluator(
+            type="azure_ai_evaluator",
+            name="violence",
+            evaluator_name="builtin.violence",
+            data_mapping={
+                "query": "{{item.query}}",
+                "response": "{{sample.output_text}}",
+            },
+        ),
+    ]
+    ```
+
+  </Tab>
+  <Tab title="C#">
+
+    The C# sample defines the data source configuration and evaluators in [Create evaluation and run](#create-evaluation-and-run).
+
+  </Tab>
+  <Tab title="JavaScript/TypeScript">
+
+    ```javascript
+    const dataSourceConfig = {
+      type: "custom",
+      item_schema: {
+        type: "object",
+        properties: { query: { type: "string" } },
+        required: ["query"],
+      },
+      include_sample_schema: true,
+    };
+
+    const testingCriteria = [
+      {
+        type: "azure_ai_evaluator",
+        name: "coherence",
+        evaluator_name: "builtin.coherence",
+        initialization_parameters: { model: modelDeploymentName },
+        data_mapping: {
+          query: "{{item.query}}",
+          response: "{{sample.output_text}}",
         },
-    ),
-]
-```
+      },
+      {
+        type: "azure_ai_evaluator",
+        name: "violence",
+        evaluator_name: "builtin.violence",
+        data_mapping: {
+          query: "{{item.query}}",
+          response: "{{sample.output_text}}",
+        },
+      },
+    ];
+    ```
+
+  </Tab>
+  <Tab title="cURL">
+
+    Define the evaluator configuration directly in the JSON request body shown in the cURL tab under [Create evaluation and run](#create-evaluation-and-run).
+
+  </Tab>
+</Tabs>
 
 ### Create evaluation and run
 
-<CodeGroup>
-```python Python
+<Tabs>
+  <Tab title="Python">
+
+    ```python
     eval_object = openai_client.evals.create(
         name="Model Target Evaluation",
         data_source_config=data_source_config,
@@ -125,7 +221,134 @@ testing_criteria = [
     )
     ```
 
-```bash cURL
+  </Tab>
+  <Tab title="C#">
+
+    ```csharp
+    object dataSourceConfig = new
+    {
+      type = "custom",
+      item_schema = new
+      {
+        type = "object",
+        properties = new { query = new { type = "string" } },
+        required = new[] { "query" }
+      },
+      include_sample_schema = true
+    };
+    object[] testingCriteria =
+    [
+      new
+      {
+        type = "azure_ai_evaluator",
+        name = "coherence",
+        evaluator_name = "builtin.coherence",
+        initialization_parameters = new { model = modelDeploymentName },
+        data_mapping = new
+        {
+          query = "{{item.query}}",
+          response = "{{sample.output_text}}"
+        }
+      },
+      new
+      {
+        type = "azure_ai_evaluator",
+        name = "violence",
+        evaluator_name = "builtin.violence",
+        data_mapping = new
+        {
+          query = "{{item.query}}",
+          response = "{{sample.output_text}}"
+        }
+      }
+    ];
+    BinaryData evaluationData = BinaryData.FromObjectAsJson(new
+    {
+      name = "Model Target Evaluation",
+      data_source_config = dataSourceConfig,
+      testing_criteria = testingCriteria
+    });
+    using BinaryContent evaluationContent = BinaryContent.Create(evaluationData);
+    ClientResult evaluation = await evaluationClient.CreateEvaluationAsync(
+      evaluationContent);
+    string evaluationId = GetString(evaluation, "id");
+
+    object dataSource = new
+    {
+      type = "azure_ai_target_completions",
+      source = new { type = "file_id", id = dataId },
+      input_messages = new
+      {
+        type = "template",
+        template = new[]
+        {
+          new
+          {
+            type = "message",
+            role = "user",
+            content = new
+            {
+              type = "input_text",
+              text = "{{item.query}}"
+            }
+          }
+        }
+      },
+      target = new
+      {
+        type = "azure_ai_model",
+        model = modelDeploymentName,
+        sampling_params = new
+        {
+          top_p = 1.0f,
+          max_completion_tokens = 2048
+        }
+      }
+    };
+    BinaryData runData = BinaryData.FromObjectAsJson(new
+    {
+      name = "model-target-evaluation",
+      data_source = dataSource
+    });
+    using BinaryContent runContent = BinaryContent.Create(runData);
+    ClientResult evaluationRun = await evaluationClient.CreateEvaluationRunAsync(
+      evaluationId: evaluationId,
+      content: runContent);
+    Console.WriteLine($"Evaluation run created: {GetString(evaluationRun, "id")}");
+    ```
+
+    Reference: [`EvaluationClient` protocol methods](https://github.com/openai/openai-dotnet/blob/main/OpenAI/src/Custom/Evals/EvaluationClient.Protocol.cs)
+
+  </Tab>
+  <Tab title="JavaScript/TypeScript">
+
+    ```javascript
+    const evalObject = await openaiClient.evals.create({
+      name: "Model Target Evaluation",
+      data_source_config: dataSourceConfig,
+      testing_criteria: testingCriteria,
+    });
+
+    const dataSource = {
+      type: "azure_ai_target_completions",
+      source: {
+        type: "file_id",
+        id: dataId,
+      },
+      input_messages: inputMessages,
+      target: target,
+    };
+
+    const evalRun = await openaiClient.evals.runs.create(evalObject.id, {
+      name: "model-target-evaluation",
+      data_source: dataSource,
+    });
+    ```
+
+  </Tab>
+  <Tab title="cURL">
+
+    ```bash
     curl --request POST \
       --url "https://${ACCOUNT}.services.ai.azure.com/api/projects/${PROJECT}/openai/v1/evals/${EVAL_ID}/runs" \
       --header "Authorization: Bearer ${TOKEN}" \
@@ -162,7 +385,9 @@ testing_criteria = [
         }
       }'
     ```
-</CodeGroup>
+
+  </Tab>
+</Tabs>
 
 For a complete runnable example, see [sample_model_evaluation.py](https://github.com/Azure/azure-sdk-for-python/blob/main/sdk/ai/azure-ai-projects/samples/evaluations/sample_model_evaluation.py) on GitHub. To poll for completion and interpret results, see [Get cloud evaluation results](/evaluation/cloud-evaluation-results).
 
@@ -192,35 +417,81 @@ Hosted agents that use the responses protocol work with the same code samples sh
 
 The `input_messages` template controls how queries are sent to the agent. Use `{{item.query}}` to reference fields from your input data. Specify the agent to evaluate by name:
 
-```python
-input_messages = {
-    "type": "template",
-    "template": [
-        {
-            "type": "message",
-            "role": "developer",
-            "content": {
-                "type": "input_text",
-                "text": "You are a helpful assistant. Answer clearly and safely."
+<Tabs>
+  <Tab title="Python">
+
+    ```python
+    input_messages = {
+        "type": "template",
+        "template": [
+            {
+                "type": "message",
+                "role": "developer",
+                "content": {
+                    "type": "input_text",
+                    "text": "You are a helpful assistant. Answer clearly and safely."
+                }
+            },
+            {
+                "type": "message",
+                "role": "user",
+                "content": {
+                    "type": "input_text",
+                    "text": "{{item.query}}"
+                }
             }
+        ]
+    }
+
+    target = {
+        "type": "azure_ai_agent",
+        "name": "my-agent",
+        "version": "1"  # Optional. Uses latest version if omitted.
+    }
+    ```
+
+  </Tab>
+  <Tab title="C#">
+
+    The C# sample defines the message template and agent target in [Create evaluation and run](#create-evaluation-and-run-1).
+
+  </Tab>
+  <Tab title="JavaScript/TypeScript">
+
+    ```javascript
+    const inputMessages = {
+      type: "template",
+      template: [
+        {
+          type: "message",
+          role: "developer",
+          content: {
+            type: "input_text",
+            text: "You are a helpful assistant. Answer clearly and safely.",
+          },
         },
         {
-            "type": "message",
-            "role": "user",
-            "content": {
-                "type": "input_text",
-                "text": "{{item.query}}"
-            }
-        }
-    ]
-}
+          type: "message",
+          role: "user",
+          content: { type: "input_text", text: "{{item.query}}" },
+        },
+      ],
+    };
 
-target = {
-    "type": "azure_ai_agent",
-    "name": "my-agent",
-    "version": "1"  # Optional. Uses latest version if omitted.
-}
-```
+    const target = {
+      type: "azure_ai_agent",
+      name: "my-agent",
+      version: "1", // Optional. Uses latest version if omitted.
+    };
+    ```
+
+  </Tab>
+  <Tab title="cURL">
+
+    Define the message template and target directly in the JSON request body shown in the cURL tab under [Create evaluation and run](#create-evaluation-and-run-1).
+
+  </Tab>
+</Tabs>
 
 ### Set up evaluators and data mappings
 
@@ -228,9 +499,13 @@ When the agent generates responses at runtime, use `{{sample.*}}` variables in `
 
 | Variable | Description | Use for |
 |----------|-------------|---------|
-| `{{sample.output_text}}` | The agent's plain text response. | Evaluators that expect a string response (for example, `coherence`, `violence`). |
+| `{{sample.output_text}}` | The agent's plain text response. | Evaluators that expect a string response (for example, `coherence` and `violence`). |
 | `{{sample.output_items}}` | The agent's structured JSON output, including tool calls. | Evaluators that need full interaction context (for example, `task_adherence`). |
 | `{{item.field}}` | A field from your input data. | Input fields like `query` or `ground_truth`. |
+
+Map every required evaluator input explicitly. Most evaluators in this example
+use `{{sample.output_text}}` for the response. Task Adherence instead requires
+the full structured interaction in `{{sample.output_items}}`.
 
 <Tip>
 
@@ -238,56 +513,111 @@ The `query` field can contain structured JSON, including system messages and con
 
 </Tip>
 
-```python
-data_source_config = DataSourceConfigCustom(
-    type="custom",
-    item_schema={
-        "type": "object",
-        "properties": {
-            "query": {"type": "string"},
-        },
-        "required": ["query"],
-    },
-    include_sample_schema=True,
-)
+<Tabs>
+  <Tab title="Python">
 
-testing_criteria = [
-    TestingCriterionAzureAIEvaluator(
-        type="azure_ai_evaluator",
-        name="coherence",
-        evaluator_name="builtin.coherence",
-        initialization_parameters={"model": model_deployment_name},
-        data_mapping={
-            "query": "{{item.query}}",
-            "response": "{{sample.output_text}}",
+    ```python
+    data_source_config = DataSourceConfigCustom(
+        type="custom",
+        item_schema={
+            "type": "object",
+            "properties": {
+                "query": {"type": "string"},
+            },
+            "required": ["query"],
         },
-    ),
-    TestingCriterionAzureAIEvaluator(
-        type="azure_ai_evaluator",
-        name="violence",
-        evaluator_name="builtin.violence",
-        data_mapping={
-            "query": "{{item.query}}",
-            "response": "{{sample.output_text}}",
+        include_sample_schema=True,
+    )
+
+    testing_criteria = [
+        TestingCriterionAzureAIEvaluator(
+            type="azure_ai_evaluator",
+            name="coherence",
+            evaluator_name="builtin.coherence",
+            initialization_parameters={"model": model_deployment_name},
+            data_mapping={
+                "query": "{{item.query}}",
+                "response": "{{sample.output_text}}",
+            },
+        ),
+        TestingCriterionAzureAIEvaluator(
+            type="azure_ai_evaluator",
+            name="violence",
+            evaluator_name="builtin.violence",
+            data_mapping={
+                "query": "{{item.query}}",
+                "response": "{{sample.output_text}}",
+            },
+        ),
+    ]
+    ```
+
+  </Tab>
+  <Tab title="C#">
+
+    The C# sample defines the data source configuration and evaluators in [Create evaluation and run](#create-evaluation-and-run-1).
+
+  </Tab>
+  <Tab title="JavaScript/TypeScript">
+
+    ```javascript
+    const dataSourceConfig = {
+      type: "custom",
+      item_schema: {
+        type: "object",
+        properties: { query: { type: "string" } },
+        required: ["query"],
+      },
+      include_sample_schema: true,
+    };
+
+    const testingCriteria = [
+      {
+        type: "azure_ai_evaluator",
+        name: "coherence",
+        evaluator_name: "builtin.coherence",
+        initialization_parameters: { model: modelDeploymentName },
+        data_mapping: {
+          query: "{{item.query}}",
+          response: "{{sample.output_text}}",
         },
-    ),
-    TestingCriterionAzureAIEvaluator(
-        type="azure_ai_evaluator",
-        name="task_adherence",
-        evaluator_name="builtin.task_adherence",
-        initialization_parameters={"model": model_deployment_name},
-        data_mapping={
-            "query": "{{item.query}}",
-            "response": "{{sample.output_items}}",
+      },
+      {
+        type: "azure_ai_evaluator",
+        name: "violence",
+        evaluator_name: "builtin.violence",
+        data_mapping: {
+          query: "{{item.query}}",
+          response: "{{sample.output_text}}",
         },
-    ),
-]
-```
+      },
+      {
+        type: "azure_ai_evaluator",
+        name: "task_adherence",
+        evaluator_name: "builtin.task_adherence",
+        initialization_parameters: { model: modelDeploymentName },
+        data_mapping: {
+          query: "{{item.query}}",
+          response: "{{sample.output_items}}",
+        },
+      },
+    ];
+    ```
+
+  </Tab>
+  <Tab title="cURL">
+
+    Define the evaluator configuration directly in the JSON request body shown in the cURL tab under [Create evaluation and run](#create-evaluation-and-run-1).
+
+  </Tab>
+</Tabs>
 
 ### Create evaluation and run
 
-<CodeGroup>
-```python Python
+<Tabs>
+  <Tab title="Python">
+
+    ```python
     eval_object = openai_client.evals.create(
         name="Agent Target Evaluation",
         data_source_config=data_source_config,
@@ -311,7 +641,152 @@ testing_criteria = [
     )
     ```
 
-```bash cURL
+  </Tab>
+  <Tab title="C#">
+
+    ```csharp
+    object dataSourceConfig = new
+    {
+      type = "custom",
+      item_schema = new
+      {
+        type = "object",
+        properties = new { query = new { type = "string" } },
+        required = new[] { "query" }
+      },
+      include_sample_schema = true
+    };
+    object[] testingCriteria =
+    [
+      new
+      {
+        type = "azure_ai_evaluator",
+        name = "coherence",
+        evaluator_name = "builtin.coherence",
+        initialization_parameters = new { model = modelDeploymentName },
+        data_mapping = new
+        {
+          query = "{{item.query}}",
+          response = "{{sample.output_text}}"
+        }
+      },
+      new
+      {
+        type = "azure_ai_evaluator",
+        name = "violence",
+        evaluator_name = "builtin.violence",
+        data_mapping = new
+        {
+          query = "{{item.query}}",
+          response = "{{sample.output_text}}"
+        }
+      },
+      new
+      {
+        type = "azure_ai_evaluator",
+        name = "task_adherence",
+        evaluator_name = "builtin.task_adherence",
+        initialization_parameters = new { model = modelDeploymentName },
+        data_mapping = new
+        {
+          query = "{{item.query}}",
+          response = "{{sample.output_items}}"
+        }
+      }
+    ];
+    BinaryData evaluationData = BinaryData.FromObjectAsJson(new
+    {
+      name = "Agent Target Evaluation",
+      data_source_config = dataSourceConfig,
+      testing_criteria = testingCriteria
+    });
+    using BinaryContent evaluationContent = BinaryContent.Create(evaluationData);
+    ClientResult evaluation = await evaluationClient.CreateEvaluationAsync(
+      evaluationContent);
+    string evaluationId = GetString(evaluation, "id");
+
+    object dataSource = new
+    {
+      type = "azure_ai_target_completions",
+      source = new { type = "file_id", id = dataId },
+      input_messages = new
+      {
+        type = "template",
+        template = new[]
+        {
+          new
+          {
+            type = "message",
+            role = "developer",
+            content = new
+            {
+              type = "input_text",
+              text = "You are a helpful assistant. Answer clearly and safely."
+            }
+          },
+          new
+          {
+            type = "message",
+            role = "user",
+            content = new
+            {
+              type = "input_text",
+              text = "{{item.query}}"
+            }
+          }
+        }
+      },
+      target = new
+      {
+        type = "azure_ai_agent",
+        name = "my-agent",
+        version = "1"
+      }
+    };
+    BinaryData runData = BinaryData.FromObjectAsJson(new
+    {
+      name = "agent-target-evaluation",
+      data_source = dataSource
+    });
+    using BinaryContent runContent = BinaryContent.Create(runData);
+    ClientResult evaluationRun = await evaluationClient.CreateEvaluationRunAsync(
+      evaluationId: evaluationId,
+      content: runContent);
+    Console.WriteLine($"Evaluation run created: {GetString(evaluationRun, "id")}");
+    ```
+
+    Reference: [`EvaluationClient` protocol methods](https://github.com/openai/openai-dotnet/blob/main/OpenAI/src/Custom/Evals/EvaluationClient.Protocol.cs)
+
+  </Tab>
+  <Tab title="JavaScript/TypeScript">
+
+    ```javascript
+    const evalObject = await openaiClient.evals.create({
+      name: "Agent Target Evaluation",
+      data_source_config: dataSourceConfig,
+      testing_criteria: testingCriteria,
+    });
+
+    const dataSource = {
+      type: "azure_ai_target_completions",
+      source: {
+        type: "file_id",
+        id: dataId,
+      },
+      input_messages: inputMessages,
+      target: target,
+    };
+
+    const agentEvalRun = await openaiClient.evals.runs.create(evalObject.id, {
+      name: "agent-target-evaluation",
+      data_source: dataSource,
+    });
+    ```
+
+  </Tab>
+  <Tab title="cURL">
+
+    ```bash
     curl --request POST \
       --url "https://${ACCOUNT}.services.ai.azure.com/api/projects/${PROJECT}/openai/v1/evals/${EVAL_ID}/runs" \
       --header "Authorization: Bearer ${TOKEN}" \
@@ -353,7 +828,9 @@ testing_criteria = [
         }
       }'
     ```
-</CodeGroup>
+
+  </Tab>
+</Tabs>
 
 For a complete runnable example, see [sample_agent_evaluation.py](https://github.com/Azure/azure-sdk-for-python/blob/main/sdk/ai/azure-ai-projects/samples/evaluations/sample_agent_evaluation.py) on GitHub. To poll for completion and interpret results, see [Get cloud evaluation results](/evaluation/cloud-evaluation-results).
 
@@ -365,20 +842,43 @@ If a hosted agent supports both the responses and invocations protocols, the ser
 
 #### Define the message format and target
 
-```python
-input_messages = {"message": "{{item.query}}"}
+<Tabs>
+  <Tab title="Python">
 
-target = {
-    "type": "azure_ai_agent",
-    "name": "my-hosted-agent",  # Replace with your hosted agent name
-    "version": "1",
-}
-```
+    ```python
+    input_messages = {"message": "{{item.query}}"}
+
+    target = {
+        "type": "azure_ai_agent",
+        "name": "my-hosted-agent",  # Replace with your hosted agent name
+        "version": "1",
+    }
+    ```
+
+  </Tab>
+  <Tab title="C#">
+
+    The C# sample defines the freeform message and hosted-agent target in [Create evaluation and run](#create-evaluation-and-run-2).
+
+  </Tab>
+  <Tab title="JavaScript/TypeScript">
+
+    The current JavaScript/TypeScript SDK samples don't demonstrate hosted-agent evaluation through the invocations protocol. Use the Python or cURL tab for this flow.
+
+  </Tab>
+  <Tab title="cURL">
+
+    Define the freeform message and hosted-agent target directly in the JSON request body shown in the cURL tab under [Create evaluation and run](#create-evaluation-and-run-2).
+
+  </Tab>
+</Tabs>
 
 #### Create evaluation and run
 
-<CodeGroup>
-```python Python
+<Tabs>
+  <Tab title="Python">
+
+    ```python
     eval_object = openai_client.evals.create(
         name="Hosted Agent Invocations Evaluation",
         data_source_config=data_source_config,
@@ -402,7 +902,104 @@ target = {
     )
     ```
 
-```bash cURL
+  </Tab>
+  <Tab title="C#">
+
+    ```csharp
+    object dataSourceConfig = new
+    {
+      type = "custom",
+      item_schema = new
+      {
+        type = "object",
+        properties = new { query = new { type = "string" } },
+        required = new[] { "query" }
+      },
+      include_sample_schema = true
+    };
+    object[] testingCriteria =
+    [
+      new
+      {
+        type = "azure_ai_evaluator",
+        name = "coherence",
+        evaluator_name = "builtin.coherence",
+        initialization_parameters = new { model = modelDeploymentName },
+        data_mapping = new
+        {
+          query = "{{item.query}}",
+          response = "{{sample.output_text}}"
+        }
+      },
+      new
+      {
+        type = "azure_ai_evaluator",
+        name = "violence",
+        evaluator_name = "builtin.violence",
+        data_mapping = new
+        {
+          query = "{{item.query}}",
+          response = "{{sample.output_text}}"
+        }
+      },
+      new
+      {
+        type = "azure_ai_evaluator",
+        name = "task_adherence",
+        evaluator_name = "builtin.task_adherence",
+        initialization_parameters = new { model = modelDeploymentName },
+        data_mapping = new
+        {
+          query = "{{item.query}}",
+          response = "{{sample.output_items}}"
+        }
+      }
+    ];
+    BinaryData evaluationData = BinaryData.FromObjectAsJson(new
+    {
+      name = "Hosted Agent Invocations Evaluation",
+      data_source_config = dataSourceConfig,
+      testing_criteria = testingCriteria
+    });
+    using BinaryContent evaluationContent = BinaryContent.Create(evaluationData);
+    ClientResult evaluation = await evaluationClient.CreateEvaluationAsync(
+      evaluationContent);
+    string evaluationId = GetString(evaluation, "id");
+
+    object dataSource = new
+    {
+      type = "azure_ai_target_completions",
+      source = new { type = "file_id", id = dataId },
+      input_messages = new { message = "{{item.query}}" },
+      target = new
+      {
+        type = "azure_ai_agent",
+        name = "my-hosted-agent",
+        version = "1"
+      }
+    };
+    BinaryData runData = BinaryData.FromObjectAsJson(new
+    {
+      name = "hosted-agent-invocations-evaluation",
+      data_source = dataSource
+    });
+    using BinaryContent runContent = BinaryContent.Create(runData);
+    ClientResult evaluationRun = await evaluationClient.CreateEvaluationRunAsync(
+      evaluationId: evaluationId,
+      content: runContent);
+    Console.WriteLine($"Evaluation run created: {GetString(evaluationRun, "id")}");
+    ```
+
+    Reference: [`EvaluationClient` protocol methods](https://github.com/openai/openai-dotnet/blob/main/OpenAI/src/Custom/Evals/EvaluationClient.Protocol.cs)
+  </Tab>
+  <Tab title="JavaScript/TypeScript">
+
+    The current JavaScript/TypeScript SDK samples don't demonstrate hosted-agent evaluation through the invocations protocol. Use the Python or cURL tab for this flow.
+
+  </Tab>
+  <Tab title="cURL">
+
+    ```bash
     curl --request POST \
       --url "https://${ACCOUNT}.services.ai.azure.com/api/projects/${PROJECT}/openai/v1/evals/${EVAL_ID}/runs" \
       --header "Authorization: Bearer ${TOKEN}" \
@@ -426,7 +1023,9 @@ target = {
         }
       }'
     ```
-</CodeGroup>
+
+  </Tab>
+</Tabs>
 
 The evaluator setup and data mappings are the same as for [prompt agent evaluation](#set-up-evaluators-and-data-mappings-1). Use `{{sample.output_text}}` for the agent's text response and `{{sample.output_items}}` for the full structured output including tool calls.
 
@@ -435,3 +1034,5 @@ The evaluator setup and data mappings are the same as for [prompt agent evaluati
 - [Cloud evaluation overview](/evaluation/cloud-evaluation)
 - [Prepare cloud evaluation data](/evaluation/cloud-evaluation-datasets#prepare-input-data)
 - [Get cloud evaluation results](/evaluation/cloud-evaluation-results)
+- [.NET model evaluation sample](https://github.com/Azure/azure-sdk-for-net/blob/main/sdk/ai/Azure.AI.Projects/samples/Evaluations/Sample5_Evaluations_Model.md)
+- [.NET agent evaluation sample](https://github.com/Azure/azure-sdk-for-net/blob/main/sdk/ai/Azure.AI.Projects/samples/Evaluations/Sample1_Evaluations.md)
