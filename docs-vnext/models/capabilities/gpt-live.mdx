@@ -1,0 +1,136 @@
+---
+title: "Use GPT-Live for real-time voice"
+description: "Connect to GPT-Live over WebSocket, configure a session, stream audio, and process transcripts and turns."
+---
+
+Use a WebSocket connection for server-to-server, full-duplex voice applications. For browser-native media, see
+[Use GPT-Live via WebRTC](/models/capabilities/gpt-live-webrtc).
+
+## Prerequisites
+
+- An Azure subscription.
+- A Microsoft Foundry resource.
+- An API key or Microsoft Entra ID credentials. Use Microsoft Entra ID for production applications.
+- A deployment of the `gpt-live-1` model.
+
+## Connect over WebSocket
+
+Connect to the live endpoint, send `session.start`, and wait for `session.started` before treating the session as ready.
+
+```javascript
+import WebSocket from "ws";
+
+const resourceName = process.env.FOUNDRY_RESOURCE_NAME;
+const apiKey = process.env.FOUNDRY_API_KEY;
+
+const ws = new WebSocket(
+  `wss://${resourceName}.openai.azure.com/openai/v1/live`,
+  { headers: { "api-key": apiKey } },
+);
+
+ws.on("open", () => {
+  ws.send(JSON.stringify({
+    type: "session.start",
+    event_id: "event_start",
+    session: {
+      model: "gpt-live-1",
+      instructions: "Be concise and ask before taking an external action.",
+      audio: { output: { voice: "marin" } },
+      delegation: { type: "client" },
+    },
+  }));
+});
+
+ws.on("message", (data) => {
+  const event = JSON.parse(data.toString());
+  console.log(event.type, event);
+});
+```
+
+## Configure the session
+
+The `session` object rejects unknown fields.
+
+| Field | Notes |
+| --- | --- |
+| `model` | Required. Set to a deployed GPT-Live model such as `gpt-live-1`. Immutable after startup. |
+| `instructions` | System instructions. Immutable after startup; add more with `session.instructions.append`. |
+| `audio.output.voice` | Output voice. Defaults to `marin` and is immutable after startup. |
+| `delegation` | Use `{ type: "client" }` or `{ type: "responses", responses: {...} }`. Omitted or `null` selects client delegation. |
+
+Later `session.update` calls are sparse: omitted fields keep their values, and only `delegation.responses` settings can
+change. A successful update returns `session.updated` with the complete public session resource.
+
+## Stream audio
+
+WebSocket audio is raw, headerless, mono PCM16 little-endian sampled at 24,000 Hz. Base64-encode the raw bytes rather
+than a WAV or another container. Each sample is two bytes, so the decoded payload must have an even byte count.
+
+```javascript
+ws.send(JSON.stringify({
+  type: "session.input_audio.append",
+  event_id: "event_audio_1",
+  audio: "BASE64_ENCODED_PCM16_AUDIO",
+}));
+```
+
+Output arrives in `session.output_audio.delta` events with server-assigned half-open `start_ms` and `end_ms` ranges.
+There is no output-audio-done event; a gap between ranges represents omitted silence.
+
+## Read transcripts
+
+`session.input_transcript.delta` and `session.output_transcript.delta` contain timed text fragments. Append fragments
+in order for each speaker. Because listening and speaking can overlap, user and assistant fragments can interleave.
+GPT-Live doesn't emit an authoritative turn-completed event, so group fragments in the application when needed.
+
+## Add context
+
+Each context event accepts a plain-string `content` of up to 500 tokens and a required `delegation_id`. Use `null` for
+general context or a client delegation ID for a specific task.
+
+| Event | Use | Acknowledgment |
+| --- | --- | --- |
+| `session.instructions.append` | Trusted instructions that change behavior or speech | `session.instructions.appended` |
+| `session.thinking.append` | Quiet context that the model can use | `session.thinking.appended` |
+| `session.commentary.append` | Information the model should say aloud | `session.commentary.appended` |
+
+```javascript
+ws.send(JSON.stringify({
+  type: "session.thinking.append",
+  event_id: "event_context_1",
+  delegation_id: null,
+  content: "The user has already accepted the terms.",
+}));
+```
+
+An acknowledgment confirms that context was accepted for injection, not that the model consumed or spoke it. Don't
+include secrets in quiet context.
+
+## Attach a sideband WebSocket
+
+A trusted server can observe and steer an existing session without becoming a primary media endpoint:
+
+```text
+wss://YOUR_RESOURCE_NAME.openai.azure.com/openai/v1/live/sessions/SESSION_ID/attach
+```
+
+Don't send `session.start` on the sideband connection. It receives the same JSON server events as the primary
+connection, and its commands enter the same session stream.
+
+## Close gracefully
+
+Send `session.close`, continue reading until `session.closed`, and then expect the transport to close. Read final
+cumulative usage from `session.closed`; a transport close without this event leaves final usage unconfirmed.
+
+```javascript
+ws.send(JSON.stringify({
+  type: "session.close",
+  event_id: "event_close",
+}));
+```
+
+## Related content
+
+- [Delegate work in GPT-Live](/models/capabilities/gpt-live-delegation)
+- [Use GPT-Live via WebRTC](/models/capabilities/gpt-live-webrtc)
+- [GPT-Live event API reference](https://learn.microsoft.com/azure/foundry/openai/gpt-live-reference)
