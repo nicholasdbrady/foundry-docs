@@ -11,7 +11,7 @@ MCP Servers:
   - foundry-docs-vnext: Custom FastMCP over docs-vnext/ (treatment)
 
 Models:
-  - claude-sonnet-4.6
+  - claude-sonnet-5
   - gpt-5.4
 """
 
@@ -39,7 +39,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 SCENARIOS_FILE = PROJECT_ROOT / "tests" / "docs_eval_scenarios.json"
 RESULTS_DIR = PROJECT_ROOT / "tests" / "eval_results"
 
-MODELS = ["claude-sonnet-4.6", "gpt-5.4"]
+MODELS = ["claude-sonnet-5", "gpt-5.4"]
 
 # MCP server configurations
 MCP_SERVERS = {
@@ -251,18 +251,22 @@ def load_scenarios(path: Path) -> list[dict]:
         return json.load(f)
 
 
-def build_prompt(question: str, server_name: str) -> str:
+def build_prompt(question: str, server_name: str, available_tools: tuple[str, ...]) -> str:
     """Build the evaluation prompt for a given question and server."""
+    tool_list = ", ".join(f"`{tool}`" for tool in available_tools)
     return (
         f"Answer the following question about Microsoft Foundry using ONLY the "
         f"`{server_name}` documentation source configured for this evaluation row. "
-        f"You must call its documentation search tool before answering. Be thorough and include "
-        f"code examples where relevant.\n\n"
+        f"The only tools available for this row are: {tool_list}. "
+        f"You must call the selected source's documentation search tool before answering.\n\n"
         f"Question: {question}\n\n"
         f"Instructions:\n"
+        f"- Call only the exact tools listed above; never call view, bash, shell, web, or another built-in tool\n"
         f"- Search the documentation to find relevant pages\n"
-        f"- Read the most relevant pages\n"
-        f"- Provide a comprehensive answer based on what you find\n"
+        f"- Read only exact page paths or identifiers returned by search or listing tools; never guess or rewrite paths\n"
+        f"- If a read fails, search once more instead of trying path variants\n"
+        f"- Stop searching when the evidence answers the question\n"
+        f"- Keep the final answer under 1,200 words while covering the requested details\n"
         f"- Include specific file paths or page references\n"
         f"- Include code examples if the documentation contains them"
     )
@@ -2118,7 +2122,8 @@ def run_single_eval(
     """Run a single evaluation: one scenario × one server × one model."""
     question = scenario["question"]
     source_name = server_config["config"]["name"]
-    prompt = build_prompt(question, source_name)
+    available_tools = tuple(server_config["config"]["available_tools"])
+    prompt = build_prompt(question, source_name, available_tools)
 
     result = {
         "scenario_id": scenario["id"],
@@ -2181,7 +2186,7 @@ def run_single_eval(
                 prompt,
                 config_path,
                 source_name,
-                tuple(server_config["config"]["available_tools"]),
+                available_tools,
             )
             process_env = os.environ.copy()
             process_env["COPILOT_HOME"] = isolated_home
