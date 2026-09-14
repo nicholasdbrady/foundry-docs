@@ -50,24 +50,36 @@ For Invocations, the platform reads the query parameter only. Fields named `agen
 
 - A [deployed Hosted agent](/agents/deploy-hosted-agent) with an `active` version. See [Manage Hosted agents](/agents/manage-hosted-agent) for how to check version status.
 
-<ZonePivot group="azd__javascript__python__rest" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} defaultValue="rest" />
+<ZonePivot group="azd__csharp__javascript__python__rest" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} defaultValue="rest" />
 
-<ZoneContent group="azd__javascript__python__rest" value="rest" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="rest" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 - [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) version 2.80 or later, authenticated with `az login`.
 
 </ZoneContent>
-<ZoneContent group="azd__javascript__python__rest" value="python" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="python" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 - Python SDK: `azure-ai-projects>=2.3.0` and `azure-identity`.
 
 </ZoneContent>
-<ZoneContent group="azd__javascript__python__rest" value="javascript" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="csharp" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
+
+- [.NET 10 SDK or later](https://dotnet.microsoft.com/download/dotnet/10.0).
+- The .NET packages used in this article:
+
+    ```dotnetcli
+    dotnet add package Azure.AI.Projects --prerelease
+    dotnet add package Azure.AI.Extensions.OpenAI
+    dotnet add package Azure.Identity
+    ```
+
+</ZoneContent>
+<ZoneContent group="azd__csharp__javascript__python__rest" value="javascript" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 - JavaScript/TypeScript SDK: `@azure/ai-projects` and `@azure/identity` (`npm install @azure/ai-projects @azure/identity`).
 
 </ZoneContent>
-<ZoneContent group="azd__javascript__python__rest" value="azd" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="azd" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 - [Azure Developer CLI](https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd) version 1.23.0 or later.
 - The Foundry agents extension:
@@ -77,9 +89,9 @@ For Invocations, the platform reads the query parameter only. Fields named `agen
     ```
 
 </ZoneContent>
-<ZonePivot group="javascript__python__rest" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}]} defaultValue="rest" />
+<ZonePivot group="csharp__javascript__python__rest" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}]} defaultValue="rest" />
 
-<ZoneContent group="javascript__python__rest" value="rest" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}]} values={["rest", "python", "javascript"]} defaultValue="rest">
+<ZoneContent group="csharp__javascript__python__rest" value="rest" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}]} values={["rest", "python", "csharp", "javascript"]} defaultValue="rest">
 
 ## Set up variables
 
@@ -100,7 +112,7 @@ The `--resource` parameter is required for all `az rest` calls to Foundry Agent 
 </Info>
 
 </ZoneContent>
-<ZoneContent group="javascript__python__rest" value="python" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}]} values={["rest", "python", "javascript"]} defaultValue="rest">
+<ZoneContent group="csharp__javascript__python__rest" value="python" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}]} values={["rest", "python", "csharp", "javascript"]} defaultValue="rest">
 
 ## Set up the client
 
@@ -117,7 +129,29 @@ project = AIProjectClient(
 ```
 
 </ZoneContent>
-<ZoneContent group="javascript__python__rest" value="javascript" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}]} values={["rest", "python", "javascript"]} defaultValue="rest">
+<ZoneContent group="csharp__javascript__python__rest" value="csharp" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}]} values={["rest", "python", "csharp", "javascript"]} defaultValue="rest">
+
+## Set up the client
+
+All C# examples in this article use the following client configuration. Session management uses `AgentAdministrationClient`; invoking an agent uses `ProjectResponsesClient`:
+
+```csharp
+using Azure.AI.Extensions.OpenAI;
+using Azure.AI.Projects;
+using Azure.AI.Projects.Agents;
+using Azure.Identity;
+
+#pragma warning disable AAIP001, OPENAI001
+
+var projectEndpoint = "<your-project-endpoint>";
+var agentName = "my-agent";
+
+AIProjectClient projectClient = new(new Uri(projectEndpoint), new DefaultAzureCredential());
+AgentAdministrationClient agentsClient = projectClient.AgentAdministrationClient;
+```
+
+</ZoneContent>
+<ZoneContent group="csharp__javascript__python__rest" value="javascript" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}]} values={["rest", "python", "csharp", "javascript"]} defaultValue="rest">
 
 ## Set up the client
 
@@ -143,9 +177,7 @@ Configure the idle timeout when you create an agent version. The setting applies
 
 When a session reaches the idle timeout, the platform suspends its sandbox and saves its state. The platform provisions compute and restores the saved state when the session is referenced again. To change the timeout, create another agent version with the new value.
 
-<ZonePivot group="azd__python__rest" options={[{"id": "azd", "title": "Azure Developer CLI"}, {"id": "python", "title": "Python"}, {"id": "rest", "title": "REST"}]} defaultValue="azd" />
-
-<ZoneContent group="azd__python__rest" value="azd" options={[{"id": "azd", "title": "Azure Developer CLI"}, {"id": "python", "title": "Python"}, {"id": "rest", "title": "REST"}]} values={["azd", "python", "rest"]} defaultValue="azd">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="azd" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 Add `sessionConfiguration` to the `azure.ai.agent` service in `azure.yaml`:
 
@@ -173,7 +205,7 @@ The 120-second minimum requires `azure.ai.agents` extension version **1.0.0-beta
 </Note>
 
 </ZoneContent>
-<ZoneContent group="azd__python__rest" value="python" options={[{"id": "azd", "title": "Azure Developer CLI"}, {"id": "python", "title": "Python"}, {"id": "rest", "title": "REST"}]} values={["azd", "python", "rest"]} defaultValue="azd">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="python" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 Pass a `SessionConfiguration` in the hosted agent definition:
 
@@ -215,7 +247,17 @@ print(f"Created version {agent.version} with a 2-minute idle timeout.")
 Reference: [HostedAgentDefinition](https://learn.microsoft.com/python/api/azure-ai-projects/azure.ai.projects.models.hostedagentdefinition)
 
 </ZoneContent>
-<ZoneContent group="azd__python__rest" value="rest" options={[{"id": "azd", "title": "Azure Developer CLI"}, {"id": "python", "title": "Python"}, {"id": "rest", "title": "REST"}]} values={["azd", "python", "rest"]} defaultValue="azd">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="csharp" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
+
+The .NET SDK's `HostedAgentDefinition` doesn't expose a session configuration property yet, so set the idle timeout with the REST API or the Python SDK. Select the **REST API** tab for the request body.
+
+</ZoneContent>
+<ZoneContent group="azd__csharp__javascript__python__rest" value="javascript" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
+
+Set the idle timeout with the REST API or the Python SDK. Select the **REST API** tab for the request body.
+
+</ZoneContent>
+<ZoneContent group="azd__csharp__javascript__python__rest" value="rest" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 Include `session_configuration` in the definition when you create an agent version:
 
@@ -265,7 +307,7 @@ Session continuity *isn't* the same as conversation continuity. For Responses, p
 
 The Responses endpoint returns either a single JSON payload or a Server-Sent Events (SSE) stream, depending on the `stream` field in the request body. The default is `false`. Set `"stream": true` to receive incremental events.
 
-<ZoneContent group="azd__javascript__python__rest" value="rest" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="rest" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 ```bash
 AGENT_NAME="my-agent"
@@ -296,7 +338,7 @@ az rest --method POST \
 If you thread turns with a `conversation` ID instead, the platform automatically routes every call for that conversation to the same `agent_session_id`. You don't need to pass `agent_session_id` yourself.
 
 </ZoneContent>
-<ZoneContent group="azd__javascript__python__rest" value="python" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="python" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 When you call `get_openai_client` with an `agent_name`, the returned OpenAI client is routed at the agent's endpoint. The first call creates the session; the response carries the new `agent_session_id` in `model_extra`.
 
@@ -335,7 +377,34 @@ follow_up = openai_client.responses.create(
 ```
 
 </ZoneContent>
-<ZoneContent group="azd__javascript__python__rest" value="javascript" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="csharp" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
+
+Invoke the agent, and then read `agent_session_id` from the raw response payload:
+
+```csharp
+ProjectResponsesClient responsesClient = projectClient.ProjectOpenAIClient
+    .GetProjectResponsesClientForAgentEndpoint(agentName);
+
+ClientResult<ResponseResult> first = responsesClient.CreateResponse(
+    "Find me hotels in Seattle under $200 per night");
+
+using JsonDocument payload = JsonDocument.Parse(first.GetRawResponse().Content.ToString());
+string sessionId = payload.RootElement.GetProperty("agent_session_id").GetString()!;
+Console.WriteLine($"Session: {sessionId}");
+```
+
+When you thread the next turn with `PreviousResponseId`, the platform routes the call to the same session:
+
+```csharp
+CreateResponseOptions options = new() { PreviousResponseId = first.Value.Id };
+options.InputItems.Add(ResponseItem.CreateUserMessageItem("Recommend one of those hotels"));
+
+ClientResult<ResponseResult> followUp = responsesClient.CreateResponse(options);
+Console.WriteLine(followUp.Value.GetOutputText());
+```
+
+</ZoneContent>
+<ZoneContent group="azd__csharp__javascript__python__rest" value="javascript" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 When you call `getOpenAIClient` with an `agentName`, the returned OpenAI client is routed at the agent's endpoint. The first call creates the session; the response carries the new `agent_session_id` field.
 
@@ -380,7 +449,7 @@ const followUp2 = await openAIClient.responses.create({
 Reference: [AIProjectClient](https://learn.microsoft.com/javascript/api/overview/azure/ai-projects-readme)
 
 </ZoneContent>
-<ZoneContent group="azd__javascript__python__rest" value="azd" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="azd" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 ```bash
 azd ai agent invoke --input "Find me hotels in Seattle under $200 per night"
@@ -394,7 +463,7 @@ Invocations agents accept arbitrary JSON request bodies that match the schema yo
 
 The first call without an `agent_session_id` query parameter creates a new session. To reuse the sandbox on a later call, pass the session ID as the `agent_session_id` query parameter.
 
-<ZoneContent group="azd__javascript__python__rest" value="rest" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="rest" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 ```bash
 AGENT_NAME="my-agent"
@@ -424,7 +493,7 @@ The Invocations endpoint reads the session ID from the **query string**. Fields 
 </Info>
 
 </ZoneContent>
-<ZoneContent group="azd__javascript__python__rest" value="python" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="python" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 The Python SDK doesn't ship a typed Invocations client. Call the endpoint with `requests` (or any HTTP library) and authenticate with a bearer token from `azure-identity`:
 
@@ -459,7 +528,39 @@ requests.post(
 ```
 
 </ZoneContent>
-<ZoneContent group="azd__javascript__python__rest" value="javascript" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="csharp" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
+
+The .NET SDK doesn't ship a typed Invocations client. Call the endpoint with `HttpClient` and authenticate with a bearer token from `Azure.Identity`:
+
+```csharp
+using System.Net.Http.Json;
+using Azure.Core;
+
+var token = new DefaultAzureCredential()
+    .GetToken(new TokenRequestContext(["https://ai.azure.com/.default"]))
+    .Token;
+
+using HttpClient http = new();
+http.DefaultRequestHeaders.Authorization = new("Bearer", token);
+
+var baseUrl = $"{projectEndpoint}/agents/{agentName}/endpoint/protocols/invocations?api-version=v1";
+
+// First call - the platform creates a new session.
+HttpResponseMessage first = await http.PostAsJsonAsync(baseUrl, new { input = "Hello" });
+Console.WriteLine(await first.Content.ReadAsStringAsync());
+
+// Reuse the session on a later call by passing it as a query parameter.
+var sessionId = "<session_id-from-first-response>";
+HttpResponseMessage next = await http.PostAsJsonAsync(
+    $"{baseUrl}&agent_session_id={sessionId}",
+    new { input = "Continue our previous discussion" });
+Console.WriteLine(await next.Content.ReadAsStringAsync());
+```
+
+Containers built with the AgentServer SDK return a Server-Sent Events stream, so read the response as a string and parse the terminal `done` event for `session_id`.
+
+</ZoneContent>
+<ZoneContent group="azd__csharp__javascript__python__rest" value="javascript" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 The JavaScript/TypeScript SDK doesn't ship a typed Invocations client either. Call the endpoint with `fetch` (or any HTTP library) and authenticate with a bearer token from `@azure/identity`:
 
@@ -505,7 +606,7 @@ await fetch(`${base}&agent_session_id=${sessionId}`, {
 ```
 
 </ZoneContent>
-<ZoneContent group="azd__javascript__python__rest" value="azd" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="azd" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 ```bash
 azd ai agent invoke --input '{"input": "Hello"}'
@@ -553,7 +654,7 @@ Create a session in advance only when you need to:
 - Preallocate a session you can reference from your client code before the first invocation.
 - Pin the session to a specific agent version with `version_indicator`. Each session is bound to a single version at creation time. By default, the platform resolves the version using the agent endpoint's traffic-routing rules (`version_selector`)—for example, `@latest`. Pass `version_indicator` to override that and bind the session to a concrete version (such as `"2"`) so later turns keep using that version even if you publish a newer one. The value must be a concrete version identifier returned by the agent versions API; aliases like `@latest` aren't accepted here.
 
-<ZoneContent group="azd__javascript__python__rest" value="rest" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="rest" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 ```bash
 AGENT_NAME="my-agent"
@@ -573,7 +674,7 @@ az rest --method POST \
 Omit the body (or send `{}`) to let the platform pick the version using the agent endpoint's traffic-routing rules.
 
 </ZoneContent>
-<ZoneContent group="azd__javascript__python__rest" value="python" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="python" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 ```python
 session = project.agents.create_session(
@@ -595,7 +696,29 @@ print(f"Created session {session.agent_session_id} for agent version 2")
 ```
 
 </ZoneContent>
-<ZoneContent group="azd__javascript__python__rest" value="javascript" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="csharp" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
+
+Pass a `VersionRefIndicator` to pin the session to a specific agent version. Supply your own session ID, and then poll until the session reaches `Active`:
+
+```csharp
+var sessionId = Guid.NewGuid().ToString();
+
+ProjectAgentSession session = agentsClient.CreateSession(
+    agentName: agentName,
+    versionIndicator: new VersionRefIndicator("2"),
+    agentSessionId: sessionId);
+Console.WriteLine($"Session created (ID: {session.AgentSessionId}, status: {session.Status})");
+
+while (session.Status != AgentSessionStatus.Active && session.Status != AgentSessionStatus.Failed)
+{
+    Thread.Sleep(TimeSpan.FromSeconds(1));
+    session = agentsClient.GetSession(agentName, sessionId);
+}
+Console.WriteLine($"Session status: {session.Status}");
+```
+
+</ZoneContent>
+<ZoneContent group="azd__csharp__javascript__python__rest" value="javascript" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 ```typescript
 const session = await project.agents.createSession("my-agent");
@@ -619,7 +742,7 @@ console.log(
 Reference: [AIProjectClient](https://learn.microsoft.com/javascript/api/overview/azure/ai-projects-readme)
 
 </ZoneContent>
-<ZoneContent group="azd__javascript__python__rest" value="azd" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="azd" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 Sessions are created automatically when you invoke an agent through `azd`. Manual session creation isn't currently available as a standalone command.
 
@@ -627,7 +750,7 @@ Sessions are created automatically when you invoke an agent through `azd`. Manua
 
 ## List sessions
 
-<ZoneContent group="azd__javascript__python__rest" value="rest" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="rest" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 ```bash
 az rest --method GET \
@@ -636,7 +759,7 @@ az rest --method GET \
 ```
 
 </ZoneContent>
-<ZoneContent group="azd__javascript__python__rest" value="python" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="python" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 ```python
 sessions = project.agents.list_sessions(agent_name="my-agent")
@@ -645,7 +768,17 @@ for item in sessions:
 ```
 
 </ZoneContent>
-<ZoneContent group="azd__javascript__python__rest" value="javascript" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="csharp" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
+
+```csharp
+foreach (ProjectAgentSession item in agentsClient.GetSessions(agentName))
+{
+    Console.WriteLine($"Session: {item.AgentSessionId} (status: {item.Status})");
+}
+```
+
+</ZoneContent>
+<ZoneContent group="azd__csharp__javascript__python__rest" value="javascript" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 ```typescript
 for await (const item of project.agents.listSessions("my-agent")) {
@@ -656,7 +789,7 @@ for await (const item of project.agents.listSessions("my-agent")) {
 Reference: [AIProjectClient](https://learn.microsoft.com/javascript/api/overview/azure/ai-projects-readme)
 
 </ZoneContent>
-<ZoneContent group="azd__javascript__python__rest" value="azd" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="azd" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 Session listing isn't currently available as a standalone command. Use the REST API or SDK.
 
@@ -664,7 +797,7 @@ Session listing isn't currently available as a standalone command. Use the REST 
 
 ## Get session details
 
-<ZoneContent group="azd__javascript__python__rest" value="rest" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="rest" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 ```bash
 SESSION_ID="<session-id>"
@@ -675,7 +808,7 @@ az rest --method GET \
 ```
 
 </ZoneContent>
-<ZoneContent group="azd__javascript__python__rest" value="python" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="python" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 ```python
 session = project.agents.get_session(
@@ -686,7 +819,16 @@ print(f"Session ID: {session.agent_session_id}, Status: {session.status}")
 ```
 
 </ZoneContent>
-<ZoneContent group="azd__javascript__python__rest" value="javascript" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="csharp" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
+
+```csharp
+ProjectAgentSession session = agentsClient.GetSession(agentName, "<session-id>");
+Console.WriteLine($"Session ID: {session.AgentSessionId}, Status: {session.Status}");
+Console.WriteLine($"Created: {session.CreatedAt}, Last accessed: {session.LastAccessedAt}, Expires: {session.ExpiresAt}");
+```
+
+</ZoneContent>
+<ZoneContent group="azd__csharp__javascript__python__rest" value="javascript" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 ```typescript
 const session = await project.agents.getSession(
@@ -699,7 +841,7 @@ console.log(`Session ID: ${session.agent_session_id}, Status: ${session.status}`
 Reference: [AIProjectClient](https://learn.microsoft.com/javascript/api/overview/azure/ai-projects-readme)
 
 </ZoneContent>
-<ZoneContent group="azd__javascript__python__rest" value="azd" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="azd" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 Session management isn't currently available as a standalone command. Use the REST API or SDK.
 
@@ -713,7 +855,7 @@ Stopping a session that's already stopped succeeds without error.
 
 When the agent endpoint uses `Header` isolation, the isolation key must match the value used when the session was created. When the endpoint uses `Entra` isolation, the platform scopes the stop to the calling identity.
 
-<ZoneContent group="azd__javascript__python__rest" value="rest" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="rest" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 ```bash
 SESSION_ID="<session-id>"
@@ -726,7 +868,7 @@ az rest --method POST \
 ```
 
 </ZoneContent>
-<ZoneContent group="azd__javascript__python__rest" value="python" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="python" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 ```python
 project.agents.stop_session(
@@ -736,12 +878,17 @@ project.agents.stop_session(
 ```
 
 </ZoneContent>
-<ZoneContent group="azd__javascript__python__rest" value="javascript" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="csharp" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
+
+Stop a session with the REST API. Select the **REST API** tab for the request. The `StopSession` method in `Azure.AI.Projects.Agents` 2.1.0-beta.4 fails at runtime, so avoid it until a later release fixes it.
+
+</ZoneContent>
+<ZoneContent group="azd__csharp__javascript__python__rest" value="javascript" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 Not yet available through the JavaScript/TypeScript SDK. Use the REST API.
 
 </ZoneContent>
-<ZoneContent group="azd__javascript__python__rest" value="azd" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="azd" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 Session management isn't currently available as a standalone command. Use the REST API or SDK.
 
@@ -751,7 +898,7 @@ Session management isn't currently available as a standalone command. Use the RE
 
 Deleting a session terminates the sandbox and releases its resources. When the agent endpoint uses `Header` isolation, the isolation key must match the value used when the session was created. When the endpoint uses `Entra` isolation, the platform scopes the delete to the calling identity.
 
-<ZoneContent group="azd__javascript__python__rest" value="rest" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="rest" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 ```bash
 SESSION_ID="<session-id>"
@@ -764,7 +911,7 @@ az rest --method DELETE \
 ```
 
 </ZoneContent>
-<ZoneContent group="azd__javascript__python__rest" value="python" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="python" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 ```python
 project.agents.delete_session(
@@ -774,7 +921,14 @@ project.agents.delete_session(
 ```
 
 </ZoneContent>
-<ZoneContent group="azd__javascript__python__rest" value="javascript" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="csharp" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
+
+```csharp
+agentsClient.DeleteSession(agentName, "<session-id>");
+```
+
+</ZoneContent>
+<ZoneContent group="azd__csharp__javascript__python__rest" value="javascript" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 ```typescript
 await project.agents.deleteSession("my-agent", "<session-id>");
@@ -783,7 +937,7 @@ await project.agents.deleteSession("my-agent", "<session-id>");
 Reference: [AIProjectClient](https://learn.microsoft.com/javascript/api/overview/azure/ai-projects-readme)
 
 </ZoneContent>
-<ZoneContent group="azd__javascript__python__rest" value="azd" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="azd" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 Session management isn't currently available as a standalone command. Use the REST API or SDK.
 
@@ -797,7 +951,7 @@ A container can also write files directly into the session sandbox (under `$HOME
 
 ### Upload a file
 
-<ZoneContent group="azd__javascript__python__rest" value="rest" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="rest" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 ```bash
 SESSION_ID="<session-id>"
@@ -810,7 +964,7 @@ az rest --method PUT \
 ```
 
 </ZoneContent>
-<ZoneContent group="azd__javascript__python__rest" value="python" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="python" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 ```python
 with open("./data.csv", "rb") as file:
@@ -824,7 +978,21 @@ print(f"Uploaded {result.path} ({result.bytes_written} bytes)")
 ```
 
 </ZoneContent>
-<ZoneContent group="azd__javascript__python__rest" value="javascript" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="csharp" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
+
+Get an `AgentSessionFiles` client for the session, and then upload a local file to a path in the sandbox:
+
+```csharp
+AgentSessionFiles files = agentsClient.GetAgentSessionFiles(agentName, "<session-id>");
+
+SessionFileWriteResponse result = files.Upload(
+    sessionStoragePath: "/mnt/agent/session/data.csv",
+    localPath: "./data.csv");
+Console.WriteLine("Uploaded data.csv");
+```
+
+</ZoneContent>
+<ZoneContent group="azd__csharp__javascript__python__rest" value="javascript" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 ```typescript
 import { readFileSync } from "node:fs";
@@ -841,7 +1009,7 @@ console.log(`Uploaded ${result.path} (${result.bytes_written} bytes)`);
 Reference: [AIProjectClient](https://learn.microsoft.com/javascript/api/overview/azure/ai-projects-readme)
 
 </ZoneContent>
-<ZoneContent group="azd__javascript__python__rest" value="azd" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="azd" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 ```bash
 azd ai agent files upload --file ./data.csv --target-path data.csv
@@ -851,7 +1019,7 @@ azd ai agent files upload --file ./data.csv --target-path data.csv
 
 ### List files in a session
 
-<ZoneContent group="azd__javascript__python__rest" value="rest" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="rest" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 ```bash
 SESSION_ID="<session-id>"
@@ -862,7 +1030,7 @@ az rest --method GET \
 ```
 
 </ZoneContent>
-<ZoneContent group="azd__javascript__python__rest" value="python" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="python" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 ```python
 files = project.agents.list_session_files(
@@ -875,7 +1043,17 @@ for entry in files:
 ```
 
 </ZoneContent>
-<ZoneContent group="azd__javascript__python__rest" value="javascript" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="csharp" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
+
+```csharp
+foreach (SessionDirectoryEntry entry in files.GetAll(sessionStoragePath: "/mnt/agent/session"))
+{
+    Console.WriteLine($"{entry.Name} (size: {entry.SizeInBytes}, directory: {entry.IsDirectory})");
+}
+```
+
+</ZoneContent>
+<ZoneContent group="azd__csharp__javascript__python__rest" value="javascript" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 ```typescript
 const files = project.agents.listSessionFiles(
@@ -893,7 +1071,7 @@ for await (const entry of files) {
 Reference: [AIProjectClient](https://learn.microsoft.com/javascript/api/overview/azure/ai-projects-readme)
 
 </ZoneContent>
-<ZoneContent group="azd__javascript__python__rest" value="azd" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="azd" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 ```bash
 azd ai agent files list .
@@ -903,7 +1081,7 @@ azd ai agent files list .
 
 ### Download a file
 
-<ZoneContent group="azd__javascript__python__rest" value="rest" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="rest" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 ```bash
 SESSION_ID="<session-id>"
@@ -915,7 +1093,7 @@ az rest --method GET \
 ```
 
 </ZoneContent>
-<ZoneContent group="azd__javascript__python__rest" value="python" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="python" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 ```python
 content_bytes = b"".join(
@@ -930,7 +1108,19 @@ with open("./output.csv", "wb") as f:
 ```
 
 </ZoneContent>
-<ZoneContent group="azd__javascript__python__rest" value="javascript" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="csharp" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
+
+The `Download` method writes the file to `localPath` and returns its contents:
+
+```csharp
+BinaryData content = files.Download(
+    sessionStoragePath: "/mnt/agent/session/data.csv",
+    localPath: "./output.csv");
+Console.WriteLine($"Downloaded {content.ToArray().Length} bytes");
+```
+
+</ZoneContent>
+<ZoneContent group="azd__csharp__javascript__python__rest" value="javascript" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 ```typescript
 import { writeFileSync } from "node:fs";
@@ -951,7 +1141,7 @@ writeFileSync("./output.csv", contentBytes);
 Reference: [AIProjectClient](https://learn.microsoft.com/javascript/api/overview/azure/ai-projects-readme)
 
 </ZoneContent>
-<ZoneContent group="azd__javascript__python__rest" value="azd" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="azd" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 ```bash
 azd ai agent files download --file data.csv --target-path ./output.csv
@@ -961,7 +1151,7 @@ azd ai agent files download --file data.csv --target-path ./output.csv
 
 ### Delete a file
 
-<ZoneContent group="azd__javascript__python__rest" value="rest" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="rest" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 ```bash
 SESSION_ID="<session-id>"
@@ -972,7 +1162,7 @@ az rest --method DELETE \
 ```
 
 </ZoneContent>
-<ZoneContent group="azd__javascript__python__rest" value="python" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="python" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 ```python
 project.agents.delete_session_file(
@@ -983,7 +1173,14 @@ project.agents.delete_session_file(
 ```
 
 </ZoneContent>
-<ZoneContent group="azd__javascript__python__rest" value="javascript" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="csharp" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
+
+```csharp
+files.Delete(localPath: "/mnt/agent/session/data.csv");
+```
+
+</ZoneContent>
+<ZoneContent group="azd__csharp__javascript__python__rest" value="javascript" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 ```typescript
 await project.agents.deleteSessionFile(
@@ -996,7 +1193,7 @@ await project.agents.deleteSessionFile(
 Reference: [AIProjectClient](https://learn.microsoft.com/javascript/api/overview/azure/ai-projects-readme)
 
 </ZoneContent>
-<ZoneContent group="azd__javascript__python__rest" value="azd" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "javascript", "azd"]} defaultValue="rest">
+<ZoneContent group="azd__csharp__javascript__python__rest" value="azd" options={[{"id": "rest", "title": "REST"}, {"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "javascript", "title": "JavaScript"}, {"id": "azd", "title": "Azure Developer CLI"}]} values={["rest", "python", "csharp", "javascript", "azd"]} defaultValue="rest">
 
 ```bash
 azd ai agent files remove --file data.csv
