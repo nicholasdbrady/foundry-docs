@@ -312,6 +312,13 @@ def test_eval_prompt_names_allowed_tools_and_forbids_guessed_paths():
     assert "under 1,200 words" in prompt
 
 
+@pytest.mark.parametrize("server_name", ["foundry-docs", "foundry-docs-vnext"])
+def test_custom_docs_evaluation_exposes_only_azure_backed_search(server_name):
+    assert MCP_SERVERS[server_name]["config"]["available_tools"] == (
+        f"{MCP_SERVERS[server_name]['config']['tool_prefix']}-search_docs",
+    )
+
+
 @pytest.mark.parametrize(
     ("server_name", "source_name"),
     [
@@ -1244,7 +1251,7 @@ def test_invalid_event_evidence_fails_closed(monkeypatch, stdout, failure_prefix
     assert result["failure_reason"].startswith(failure_prefix)
 
 
-def test_azure_required_row_needs_successful_selected_search(monkeypatch):
+def test_azure_required_row_rejects_disabled_non_search_tool(monkeypatch):
     monkeypatch.setenv("AZURE_SEARCH_ENDPOINT", "https://search.example")
     monkeypatch.setenv("AZURE_AI_PROJECT_ENDPOINT", "https://project.example")
     monkeypatch.setattr(
@@ -1269,7 +1276,7 @@ def test_azure_required_row_needs_successful_selected_search(monkeypatch):
     assert result["azure_required"] is True
     assert result["azure_live_query_proven"] is False
     assert result["status"] == "invalid"
-    assert result["failure_reason"].startswith("azure_live_query_unproven:")
+    assert result["failure_reason"] == "cross_source_tool_call: foundry_docs-get_doc"
 
 
 def test_timeout_is_preserved_as_invalid_row_diagnostics(monkeypatch):

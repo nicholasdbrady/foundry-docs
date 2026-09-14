@@ -80,9 +80,6 @@ MCP_SERVERS = {
             "supports_azure": True,
             "available_tools": (
                 "foundry_docs-search_docs",
-                "foundry_docs-get_doc",
-                "foundry_docs-get_section",
-                "foundry_docs-list_sections",
             ),
         },
     },
@@ -96,9 +93,6 @@ MCP_SERVERS = {
             "supports_azure": True,
             "available_tools": (
                 "foundry_docs_vnext-search_docs",
-                "foundry_docs_vnext-get_doc",
-                "foundry_docs_vnext-get_section",
-                "foundry_docs_vnext-list_sections",
             ),
         },
     },
@@ -2557,7 +2551,7 @@ def _parse_args() -> argparse.Namespace:
         help="Specific models to use (default: all three)"
     )
     parser.add_argument(
-        "--timeout", type=int, default=120,
+        "--timeout", type=int, default=180,
         help="Timeout per evaluation in seconds"
     )
     parser.add_argument(
