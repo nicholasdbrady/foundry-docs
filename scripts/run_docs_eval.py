@@ -11,7 +11,7 @@ MCP Servers:
   - foundry-docs-vnext: Custom FastMCP over docs-vnext/ (treatment)
 
 Models:
-  - claude-sonnet-4.6
+  - claude-sonnet-5
   - gpt-5.4
 """
 
@@ -39,7 +39,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 SCENARIOS_FILE = PROJECT_ROOT / "tests" / "docs_eval_scenarios.json"
 RESULTS_DIR = PROJECT_ROOT / "tests" / "eval_results"
 
-MODELS = ["claude-sonnet-4.6", "gpt-5.4"]
+MODELS = ["claude-sonnet-5", "gpt-5.4"]
 
 # MCP server configurations
 MCP_SERVERS = {
