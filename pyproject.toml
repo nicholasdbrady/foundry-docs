@@ -1,0 +1,49 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "foundry-docs"
+version = "0.1.0"
+description = "Microsoft Foundry documentation served via FastMCP server"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+dependencies = [
+    "fastmcp>=3.0.2",
+    "pyyaml>=6.0.3",
+    "httpx>=0.28.1",
+    "azure-search-documents>=11.6.0",
+    "azure-identity>=1.25.2",
+    "openai>=2.24.0",
+    "azure-ai-projects>=2.0.0b4",
+    "azure-monitor-opentelemetry-exporter>=1.0.0b48",
+    "opentelemetry-sdk>=1.39.0,<1.40",
+    "opentelemetry-api>=1.39.0,<1.40",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.0.2",
+    "ruff>=0.15.2",
+]
+
+azure = [
+    "azure-search-documents>=11.6.0",
+    "azure-identity>=1.25.2",
+    "openai>=2.24.0",
+    "azure-ai-projects>=2.0.0b4",
+    "azure-monitor-opentelemetry-exporter>=1.0.0b48",
+    "opentelemetry-sdk>=1.39.0,<1.40",
+    "opentelemetry-api>=1.39.0,<1.40",
+]
+
+[project.scripts]
+foundry-docs = "foundry_docs_mcp.server:main"
+foundry-docs-vnext = "foundry_docs_vnext_mcp.server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["foundry_docs_mcp", "foundry_docs_vnext_mcp"]
+
+[tool.ruff]
+line-length = 120

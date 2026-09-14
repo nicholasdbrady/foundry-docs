@@ -1,0 +1,82 @@
+---
+title: "Azure OpenAI in Microsoft Foundry Models Quotas and Limits in Azure Government"
+description: "This article features detailed descriptions and best practices on the quotas and limits for Azure OpenAI in Azure Government."
+---
+
+This article contains a quick reference and a detailed description of the quotas and limits for Azure OpenAI in Azure Government.
+
+## Scope of quota
+
+Quotas and limits aren't enforced at the tenant level. Instead, the highest level of quota restrictions is scoped at the Azure subscription level.
+
+## Regional quota allocation
+
+Tokens per minute (TPM) and requests per minute (RPM) limits are defined *per region*, *per subscription*, and *per model or deployment type*.
+
+For example, if the `gpt-4.1` DataZone Standard model is listed with a quota of *5 million TPM* and *5,000 RPM*, then *each region* where that [model or deployment type is available](../../foundry-models/concepts/models-sold-directly-by-azure-gov) has its own dedicated quota pool of that amount for *each* of your Azure subscriptions. Within a single Azure subscription, it's possible to use a larger quantity of total TPM and RPM quota for a given model and deployment type, as long as you have resources and model deployments spread across multiple regions.
+
+### Quota tiers
+
+In Azure Government, we don't support Quota Tiers or automatic adjustments to quota. Instead, we provide two levels including a Default level and an Enterprise level for customers with an Enterprise Agreement. 
+
+### Can I request more quota?
+
+Yes, using the [Azure Gov Quota Request Form](https://aka.ms/AOAIGovQuota) you can always request more quota. If the request is approved, the current tier will remain the same, but with more quota assigned.  
+
+### Azure Government quota reference
+
+<Tabs>
+  <Tab title="DataZone Standard">
+
+    ### DataZone Standard Tokens Per Minute (TPM)
+
+    | Model Name    | Default TPM | Enterprise TPM | 
+    |:--------------|------------:|---------------:|
+    | gpt-5.1	    | 300,000	      | 1,000,000          |
+    | gpt4.1        | 300,000	      | 2,000,000          |
+    | gpt-4.1-mini	| 300,000	      | 2,000,000          |
+    | gpt-4o        | 300,000         | 10,000,000         |
+    | o3-mini       | 200,000         |	200,000            |
+
+  </Tab>
+  <Tab title="Standard">
+
+    ### Standard Tokens Per Minute (TPM)
+
+    | Model Name    | Default TPM | Enterprise TPM | 
+    |:--------------|------------:|---------------:|
+    | gpt4.1        | 300,000	      | 2,000,000          |
+    | gpt-4.1-mini	| 300,000	      | 2,000,000          |
+    | gpt-4o        | 80,000          | 80,000             |
+    | text-embedding-3-large | 350,000	| 350,000 |
+    | text-embedding-3-small | 350,000	| 350,000 |
+    | text-embedding-ada-002 | 350,000	| 350,000 |
+
+  </Tab>
+</Tabs>
+
+### General best practices to remain within rate limits
+
+To minimize issues related to rate limits, it's a good idea to use the following techniques:
+
+- Implement retry logic in your application.
+- Avoid sharp changes in the workload. Increase the workload gradually.
+- Test different load increase patterns.
+- Increase the quota assigned to your deployment. Move quota from another deployment, if necessary.
+
+## Regional quota capacity limits
+
+You can view quota availability by region for your subscription in the [Foundry portal](https://ai.azure.us/resource/quota).
+
+To view quota capacity by region for a specific model or version, you can query the [capacity API](https://learn.microsoft.com/rest/api/aiservices/accountmanagement/model-capacities/list) for your subscription. Provide a `subscriptionId`, `model_name`, and `model_version` and the API returns the available capacity for that model across all regions and deployment types for your subscription.
+
+<Note>
+
+Currently, both the Foundry portal and the capacity API return quota/capacity information for models that are [retired](../concepts/model-retirements) and no longer available.
+
+</Note>
+
+## Related content
+
+- Explore how to [manage quota](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/how-to/quota) for your Azure OpenAI deployments.
+- Learn more about the [underlying models that power Azure OpenAI](../../foundry-models/concepts/models-sold-directly-by-azure-gov).

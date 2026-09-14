@@ -1,0 +1,3558 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Azure AI",
+    "version": "v1",
+    "x-typespec-generated": [
+      {
+        "emitter": "@azure-tools/typespec-autorest"
+      }
+    ],
+    "description": "The Azure AI Foundry Projects API provides management capabilities for AI projects including connections, datasets, deployments, evaluations, indexes, and red teaming."
+  },
+  "security": [
+    {
+      "OAuth2Auth": [
+        "https://ai.azure.com/.default"
+      ]
+    }
+  ],
+  "tags": [
+    {
+      "name": "Connections",
+      "description": "Manage connections to external services and data sources."
+    },
+    {
+      "name": "Datasets",
+      "description": "Manage datasets for training, evaluation, and fine-tuning."
+    },
+    {
+      "name": "Deployments",
+      "description": "Manage model deployments and endpoints."
+    },
+    {
+      "name": "Indexes",
+      "description": "Manage search indexes for retrieval-augmented generation."
+    }
+  ],
+  "paths": {
+    "/connections": {
+      "get": {
+        "operationId": "Connections_List",
+        "description": "List all connections in the project, without populating connection credentials",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Azure.Core.Foundations.ApiVersionParameter"
+          },
+          {
+            "name": "connectionType",
+            "in": "query",
+            "description": "List connections of this specific type",
+            "required": false,
+            "x-ms-enum": {
+              "name": "ConnectionType",
+              "modelAsString": true,
+              "values": [
+                {
+                  "name": "AzureOpenAI",
+                  "value": "AzureOpenAI",
+                  "description": "Azure OpenAI Service"
+                },
+                {
+                  "name": "AzureBlobStorage",
+                  "value": "AzureBlob",
+                  "description": "Azure Blob Storage, with specified container"
+                },
+                {
+                  "name": "AzureStorageAccount",
+                  "value": "AzureStorageAccount",
+                  "description": "Azure Blob Storage, with container not specified (used by Agents)"
+                },
+                {
+                  "name": "AzureAISearch",
+                  "value": "CognitiveSearch",
+                  "description": "Azure AI Search"
+                },
+                {
+                  "name": "CosmosDB",
+                  "value": "CosmosDB",
+                  "description": "CosmosDB"
+                },
+                {
+                  "name": "APIKey",
+                  "value": "ApiKey",
+                  "description": "Generic connection that uses API Key authentication"
+                },
+                {
+                  "name": "ApplicationConfiguration",
+                  "value": "AppConfig",
+                  "description": "Application Configuration"
+                },
+                {
+                  "name": "ApplicationInsights",
+                  "value": "AppInsights",
+                  "description": "Application Insights"
+                },
+                {
+                  "name": "Custom",
+                  "value": "CustomKeys",
+                  "description": "Custom Keys"
+                }
+              ]
+            },
+            "schema": {
+              "type": "string",
+              "enum": [
+                "AzureOpenAI",
+                "AzureBlob",
+                "AzureStorageAccount",
+                "CognitiveSearch",
+                "CosmosDB",
+                "ApiKey",
+                "AppConfig",
+                "AppInsights",
+                "CustomKeys"
+              ]
+            }
+          },
+          {
+            "name": "defaultConnection",
+            "in": "query",
+            "description": "List connections that are default connections",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/Azure.Core.ClientRequestIdHeader"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Output",
+            "headers": {
+              "x-ms-client-request-id": {
+                "description": "An opaque, globally-unique, client-generated string identifier for the request.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedConnection"
+                },
+                "example": {
+                  "value": [
+                    {
+                      "name": "my-aoai-connection",
+                      "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/my-rg/providers/Microsoft.MachineLearningServices/workspaces/my-project/connections/my-aoai-connection",
+                      "type": "AzureOpenAI",
+                      "properties": {
+                        "category": "AzureOpenAI",
+                        "target": "https://my-aoai.openai.azure.com/",
+                        "authType": "ApiKey"
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "headers": {
+              "x-ms-error-code": {
+                "description": "String error code indicating what went wrong.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Azure.Core.Foundations.ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "invalid_api_key",
+                    "message": "Incorrect API key provided. You can find your API key in the Azure portal.",
+                    "param": null,
+                    "type": "invalid_request_error"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-ms-pageable": {
+          "nextLinkName": "nextLink"
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Entra ID",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n\nconnections = client.connections.list()\nfor conn in connections:\n    print(conn.name, conn.type)"
+          },
+          {
+            "lang": "python",
+            "label": "API Key",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.core.credentials import AzureKeyCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=AzureKeyCredential(\"YOUR_API_KEY\"),\n)\n\nconnections = client.connections.list()\nfor conn in connections:\n    print(conn.name, conn.type)"
+          },
+          {
+            "lang": "bash",
+            "label": "Entra ID",
+            "source": "curl \"$ENDPOINT/connections?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "bash",
+            "label": "API Key",
+            "source": "curl \"$ENDPOINT/connections?api-version=v1\" \\\n  -H \"api-key: YOUR_API_KEY\""
+          },
+          {
+            "lang": "csharp",
+            "label": "Entra ID",
+            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new DefaultAzureCredential());\n\nvar connections = client.GetConnections();\n\nforeach (var conn in connections)\n    Console.WriteLine($\"{conn.Name} {conn.ConnectionType}\");"
+          },
+          {
+            "lang": "csharp",
+            "label": "API Key",
+            "source": "using Azure.AI.Projects;\nusing Azure;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new AzureKeyCredential(\"YOUR_API_KEY\"));\n\nvar connections = client.GetConnections();\n\nforeach (var conn in connections)\n    Console.WriteLine($\"{conn.Name} {conn.ConnectionType}\");"
+          },
+          {
+            "lang": "javascript",
+            "label": "Entra ID",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new DefaultAzureCredential(),\n);\n\nconst connections = await client.connections.list();\nfor await (const conn of connections) {\n    console.log(conn.name, conn.type);\n}"
+          },
+          {
+            "lang": "javascript",
+            "label": "API Key",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { AzureKeyCredential } from \"@azure/core-auth\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new AzureKeyCredential(\"YOUR_API_KEY\"),\n);\n\nconst connections = await client.connections.list();\nfor await (const conn of connections) {\n    console.log(conn.name, conn.type);\n}"
+          },
+          {
+            "lang": "java",
+            "label": "Entra ID",
+            "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.identity.DefaultAzureCredentialBuilder;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new DefaultAzureCredentialBuilder().build())\n    .buildClient();\n\nPagedIterable<Connection> connections = client.getConnections();\n\nfor (Connection conn : connections) {\n    System.out.printf(\"%s %s%n\", conn.getName(), conn.getConnectionType());\n}"
+          },
+          {
+            "lang": "java",
+            "label": "API Key",
+            "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.core.credential.AzureKeyCredential;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new AzureKeyCredential(\"YOUR_API_KEY\"))\n    .buildClient();\n\nPagedIterable<Connection> connections = client.getConnections();\n\nfor (Connection conn : connections) {\n    System.out.printf(\"%s %s%n\", conn.getName(), conn.getConnectionType());\n}"
+          }
+        ],
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Returns a list of connections."
+      }
+    },
+    "/connections/{name}": {
+      "get": {
+        "operationId": "Connections_Get",
+        "description": "Get a connection by name, without populating connection credentials",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Azure.Core.Foundations.ApiVersionParameter"
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "description": "The friendly name of the connection, provided by the user.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/Azure.Core.ClientRequestIdHeader"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Output",
+            "headers": {
+              "x-ms-client-request-id": {
+                "description": "An opaque, globally-unique, client-generated string identifier for the request.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Connection"
+                },
+                "example": {
+                  "name": "my-aoai-connection",
+                  "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/my-rg/providers/Microsoft.MachineLearningServices/workspaces/my-project/connections/my-aoai-connection",
+                  "type": "AzureOpenAI",
+                  "properties": {
+                    "category": "AzureOpenAI",
+                    "target": "https://my-aoai.openai.azure.com/",
+                    "authType": "ApiKey"
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "headers": {
+              "x-ms-error-code": {
+                "description": "String error code indicating what went wrong.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Azure.Core.Foundations.ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "invalid_api_key",
+                    "message": "Incorrect API key provided. You can find your API key in the Azure portal.",
+                    "param": null,
+                    "type": "invalid_request_error"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Entra ID",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n\nconnection = client.connections.get(\"my-connection\")\nprint(connection.name, connection.type)"
+          },
+          {
+            "lang": "python",
+            "label": "API Key",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.core.credentials import AzureKeyCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=AzureKeyCredential(\"YOUR_API_KEY\"),\n)\n\nconnection = client.connections.get(\"my-connection\")\nprint(connection.name, connection.type)"
+          },
+          {
+            "lang": "bash",
+            "label": "Entra ID",
+            "source": "curl \"$ENDPOINT/connections/my-connection?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "bash",
+            "label": "API Key",
+            "source": "curl \"$ENDPOINT/connections/my-connection?api-version=v1\" \\\n  -H \"api-key: YOUR_API_KEY\""
+          },
+          {
+            "lang": "csharp",
+            "label": "Entra ID",
+            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new DefaultAzureCredential());\n\nvar connection = client.GetConnection(\"my-connection\");\n\nConsole.WriteLine($\"{connection.Name} {connection.ConnectionType}\");"
+          },
+          {
+            "lang": "csharp",
+            "label": "API Key",
+            "source": "using Azure.AI.Projects;\nusing Azure;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new AzureKeyCredential(\"YOUR_API_KEY\"));\n\nvar connection = client.GetConnection(\"my-connection\");\n\nConsole.WriteLine($\"{connection.Name} {connection.ConnectionType}\");"
+          },
+          {
+            "lang": "javascript",
+            "label": "Entra ID",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new DefaultAzureCredential(),\n);\n\nconst connection = await client.connections.get(\"my-connection\");\nconsole.log(connection.name, connection.type);"
+          },
+          {
+            "lang": "javascript",
+            "label": "API Key",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { AzureKeyCredential } from \"@azure/core-auth\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new AzureKeyCredential(\"YOUR_API_KEY\"),\n);\n\nconst connection = await client.connections.get(\"my-connection\");\nconsole.log(connection.name, connection.type);"
+          },
+          {
+            "lang": "java",
+            "label": "Entra ID",
+            "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.identity.DefaultAzureCredentialBuilder;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new DefaultAzureCredentialBuilder().build())\n    .buildClient();\n\nConnection connection = client.getConnection(\"my-connection\");\n\nSystem.out.printf(\"%s %s%n\", connection.getName(), connection.getConnectionType());"
+          },
+          {
+            "lang": "java",
+            "label": "API Key",
+            "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.core.credential.AzureKeyCredential;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new AzureKeyCredential(\"YOUR_API_KEY\"))\n    .buildClient();\n\nConnection connection = client.getConnection(\"my-connection\");\n\nSystem.out.printf(\"%s %s%n\", connection.getName(), connection.getConnectionType());"
+          }
+        ],
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Retrieves a connection by name."
+      }
+    },
+    "/connections/{name}/getConnectionWithCredentials": {
+      "post": {
+        "operationId": "Connections_GetWithCredentials",
+        "description": "Get a connection by name, with its connection credentials",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Azure.Core.Foundations.ApiVersionParameter"
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "description": "The friendly name of the connection, provided by the user.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/Azure.Core.ClientRequestIdHeader"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Output",
+            "headers": {
+              "x-ms-client-request-id": {
+                "description": "An opaque, globally-unique, client-generated string identifier for the request.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Connection"
+                },
+                "example": {
+                  "name": "my-aoai-connection",
+                  "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/my-rg/providers/Microsoft.MachineLearningServices/workspaces/my-project/connections/my-aoai-connection",
+                  "type": "AzureOpenAI",
+                  "properties": {
+                    "category": "AzureOpenAI",
+                    "target": "https://my-aoai.openai.azure.com/",
+                    "authType": "ApiKey",
+                    "credentials": {
+                      "key": "YOUR_API_KEY"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "headers": {
+              "x-ms-error-code": {
+                "description": "String error code indicating what went wrong.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Azure.Core.Foundations.ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "invalid_api_key",
+                    "message": "Incorrect API key provided. You can find your API key in the Azure portal.",
+                    "param": null,
+                    "type": "invalid_request_error"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Entra ID",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n\nconnection = client.connections.get(\n    \"my-connection\",\n    include_credentials=True,\n)\nprint(connection.name, connection.credentials)"
+          },
+          {
+            "lang": "python",
+            "label": "API Key",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.core.credentials import AzureKeyCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=AzureKeyCredential(\"YOUR_API_KEY\"),\n)\n\nconnection = client.connections.get(\n    \"my-connection\",\n    include_credentials=True,\n)\nprint(connection.name, connection.credentials)"
+          },
+          {
+            "lang": "bash",
+            "label": "Entra ID",
+            "source": "curl -X POST \"$ENDPOINT/connections/my-connection/getConnectionWithCredentials?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "bash",
+            "label": "API Key",
+            "source": "curl -X POST \"$ENDPOINT/connections/my-connection/getConnectionWithCredentials?api-version=v1\" \\\n  -H \"api-key: YOUR_API_KEY\""
+          },
+          {
+            "lang": "csharp",
+            "label": "Entra ID",
+            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new DefaultAzureCredential());\n\nvar connection = client.GetConnectionWithCredentials(\n    \"my-connection\");\n\nConsole.WriteLine(connection.Credentials);"
+          },
+          {
+            "lang": "csharp",
+            "label": "API Key",
+            "source": "using Azure.AI.Projects;\nusing Azure;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new AzureKeyCredential(\"YOUR_API_KEY\"));\n\nvar connection = client.GetConnectionWithCredentials(\n    \"my-connection\");\n\nConsole.WriteLine(connection.Credentials);"
+          },
+          {
+            "lang": "javascript",
+            "label": "Entra ID",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new DefaultAzureCredential(),\n);\n\nconst connection = await client.connections.getWithCredentials(\"my-connection\");\nconsole.log(connection.name, connection.credentials);"
+          },
+          {
+            "lang": "javascript",
+            "label": "API Key",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { AzureKeyCredential } from \"@azure/core-auth\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new AzureKeyCredential(\"YOUR_API_KEY\"),\n);\n\nconst connection = await client.connections.getWithCredentials(\"my-connection\");\nconsole.log(connection.name, connection.credentials);"
+          },
+          {
+            "lang": "java",
+            "label": "Entra ID",
+            "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.identity.DefaultAzureCredentialBuilder;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new DefaultAzureCredentialBuilder().build())\n    .buildClient();\n\nConnection connection = client.getConnectionWithCredentials(\n    \"my-connection\");\n\nSystem.out.println(connection.getCredentials());"
+          },
+          {
+            "lang": "java",
+            "label": "API Key",
+            "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.core.credential.AzureKeyCredential;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new AzureKeyCredential(\"YOUR_API_KEY\"))\n    .buildClient();\n\nConnection connection = client.getConnectionWithCredentials(\n    \"my-connection\");\n\nSystem.out.println(connection.getCredentials());"
+          }
+        ],
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Retrieves a connection with credentials."
+      }
+    },
+    "/datasets": {
+      "get": {
+        "operationId": "Datasets_ListLatest",
+        "description": "List the latest version of each DatasetVersion",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Azure.Core.Foundations.ApiVersionParameter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Output",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedDatasetVersion"
+                },
+                "example": {
+                  "value": [
+                    {
+                      "name": "my-dataset",
+                      "version": "1",
+                      "uri": "https://my-storage.blob.core.windows.net/datasets/my-dataset/",
+                      "type": "uri_folder",
+                      "tags": {
+                        "purpose": "training"
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "headers": {
+              "x-ms-error-code": {
+                "description": "String error code indicating what went wrong.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Azure.Core.Foundations.ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "invalid_api_key",
+                    "message": "Incorrect API key provided. You can find your API key in the Azure portal.",
+                    "param": null,
+                    "type": "invalid_request_error"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-ms-pageable": {
+          "nextLinkName": "nextLink"
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Entra ID",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n\ndatasets = client.datasets.list()\nfor ds in datasets:\n    print(ds.name, ds.version)"
+          },
+          {
+            "lang": "python",
+            "label": "API Key",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.core.credentials import AzureKeyCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=AzureKeyCredential(\"YOUR_API_KEY\"),\n)\n\ndatasets = client.datasets.list()\nfor ds in datasets:\n    print(ds.name, ds.version)"
+          },
+          {
+            "lang": "bash",
+            "label": "Entra ID",
+            "source": "curl \"$ENDPOINT/datasets?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "bash",
+            "label": "API Key",
+            "source": "curl \"$ENDPOINT/datasets?api-version=v1\" \\\n  -H \"api-key: YOUR_API_KEY\""
+          },
+          {
+            "lang": "csharp",
+            "label": "Entra ID",
+            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new DefaultAzureCredential());\n\nvar datasets = client.GetDatasets();\n\nforeach (var ds in datasets)\n    Console.WriteLine($\"{ds.Name} v{ds.Version}\");"
+          },
+          {
+            "lang": "csharp",
+            "label": "API Key",
+            "source": "using Azure.AI.Projects;\nusing Azure;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new AzureKeyCredential(\"YOUR_API_KEY\"));\n\nvar datasets = client.GetDatasets();\n\nforeach (var ds in datasets)\n    Console.WriteLine($\"{ds.Name} v{ds.Version}\");"
+          },
+          {
+            "lang": "javascript",
+            "label": "Entra ID",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new DefaultAzureCredential(),\n);\n\nconst datasets = await client.datasets.list();\nfor await (const ds of datasets) {\n    console.log(ds.name, ds.version);\n}"
+          },
+          {
+            "lang": "javascript",
+            "label": "API Key",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { AzureKeyCredential } from \"@azure/core-auth\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new AzureKeyCredential(\"YOUR_API_KEY\"),\n);\n\nconst datasets = await client.datasets.list();\nfor await (const ds of datasets) {\n    console.log(ds.name, ds.version);\n}"
+          },
+          {
+            "lang": "java",
+            "label": "Entra ID",
+            "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.identity.DefaultAzureCredentialBuilder;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new DefaultAzureCredentialBuilder().build())\n    .buildClient();\n\nPagedIterable<Dataset> datasets = client.getDatasets();\n\nfor (Dataset ds : datasets) {\n    System.out.printf(\"%s v%s%n\", ds.getName(), ds.getVersion());\n}"
+          },
+          {
+            "lang": "java",
+            "label": "API Key",
+            "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.core.credential.AzureKeyCredential;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new AzureKeyCredential(\"YOUR_API_KEY\"))\n    .buildClient();\n\nPagedIterable<Dataset> datasets = client.getDatasets();\n\nfor (Dataset ds : datasets) {\n    System.out.printf(\"%s v%s%n\", ds.getName(), ds.getVersion());\n}"
+          }
+        ],
+        "tags": [
+          "Datasets"
+        ],
+        "summary": "Returns a list of datasets."
+      }
+    },
+    "/datasets/{name}/versions": {
+      "get": {
+        "operationId": "Datasets_ListVersions",
+        "description": "List all versions of the given DatasetVersion",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Azure.Core.Foundations.ApiVersionParameter"
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "description": "The name of the resource",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Output",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedDatasetVersion"
+                },
+                "example": {
+                  "value": [
+                    {
+                      "name": "my-dataset",
+                      "version": "1",
+                      "uri": "https://my-storage.blob.core.windows.net/datasets/my-dataset/v1/",
+                      "type": "uri_folder"
+                    },
+                    {
+                      "name": "my-dataset",
+                      "version": "2",
+                      "uri": "https://my-storage.blob.core.windows.net/datasets/my-dataset/v2/",
+                      "type": "uri_folder"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "headers": {
+              "x-ms-error-code": {
+                "description": "String error code indicating what went wrong.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Azure.Core.Foundations.ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "invalid_api_key",
+                    "message": "Incorrect API key provided. You can find your API key in the Azure portal.",
+                    "param": null,
+                    "type": "invalid_request_error"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-ms-pageable": {
+          "nextLinkName": "nextLink"
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Entra ID",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n\nversions = client.datasets.list_versions(\"my-dataset\")\nfor v in versions:\n    print(v.version, v.created_date)"
+          },
+          {
+            "lang": "python",
+            "label": "API Key",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.core.credentials import AzureKeyCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=AzureKeyCredential(\"YOUR_API_KEY\"),\n)\n\nversions = client.datasets.list_versions(\"my-dataset\")\nfor v in versions:\n    print(v.version, v.created_date)"
+          },
+          {
+            "lang": "bash",
+            "label": "Entra ID",
+            "source": "curl \"$ENDPOINT/datasets/my-dataset/versions?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "bash",
+            "label": "API Key",
+            "source": "curl \"$ENDPOINT/datasets/my-dataset/versions?api-version=v1\" \\\n  -H \"api-key: YOUR_API_KEY\""
+          },
+          {
+            "lang": "csharp",
+            "label": "Entra ID",
+            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new DefaultAzureCredential());\n\nvar versions = client.GetDatasetVersions(\"my-dataset\");\n\nforeach (var v in versions)\n    Console.WriteLine($\"v{v.Version} {v.CreatedDate}\");"
+          },
+          {
+            "lang": "csharp",
+            "label": "API Key",
+            "source": "using Azure.AI.Projects;\nusing Azure;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new AzureKeyCredential(\"YOUR_API_KEY\"));\n\nvar versions = client.GetDatasetVersions(\"my-dataset\");\n\nforeach (var v in versions)\n    Console.WriteLine($\"v{v.Version} {v.CreatedDate}\");"
+          },
+          {
+            "lang": "javascript",
+            "label": "Entra ID",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new DefaultAzureCredential(),\n);\n\nconst versions = await client.datasets.listVersions(\"my-dataset\");\nfor await (const v of versions) {\n    console.log(v.version, v.createdDate);\n}"
+          },
+          {
+            "lang": "javascript",
+            "label": "API Key",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { AzureKeyCredential } from \"@azure/core-auth\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new AzureKeyCredential(\"YOUR_API_KEY\"),\n);\n\nconst versions = await client.datasets.listVersions(\"my-dataset\");\nfor await (const v of versions) {\n    console.log(v.version, v.createdDate);\n}"
+          },
+          {
+            "lang": "java",
+            "label": "Entra ID",
+            "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.identity.DefaultAzureCredentialBuilder;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new DefaultAzureCredentialBuilder().build())\n    .buildClient();\n\nPagedIterable<Dataset> versions = client.getDatasetVersions(\"my-dataset\");\n\nfor (Dataset v : versions) {\n    System.out.printf(\"v%s %s%n\", v.getVersion(), v.getCreatedDate());\n}"
+          },
+          {
+            "lang": "java",
+            "label": "API Key",
+            "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.core.credential.AzureKeyCredential;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new AzureKeyCredential(\"YOUR_API_KEY\"))\n    .buildClient();\n\nPagedIterable<Dataset> versions = client.getDatasetVersions(\"my-dataset\");\n\nfor (Dataset v : versions) {\n    System.out.printf(\"v%s %s%n\", v.getVersion(), v.getCreatedDate());\n}"
+          }
+        ],
+        "tags": [
+          "Datasets"
+        ],
+        "summary": "Returns a list of dataset versions."
+      }
+    },
+    "/datasets/{name}/versions/{version}": {
+      "get": {
+        "operationId": "Datasets_GetVersion",
+        "description": "Get the specific version of the DatasetVersion. The service returns 404 Not Found error if the DatasetVersion does not exist.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Azure.Core.Foundations.ApiVersionParameter"
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "description": "The name of the resource",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "description": "The specific version id of the DatasetVersion to retrieve.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Output",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetVersion"
+                },
+                "example": {
+                  "name": "my-dataset",
+                  "version": "1",
+                  "uri": "https://my-storage.blob.core.windows.net/datasets/my-dataset/v1/",
+                  "type": "uri_folder",
+                  "tags": {
+                    "purpose": "training"
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "headers": {
+              "x-ms-error-code": {
+                "description": "String error code indicating what went wrong.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Azure.Core.Foundations.ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "invalid_api_key",
+                    "message": "Incorrect API key provided. You can find your API key in the Azure portal.",
+                    "param": null,
+                    "type": "invalid_request_error"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Entra ID",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n\ndataset = client.datasets.get(\n    name=\"my-dataset\",\n    version=\"1\",\n)\nprint(dataset.name, dataset.version)"
+          },
+          {
+            "lang": "python",
+            "label": "API Key",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.core.credentials import AzureKeyCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=AzureKeyCredential(\"YOUR_API_KEY\"),\n)\n\ndataset = client.datasets.get(\n    name=\"my-dataset\",\n    version=\"1\",\n)\nprint(dataset.name, dataset.version)"
+          },
+          {
+            "lang": "bash",
+            "label": "Entra ID",
+            "source": "curl \"$ENDPOINT/datasets/my-dataset/versions/1?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "bash",
+            "label": "API Key",
+            "source": "curl \"$ENDPOINT/datasets/my-dataset/versions/1?api-version=v1\" \\\n  -H \"api-key: YOUR_API_KEY\""
+          },
+          {
+            "lang": "csharp",
+            "label": "Entra ID",
+            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new DefaultAzureCredential());\n\nvar dataset = client.GetDataset(\"my-dataset\", \"1\");\n\nConsole.WriteLine($\"{dataset.Name} v{dataset.Version}\");"
+          },
+          {
+            "lang": "csharp",
+            "label": "API Key",
+            "source": "using Azure.AI.Projects;\nusing Azure;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new AzureKeyCredential(\"YOUR_API_KEY\"));\n\nvar dataset = client.GetDataset(\"my-dataset\", \"1\");\n\nConsole.WriteLine($\"{dataset.Name} v{dataset.Version}\");"
+          },
+          {
+            "lang": "javascript",
+            "label": "Entra ID",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new DefaultAzureCredential(),\n);\n\nconst dataset = await client.datasets.get(\"my-dataset\", \"1\");\nconsole.log(dataset.name, dataset.version);"
+          },
+          {
+            "lang": "javascript",
+            "label": "API Key",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { AzureKeyCredential } from \"@azure/core-auth\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new AzureKeyCredential(\"YOUR_API_KEY\"),\n);\n\nconst dataset = await client.datasets.get(\"my-dataset\", \"1\");\nconsole.log(dataset.name, dataset.version);"
+          },
+          {
+            "lang": "java",
+            "label": "Entra ID",
+            "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.identity.DefaultAzureCredentialBuilder;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new DefaultAzureCredentialBuilder().build())\n    .buildClient();\n\nDataset dataset = client.getDataset(\"my-dataset\", \"1\");\n\nSystem.out.printf(\"%s v%s%n\", dataset.getName(), dataset.getVersion());"
+          },
+          {
+            "lang": "java",
+            "label": "API Key",
+            "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.core.credential.AzureKeyCredential;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new AzureKeyCredential(\"YOUR_API_KEY\"))\n    .buildClient();\n\nDataset dataset = client.getDataset(\"my-dataset\", \"1\");\n\nSystem.out.printf(\"%s v%s%n\", dataset.getName(), dataset.getVersion());"
+          }
+        ],
+        "tags": [
+          "Datasets"
+        ],
+        "summary": "Retrieves a specific dataset version."
+      },
+      "patch": {
+        "operationId": "Datasets_CreateOrUpdateVersion",
+        "description": "Create a new or update an existing DatasetVersion with the given version id",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Azure.Core.Foundations.ApiVersionParameter"
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "description": "The name of the resource",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "description": "The specific version id of the DatasetVersion to create or update.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/merge-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/DatasetVersion"
+              }
+            }
+          },
+          "description": "The DatasetVersion to create or update.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Output",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetVersion"
+                },
+                "example": {
+                  "name": "my-dataset",
+                  "version": "1",
+                  "uri": "https://my-storage.blob.core.windows.net/datasets/my-dataset/v1/",
+                  "type": "uri_folder",
+                  "tags": {
+                    "purpose": "training"
+                  }
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Output",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetVersion"
+                },
+                "example": {
+                  "name": "my-dataset",
+                  "version": "1",
+                  "uri": "https://my-storage.blob.core.windows.net/datasets/my-dataset/v1/",
+                  "type": "uri_folder",
+                  "tags": {
+                    "purpose": "training"
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "headers": {
+              "x-ms-error-code": {
+                "description": "String error code indicating what went wrong.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Azure.Core.Foundations.ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "invalid_api_key",
+                    "message": "Incorrect API key provided. You can find your API key in the Azure portal.",
+                    "param": null,
+                    "type": "invalid_request_error"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Entra ID",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n\ndataset = client.datasets.create_or_update(\n    name=\"my-dataset\",\n    version=\"1\",\n    body={\"description\": \"Training data\"},\n)\nprint(dataset.name)"
+          },
+          {
+            "lang": "python",
+            "label": "API Key",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.core.credentials import AzureKeyCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=AzureKeyCredential(\"YOUR_API_KEY\"),\n)\n\ndataset = client.datasets.create_or_update(\n    name=\"my-dataset\",\n    version=\"1\",\n    body={\"description\": \"Training data\"},\n)\nprint(dataset.name)"
+          },
+          {
+            "lang": "bash",
+            "label": "Entra ID",
+            "source": "curl -X PATCH \"$ENDPOINT/datasets/my-dataset/versions/1?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"description\": \"Training data\"}'"
+          },
+          {
+            "lang": "bash",
+            "label": "API Key",
+            "source": "curl -X PATCH \"$ENDPOINT/datasets/my-dataset/versions/1?api-version=v1\" \\\n  -H \"api-key: YOUR_API_KEY\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"description\": \"Training data\"}'"
+          },
+          {
+            "lang": "csharp",
+            "label": "Entra ID",
+            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new DefaultAzureCredential());\n\nvar dataset = client.CreateOrUpdateDataset(\n    \"my-dataset\", \"1\",\n    new DatasetVersionOptions { Description = \"Training data\" });\n\nConsole.WriteLine(dataset.Name);"
+          },
+          {
+            "lang": "csharp",
+            "label": "API Key",
+            "source": "using Azure.AI.Projects;\nusing Azure;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new AzureKeyCredential(\"YOUR_API_KEY\"));\n\nvar dataset = client.CreateOrUpdateDataset(\n    \"my-dataset\", \"1\",\n    new DatasetVersionOptions { Description = \"Training data\" });\n\nConsole.WriteLine(dataset.Name);"
+          },
+          {
+            "lang": "javascript",
+            "label": "Entra ID",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new DefaultAzureCredential(),\n);\n\nconst dataset = await client.datasets.createOrUpdate(\n    \"my-dataset\", \"1\",\n    { description: \"Training data\" },\n);\nconsole.log(dataset.name);"
+          },
+          {
+            "lang": "javascript",
+            "label": "API Key",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { AzureKeyCredential } from \"@azure/core-auth\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new AzureKeyCredential(\"YOUR_API_KEY\"),\n);\n\nconst dataset = await client.datasets.createOrUpdate(\n    \"my-dataset\", \"1\",\n    { description: \"Training data\" },\n);\nconsole.log(dataset.name);"
+          },
+          {
+            "lang": "java",
+            "label": "Entra ID",
+            "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.identity.DefaultAzureCredentialBuilder;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new DefaultAzureCredentialBuilder().build())\n    .buildClient();\n\nDataset dataset = client.createOrUpdateDataset(\n    \"my-dataset\", \"1\",\n    new DatasetVersionOptions().setDescription(\"Training data\"));\n\nSystem.out.println(dataset.getName());"
+          },
+          {
+            "lang": "java",
+            "label": "API Key",
+            "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.core.credential.AzureKeyCredential;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new AzureKeyCredential(\"YOUR_API_KEY\"))\n    .buildClient();\n\nDataset dataset = client.createOrUpdateDataset(\n    \"my-dataset\", \"1\",\n    new DatasetVersionOptions().setDescription(\"Training data\"));\n\nSystem.out.println(dataset.getName());"
+          }
+        ],
+        "tags": [
+          "Datasets"
+        ]
+      },
+      "delete": {
+        "operationId": "Datasets_DeleteVersion",
+        "description": "Delete the specific version of the DatasetVersion. The service returns 204 No Content if the DatasetVersion was deleted successfully or if the DatasetVersion does not exist.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Azure.Core.Foundations.ApiVersionParameter"
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "description": "The name of the resource",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "description": "The version of the DatasetVersion to delete.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "There is no content to send for this request, but the headers may be useful.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "status": "deleted"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "headers": {
+              "x-ms-error-code": {
+                "description": "String error code indicating what went wrong.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Azure.Core.Foundations.ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "invalid_api_key",
+                    "message": "Incorrect API key provided. You can find your API key in the Azure portal.",
+                    "param": null,
+                    "type": "invalid_request_error"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Entra ID",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n\nclient.datasets.delete(\n    name=\"my-dataset\",\n    version=\"1\",\n)"
+          },
+          {
+            "lang": "python",
+            "label": "API Key",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.core.credentials import AzureKeyCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=AzureKeyCredential(\"YOUR_API_KEY\"),\n)\n\nclient.datasets.delete(\n    name=\"my-dataset\",\n    version=\"1\",\n)"
+          },
+          {
+            "lang": "bash",
+            "label": "Entra ID",
+            "source": "curl -X DELETE \"$ENDPOINT/datasets/my-dataset/versions/1?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "bash",
+            "label": "API Key",
+            "source": "curl -X DELETE \"$ENDPOINT/datasets/my-dataset/versions/1?api-version=v1\" \\\n  -H \"api-key: YOUR_API_KEY\""
+          },
+          {
+            "lang": "csharp",
+            "label": "Entra ID",
+            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new DefaultAzureCredential());\n\nclient.DeleteDataset(\"my-dataset\", \"1\");"
+          },
+          {
+            "lang": "csharp",
+            "label": "API Key",
+            "source": "using Azure.AI.Projects;\nusing Azure;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new AzureKeyCredential(\"YOUR_API_KEY\"));\n\nclient.DeleteDataset(\"my-dataset\", \"1\");"
+          },
+          {
+            "lang": "javascript",
+            "label": "Entra ID",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new DefaultAzureCredential(),\n);\n\nawait client.datasets.delete(\"my-dataset\", \"1\");"
+          },
+          {
+            "lang": "javascript",
+            "label": "API Key",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { AzureKeyCredential } from \"@azure/core-auth\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new AzureKeyCredential(\"YOUR_API_KEY\"),\n);\n\nawait client.datasets.delete(\"my-dataset\", \"1\");"
+          },
+          {
+            "lang": "java",
+            "label": "Entra ID",
+            "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.identity.DefaultAzureCredentialBuilder;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new DefaultAzureCredentialBuilder().build())\n    .buildClient();\n\nclient.deleteDataset(\"my-dataset\", \"1\");"
+          },
+          {
+            "lang": "java",
+            "label": "API Key",
+            "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.core.credential.AzureKeyCredential;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new AzureKeyCredential(\"YOUR_API_KEY\"))\n    .buildClient();\n\nclient.deleteDataset(\"my-dataset\", \"1\");"
+          }
+        ],
+        "tags": [
+          "Datasets"
+        ]
+      }
+    },
+    "/datasets/{name}/versions/{version}/credentials": {
+      "post": {
+        "operationId": "Datasets_GetCredentials",
+        "description": "Get the SAS credential to access the storage account associated with a Dataset version.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Azure.Core.Foundations.ApiVersionParameter"
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "description": "The name of the resource",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "description": "The specific version id of the DatasetVersion to operate on.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Output",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetCredentialResponse"
+                },
+                "example": {
+                  "credentials": {
+                    "sasUri": "https://my-storage.blob.core.windows.net/datasets/my-dataset?sv=2023-01-01&sig=YOUR_SAS_TOKEN"
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "headers": {
+              "x-ms-error-code": {
+                "description": "String error code indicating what went wrong.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Azure.Core.Foundations.ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "invalid_api_key",
+                    "message": "Incorrect API key provided. You can find your API key in the Azure portal.",
+                    "param": null,
+                    "type": "invalid_request_error"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Entra ID",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n\ncreds = client.datasets.get_credentials(\n    name=\"my-dataset\",\n    version=\"1\",\n)\nprint(creds.credential_type)"
+          },
+          {
+            "lang": "python",
+            "label": "API Key",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.core.credentials import AzureKeyCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=AzureKeyCredential(\"YOUR_API_KEY\"),\n)\n\ncreds = client.datasets.get_credentials(\n    name=\"my-dataset\",\n    version=\"1\",\n)\nprint(creds.credential_type)"
+          },
+          {
+            "lang": "bash",
+            "label": "Entra ID",
+            "source": "curl -X POST \"$ENDPOINT/datasets/my-dataset/versions/1/credentials?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "bash",
+            "label": "API Key",
+            "source": "curl -X POST \"$ENDPOINT/datasets/my-dataset/versions/1/credentials?api-version=v1\" \\\n  -H \"api-key: YOUR_API_KEY\""
+          },
+          {
+            "lang": "csharp",
+            "label": "Entra ID",
+            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new DefaultAzureCredential());\n\nvar creds = client.GetDatasetCredentials(\"my-dataset\", \"1\");\n\nConsole.WriteLine(creds.CredentialType);"
+          },
+          {
+            "lang": "csharp",
+            "label": "API Key",
+            "source": "using Azure.AI.Projects;\nusing Azure;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new AzureKeyCredential(\"YOUR_API_KEY\"));\n\nvar creds = client.GetDatasetCredentials(\"my-dataset\", \"1\");\n\nConsole.WriteLine(creds.CredentialType);"
+          },
+          {
+            "lang": "javascript",
+            "label": "Entra ID",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new DefaultAzureCredential(),\n);\n\nconst creds = await client.datasets.getCredentials(\"my-dataset\", \"1\");\nconsole.log(creds.credentialType);"
+          },
+          {
+            "lang": "javascript",
+            "label": "API Key",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { AzureKeyCredential } from \"@azure/core-auth\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new AzureKeyCredential(\"YOUR_API_KEY\"),\n);\n\nconst creds = await client.datasets.getCredentials(\"my-dataset\", \"1\");\nconsole.log(creds.credentialType);"
+          },
+          {
+            "lang": "java",
+            "label": "Entra ID",
+            "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.identity.DefaultAzureCredentialBuilder;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new DefaultAzureCredentialBuilder().build())\n    .buildClient();\n\nDatasetCredentials creds = client.getDatasetCredentials(\n    \"my-dataset\", \"1\");\n\nSystem.out.println(creds.getCredentialType());"
+          },
+          {
+            "lang": "java",
+            "label": "API Key",
+            "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.core.credential.AzureKeyCredential;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new AzureKeyCredential(\"YOUR_API_KEY\"))\n    .buildClient();\n\nDatasetCredentials creds = client.getDatasetCredentials(\n    \"my-dataset\", \"1\");\n\nSystem.out.println(creds.getCredentialType());"
+          }
+        ],
+        "tags": [
+          "Datasets"
+        ],
+        "summary": "Retrieves credentials for a dataset version."
+      }
+    },
+    "/datasets/{name}/versions/{version}/startPendingUpload": {
+      "post": {
+        "operationId": "Datasets_StartPendingUploadVersion",
+        "description": "Start a new or get an existing pending upload of a dataset for a specific version.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Azure.Core.Foundations.ApiVersionParameter"
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "description": "The name of the resource",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "description": "The specific version id of the DatasetVersion to operate on.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PendingUploadRequest"
+              }
+            }
+          },
+          "description": "The pending upload request parameters",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Output",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingUploadResponse"
+                },
+                "example": {
+                  "blobReference": {
+                    "blobUri": "https://my-storage.blob.core.windows.net/datasets/my-dataset/v1/",
+                    "credential": {
+                      "sasUri": "https://my-storage.blob.core.windows.net/datasets?sv=2023-01-01&sig=YOUR_SAS_TOKEN"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "headers": {
+              "x-ms-error-code": {
+                "description": "String error code indicating what went wrong.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Azure.Core.Foundations.ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "invalid_api_key",
+                    "message": "Incorrect API key provided. You can find your API key in the Azure portal.",
+                    "param": null,
+                    "type": "invalid_request_error"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Entra ID",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n\nupload = client.datasets.start_pending_upload(\n    name=\"my-dataset\",\n    version=\"1\",\n    body={\"pending_upload_type\": \"temporary_sas\"},\n)\nprint(upload.blob_reference)"
+          },
+          {
+            "lang": "python",
+            "label": "API Key",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.core.credentials import AzureKeyCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=AzureKeyCredential(\"YOUR_API_KEY\"),\n)\n\nupload = client.datasets.start_pending_upload(\n    name=\"my-dataset\",\n    version=\"1\",\n    body={\"pending_upload_type\": \"temporary_sas\"},\n)\nprint(upload.blob_reference)"
+          },
+          {
+            "lang": "bash",
+            "label": "Entra ID",
+            "source": "curl -X POST \"$ENDPOINT/datasets/my-dataset/versions/1/startPendingUpload?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"pending_upload_type\": \"temporary_sas\"}'"
+          },
+          {
+            "lang": "bash",
+            "label": "API Key",
+            "source": "curl -X POST \"$ENDPOINT/datasets/my-dataset/versions/1/startPendingUpload?api-version=v1\" \\\n  -H \"api-key: YOUR_API_KEY\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"pending_upload_type\": \"temporary_sas\"}'"
+          },
+          {
+            "lang": "csharp",
+            "label": "Entra ID",
+            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new DefaultAzureCredential());\n\nvar upload = client.StartPendingDatasetUpload(\n    \"my-dataset\", \"1\",\n    new PendingUploadOptions { PendingUploadType = \"temporary_sas\" });\n\nConsole.WriteLine(upload.BlobReference);"
+          },
+          {
+            "lang": "csharp",
+            "label": "API Key",
+            "source": "using Azure.AI.Projects;\nusing Azure;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new AzureKeyCredential(\"YOUR_API_KEY\"));\n\nvar upload = client.StartPendingDatasetUpload(\n    \"my-dataset\", \"1\",\n    new PendingUploadOptions { PendingUploadType = \"temporary_sas\" });\n\nConsole.WriteLine(upload.BlobReference);"
+          },
+          {
+            "lang": "javascript",
+            "label": "Entra ID",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new DefaultAzureCredential(),\n);\n\nconst upload = await client.datasets.startPendingUpload(\n    \"my-dataset\", \"1\",\n    { pendingUploadType: \"temporary_sas\" },\n);\nconsole.log(upload.blobReference);"
+          },
+          {
+            "lang": "javascript",
+            "label": "API Key",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { AzureKeyCredential } from \"@azure/core-auth\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new AzureKeyCredential(\"YOUR_API_KEY\"),\n);\n\nconst upload = await client.datasets.startPendingUpload(\n    \"my-dataset\", \"1\",\n    { pendingUploadType: \"temporary_sas\" },\n);\nconsole.log(upload.blobReference);"
+          },
+          {
+            "lang": "java",
+            "label": "Entra ID",
+            "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.identity.DefaultAzureCredentialBuilder;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new DefaultAzureCredentialBuilder().build())\n    .buildClient();\n\nPendingUpload upload = client.startPendingDatasetUpload(\n    \"my-dataset\", \"1\",\n    new PendingUploadOptions().setPendingUploadType(\"temporary_sas\"));\n\nSystem.out.println(upload.getBlobReference());"
+          },
+          {
+            "lang": "java",
+            "label": "API Key",
+            "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.core.credential.AzureKeyCredential;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new AzureKeyCredential(\"YOUR_API_KEY\"))\n    .buildClient();\n\nPendingUpload upload = client.startPendingDatasetUpload(\n    \"my-dataset\", \"1\",\n    new PendingUploadOptions().setPendingUploadType(\"temporary_sas\"));\n\nSystem.out.println(upload.getBlobReference());"
+          }
+        ],
+        "tags": [
+          "Datasets"
+        ],
+        "summary": "Starts a pending upload for a dataset version."
+      }
+    },
+    "/deployments": {
+      "get": {
+        "operationId": "Deployments_List",
+        "description": "List all deployed models in the project",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Azure.Core.Foundations.ApiVersionParameter"
+          },
+          {
+            "name": "modelPublisher",
+            "in": "query",
+            "description": "Model publisher to filter models by",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "modelName",
+            "in": "query",
+            "description": "Model name (the publisher specific name) to filter models by",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "deploymentType",
+            "in": "query",
+            "description": "Type of deployment to filter list by",
+            "required": false,
+            "x-ms-enum": {
+              "name": "DeploymentType",
+              "modelAsString": true,
+              "values": [
+                {
+                  "name": "ModelDeployment",
+                  "value": "ModelDeployment",
+                  "description": "Model deployment"
+                }
+              ]
+            },
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ModelDeployment"
+              ]
+            }
+          },
+          {
+            "$ref": "#/components/parameters/Azure.Core.ClientRequestIdHeader"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Output",
+            "headers": {
+              "x-ms-client-request-id": {
+                "description": "An opaque, globally-unique, client-generated string identifier for the request.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedDeployment"
+                },
+                "example": {
+                  "value": [
+                    {
+                      "name": "gpt-4o",
+                      "type": "Azure.OpenAI",
+                      "model": {
+                        "name": "gpt-4o",
+                        "version": "2024-11-20",
+                        "format": "OpenAI"
+                      },
+                      "properties": {
+                        "provisioningState": "Succeeded"
+                      }
+                    },
+                    {
+                      "name": "text-embedding-3-large",
+                      "type": "Azure.OpenAI",
+                      "model": {
+                        "name": "text-embedding-3-large",
+                        "version": "1",
+                        "format": "OpenAI"
+                      },
+                      "properties": {
+                        "provisioningState": "Succeeded"
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "headers": {
+              "x-ms-error-code": {
+                "description": "String error code indicating what went wrong.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Azure.Core.Foundations.ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "invalid_api_key",
+                    "message": "Incorrect API key provided. You can find your API key in the Azure portal.",
+                    "param": null,
+                    "type": "invalid_request_error"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-ms-pageable": {
+          "nextLinkName": "nextLink"
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Entra ID",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n\ndeployments = client.deployments.list()\nfor d in deployments:\n    print(d.name, d.model)"
+          },
+          {
+            "lang": "python",
+            "label": "API Key",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.core.credentials import AzureKeyCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=AzureKeyCredential(\"YOUR_API_KEY\"),\n)\n\ndeployments = client.deployments.list()\nfor d in deployments:\n    print(d.name, d.model)"
+          },
+          {
+            "lang": "bash",
+            "label": "Entra ID",
+            "source": "curl \"$ENDPOINT/deployments?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "bash",
+            "label": "API Key",
+            "source": "curl \"$ENDPOINT/deployments?api-version=v1\" \\\n  -H \"api-key: YOUR_API_KEY\""
+          },
+          {
+            "lang": "csharp",
+            "label": "Entra ID",
+            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new DefaultAzureCredential());\n\nvar deployments = client.GetDeployments();\n\nforeach (var d in deployments)\n    Console.WriteLine($\"{d.Name} {d.Model}\");"
+          },
+          {
+            "lang": "csharp",
+            "label": "API Key",
+            "source": "using Azure.AI.Projects;\nusing Azure;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new AzureKeyCredential(\"YOUR_API_KEY\"));\n\nvar deployments = client.GetDeployments();\n\nforeach (var d in deployments)\n    Console.WriteLine($\"{d.Name} {d.Model}\");"
+          },
+          {
+            "lang": "javascript",
+            "label": "Entra ID",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new DefaultAzureCredential(),\n);\n\nconst deployments = await client.deployments.list();\nfor await (const d of deployments) {\n    console.log(d.name, d.model);\n}"
+          },
+          {
+            "lang": "javascript",
+            "label": "API Key",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { AzureKeyCredential } from \"@azure/core-auth\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new AzureKeyCredential(\"YOUR_API_KEY\"),\n);\n\nconst deployments = await client.deployments.list();\nfor await (const d of deployments) {\n    console.log(d.name, d.model);\n}"
+          },
+          {
+            "lang": "java",
+            "label": "Entra ID",
+            "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.identity.DefaultAzureCredentialBuilder;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new DefaultAzureCredentialBuilder().build())\n    .buildClient();\n\nPagedIterable<Deployment> deployments = client.getDeployments();\n\nfor (Deployment d : deployments) {\n    System.out.printf(\"%s %s%n\", d.getName(), d.getModel());\n}"
+          },
+          {
+            "lang": "java",
+            "label": "API Key",
+            "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.core.credential.AzureKeyCredential;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new AzureKeyCredential(\"YOUR_API_KEY\"))\n    .buildClient();\n\nPagedIterable<Deployment> deployments = client.getDeployments();\n\nfor (Deployment d : deployments) {\n    System.out.printf(\"%s %s%n\", d.getName(), d.getModel());\n}"
+          }
+        ],
+        "tags": [
+          "Deployments"
+        ],
+        "summary": "Returns a list of deployments."
+      }
+    },
+    "/deployments/{name}": {
+      "get": {
+        "operationId": "Deployments_Get",
+        "description": "Get a deployed model.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Azure.Core.Foundations.ApiVersionParameter"
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "description": "Name of the deployment",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/Azure.Core.ClientRequestIdHeader"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Output",
+            "headers": {
+              "x-ms-client-request-id": {
+                "description": "An opaque, globally-unique, client-generated string identifier for the request.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Deployment"
+                },
+                "example": {
+                  "name": "gpt-4o",
+                  "type": "Azure.OpenAI",
+                  "model": {
+                    "name": "gpt-4o",
+                    "version": "2024-11-20",
+                    "format": "OpenAI"
+                  },
+                  "properties": {
+                    "provisioningState": "Succeeded"
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "headers": {
+              "x-ms-error-code": {
+                "description": "String error code indicating what went wrong.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Azure.Core.Foundations.ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "invalid_api_key",
+                    "message": "Incorrect API key provided. You can find your API key in the Azure portal.",
+                    "param": null,
+                    "type": "invalid_request_error"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Entra ID",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n\ndeployment = client.deployments.get(\"gpt-4o\")\nprint(deployment.name, deployment.model)"
+          },
+          {
+            "lang": "python",
+            "label": "API Key",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.core.credentials import AzureKeyCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=AzureKeyCredential(\"YOUR_API_KEY\"),\n)\n\ndeployment = client.deployments.get(\"gpt-4o\")\nprint(deployment.name, deployment.model)"
+          },
+          {
+            "lang": "bash",
+            "label": "Entra ID",
+            "source": "curl \"$ENDPOINT/deployments/gpt-4o?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "bash",
+            "label": "API Key",
+            "source": "curl \"$ENDPOINT/deployments/gpt-4o?api-version=v1\" \\\n  -H \"api-key: YOUR_API_KEY\""
+          },
+          {
+            "lang": "csharp",
+            "label": "Entra ID",
+            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new DefaultAzureCredential());\n\nvar deployment = client.GetDeployment(\"gpt-4o\");\n\nConsole.WriteLine($\"{deployment.Name} {deployment.Model}\");"
+          },
+          {
+            "lang": "csharp",
+            "label": "API Key",
+            "source": "using Azure.AI.Projects;\nusing Azure;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new AzureKeyCredential(\"YOUR_API_KEY\"));\n\nvar deployment = client.GetDeployment(\"gpt-4o\");\n\nConsole.WriteLine($\"{deployment.Name} {deployment.Model}\");"
+          },
+          {
+            "lang": "javascript",
+            "label": "Entra ID",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new DefaultAzureCredential(),\n);\n\nconst deployment = await client.deployments.get(\"gpt-4o\");\nconsole.log(deployment.name, deployment.model);"
+          },
+          {
+            "lang": "javascript",
+            "label": "API Key",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { AzureKeyCredential } from \"@azure/core-auth\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new AzureKeyCredential(\"YOUR_API_KEY\"),\n);\n\nconst deployment = await client.deployments.get(\"gpt-4o\");\nconsole.log(deployment.name, deployment.model);"
+          },
+          {
+            "lang": "java",
+            "label": "Entra ID",
+            "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.identity.DefaultAzureCredentialBuilder;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new DefaultAzureCredentialBuilder().build())\n    .buildClient();\n\nDeployment deployment = client.getDeployment(\"gpt-4o\");\n\nSystem.out.printf(\"%s %s%n\", deployment.getName(), deployment.getModel());"
+          },
+          {
+            "lang": "java",
+            "label": "API Key",
+            "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.core.credential.AzureKeyCredential;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new AzureKeyCredential(\"YOUR_API_KEY\"))\n    .buildClient();\n\nDeployment deployment = client.getDeployment(\"gpt-4o\");\n\nSystem.out.printf(\"%s %s%n\", deployment.getName(), deployment.getModel());"
+          }
+        ],
+        "tags": [
+          "Deployments"
+        ],
+        "summary": "Retrieves a deployment by name."
+      }
+    },
+    "/indexes": {
+      "get": {
+        "operationId": "Indexes_ListLatest",
+        "description": "List the latest version of each Index",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Azure.Core.Foundations.ApiVersionParameter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Output",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedIndex"
+                },
+                "example": {
+                  "value": [
+                    {
+                      "name": "my-search-index",
+                      "version": "1",
+                      "type": "AzureSearch",
+                      "tags": {
+                        "domain": "product-docs"
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "headers": {
+              "x-ms-error-code": {
+                "description": "String error code indicating what went wrong.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Azure.Core.Foundations.ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "invalid_api_key",
+                    "message": "Incorrect API key provided. You can find your API key in the Azure portal.",
+                    "param": null,
+                    "type": "invalid_request_error"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-ms-pageable": {
+          "nextLinkName": "nextLink"
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Entra ID",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n\nindexes = client.indexes.list()\nfor idx in indexes:\n    print(idx.name, idx.version)"
+          },
+          {
+            "lang": "python",
+            "label": "API Key",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.core.credentials import AzureKeyCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=AzureKeyCredential(\"YOUR_API_KEY\"),\n)\n\nindexes = client.indexes.list()\nfor idx in indexes:\n    print(idx.name, idx.version)"
+          },
+          {
+            "lang": "bash",
+            "label": "Entra ID",
+            "source": "curl \"$ENDPOINT/indexes?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "bash",
+            "label": "API Key",
+            "source": "curl \"$ENDPOINT/indexes?api-version=v1\" \\\n  -H \"api-key: YOUR_API_KEY\""
+          },
+          {
+            "lang": "csharp",
+            "label": "Entra ID",
+            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new DefaultAzureCredential());\n\nvar indexes = client.GetIndexes();\n\nforeach (var idx in indexes)\n    Console.WriteLine($\"{idx.Name} v{idx.Version}\");"
+          },
+          {
+            "lang": "csharp",
+            "label": "API Key",
+            "source": "using Azure.AI.Projects;\nusing Azure;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new AzureKeyCredential(\"YOUR_API_KEY\"));\n\nvar indexes = client.GetIndexes();\n\nforeach (var idx in indexes)\n    Console.WriteLine($\"{idx.Name} v{idx.Version}\");"
+          },
+          {
+            "lang": "javascript",
+            "label": "Entra ID",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new DefaultAzureCredential(),\n);\n\nconst indexes = await client.indexes.list();\nfor await (const idx of indexes) {\n    console.log(idx.name, idx.version);\n}"
+          },
+          {
+            "lang": "javascript",
+            "label": "API Key",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { AzureKeyCredential } from \"@azure/core-auth\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new AzureKeyCredential(\"YOUR_API_KEY\"),\n);\n\nconst indexes = await client.indexes.list();\nfor await (const idx of indexes) {\n    console.log(idx.name, idx.version);\n}"
+          },
+          {
+            "lang": "java",
+            "label": "Entra ID",
+            "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.identity.DefaultAzureCredentialBuilder;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new DefaultAzureCredentialBuilder().build())\n    .buildClient();\n\nPagedIterable<Index> indexes = client.getIndexes();\n\nfor (Index idx : indexes) {\n    System.out.printf(\"%s v%s%n\", idx.getName(), idx.getVersion());\n}"
+          },
+          {
+            "lang": "java",
+            "label": "API Key",
+            "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.core.credential.AzureKeyCredential;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new AzureKeyCredential(\"YOUR_API_KEY\"))\n    .buildClient();\n\nPagedIterable<Index> indexes = client.getIndexes();\n\nfor (Index idx : indexes) {\n    System.out.printf(\"%s v%s%n\", idx.getName(), idx.getVersion());\n}"
+          }
+        ],
+        "tags": [
+          "Indexes"
+        ],
+        "summary": "Returns a list of indexes."
+      }
+    },
+    "/indexes/{name}/versions": {
+      "get": {
+        "operationId": "Indexes_ListVersions",
+        "description": "List all versions of the given Index",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Azure.Core.Foundations.ApiVersionParameter"
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "description": "The name of the resource",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Output",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedIndex"
+                },
+                "example": {
+                  "value": [
+                    {
+                      "name": "my-search-index",
+                      "version": "1",
+                      "type": "AzureSearch"
+                    },
+                    {
+                      "name": "my-search-index",
+                      "version": "2",
+                      "type": "AzureSearch"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "headers": {
+              "x-ms-error-code": {
+                "description": "String error code indicating what went wrong.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Azure.Core.Foundations.ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "invalid_api_key",
+                    "message": "Incorrect API key provided. You can find your API key in the Azure portal.",
+                    "param": null,
+                    "type": "invalid_request_error"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-ms-pageable": {
+          "nextLinkName": "nextLink"
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Entra ID",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n\nversions = client.indexes.list_versions(\"my-index\")\nfor v in versions:\n    print(v.version)"
+          },
+          {
+            "lang": "python",
+            "label": "API Key",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.core.credentials import AzureKeyCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=AzureKeyCredential(\"YOUR_API_KEY\"),\n)\n\nversions = client.indexes.list_versions(\"my-index\")\nfor v in versions:\n    print(v.version)"
+          },
+          {
+            "lang": "bash",
+            "label": "Entra ID",
+            "source": "curl \"$ENDPOINT/indexes/my-index/versions?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "bash",
+            "label": "API Key",
+            "source": "curl \"$ENDPOINT/indexes/my-index/versions?api-version=v1\" \\\n  -H \"api-key: YOUR_API_KEY\""
+          },
+          {
+            "lang": "csharp",
+            "label": "Entra ID",
+            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new DefaultAzureCredential());\n\nvar versions = client.GetIndexVersions(\"my-index\");\n\nforeach (var v in versions)\n    Console.WriteLine(v.Version);"
+          },
+          {
+            "lang": "csharp",
+            "label": "API Key",
+            "source": "using Azure.AI.Projects;\nusing Azure;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new AzureKeyCredential(\"YOUR_API_KEY\"));\n\nvar versions = client.GetIndexVersions(\"my-index\");\n\nforeach (var v in versions)\n    Console.WriteLine(v.Version);"
+          },
+          {
+            "lang": "javascript",
+            "label": "Entra ID",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new DefaultAzureCredential(),\n);\n\nconst versions = await client.indexes.listVersions(\"my-index\");\nfor await (const v of versions) {\n    console.log(v.version);\n}"
+          },
+          {
+            "lang": "javascript",
+            "label": "API Key",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { AzureKeyCredential } from \"@azure/core-auth\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new AzureKeyCredential(\"YOUR_API_KEY\"),\n);\n\nconst versions = await client.indexes.listVersions(\"my-index\");\nfor await (const v of versions) {\n    console.log(v.version);\n}"
+          },
+          {
+            "lang": "java",
+            "label": "Entra ID",
+            "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.identity.DefaultAzureCredentialBuilder;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new DefaultAzureCredentialBuilder().build())\n    .buildClient();\n\nPagedIterable<Index> versions = client.getIndexVersions(\"my-index\");\n\nfor (Index v : versions) {\n    System.out.println(v.getVersion());\n}"
+          },
+          {
+            "lang": "java",
+            "label": "API Key",
+            "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.core.credential.AzureKeyCredential;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new AzureKeyCredential(\"YOUR_API_KEY\"))\n    .buildClient();\n\nPagedIterable<Index> versions = client.getIndexVersions(\"my-index\");\n\nfor (Index v : versions) {\n    System.out.println(v.getVersion());\n}"
+          }
+        ],
+        "tags": [
+          "Indexes"
+        ],
+        "summary": "Returns a list of index versions."
+      }
+    },
+    "/indexes/{name}/versions/{version}": {
+      "get": {
+        "operationId": "Indexes_GetVersion",
+        "description": "Get the specific version of the Index. The service returns 404 Not Found error if the Index does not exist.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Azure.Core.Foundations.ApiVersionParameter"
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "description": "The name of the resource",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "description": "The specific version id of the Index to retrieve.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Output",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Index"
+                },
+                "example": {
+                  "name": "my-search-index",
+                  "version": "1",
+                  "type": "AzureSearch",
+                  "tags": {
+                    "domain": "product-docs"
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "headers": {
+              "x-ms-error-code": {
+                "description": "String error code indicating what went wrong.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Azure.Core.Foundations.ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "invalid_api_key",
+                    "message": "Incorrect API key provided. You can find your API key in the Azure portal.",
+                    "param": null,
+                    "type": "invalid_request_error"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Entra ID",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n\nindex = client.indexes.get(\n    name=\"my-index\",\n    version=\"1\",\n)\nprint(index.name)"
+          },
+          {
+            "lang": "python",
+            "label": "API Key",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.core.credentials import AzureKeyCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=AzureKeyCredential(\"YOUR_API_KEY\"),\n)\n\nindex = client.indexes.get(\n    name=\"my-index\",\n    version=\"1\",\n)\nprint(index.name)"
+          },
+          {
+            "lang": "bash",
+            "label": "Entra ID",
+            "source": "curl \"$ENDPOINT/indexes/my-index/versions/1?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "bash",
+            "label": "API Key",
+            "source": "curl \"$ENDPOINT/indexes/my-index/versions/1?api-version=v1\" \\\n  -H \"api-key: YOUR_API_KEY\""
+          },
+          {
+            "lang": "csharp",
+            "label": "Entra ID",
+            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new DefaultAzureCredential());\n\nvar index = client.GetIndex(\"my-index\", \"1\");\n\nConsole.WriteLine(index.Name);"
+          },
+          {
+            "lang": "csharp",
+            "label": "API Key",
+            "source": "using Azure.AI.Projects;\nusing Azure;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new AzureKeyCredential(\"YOUR_API_KEY\"));\n\nvar index = client.GetIndex(\"my-index\", \"1\");\n\nConsole.WriteLine(index.Name);"
+          },
+          {
+            "lang": "javascript",
+            "label": "Entra ID",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new DefaultAzureCredential(),\n);\n\nconst index = await client.indexes.get(\"my-index\", \"1\");\nconsole.log(index.name);"
+          },
+          {
+            "lang": "javascript",
+            "label": "API Key",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { AzureKeyCredential } from \"@azure/core-auth\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new AzureKeyCredential(\"YOUR_API_KEY\"),\n);\n\nconst index = await client.indexes.get(\"my-index\", \"1\");\nconsole.log(index.name);"
+          },
+          {
+            "lang": "java",
+            "label": "Entra ID",
+            "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.identity.DefaultAzureCredentialBuilder;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new DefaultAzureCredentialBuilder().build())\n    .buildClient();\n\nIndex index = client.getIndex(\"my-index\", \"1\");\n\nSystem.out.println(index.getName());"
+          },
+          {
+            "lang": "java",
+            "label": "API Key",
+            "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.core.credential.AzureKeyCredential;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new AzureKeyCredential(\"YOUR_API_KEY\"))\n    .buildClient();\n\nIndex index = client.getIndex(\"my-index\", \"1\");\n\nSystem.out.println(index.getName());"
+          }
+        ],
+        "tags": [
+          "Indexes"
+        ],
+        "summary": "Retrieves a specific index version."
+      },
+      "patch": {
+        "operationId": "Indexes_CreateOrUpdateVersion",
+        "description": "Create a new or update an existing Index with the given version id",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Azure.Core.Foundations.ApiVersionParameter"
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "description": "The name of the resource",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "description": "The specific version id of the Index to create or update.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/merge-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/Index"
+              }
+            }
+          },
+          "description": "The Index to create or update.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Output",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Index"
+                },
+                "example": {
+                  "name": "my-search-index",
+                  "version": "1",
+                  "type": "AzureSearch",
+                  "tags": {
+                    "domain": "product-docs"
+                  }
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Output",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Index"
+                },
+                "example": {
+                  "name": "my-search-index",
+                  "version": "1",
+                  "type": "AzureSearch",
+                  "tags": {
+                    "domain": "product-docs"
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "headers": {
+              "x-ms-error-code": {
+                "description": "String error code indicating what went wrong.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Azure.Core.Foundations.ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "invalid_api_key",
+                    "message": "Incorrect API key provided. You can find your API key in the Azure portal.",
+                    "param": null,
+                    "type": "invalid_request_error"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Entra ID",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n\nindex = client.indexes.create_or_update(\n    name=\"my-index\",\n    version=\"1\",\n    body={\"description\": \"Search index\"},\n)\nprint(index.name)"
+          },
+          {
+            "lang": "python",
+            "label": "API Key",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.core.credentials import AzureKeyCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=AzureKeyCredential(\"YOUR_API_KEY\"),\n)\n\nindex = client.indexes.create_or_update(\n    name=\"my-index\",\n    version=\"1\",\n    body={\"description\": \"Search index\"},\n)\nprint(index.name)"
+          },
+          {
+            "lang": "bash",
+            "label": "Entra ID",
+            "source": "curl -X PATCH \"$ENDPOINT/indexes/my-index/versions/1?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"description\": \"Search index\"}'"
+          },
+          {
+            "lang": "bash",
+            "label": "API Key",
+            "source": "curl -X PATCH \"$ENDPOINT/indexes/my-index/versions/1?api-version=v1\" \\\n  -H \"api-key: YOUR_API_KEY\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"description\": \"Search index\"}'"
+          },
+          {
+            "lang": "csharp",
+            "label": "Entra ID",
+            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new DefaultAzureCredential());\n\nvar index = client.CreateOrUpdateIndex(\n    \"my-index\", \"1\",\n    new IndexVersionOptions { Description = \"Search index\" });\n\nConsole.WriteLine(index.Name);"
+          },
+          {
+            "lang": "csharp",
+            "label": "API Key",
+            "source": "using Azure.AI.Projects;\nusing Azure;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new AzureKeyCredential(\"YOUR_API_KEY\"));\n\nvar index = client.CreateOrUpdateIndex(\n    \"my-index\", \"1\",\n    new IndexVersionOptions { Description = \"Search index\" });\n\nConsole.WriteLine(index.Name);"
+          },
+          {
+            "lang": "javascript",
+            "label": "Entra ID",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new DefaultAzureCredential(),\n);\n\nconst index = await client.indexes.createOrUpdate(\n    \"my-index\", \"1\",\n    { description: \"Search index\" },\n);\nconsole.log(index.name);"
+          },
+          {
+            "lang": "javascript",
+            "label": "API Key",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { AzureKeyCredential } from \"@azure/core-auth\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new AzureKeyCredential(\"YOUR_API_KEY\"),\n);\n\nconst index = await client.indexes.createOrUpdate(\n    \"my-index\", \"1\",\n    { description: \"Search index\" },\n);\nconsole.log(index.name);"
+          },
+          {
+            "lang": "java",
+            "label": "Entra ID",
+            "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.identity.DefaultAzureCredentialBuilder;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new DefaultAzureCredentialBuilder().build())\n    .buildClient();\n\nIndex index = client.createOrUpdateIndex(\n    \"my-index\", \"1\",\n    new IndexVersionOptions().setDescription(\"Search index\"));\n\nSystem.out.println(index.getName());"
+          },
+          {
+            "lang": "java",
+            "label": "API Key",
+            "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.core.credential.AzureKeyCredential;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new AzureKeyCredential(\"YOUR_API_KEY\"))\n    .buildClient();\n\nIndex index = client.createOrUpdateIndex(\n    \"my-index\", \"1\",\n    new IndexVersionOptions().setDescription(\"Search index\"));\n\nSystem.out.println(index.getName());"
+          }
+        ],
+        "tags": [
+          "Indexes"
+        ]
+      },
+      "delete": {
+        "operationId": "Indexes_DeleteVersion",
+        "description": "Delete the specific version of the Index. The service returns 204 No Content if the Index was deleted successfully or if the Index does not exist.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Azure.Core.Foundations.ApiVersionParameter"
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "description": "The name of the resource",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "description": "The version of the Index to delete.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "There is no content to send for this request, but the headers may be useful.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "status": "deleted"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "headers": {
+              "x-ms-error-code": {
+                "description": "String error code indicating what went wrong.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Azure.Core.Foundations.ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "invalid_api_key",
+                    "message": "Incorrect API key provided. You can find your API key in the Azure portal.",
+                    "param": null,
+                    "type": "invalid_request_error"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "python",
+            "label": "Entra ID",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.identity import DefaultAzureCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=DefaultAzureCredential(),\n)\n\nclient.indexes.delete(\n    name=\"my-index\",\n    version=\"1\",\n)"
+          },
+          {
+            "lang": "python",
+            "label": "API Key",
+            "source": "from azure.ai.projects import AIProjectClient\nfrom azure.core.credentials import AzureKeyCredential\n\nclient = AIProjectClient(\n    endpoint=\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    credential=AzureKeyCredential(\"YOUR_API_KEY\"),\n)\n\nclient.indexes.delete(\n    name=\"my-index\",\n    version=\"1\",\n)"
+          },
+          {
+            "lang": "bash",
+            "label": "Entra ID",
+            "source": "curl -X DELETE \"$ENDPOINT/indexes/my-index/versions/1?api-version=v1\" \\\n  -H \"Authorization: Bearer $TOKEN\""
+          },
+          {
+            "lang": "bash",
+            "label": "API Key",
+            "source": "curl -X DELETE \"$ENDPOINT/indexes/my-index/versions/1?api-version=v1\" \\\n  -H \"api-key: YOUR_API_KEY\""
+          },
+          {
+            "lang": "csharp",
+            "label": "Entra ID",
+            "source": "using Azure.AI.Projects;\nusing Azure.Identity;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new DefaultAzureCredential());\n\nclient.DeleteIndex(\"my-index\", \"1\");"
+          },
+          {
+            "lang": "csharp",
+            "label": "API Key",
+            "source": "using Azure.AI.Projects;\nusing Azure;\n\nvar client = new AIProjectClient(\n    new Uri(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\"),\n    new AzureKeyCredential(\"YOUR_API_KEY\"));\n\nclient.DeleteIndex(\"my-index\", \"1\");"
+          },
+          {
+            "lang": "javascript",
+            "label": "Entra ID",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { DefaultAzureCredential } from \"@azure/identity\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new DefaultAzureCredential(),\n);\n\nawait client.indexes.delete(\"my-index\", \"1\");"
+          },
+          {
+            "lang": "javascript",
+            "label": "API Key",
+            "source": "import { AIProjectClient } from \"@azure/ai-projects\";\nimport { AzureKeyCredential } from \"@azure/core-auth\";\n\nconst client = new AIProjectClient(\n    \"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\",\n    new AzureKeyCredential(\"YOUR_API_KEY\"),\n);\n\nawait client.indexes.delete(\"my-index\", \"1\");"
+          },
+          {
+            "lang": "java",
+            "label": "Entra ID",
+            "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.identity.DefaultAzureCredentialBuilder;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new DefaultAzureCredentialBuilder().build())\n    .buildClient();\n\nclient.deleteIndex(\"my-index\", \"1\");"
+          },
+          {
+            "lang": "java",
+            "label": "API Key",
+            "source": "import com.azure.ai.projects.AIProjectClient;\nimport com.azure.ai.projects.AIProjectClientBuilder;\nimport com.azure.core.credential.AzureKeyCredential;\n\nAIProjectClient client = new AIProjectClientBuilder()\n    .endpoint(\"https://RESOURCE_NAME.services.ai.azure.com/api/projects/PROJECT_NAME\")\n    .credential(new AzureKeyCredential(\"YOUR_API_KEY\"))\n    .buildClient();\n\nclient.deleteIndex(\"my-index\", \"1\");"
+          }
+        ],
+        "tags": [
+          "Indexes"
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "https://{resource-name}.services.ai.azure.com/api/projects/{project-name}",
+      "description": "Microsoft Foundry Projects API",
+      "variables": {
+        "resource-name": {
+          "default": "YOUR_RESOURCE_NAME",
+          "description": "Your Foundry resource name (from the Azure portal)"
+        },
+        "project-name": {
+          "default": "YOUR_PROJECT_NAME",
+          "description": "Your Foundry project name"
+        }
+      }
+    }
+  ],
+  "components": {
+    "parameters": {
+      "Azure.Core.ClientRequestIdHeader": {
+        "name": "x-ms-client-request-id",
+        "in": "header",
+        "description": "An opaque, globally-unique, client-generated string identifier for the request.",
+        "required": false,
+        "x-ms-parameter-location": "method",
+        "x-ms-client-name": "clientRequestId",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "Azure.Core.Foundations.ApiVersionParameter": {
+        "name": "api-version",
+        "in": "query",
+        "description": "The API version to use for this operation.",
+        "required": true,
+        "x-ms-parameter-location": "method",
+        "x-ms-client-name": "apiVersion",
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "securitySchemes": {
+      "OAuth2Auth": {
+        "type": "oauth2",
+        "flows": {
+          "implicit": {
+            "authorizationUrl": "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
+            "scopes": {
+              "https://ai.azure.com/.default": ""
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "ApiKeyCredentials": {
+        "type": "object",
+        "description": "API Key Credential definition",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "API Key",
+            "readOnly": true,
+            "x-ms-client-name": "apiKey"
+          }
+        },
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/BaseCredentials"
+          }
+        ],
+        "x-ms-discriminator-value": "ApiKey"
+      },
+      "AssetCredentialResponse": {
+        "type": "object",
+        "description": "Represents a reference to a blob for consumption",
+        "properties": {
+          "blobReference": {
+            "$ref": "#/components/schemas/BlobReference"
+          }
+        },
+        "required": [
+          "blobReference"
+        ]
+      },
+      "Azure.Core.Foundations.Error": {
+        "type": "object",
+        "description": "The error object.",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "One of a server-defined set of error codes."
+          },
+          "message": {
+            "type": "string",
+            "description": "A human-readable representation of the error."
+          },
+          "target": {
+            "type": "string",
+            "description": "The target of the error."
+          },
+          "details": {
+            "type": "array",
+            "description": "An array of details about specific errors that led to this reported error.",
+            "items": {
+              "$ref": "#/components/schemas/Azure.Core.Foundations.Error"
+            }
+          },
+          "innererror": {
+            "$ref": "#/components/schemas/Azure.Core.Foundations.InnerError"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ]
+      },
+      "Azure.Core.Foundations.ErrorResponse": {
+        "type": "object",
+        "description": "A response containing error details.",
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/Azure.Core.Foundations.Error"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "Azure.Core.Foundations.InnerError": {
+        "type": "object",
+        "description": "An object containing more specific information about the error. As per Azure REST API guidelines - https://aka.ms/AzureRestApiGuidelines#handling-errors.",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "One of a server-defined set of error codes."
+          },
+          "innererror": {
+            "$ref": "#/components/schemas/Azure.Core.Foundations.InnerError"
+          }
+        }
+      },
+      "AzureAISearchIndex": {
+        "type": "object",
+        "description": "Azure AI Search Index Definition",
+        "properties": {
+          "connectionName": {
+            "type": "string",
+            "description": "Name of connection to Azure AI Search",
+            "x-ms-mutability": [
+              "create"
+            ]
+          },
+          "indexName": {
+            "type": "string",
+            "description": "Name of index in Azure AI Search resource to attach",
+            "x-ms-mutability": [
+              "create"
+            ]
+          },
+          "fieldMapping": {
+            "$ref": "#/components/schemas/FieldMapping"
+          }
+        },
+        "required": [
+          "connectionName",
+          "indexName"
+        ],
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Index"
+          }
+        ],
+        "x-ms-discriminator-value": "AzureSearch"
+      },
+      "BaseCredentials": {
+        "type": "object",
+        "description": "A base class for connection credentials",
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/CredentialType"
+          }
+        },
+        "discriminator": {
+          "propertyName": "type"
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "BlobReference": {
+        "type": "object",
+        "description": "Blob reference details.",
+        "properties": {
+          "blobUri": {
+            "type": "string",
+            "description": "Blob URI path for client to upload data. Example: https://blob.windows.core.net/Container/Path"
+          },
+          "storageAccountArmId": {
+            "type": "string",
+            "description": "ARM ID of the storage account to use."
+          },
+          "credential": {
+            "$ref": "#/components/schemas/SasCredential"
+          }
+        },
+        "required": [
+          "blobUri",
+          "storageAccountArmId",
+          "credential"
+        ]
+      },
+      "Connection": {
+        "type": "object",
+        "description": "Response from the list and get connections operations",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The friendly name of the connection, provided by the user.",
+            "readOnly": true
+          },
+          "id": {
+            "type": "string",
+            "description": "A unique identifier for the connection, generated by the service",
+            "readOnly": true
+          },
+          "type": {
+            "$ref": "#/components/schemas/ConnectionType"
+          },
+          "target": {
+            "type": "string",
+            "description": "The connection URL to be used for this service",
+            "readOnly": true
+          },
+          "isDefault": {
+            "type": "boolean",
+            "description": "Whether the connection is tagged as the default connection of its type",
+            "readOnly": true
+          },
+          "credentials": {
+            "$ref": "#/components/schemas/BaseCredentials"
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Metadata of the connection",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "readOnly": true
+          }
+        },
+        "required": [
+          "name",
+          "id",
+          "type",
+          "target",
+          "isDefault",
+          "credentials",
+          "metadata"
+        ]
+      },
+      "ConnectionType": {
+        "type": "string",
+        "description": "The Type (or category) of the connection",
+        "enum": [
+          "AzureOpenAI",
+          "AzureBlob",
+          "AzureStorageAccount",
+          "CognitiveSearch",
+          "CosmosDB",
+          "ApiKey",
+          "AppConfig",
+          "AppInsights",
+          "CustomKeys"
+        ],
+        "x-ms-enum": {
+          "name": "ConnectionType",
+          "modelAsString": true,
+          "values": [
+            {
+              "name": "AzureOpenAI",
+              "value": "AzureOpenAI",
+              "description": "Azure OpenAI Service"
+            },
+            {
+              "name": "AzureBlobStorage",
+              "value": "AzureBlob",
+              "description": "Azure Blob Storage, with specified container"
+            },
+            {
+              "name": "AzureStorageAccount",
+              "value": "AzureStorageAccount",
+              "description": "Azure Blob Storage, with container not specified (used by Agents)"
+            },
+            {
+              "name": "AzureAISearch",
+              "value": "CognitiveSearch",
+              "description": "Azure AI Search"
+            },
+            {
+              "name": "CosmosDB",
+              "value": "CosmosDB",
+              "description": "CosmosDB"
+            },
+            {
+              "name": "APIKey",
+              "value": "ApiKey",
+              "description": "Generic connection that uses API Key authentication"
+            },
+            {
+              "name": "ApplicationConfiguration",
+              "value": "AppConfig",
+              "description": "Application Configuration"
+            },
+            {
+              "name": "ApplicationInsights",
+              "value": "AppInsights",
+              "description": "Application Insights"
+            },
+            {
+              "name": "Custom",
+              "value": "CustomKeys",
+              "description": "Custom Keys"
+            }
+          ]
+        }
+      },
+      "CosmosDBIndex": {
+        "type": "object",
+        "description": "CosmosDB Vector Store Index Definition",
+        "properties": {
+          "connectionName": {
+            "type": "string",
+            "description": "Name of connection to CosmosDB",
+            "x-ms-mutability": [
+              "create"
+            ]
+          },
+          "databaseName": {
+            "type": "string",
+            "description": "Name of the CosmosDB Database",
+            "x-ms-mutability": [
+              "create"
+            ]
+          },
+          "containerName": {
+            "type": "string",
+            "description": "Name of CosmosDB Container",
+            "x-ms-mutability": [
+              "create"
+            ]
+          },
+          "embeddingConfiguration": {
+            "$ref": "#/components/schemas/EmbeddingConfiguration"
+          },
+          "fieldMapping": {
+            "$ref": "#/components/schemas/FieldMapping"
+          }
+        },
+        "required": [
+          "connectionName",
+          "databaseName",
+          "containerName",
+          "embeddingConfiguration",
+          "fieldMapping"
+        ],
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Index"
+          }
+        ],
+        "x-ms-discriminator-value": "CosmosDBNoSqlVectorStore"
+      },
+      "CredentialType": {
+        "type": "string",
+        "description": "The credential type used by the connection",
+        "enum": [
+          "ApiKey",
+          "AAD",
+          "SAS",
+          "CustomKeys",
+          "None"
+        ],
+        "x-ms-enum": {
+          "name": "CredentialType",
+          "modelAsString": true,
+          "values": [
+            {
+              "name": "apiKey",
+              "value": "ApiKey",
+              "description": "API Key credential"
+            },
+            {
+              "name": "entraId",
+              "value": "AAD",
+              "description": "Entra ID credential (formerly known as AAD)"
+            },
+            {
+              "name": "SAS",
+              "value": "SAS",
+              "description": "Shared Access Signature (SAS) credential"
+            },
+            {
+              "name": "custom",
+              "value": "CustomKeys",
+              "description": "Custom credential"
+            },
+            {
+              "name": "None",
+              "value": "None",
+              "description": "No credential"
+            }
+          ]
+        }
+      },
+      "CustomCredential": {
+        "type": "object",
+        "description": "Custom credential definition",
+        "additionalProperties": {
+          "type": "string"
+        },
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/BaseCredentials"
+          }
+        ],
+        "x-ms-discriminator-value": "CustomKeys"
+      },
+      "DatasetType": {
+        "type": "string",
+        "description": "Enum to determine the type of data.",
+        "enum": [
+          "uri_file",
+          "uri_folder"
+        ],
+        "x-ms-enum": {
+          "name": "DatasetType",
+          "modelAsString": true,
+          "values": [
+            {
+              "name": "uri_file",
+              "value": "uri_file",
+              "description": "URI file."
+            },
+            {
+              "name": "uri_folder",
+              "value": "uri_folder",
+              "description": "URI folder."
+            }
+          ]
+        }
+      },
+      "DatasetVersion": {
+        "type": "object",
+        "description": "DatasetVersion Definition",
+        "properties": {
+          "dataUri": {
+            "type": "string",
+            "description": "URI of the data. Example: https://go.microsoft.com/fwlink/?linkid=2202330",
+            "minLength": 1,
+            "pattern": "[a-zA-Z0-9_]",
+            "x-ms-mutability": [
+              "read",
+              "create"
+            ]
+          },
+          "type": {
+            "$ref": "#/components/schemas/DatasetType"
+          },
+          "isReference": {
+            "type": "boolean",
+            "description": "Indicates if the dataset holds a reference to the storage, or the dataset manages storage itself. If true, the underlying data will not be deleted when the dataset version is deleted",
+            "readOnly": true
+          },
+          "connectionName": {
+            "type": "string",
+            "description": "The Azure Storage Account connection name. Required if startPendingUploadVersion was not called before creating the Dataset",
+            "x-ms-mutability": [
+              "read",
+              "create"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "description": "Asset ID, a unique identifier for the asset",
+            "readOnly": true
+          },
+          "name": {
+            "type": "string",
+            "description": "The name of the resource",
+            "readOnly": true
+          },
+          "version": {
+            "type": "string",
+            "description": "The version of the resource",
+            "readOnly": true
+          },
+          "description": {
+            "type": "string",
+            "description": "The asset description text.",
+            "x-ms-mutability": [
+              "update",
+              "create"
+            ]
+          },
+          "tags": {
+            "type": "object",
+            "description": "Tag dictionary. Tags can be added, removed, and updated.",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "x-ms-mutability": [
+              "update",
+              "create"
+            ]
+          }
+        },
+        "discriminator": {
+          "propertyName": "type"
+        },
+        "required": [
+          "dataUri",
+          "type",
+          "name",
+          "version"
+        ]
+      },
+      "Deployment": {
+        "type": "object",
+        "description": "Model Deployment Definition",
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/DeploymentType"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of the deployment",
+            "readOnly": true
+          }
+        },
+        "discriminator": {
+          "propertyName": "type"
+        },
+        "required": [
+          "type",
+          "name"
+        ]
+      },
+      "DeploymentType": {
+        "type": "string",
+        "enum": [
+          "ModelDeployment"
+        ],
+        "x-ms-enum": {
+          "name": "DeploymentType",
+          "modelAsString": true,
+          "values": [
+            {
+              "name": "ModelDeployment",
+              "value": "ModelDeployment",
+              "description": "Model deployment"
+            }
+          ]
+        }
+      },
+      "EmbeddingConfiguration": {
+        "type": "object",
+        "description": "Embedding configuration class",
+        "properties": {
+          "modelDeploymentName": {
+            "type": "string",
+            "description": "Deployment name of embedding model. It can point to a model deployment either in the parent AIServices or a connection.",
+            "x-ms-mutability": [
+              "create"
+            ]
+          },
+          "embeddingField": {
+            "type": "string",
+            "description": "Embedding field",
+            "x-ms-mutability": [
+              "create"
+            ]
+          }
+        },
+        "required": [
+          "modelDeploymentName",
+          "embeddingField"
+        ]
+      },
+      "EntraIDCredentials": {
+        "type": "object",
+        "description": "Entra ID credential definition",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/BaseCredentials"
+          }
+        ],
+        "x-ms-discriminator-value": "AAD"
+      },
+      "FieldMapping": {
+        "type": "object",
+        "description": "Field mapping configuration class",
+        "properties": {
+          "contentFields": {
+            "type": "array",
+            "description": "List of fields with text content",
+            "items": {
+              "type": "string"
+            },
+            "x-ms-mutability": [
+              "create"
+            ]
+          },
+          "filepathField": {
+            "type": "string",
+            "description": "Path of file to be used as a source of text content",
+            "x-ms-mutability": [
+              "create"
+            ]
+          },
+          "titleField": {
+            "type": "string",
+            "description": "Field containing the title of the document",
+            "x-ms-mutability": [
+              "create"
+            ]
+          },
+          "urlField": {
+            "type": "string",
+            "description": "Field containing the url of the document",
+            "x-ms-mutability": [
+              "create"
+            ]
+          },
+          "vectorFields": {
+            "type": "array",
+            "description": "List of fields with vector content",
+            "items": {
+              "type": "string"
+            },
+            "x-ms-mutability": [
+              "create"
+            ]
+          },
+          "metadataFields": {
+            "type": "array",
+            "description": "List of fields with metadata content",
+            "items": {
+              "type": "string"
+            },
+            "x-ms-mutability": [
+              "create"
+            ]
+          }
+        },
+        "required": [
+          "contentFields"
+        ]
+      },
+      "FileDatasetVersion": {
+        "type": "object",
+        "description": "FileDatasetVersion Definition",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/DatasetVersion"
+          }
+        ],
+        "x-ms-discriminator-value": "uri_file"
+      },
+      "FolderDatasetVersion": {
+        "type": "object",
+        "description": "FileDatasetVersion Definition",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/DatasetVersion"
+          }
+        ],
+        "x-ms-discriminator-value": "uri_folder"
+      },
+      "Index": {
+        "type": "object",
+        "description": "Index resource Definition",
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/IndexType"
+          },
+          "id": {
+            "type": "string",
+            "description": "Asset ID, a unique identifier for the asset",
+            "readOnly": true
+          },
+          "name": {
+            "type": "string",
+            "description": "The name of the resource",
+            "readOnly": true
+          },
+          "version": {
+            "type": "string",
+            "description": "The version of the resource",
+            "readOnly": true
+          },
+          "description": {
+            "type": "string",
+            "description": "The asset description text.",
+            "x-ms-mutability": [
+              "update",
+              "create"
+            ]
+          },
+          "tags": {
+            "type": "object",
+            "description": "Tag dictionary. Tags can be added, removed, and updated.",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "x-ms-mutability": [
+              "update",
+              "create"
+            ]
+          }
+        },
+        "discriminator": {
+          "propertyName": "type"
+        },
+        "required": [
+          "type",
+          "name",
+          "version"
+        ]
+      },
+      "IndexType": {
+        "type": "string",
+        "enum": [
+          "AzureSearch",
+          "CosmosDBNoSqlVectorStore",
+          "ManagedAzureSearch"
+        ],
+        "x-ms-enum": {
+          "name": "IndexType",
+          "modelAsString": true,
+          "values": [
+            {
+              "name": "azureSearch",
+              "value": "AzureSearch",
+              "description": "Azure search"
+            },
+            {
+              "name": "cosmosDB",
+              "value": "CosmosDBNoSqlVectorStore",
+              "description": "CosmosDB"
+            },
+            {
+              "name": "managedAzureSearch",
+              "value": "ManagedAzureSearch",
+              "description": "Managed Azure Search"
+            }
+          ]
+        }
+      },
+      "ManagedAzureAISearchIndex": {
+        "type": "object",
+        "description": "Managed Azure AI Search Index Definition",
+        "properties": {
+          "vectorStoreId": {
+            "type": "string",
+            "description": "Vector store id of managed index",
+            "x-ms-mutability": [
+              "create"
+            ]
+          }
+        },
+        "required": [
+          "vectorStoreId"
+        ],
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Index"
+          }
+        ],
+        "x-ms-discriminator-value": "ManagedAzureSearch"
+      },
+      "ModelDeployment": {
+        "type": "object",
+        "description": "Model Deployment Definition",
+        "properties": {
+          "modelName": {
+            "type": "string",
+            "description": "Publisher-specific name of the deployed model",
+            "readOnly": true
+          },
+          "modelVersion": {
+            "type": "string",
+            "description": "Publisher-specific version of the deployed model",
+            "readOnly": true
+          },
+          "modelPublisher": {
+            "type": "string",
+            "description": "Name of the deployed model's publisher",
+            "readOnly": true
+          },
+          "capabilities": {
+            "type": "object",
+            "description": "Capabilities of deployed model",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "readOnly": true
+          },
+          "sku": {
+            "$ref": "#/components/schemas/Sku"
+          },
+          "connectionName": {
+            "type": "string",
+            "description": "Name of the connection the deployment comes from",
+            "readOnly": true
+          }
+        },
+        "required": [
+          "modelName",
+          "modelVersion",
+          "modelPublisher",
+          "capabilities",
+          "sku"
+        ],
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Deployment"
+          }
+        ],
+        "x-ms-discriminator-value": "ModelDeployment"
+      },
+      "NoAuthenticationCredentials": {
+        "type": "object",
+        "description": "Credentials that do not require authentication",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/BaseCredentials"
+          }
+        ],
+        "x-ms-discriminator-value": "None"
+      },
+      "PagedConnection": {
+        "type": "object",
+        "description": "Paged collection of Connection items",
+        "properties": {
+          "value": {
+            "type": "array",
+            "description": "The Connection items on this page",
+            "items": {
+              "$ref": "#/components/schemas/Connection"
+            }
+          },
+          "nextLink": {
+            "type": "string",
+            "format": "uri",
+            "description": "The link to the next page of items"
+          }
+        },
+        "required": [
+          "value"
+        ]
+      },
+      "PagedDatasetVersion": {
+        "type": "object",
+        "description": "Paged collection of DatasetVersion items",
+        "properties": {
+          "value": {
+            "type": "array",
+            "description": "The DatasetVersion items on this page",
+            "items": {
+              "$ref": "#/components/schemas/DatasetVersion"
+            }
+          },
+          "nextLink": {
+            "type": "string",
+            "format": "uri",
+            "description": "The link to the next page of items"
+          }
+        },
+        "required": [
+          "value"
+        ]
+      },
+      "PagedDeployment": {
+        "type": "object",
+        "description": "Paged collection of Deployment items",
+        "properties": {
+          "value": {
+            "type": "array",
+            "description": "The Deployment items on this page",
+            "items": {
+              "$ref": "#/components/schemas/Deployment"
+            }
+          },
+          "nextLink": {
+            "type": "string",
+            "format": "uri",
+            "description": "The link to the next page of items"
+          }
+        },
+        "required": [
+          "value"
+        ]
+      },
+      "PagedIndex": {
+        "type": "object",
+        "description": "Paged collection of Index items",
+        "properties": {
+          "value": {
+            "type": "array",
+            "description": "The Index items on this page",
+            "items": {
+              "$ref": "#/components/schemas/Index"
+            }
+          },
+          "nextLink": {
+            "type": "string",
+            "format": "uri",
+            "description": "The link to the next page of items"
+          }
+        },
+        "required": [
+          "value"
+        ]
+      },
+      "PendingUploadCredentialType": {
+        "type": "string",
+        "description": "The type of credential used to access the storage account.",
+        "enum": [
+          "SAS"
+        ],
+        "x-ms-enum": {
+          "name": "PendingUploadCredentialType",
+          "modelAsString": true,
+          "values": [
+            {
+              "name": "sas",
+              "value": "SAS",
+              "description": "SAS credential type."
+            }
+          ]
+        }
+      },
+      "PendingUploadRequest": {
+        "type": "object",
+        "description": "Represents a request for a pending upload.",
+        "properties": {
+          "pendingUploadId": {
+            "type": "string",
+            "description": "If PendingUploadId is not provided, a random GUID will be used."
+          },
+          "connectionName": {
+            "type": "string",
+            "description": "Azure Storage Account connection name to use for generating temporary SAS token"
+          },
+          "pendingUploadType": {
+            "type": "string",
+            "description": "BlobReference is the only supported type.",
+            "enum": [
+              "BlobReference"
+            ],
+            "x-ms-enum": {
+              "modelAsString": false
+            }
+          }
+        },
+        "required": [
+          "pendingUploadType"
+        ]
+      },
+      "PendingUploadResponse": {
+        "type": "object",
+        "description": "Represents the response for a pending upload request",
+        "properties": {
+          "blobReference": {
+            "$ref": "#/components/schemas/BlobReference"
+          },
+          "pendingUploadId": {
+            "type": "string",
+            "description": "ID for this upload request."
+          },
+          "version": {
+            "type": "string",
+            "description": "Version of asset to be created if user did not specify version when initially creating upload"
+          },
+          "pendingUploadType": {
+            "type": "string",
+            "description": "BlobReference is the only supported type",
+            "enum": [
+              "BlobReference"
+            ],
+            "x-ms-enum": {
+              "modelAsString": false
+            }
+          }
+        },
+        "required": [
+          "blobReference",
+          "pendingUploadId",
+          "pendingUploadType"
+        ]
+      },
+      "PendingUploadType": {
+        "type": "string",
+        "description": "The type of pending upload.",
+        "enum": [
+          "None",
+          "BlobReference"
+        ],
+        "x-ms-enum": {
+          "name": "PendingUploadType",
+          "modelAsString": true,
+          "values": [
+            {
+              "name": "none",
+              "value": "None",
+              "description": "No pending upload."
+            },
+            {
+              "name": "BlobReference",
+              "value": "BlobReference",
+              "description": "Blob Reference is the only supported type."
+            }
+          ]
+        }
+      },
+      "SASCredentials": {
+        "type": "object",
+        "description": "Shared Access Signature (SAS) credential definition",
+        "properties": {
+          "SAS": {
+            "type": "string",
+            "description": "SAS token",
+            "readOnly": true,
+            "x-ms-client-name": "sasToken"
+          }
+        },
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/BaseCredentials"
+          }
+        ],
+        "x-ms-discriminator-value": "SAS"
+      },
+      "SasCredential": {
+        "type": "object",
+        "description": "SAS Credential definition",
+        "properties": {
+          "sasUri": {
+            "type": "string",
+            "description": "SAS uri",
+            "readOnly": true
+          },
+          "type": {
+            "type": "string",
+            "description": "Type of credential",
+            "enum": [
+              "SAS"
+            ],
+            "x-ms-enum": {
+              "modelAsString": false
+            },
+            "readOnly": true
+          }
+        },
+        "required": [
+          "sasUri",
+          "type"
+        ]
+      },
+      "Sku": {
+        "type": "object",
+        "description": "Sku information",
+        "properties": {
+          "capacity": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Sku capacity"
+          },
+          "family": {
+            "type": "string",
+            "description": "Sku family"
+          },
+          "name": {
+            "type": "string",
+            "description": "Sku name"
+          },
+          "size": {
+            "type": "string",
+            "description": "Sku size"
+          },
+          "tier": {
+            "type": "string",
+            "description": "Sku tier"
+          }
+        },
+        "required": [
+          "capacity",
+          "family",
+          "name",
+          "size",
+          "tier"
+        ]
+      }
+    }
+  }
+}

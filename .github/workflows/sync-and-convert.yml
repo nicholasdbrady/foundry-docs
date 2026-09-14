@@ -1,0 +1,124 @@
+name: Sync and Convert Docs
+
+on:
+  schedule:
+    - cron: '0 16 * * *'  # Daily at 8:00 AM PST (16:00 UTC)
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  sync-and-convert:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -e .
+
+      - name: Extract manifest
+        run: python scripts/extract_manifest.py
+        env:
+          GH_TOKEN: ${{ secrets.AZURE_AI_DOCS_PR_TOKEN }}
+
+      - name: Download docs
+        run: python scripts/download_docs.py
+        env:
+          GH_TOKEN: ${{ secrets.AZURE_AI_DOCS_PR_TOKEN }}
+
+      - name: Download code samples
+        run: |
+          python -c "
+          import re, subprocess, json
+          from pathlib import Path
+
+          REPO_MAP = {
+              'foundry-samples-main': ('microsoft-foundry', 'foundry-samples', 'main'),
+              'azureai-model-inference-bicep': ('Azure', 'azureai-model-inference-bicep', 'main'),
+          }
+
+          raw = Path('raw_docs')
+          sources = set()
+          for f in raw.rglob('*.md'):
+              content = f.read_text(errors='replace')
+              for m in re.finditer(r'source=\"~/([^\"]+)\"', content):
+                  sources.add(m.group(1))
+
+          code_dir = Path('raw_docs/code_samples')
+          ok = fail = 0
+          for src in sorted(sources):
+              parts = src.split('/', 1)
+              prefix = parts[0]
+              if prefix not in REPO_MAP:
+                  fail += 1; continue
+              owner, repo, branch = REPO_MAP[prefix]
+              file_path = parts[1] if len(parts) > 1 else ''
+              dest = code_dir / src
+              if dest.exists():
+                  ok += 1; continue
+              url = f'https://raw.githubusercontent.com/{owner}/{repo}/{branch}/{file_path}'
+              dest.parent.mkdir(parents=True, exist_ok=True)
+              result = subprocess.run(['curl', '-sL', '-o', str(dest), '-w', '%{http_code}', url],
+                                      capture_output=True, text=True, timeout=30)
+              if result.stdout.strip() == '200':
+                  ok += 1
+              else:
+                  dest.unlink(missing_ok=True); fail += 1
+          print(f'Code samples: {ok} ok, {fail} failed')
+          "
+
+      - name: Convert to MDX
+        run: python scripts/convert_to_mdx.py
+
+      - name: Build navigation
+        run: python scripts/build_navigation.py
+
+      - name: Validate outputs
+        run: |
+          echo "::group::Validation"
+          test -f manifest.json || { echo "::error::manifest.json missing"; exit 1; }
+          test -f docs.json || { echo "::error::docs.json missing"; exit 1; }
+          DOC_COUNT=$(find docs -name '*.mdx' | wc -l)
+          echo "Converted docs: $DOC_COUNT"
+          test "$DOC_COUNT" -gt 0 || { echo "::error::No MDX docs produced"; exit 1; }
+          python -c "import json; json.load(open('manifest.json')); json.load(open('docs.json'))" \
+            || { echo "::error::JSON validation failed"; exit 1; }
+          echo "✅ All outputs valid ($DOC_COUNT docs)"
+          echo "::endgroup::"
+
+      - name: Check for changes
+        id: changes
+        run: |
+          git add docs/ docs.json manifest.json path_map.json
+          git add -f raw_docs/code_samples/ 2>/dev/null || true
+          if git diff --staged --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No upstream changes detected"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Upstream changes detected"
+          fi
+
+      - name: Commit changes
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit -m "docs: sync and convert from upstream
+
+          Automated daily sync from MicrosoftDocs/azure-ai-docs-pr
+
+          Co-authored-by: github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
+          git push
+

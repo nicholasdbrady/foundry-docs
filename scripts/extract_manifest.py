@@ -1,0 +1,444 @@
+#!/usr/bin/env python3
+"""Extract manifest from Microsoft Foundry TOC files.
+
+Parses the root toc.yml and all sub-TOC YAML files from MicrosoftDocs/azure-ai-docs,
+resolves paths, deduplicates, and outputs manifest.json.
+"""
+
+import json
+import os
+import re
+import subprocess
+import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import PurePosixPath
+from urllib.error import HTTPError, URLError
+from urllib.parse import quote
+from urllib.request import urlopen
+
+import yaml
+
+REPO_OWNER = "MicrosoftDocs"
+REPO_NAME = os.environ.get("FOUNDRY_DOCS_UPSTREAM_REPO", "azure-ai-docs")
+ROOT_TOC_PATH = "articles/foundry/toc.yml"
+FETCH_TIMEOUT_SECONDS = 30
+MAX_SCAN_WORKERS = int(os.environ.get("FOUNDRY_MANIFEST_SCAN_WORKERS", "8"))
+
+# Section name → output directory mapping
+SECTION_SLUG_MAP = {
+    "What is Microsoft Foundry (new)?": "overview",
+    "Get started": "get-started",
+    "Agent development": "agents/development",
+    "Agent tools & integration": "agents/tools",
+    "Model catalog": "models/catalog",
+    "Model capabilities": "models/capabilities",
+    "Fine-tuning": "models/fine-tuning",
+    "Manage agents, models, & tools": "manage",
+    "Observability, evaluation, & tracing": "observability",
+    "Developer experience": "developer-experience",
+    "API & SDK": "api-sdk",
+    "Guardrails and controls": "guardrails",
+    "Responsible AI": "responsible-ai",
+    "Best practices": "best-practices",
+    "Setup & configure": "setup",
+    "Security & governance": "security",
+    "Operate & support": "operate",
+}
+
+
+def gh_get_file(path: str, ref: str = "main") -> str:
+    """Fetch a file from GitHub using the gh CLI."""
+    try:
+        result = subprocess.run(
+            [
+                "gh",
+                "api",
+                f"/repos/{REPO_OWNER}/{REPO_NAME}/contents/{path}",
+                "-H",
+                "Accept: application/vnd.github.raw+json",
+                "--method",
+                "GET",
+                "-f",
+                f"ref={ref}",
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=FETCH_TIMEOUT_SECONDS,
+        )
+        return result.stdout
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        raw_path = quote(path, safe="/")
+        raw_ref = quote(ref, safe="")
+        url = f"https://raw.githubusercontent.com/{REPO_OWNER}/{REPO_NAME}/{raw_ref}/{raw_path}"
+        with urlopen(url, timeout=FETCH_TIMEOUT_SECONDS) as response:
+            return response.read().decode()
+
+
+def resolve_path(href: str, toc_dir: str) -> str:
+    """Resolve a relative href against a TOC file's directory."""
+    href = re.sub(r'\?.*$', '', href)  # strip query params
+    href = href.replace('\\', '/')  # normalize Windows backslashes
+    combined = PurePosixPath(toc_dir) / href
+    parts = []
+    for part in combined.parts:
+        if part == '..':
+            if parts:
+                parts.pop()
+        elif part != '.':
+            parts.append(part)
+    return '/'.join(parts)
+
+
+# Absolute MS Learn paths that map to directories within this repo.
+# /azure/ai-services/... → articles/ai-services/...
+# These are referenced via absolute paths in the toc.yml but live in the
+# same GitHub repo under a different articles/ subdirectory.
+IN_REPO_ABSOLUTE_PREFIXES = (
+    '/azure/ai-services/',
+)
+
+
+def categorize_href(href: str) -> str:
+    """Categorize an href as in-repo-md, in-repo-yml, external, or cross-repo."""
+    if href.startswith('http://') or href.startswith('https://'):
+        return 'external'
+    clean = re.sub(r'[?#].*$', '', href)  # strip query params AND anchors
+    # Check if this is an absolute MS Learn path that lives in the same repo
+    for prefix in IN_REPO_ABSOLUTE_PREFIXES:
+        if clean.startswith(prefix):
+            return 'in-repo-md'
+    if clean.startswith('/azure/') or clean.startswith('/rest/'):
+        return 'cross-repo'
+    if clean.endswith('.md'):
+        return 'in-repo-md'
+    if clean.endswith('.yml') or clean.endswith('.yaml'):
+        return 'in-repo-yml'
+    # SDK/API reference paths (e.g. /dotnet/api/, /python/api/, /cli/azure/)
+    if clean.startswith('/'):
+        return 'external'
+    return 'external'
+
+
+def resolve_absolute_href(href: str) -> str:
+    """Resolve an absolute MS Learn href to a repo-relative path.
+
+    /azure/ai-services/language-service/foo → articles/ai-services/language-service/foo.md
+    """
+    clean = re.sub(r'[?#].*$', '', href)
+    # /azure/X → articles/X
+    if clean.startswith('/azure/'):
+        repo_path = 'articles/' + clean[len('/azure/'):]
+        if not repo_path.endswith('.md'):
+            repo_path += '.md'
+        return repo_path
+    return clean
+
+
+def parse_toc_items(items: list, toc_dir: str, section: str, hierarchy: list) -> list:
+    """Recursively parse TOC items, resolving paths."""
+    entries = []
+    for item in items:
+        name = item.get('name', '')
+        href = item.get('href', '')
+        sub_items = item.get('items', [])
+        current_hierarchy = hierarchy + [name]
+
+        if href:
+            cat = categorize_href(href)
+            if cat == 'in-repo-md' or cat == 'in-repo-yml':
+                # Resolve path: relative hrefs use toc_dir, absolute use resolve_absolute_href
+                clean_href = re.sub(r'[?#].*$', '', href)
+                if clean_href.startswith('/'):
+                    resolved = resolve_absolute_href(clean_href)
+                else:
+                    resolved = resolve_path(clean_href, toc_dir)
+                entries.append({
+                    'name': name,
+                    'source_path': resolved,
+                    'category': cat,
+                    'section': section,
+                    'hierarchy': current_hierarchy,
+                })
+            elif cat == 'cross-repo':
+                clean_href = re.sub(r'[?#].*$', '', href)
+                entries.append({
+                    'name': name,
+                    'source_path': clean_href,
+                    'category': cat,
+                    'section': section,
+                    'hierarchy': current_hierarchy,
+                    'url': f"https://learn.microsoft.com{clean_href}",
+                })
+            elif cat == 'external':
+                entries.append({
+                    'name': name,
+                    'source_path': href,
+                    'category': cat,
+                    'section': section,
+                    'hierarchy': current_hierarchy,
+                })
+
+        if sub_items:
+            entries.extend(parse_toc_items(sub_items, toc_dir, section, current_hierarchy))
+
+    return entries
+
+
+def parse_sub_toc(toc_path: str, section: str) -> list:
+    """Parse a sub-TOC YAML file."""
+    try:
+        content = gh_get_file(toc_path)
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, HTTPError, URLError) as e:
+        detail = getattr(e, "stderr", "") or str(e)
+        print(f"  WARNING: Could not fetch {toc_path}: {detail}", file=sys.stderr)
+        return []
+
+    data = yaml.safe_load(content)
+    if not data or 'items' not in data:
+        return []
+
+    toc_dir = str(PurePosixPath(toc_path).parent)
+    return parse_toc_items(data['items'], toc_dir, section, [section])
+
+
+def scan_content_for_includes(content: str, source_path: str) -> list[str]:
+    """Scan markdown content for [!INCLUDE] references."""
+    includes = []
+    for match in re.finditer(r'\[!INCLUDE\s+\[.*?\]\((.*?)\)\]', content):
+        inc_path = match.group(1)
+        resolved = resolve_path(inc_path, str(PurePosixPath(source_path).parent))
+        includes.append(resolved)
+    return includes
+
+
+def scan_content_for_images(content: str, source_path: str) -> list[str]:
+    """Scan markdown content for image references."""
+    doc_dir = str(PurePosixPath(source_path).parent)
+    images = []
+    for match in re.finditer(r':::image[^:]*source="([^"]+)"', content):
+        img_path = match.group(1)
+        if img_path.startswith('/azure/'):
+            # Absolute MS Learn path — convert to repo-relative articles/ path
+            # /azure/foundry/media/img.png → articles/foundry/media/img.png
+            images.append('articles/' + img_path[len('/azure/'):])
+        else:
+            resolved = resolve_path(img_path, doc_dir)
+            images.append(resolved)
+    # Also catch standard markdown images
+    for match in re.finditer(r'!\[.*?\]\(([^)]+)\)', content):
+        img_path = match.group(1)
+        if img_path.startswith('http') or img_path.startswith('~/'):
+            continue
+        if img_path.startswith('/azure/'):
+            images.append('articles/' + img_path[len('/azure/'):])
+        else:
+            resolved = resolve_path(img_path, doc_dir)
+            images.append(resolved)
+    return images
+
+
+def scan_doc_for_assets(source_path: str) -> tuple[list[str], list[str]]:
+    """Fetch a markdown file once and scan it for includes and images."""
+    try:
+        content = gh_get_file(source_path)
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, HTTPError, URLError):
+        return [], []
+
+    return (
+        scan_content_for_includes(content, source_path),
+        scan_content_for_images(content, source_path),
+    )
+
+
+def scan_doc_for_includes(source_path: str) -> list[str]:
+    """Scan a markdown file for [!INCLUDE] references."""
+    includes, _ = scan_doc_for_assets(source_path)
+    return includes
+
+
+def scan_doc_for_images(source_path: str) -> list[str]:
+    """Scan a markdown file for image references."""
+    _, images = scan_doc_for_assets(source_path)
+    return images
+
+
+def _sanitize_slug(raw: str) -> str:
+    """Sanitize a string into a URL-safe slug.
+
+    Strips characters that break URL routing (``?``, ``#``, ``&``, ``%``)
+    and collapses runs of hyphens.
+    """
+    slug = raw.lower().replace(' ', '-')
+    slug = re.sub(r'[?#&%!\'\"()\[\]{}]', '', slug)
+    slug = re.sub(r'-{2,}', '-', slug)
+    return slug.strip('-')
+
+
+def build_output_path(entry: dict) -> str:
+    """Build Mintlify output path from entry metadata."""
+    section_slug = SECTION_SLUG_MAP.get(entry['section'], _sanitize_slug(entry['section']))
+    source = PurePosixPath(entry['source_path'])
+    stem = source.stem
+    # Use section slug + filename
+    return f"{section_slug}/{stem}"
+
+
+def main():
+    print("Fetching root TOC...", file=sys.stderr)
+    root_content = gh_get_file(ROOT_TOC_PATH)
+    root_toc = yaml.safe_load(root_content)
+
+    root_dir = str(PurePosixPath(ROOT_TOC_PATH).parent)
+    all_entries = []
+    toc_hierarchy = []
+
+    for item in root_toc.get('items', []):
+        section_name = item.get('name', '')
+        href = item.get('href', '')
+
+        if not href:
+            continue
+
+        cat = categorize_href(href)
+        toc_section = {
+            'name': section_name,
+            'slug': SECTION_SLUG_MAP.get(section_name, _sanitize_slug(section_name)),
+            'pages': [],
+        }
+
+        if href.endswith('toc.yml'):
+            # Sub-TOC reference
+            toc_path = resolve_path(href, root_dir)
+            print(f"Parsing sub-TOC: {section_name} ({toc_path})", file=sys.stderr)
+            entries = parse_sub_toc(toc_path, section_name)
+            for e in entries:
+                e['output_path'] = build_output_path(e)
+            all_entries.extend(entries)
+            toc_section['pages'] = entries
+        elif cat in ('in-repo-md', 'in-repo-yml'):
+            # Direct doc reference
+            resolved = resolve_path(href, root_dir)
+            entry = {
+                'name': section_name,
+                'source_path': resolved,
+                'category': cat,
+                'section': section_name,
+                'hierarchy': [section_name],
+            }
+            entry['output_path'] = build_output_path(entry)
+            all_entries.append(entry)
+            toc_section['pages'] = [entry]
+
+        toc_hierarchy.append(toc_section)
+
+    # Deduplicate by source_path
+    seen = {}
+    deduped = []
+    for entry in all_entries:
+        sp = entry['source_path']
+        if sp not in seen:
+            seen[sp] = entry
+            deduped.append(entry)
+        else:
+            # Keep the first occurrence but note the duplicate
+            seen[sp].setdefault('also_in_sections', []).append(entry['section'])
+
+    # Scan in-repo docs for includes and images
+    print(f"\nFound {len(deduped)} unique docs. Scanning for includes and images...", file=sys.stderr)
+    all_includes = set()
+    all_images = set()
+
+    in_repo_docs = [entry for entry in deduped if entry['category'] == 'in-repo-md']
+    with ThreadPoolExecutor(max_workers=MAX_SCAN_WORKERS) as executor:
+        futures = {
+            executor.submit(scan_doc_for_assets, entry['source_path']): entry
+            for entry in in_repo_docs
+        }
+        for index, future in enumerate(as_completed(futures), start=1):
+            entry = futures[future]
+            includes, images = future.result()
+            if includes:
+                entry['includes'] = includes
+                all_includes.update(includes)
+            if images:
+                entry['images'] = images
+                all_images.update(images)
+            if index % 50 == 0:
+                print(
+                    f"  Scanned {index}/{len(in_repo_docs)} docs "
+                    f"({len(all_includes)} includes, {len(all_images)} images)",
+                    file=sys.stderr,
+                )
+
+    # Recursively scan include files for nested includes AND images
+    scanned_includes = set()
+    to_scan = set(all_includes)
+    while to_scan:
+        batch = sorted(path for path in to_scan if path not in scanned_includes)
+        to_scan.clear()
+        if not batch:
+            break
+        with ThreadPoolExecutor(max_workers=MAX_SCAN_WORKERS) as executor:
+            futures = {
+                executor.submit(scan_doc_for_assets, inc_path): inc_path
+                for inc_path in batch
+            }
+            for future in as_completed(futures):
+                inc_path = futures[future]
+                scanned_includes.add(inc_path)
+                nested, inc_images = future.result()
+                for nested_path in nested:
+                    if nested_path not in all_includes:
+                        all_includes.add(nested_path)
+                        if nested_path not in scanned_includes:
+                            to_scan.add(nested_path)
+                all_images.update(inc_images)
+                if len(scanned_includes) % 50 == 0:
+                    print(
+                        f"  Scanned {len(scanned_includes)} include files "
+                        f"({len(all_includes)} total includes, {len(all_images)} images)",
+                        file=sys.stderr,
+                    )
+
+    if scanned_includes:
+        print(
+            f"  Scanned {len(scanned_includes)} include files, "
+            f"found {len(all_includes)} total (including nested)",
+            file=sys.stderr,
+        )
+
+    manifest = {
+        'repo': f"{REPO_OWNER}/{REPO_NAME}",
+        'root_toc': ROOT_TOC_PATH,
+        'stats': {
+            'total_docs': len(deduped),
+            'in_repo_md': len([e for e in deduped if e['category'] == 'in-repo-md']),
+            'in_repo_yml': len([e for e in deduped if e['category'] == 'in-repo-yml']),
+            'cross_repo': len([e for e in deduped if e['category'] == 'cross-repo']),
+            'external': len([e for e in deduped if e['category'] == 'external']),
+            'include_files': len(all_includes),
+            'image_files': len(all_images),
+        },
+        'toc_hierarchy': toc_hierarchy,
+        'docs': deduped,
+        'includes': sorted(all_includes),
+        'images': sorted(all_images),
+    }
+
+    output_path = 'manifest.json'
+    with open(output_path, 'w') as f:
+        json.dump(manifest, f, indent=2)
+
+    print(f"\nManifest written to {output_path}", file=sys.stderr)
+    print(f"  Total docs: {manifest['stats']['total_docs']}", file=sys.stderr)
+    print(f"  In-repo .md: {manifest['stats']['in_repo_md']}", file=sys.stderr)
+    print(f"  In-repo .yml: {manifest['stats']['in_repo_yml']}", file=sys.stderr)
+    print(f"  Cross-repo: {manifest['stats']['cross_repo']}", file=sys.stderr)
+    print(f"  External: {manifest['stats']['external']}", file=sys.stderr)
+    print(f"  Include files: {manifest['stats']['include_files']}", file=sys.stderr)
+    print(f"  Image files: {manifest['stats']['image_files']}", file=sys.stderr)
+
+
+if __name__ == '__main__':
+    main()

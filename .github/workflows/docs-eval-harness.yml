@@ -1,0 +1,191 @@
+name: Documentation Evaluation Harness
+
+on:
+  pull_request:
+    paths:
+      - 'docs-vnext/**'
+  workflow_run:
+    workflows: ["Post-Merge Documentation Verification"]
+    types: [completed]
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * 0"  # Weekly Sunday 06:00 UTC
+  workflow_dispatch:
+    inputs:
+      servers:
+        description: "Servers to evaluate (comma-separated, or 'all')"
+        required: false
+        default: "all"
+        type: string
+      models:
+        description: "Models to use (comma-separated, or 'all')"
+        required: false
+        default: "all"
+        type: string
+
+concurrency:
+  group: docs-eval
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  issues: write
+
+env:
+  COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+
+jobs:
+  evaluate:
+    if: >-
+      github.event_name != 'workflow_run' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        server:
+          - microsoft-learn
+          - mintlify-hosted
+          - foundry-docs
+          - foundry-docs-vnext
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -e .
+
+      - name: Setup gh-aw actions
+        uses: github/gh-aw-actions/setup@7cae8cd356c7905aeda72eb08e1d0b4501310c23 # v0.64.4
+        with:
+          destination: /opt/gh-aw/actions
+
+      - name: Install Copilot CLI
+        run: /opt/gh-aw/actions/install_copilot_cli.sh 0.0.421
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+
+      - name: Parse model inputs
+        id: inputs
+        run: |
+          MODELS="${{ inputs.models || 'all' }}"
+          if [ "$MODELS" = "all" ]; then
+            echo "model_args=" >> "$GITHUB_OUTPUT"
+          else
+            echo "model_args=--models $(echo $MODELS | tr ',' ' ')" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run evaluation for ${{ matrix.server }}
+        run: |
+          python scripts/run_docs_eval.py \
+            --server ${{ matrix.server }} \
+            ${{ steps.inputs.outputs.model_args }} \
+            --output-dir tests/eval_results
+
+      - name: Upload partial results
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        if: always()
+        with:
+          name: eval-partial-${{ matrix.server }}
+          path: tests/eval_results/
+          retention-days: 7
+
+  merge-and-report:
+    needs: [evaluate]
+    if: always() && !cancelled()
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -e .
+
+      - name: Download all partial results
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          pattern: eval-partial-*
+          path: tests/eval_results/partials
+          merge-multiple: false
+
+      - name: Collect result files
+        id: collect
+        run: |
+          echo "=== Downloaded artifacts ==="
+          find tests/eval_results/partials -name "run-*.json" -type f | sort
+          FILES=$(find tests/eval_results/partials -name "run-*.json" -type f | sort | tr '\n' ' ')
+          echo "files=$FILES" >> "$GITHUB_OUTPUT"
+          echo "Found $(echo $FILES | wc -w) result files"
+
+      - name: Score merged results
+        run: |
+          mkdir -p tests/eval_results
+          python scripts/eval_scorer.py \
+            ${{ steps.collect.outputs.files }} \
+            --output tests/eval_results/scored-merged.json
+
+      - name: Generate report
+        run: |
+          python scripts/eval_report.py tests/eval_results/scored-merged.json \
+            --output tests/eval_results/report.md
+          cat tests/eval_results/report.md
+
+      - name: Upload combined results
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        with:
+          name: eval-results-${{ github.run_id }}
+          path: tests/eval_results/
+          retention-days: 90
+
+      - name: Close previous eval report issues
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue list --repo "${{ github.repository }}" \
+            --label "eval-report" --state open --json number -q '.[].number' \
+          | while read -r num; do
+              gh issue close "$num" --repo "${{ github.repository }}" \
+                --comment "Superseded by newer evaluation run." 2>/dev/null || true
+            done
+
+      - name: Create issue with results
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TITLE="📊 Docs Eval Report - $(date -u +%Y-%m-%d)"
+          gh issue create \
+            --repo "${{ github.repository }}" \
+            --title "$TITLE" \
+            --body-file tests/eval_results/report.md \
+            --label "eval-report" --label "automation" || \
+          gh issue create \
+            --repo "${{ github.repository }}" \
+            --title "$TITLE" \
+            --body-file tests/eval_results/report.md
+
+      - name: Check for regression
+        run: |
+          python3 -c "
+          import json, sys
+          with open('tests/eval_results/scored-merged.json') as f:
+              data = json.load(f)
+          avgs = data.get('aggregates', {}).get('server_averages', {})
+          regressions = {s: v for s, v in avgs.items() if v < 0.3}
+          if regressions:
+              print('⚠️ Regression detected:', regressions)
+              sys.exit(1)
+          print('✅ No regressions detected')
+          " || echo "regression_detected=true" >> "$GITHUB_OUTPUT"

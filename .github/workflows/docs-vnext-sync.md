@@ -1,0 +1,56 @@
+---
+name: Docs-vnext Baseline Sync
+description: Refreshes docs-vnext from canonical docs as a weekly baseline
+on:
+  schedule: weekly on sunday
+  workflow_dispatch:
+  skip-if-match: 'is:pr is:open in:title "[docs-vnext-sync]"'
+
+permissions:
+  contents: read
+
+tools:
+  bash:
+    - "cp *"
+    - "find *"
+    - "diff *"
+    - "git"
+
+safe-outputs:
+  max-patch-files: 500
+  max-patch-size: 10240
+  create-pull-request:
+    title-prefix: "[docs-vnext-sync] "
+    labels: [documentation, docs-vnext, sync]
+    auto-merge: true
+    draft: false
+    expires: 7d
+  report-incomplete:
+  noop:
+    report-as-issue: false
+
+engine: copilot
+imports:
+  - shared/mcp/mintlify-docs.md
+concurrency:
+  group: "gh-aw-${{ github.workflow }}"
+  cancel-in-progress: true
+timeout-minutes: 30
+---
+
+# Docs-vnext Baseline Sync
+
+Synchronize `docs-vnext/` from the canonical `docs/` directory as a weekly baseline refresh.
+
+## Process
+
+1. Copy all MDX files from `docs/` to `docs-vnext/`, preserving directory structure
+2. Preserve any files unique to `docs-vnext/` (glossary, slides, README)
+3. Commit changes if any upstream updates were detected
+
+## Important
+
+- This workflow refreshes the baseline content only
+- Agent-created improvements (glossary, unbloated prose) in files unique to docs-vnext/ are preserved
+- Files that exist in both directories are overwritten from the canonical source
+- The `docs-vnext/README.md`, `docs-vnext/reference/glossary.mdx`, and `docs-vnext/slides/` are NOT overwritten

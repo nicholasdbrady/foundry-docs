@@ -1,0 +1,401 @@
+name: API docs validation
+
+on:
+  pull_request:
+    paths:
+      - 'docs/**'
+      - 'api-reference-docs/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  OPENAPI_SPEC_PATH: ${{ vars.FOUNDRY_OPENAPI_SPEC_PATH || 'api-reference-docs/openapi/foundry-api.yaml' }}
+  METADATA_STALE_DAYS_GA: '90'
+  METADATA_STALE_DAYS_PREVIEW: '30'
+
+jobs:
+  validate-api-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install validation dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pyyaml jsonschema
+
+      - name: Collect changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v45
+        with:
+          files: |
+            docs/**
+            api-reference-docs/**
+
+      - name: Prepare validation workspace
+        run: mkdir -p .artifacts/docs-validation
+
+      - name: Capture changed file manifest
+        env:
+          CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          changed = [line.strip() for line in os.environ.get('CHANGED_FILES', '').splitlines() if line.strip()]
+          Path('.artifacts/docs-validation/changed-files.json').write_text(
+              json.dumps({'changed_files': changed}, indent=2),
+              encoding='utf-8',
+          )
+          print(f'Changed files captured: {len(changed)}')
+          PY
+
+      - name: Validate runnable examples
+        run: |
+          python - <<'PY'
+          import json
+          import re
+          from pathlib import Path
+
+          changed_files = json.loads(Path('.artifacts/docs-validation/changed-files.json').read_text(encoding='utf-8'))['changed_files']
+          endpoint_pages = [
+              path for path in changed_files
+              if path.startswith('docs/api-reference/') and path.endswith(('.md', '.mdx'))
+          ]
+
+          code_block_pattern = re.compile(r'```(?:bash|sh|shell|console)?\n(.*?)```', re.DOTALL)
+          curl_pattern = re.compile(r'curl\s')
+          header_pattern = re.compile(r'-H\s+[\'\"]([^\'\"]+):\s*([^\'\"]*)[\'\"]')
+          json_payload_pattern = re.compile(r"(?:-d|--data(?:-raw)?)\s+'(\{.*?\})'", re.DOTALL)
+          placeholder_pattern = re.compile(r'REPLACE_ME|TODO|<insert-[^>]+>|<your-[^>]+>|changeme', re.IGNORECASE)
+
+          findings = []
+          passed = 0
+
+          for page in endpoint_pages:
+              text = Path(page).read_text(encoding='utf-8')
+              blocks = code_block_pattern.findall(text)
+              curl_blocks = [block for block in blocks if curl_pattern.search(block)]
+
+              if not curl_blocks:
+                  findings.append({'file': page, 'rule_id': 'DOC-EX-001', 'severity': 'error', 'message': 'No runnable cURL example found.'})
+                  continue
+
+              page_has_error = False
+              for block in curl_blocks:
+                  headers = {name.lower(): value for name, value in header_pattern.findall(block)}
+                  if 'authorization' not in headers and 'api-key' not in headers:
+                      page_has_error = True
+                      findings.append({'file': page, 'rule_id': 'DOC-AUTH-001', 'severity': 'error', 'message': 'Missing Authorization or api-key header in cURL example.'})
+
+                  if ('-d ' in block or '--data' in block) and 'content-type' not in headers:
+                      findings.append({'file': page, 'rule_id': 'DOC-HEAD-001', 'severity': 'warning', 'message': 'Request body example is missing Content-Type.'})
+
+                  for payload in json_payload_pattern.findall(block):
+                      try:
+                          import json as _json
+                          _json.loads(payload)
+                      except Exception as exc:  # noqa: BLE001
+                          page_has_error = True
+                          findings.append({'file': page, 'rule_id': 'DOC-JSON-001', 'severity': 'error', 'message': f'Invalid JSON payload: {exc}'})
+
+                  if placeholder_pattern.search(block):
+                      findings.append({'file': page, 'rule_id': 'DOC-PLACEHOLDER-001', 'severity': 'warning', 'message': 'Editorial placeholder detected in example.'})
+
+              if not page_has_error:
+                  passed += 1
+
+          summary = {
+              'checked_pages': len(endpoint_pages),
+              'passed_pages': passed,
+              'failed_pages': len({item['file'] for item in findings if item['severity'] == 'error'}),
+              'warnings': sum(1 for item in findings if item['severity'] == 'warning'),
+              'findings': findings,
+          }
+          Path('.artifacts/docs-validation/example-validation.json').write_text(json.dumps(summary, indent=2), encoding='utf-8')
+          PY
+
+      - name: Export base OpenAPI spec
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          git fetch --no-tags --depth=1 origin "$BASE_REF"
+          git show "origin/$BASE_REF:$OPENAPI_SPEC_PATH" > .artifacts/docs-validation/base-spec.yaml || true
+
+      - name: Detect spec-to-doc drift
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          import yaml
+
+          spec_path = Path('${{ env.OPENAPI_SPEC_PATH }}')
+          base_spec_path = Path('.artifacts/docs-validation/base-spec.yaml')
+          changed_files = json.loads(Path('.artifacts/docs-validation/changed-files.json').read_text(encoding='utf-8'))['changed_files']
+          endpoint_pages = [
+              path for path in changed_files
+              if path.startswith('docs/api-reference/') and path.endswith(('.md', '.mdx'))
+          ]
+
+          if not endpoint_pages:
+              Path('.artifacts/docs-validation/spec-drift.json').write_text(
+                  json.dumps({
+                      'changed_operation_ids': [],
+                      'changed_parameters': [],
+                      'changed_responses': [],
+                      'changed_headers': [],
+                      'findings': [],
+                  }, indent=2),
+                  encoding='utf-8',
+              )
+              raise SystemExit(0)
+
+          if not spec_path.exists():
+              raise SystemExit(f'OpenAPI spec not found at {spec_path}')
+
+          head_spec = yaml.safe_load(spec_path.read_text(encoding='utf-8'))
+          base_spec = yaml.safe_load(base_spec_path.read_text(encoding='utf-8')) if base_spec_path.exists() and base_spec_path.stat().st_size else {'paths': {}}
+
+          def iter_operations(spec):
+              paths = spec.get('paths', {}) or {}
+              for path_name, methods in paths.items():
+                  for method, operation in (methods or {}).items():
+                      if method.lower() not in {'get', 'post', 'put', 'patch', 'delete'}:
+                          continue
+                      yield (path_name, method.lower(), operation or {})
+
+          def parameter_signature(operation):
+              signatures = []
+              for param in operation.get('parameters', []) or []:
+                  signatures.append((param.get('name'), param.get('in'), bool(param.get('required'))))
+              return sorted(signatures)
+
+          def required_headers(operation):
+              return sorted(
+                  param.get('name')
+                  for param in operation.get('parameters', []) or []
+                  if param.get('in') == 'header' and param.get('required')
+              )
+
+          def response_signature(operation):
+              responses = operation.get('responses', {}) or {}
+              normalized = {}
+              for status_code, response in responses.items():
+                  if not str(status_code).startswith(('2', '3')):
+                      continue
+                  content = (response or {}).get('content', {}) or {}
+                  normalized[str(status_code)] = json.dumps(content, sort_keys=True)
+              return normalized
+
+          base_ops = {(path, method): op for path, method, op in iter_operations(base_spec)}
+          head_ops = {(path, method): op for path, method, op in iter_operations(head_spec)}
+
+          changed_operation_ids = []
+          changed_parameters = []
+          changed_responses = []
+          changed_headers = []
+
+          for key, head_op in head_ops.items():
+              base_op = base_ops.get(key)
+              if not base_op:
+                  continue
+              if (base_op.get('operationId') or '') != (head_op.get('operationId') or ''):
+                  changed_operation_ids.append({'path': key[0], 'method': key[1], 'base': base_op.get('operationId'), 'head': head_op.get('operationId')})
+              if parameter_signature(base_op) != parameter_signature(head_op):
+                  changed_parameters.append({'path': key[0], 'method': key[1]})
+              if response_signature(base_op) != response_signature(head_op):
+                  changed_responses.append({'path': key[0], 'method': key[1]})
+              if required_headers(base_op) != required_headers(head_op):
+                  changed_headers.append({'path': key[0], 'method': key[1], 'required_headers': required_headers(head_op)})
+
+          affected = []
+          page_text_cache = {page: Path(page).read_text(encoding='utf-8') for page in endpoint_pages}
+          for page, text in page_text_cache.items():
+              for item in changed_operation_ids:
+                  if item['path'] in text or str(item.get('base') or '') in text or str(item.get('head') or '') in text:
+                      affected.append({'file': page, 'rule_id': 'DRIFT-OP-001', 'severity': 'warning', 'message': f"Operation ID changed for {item['method'].upper()} {item['path']}"})
+              for item in changed_parameters:
+                  if item['path'] in text:
+                      affected.append({'file': page, 'rule_id': 'DRIFT-PARAM-001', 'severity': 'error', 'message': f"Parameter contract changed for {item['method'].upper()} {item['path']}"})
+              for item in changed_responses:
+                  if item['path'] in text:
+                      affected.append({'file': page, 'rule_id': 'DRIFT-RESP-001', 'severity': 'warning', 'message': f"Response shape changed for {item['method'].upper()} {item['path']}"})
+              for item in changed_headers:
+                  if item['path'] in text:
+                      affected.append({'file': page, 'rule_id': 'DRIFT-HEAD-001', 'severity': 'error', 'message': f"Required headers changed for {item['method'].upper()} {item['path']}: {', '.join(item['required_headers']) or 'none'}"})
+
+          summary = {
+              'changed_operation_ids': changed_operation_ids,
+              'changed_parameters': changed_parameters,
+              'changed_responses': changed_responses,
+              'changed_headers': changed_headers,
+              'findings': affected,
+          }
+          Path('.artifacts/docs-validation/spec-drift.json').write_text(json.dumps(summary, indent=2), encoding='utf-8')
+          PY
+
+      - name: Check metadata freshness
+        run: |
+          python - <<'PY'
+          import json
+          import re
+          from datetime import date, datetime
+          from pathlib import Path
+
+          import yaml
+
+          changed_files = json.loads(Path('.artifacts/docs-validation/changed-files.json').read_text(encoding='utf-8'))['changed_files']
+          endpoint_pages = [
+              path for path in changed_files
+              if path.startswith('docs/api-reference/') and path.endswith(('.md', '.mdx'))
+          ]
+
+          stale_days = {
+              'ga': int('${{ env.METADATA_STALE_DAYS_GA }}'),
+              'preview': int('${{ env.METADATA_STALE_DAYS_PREVIEW }}'),
+          }
+          findings = []
+          iso_date = re.compile(r'^\d{4}-\d{2}-\d{2}$')
+          today = date.today()
+          rule_map = {
+              'last_verified_at': 'META-001',
+              'api_version': 'META-002',
+              'preview_or_ga_status': 'META-003',
+              'example_validation_status': 'META-004',
+          }
+
+          for page in endpoint_pages:
+              text = Path(page).read_text(encoding='utf-8')
+              if not text.startswith('---\n'):
+                  findings.append({'file': page, 'rule_id': 'META-001', 'severity': 'error', 'message': 'Missing frontmatter.'})
+                  continue
+              _, raw_frontmatter, _ = text.split('---', 2)
+              frontmatter = yaml.safe_load(raw_frontmatter) or {}
+
+              for field in ('last_verified_at', 'api_version', 'preview_or_ga_status', 'example_validation_status'):
+                  if not frontmatter.get(field):
+                      findings.append({'file': page, 'rule_id': rule_map[field], 'severity': 'error', 'message': f'Missing required field: {field}.'})
+
+              last_verified_at = str(frontmatter.get('last_verified_at', '')).strip()
+              if last_verified_at and not iso_date.match(last_verified_at):
+                  findings.append({'file': page, 'rule_id': 'META-001', 'severity': 'error', 'message': 'last_verified_at must be YYYY-MM-DD.'})
+                  continue
+
+              status = str(frontmatter.get('preview_or_ga_status', '')).strip().lower()
+              if status and status not in {'preview', 'ga'}:
+                  findings.append({'file': page, 'rule_id': 'META-003', 'severity': 'error', 'message': 'preview_or_ga_status must be preview or ga.'})
+
+              example_status = str(frontmatter.get('example_validation_status', '')).strip().lower()
+              if example_status and example_status not in {'passed', 'failed', 'not-run'}:
+                  findings.append({'file': page, 'rule_id': 'META-004', 'severity': 'error', 'message': 'example_validation_status must be passed, failed, or not-run.'})
+
+              if last_verified_at and status in stale_days:
+                  verified_on = datetime.strptime(last_verified_at, '%Y-%m-%d').date()
+                  age = (today - verified_on).days
+                  if age > stale_days[status]:
+                      findings.append({'file': page, 'rule_id': 'META-005', 'severity': 'warning', 'message': f'Metadata is stale ({age} days old for {status}).'})
+
+          summary = {
+              'checked_pages': len(endpoint_pages),
+              'findings': findings,
+          }
+          Path('.artifacts/docs-validation/metadata.json').write_text(json.dumps(summary, indent=2), encoding='utf-8')
+          PY
+
+      - name: Build PR summary
+        id: summary
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          example_results = json.loads(Path('.artifacts/docs-validation/example-validation.json').read_text(encoding='utf-8'))
+          spec_results = json.loads(Path('.artifacts/docs-validation/spec-drift.json').read_text(encoding='utf-8'))
+          metadata_results = json.loads(Path('.artifacts/docs-validation/metadata.json').read_text(encoding='utf-8'))
+
+          all_findings = []
+          all_findings.extend(example_results.get('findings', []))
+          all_findings.extend(spec_results.get('findings', []))
+          all_findings.extend(metadata_results.get('findings', []))
+
+          error_count = sum(1 for item in all_findings if item['severity'] == 'error')
+          warning_count = sum(1 for item in all_findings if item['severity'] == 'warning')
+          overall = 'failed' if error_count else 'passed'
+
+          lines = [
+              '## API docs validation summary',
+              '',
+              f'- Overall result: **{overall.upper()}**',
+              f'- Endpoint pages checked: **{example_results.get("checked_pages", 0)}**',
+              f'- Error findings: **{error_count}**',
+              f'- Warning findings: **{warning_count}**',
+              '',
+              '### Checks',
+              '',
+              f'- Runnable examples: {example_results.get("passed_pages", 0)} passed pages, {example_results.get("failed_pages", 0)} pages with errors',
+              f'- Spec drift findings: {len(spec_results.get("findings", []))}',
+              f'- Metadata findings: {len(metadata_results.get("findings", []))}',
+              '',
+          ]
+
+          if all_findings:
+              lines.extend(['### Findings', ''])
+              for finding in all_findings[:50]:
+                  lines.append(f"- `{finding['severity']}` `{finding['rule_id']}` — `{finding['file']}`: {finding['message']}")
+          else:
+              lines.append('No findings.')
+
+          Path('.artifacts/docs-validation/summary.md').write_text('\n'.join(lines) + '\n', encoding='utf-8')
+          Path('.artifacts/docs-validation/result.txt').write_text(overall, encoding='utf-8')
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as fh:
+              fh.write(f'overall_status={overall}\n')
+          PY
+
+      - name: Upload validation artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-docs-validation
+          path: .artifacts/docs-validation
+
+      - name: Comment on pull request
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('.artifacts/docs-validation/summary.md', 'utf8');
+            const marker = '<!-- api-docs-validation -->';
+            const finalBody = `${marker}\n${body}`;
+            const { owner, repo } = context.repo;
+            const issue_number = context.payload.pull_request.number;
+            const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number, per_page: 100 });
+            const existing = comments.find(comment => comment.body && comment.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body: finalBody });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body: finalBody });
+            }
+
+      - name: Fail workflow on blocking findings
+        run: |
+          RESULT=$(cat .artifacts/docs-validation/result.txt)
+          if [ "$RESULT" != "passed" ]; then
+            echo "Blocking API docs validation findings detected."
+            exit 1
+          fi

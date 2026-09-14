@@ -1,0 +1,137 @@
+---
+title: "AI-optimized documentation formats"
+description: "Learn how AI tools can access Microsoft Foundry documentation through Markdown pages, llms.txt, MCP server, and skill definitions."
+---
+
+Microsoft Foundry documentation is optimized for consumption by AI tools and large language models. Every page serves content as Markdown to AI agents instead of HTML, reducing token usage and improving response accuracy.
+
+## Available formats
+
+<CardGroup cols={2}>
+<Card title="Markdown pages" icon="file-lines">
+Every page is available as Markdown. Append `.md` to any page URL.
+
+Example: `https://hobbyist-e43fa225.mintlify.app/overview/what-is-foundry.md`
+</Card>
+
+<Card title="MCP server" icon="plug">
+Direct integration for AI tools. Connect once and your tool searches docs automatically.
+
+URL: `https://hobbyist-e43fa225.mintlify.app/mcp`
+</Card>
+
+<Card title="llms.txt" icon="list">
+Structured index of all documentation pages with descriptions and links.
+
+URL: [/llms.txt](https://hobbyist-e43fa225.mintlify.app/llms.txt)
+</Card>
+
+<Card title="llms-full.txt" icon="book-open">
+Entire documentation site combined into a single Markdown file.
+
+URL: [/llms-full.txt](https://hobbyist-e43fa225.mintlify.app/llms-full.txt)
+</Card>
+</CardGroup>
+
+## Markdown pages
+
+Every documentation page can be viewed as raw Markdown by appending `.md` to the URL. This is useful for:
+
+- Pasting page content into AI tools as context
+- Processing individual pages with scripts or automation
+- Reviewing content without formatting
+
+For example, to view the Foundry overview as Markdown:
+
+```
+https://hobbyist-e43fa225.mintlify.app/overview/what-is-foundry.md
+```
+
+<Tip>
+Use the contextual menu on any page to **Copy page** as Markdown or **View as Markdown** without manually editing the URL.
+</Tip>
+
+## llms.txt
+
+The `llms.txt` file follows the [llms.txt specification](https://llmstxt.org) — an industry standard that helps LLMs index documentation efficiently, similar to how a sitemap helps search engines.
+
+The file contains:
+- A site title
+- A structured list of all pages with links and descriptions
+- Links to API specifications (OpenAPI)
+
+Access the file at:
+```
+https://hobbyist-e43fa225.mintlify.app/llms.txt
+```
+
+Use `llms.txt` when you need an AI tool to understand the structure and scope of Foundry documentation without loading every page.
+
+## llms-full.txt
+
+The `llms-full.txt` file combines the entire documentation site into a single Markdown file. This provides complete context for AI tools that support large context windows.
+
+Access the file at:
+```
+https://hobbyist-e43fa225.mintlify.app/llms-full.txt
+```
+
+Also available at the `.well-known` path:
+```
+https://hobbyist-e43fa225.mintlify.app/.well-known/llms-full.txt
+```
+
+<Warning>
+The full documentation file can be large. Use `llms.txt` or the MCP server for more targeted access when you do not need the entire site as context.
+</Warning>
+
+## MCP server
+
+The Model Context Protocol (MCP) server provides a direct integration point for AI tools. When connected, AI tools can search Foundry documentation during conversations without requiring you to copy and paste content.
+
+**Server URL**: `https://hobbyist-e43fa225.mintlify.app/mcp`
+
+The MCP server exposes a search tool that AI applications use to query documentation. The tool supports optional filtering by documentation version and language.
+
+For step-by-step connection instructions for specific tools, see [Connect AI tools to Foundry docs](/get-started/connect-ai-tools).
+
+## skill.md
+
+The `skill.md` file provides a structured skill definition that AI agents can use to understand when and how to use Foundry documentation. It includes:
+
+- Product summary and key endpoints
+- Decision guidance for choosing between agent types, tool types, and setup configurations
+- Quick reference tables for SDK clients, tools, and guardrails
+- Common gotchas and verification checklists
+
+Access the file at:
+```
+https://hobbyist-e43fa225.mintlify.app/skill.md
+```
+
+### Install as an agent skill
+
+Use the [skills CLI](https://www.npmjs.com/package/skills) to add Foundry documentation capabilities to your AI agent's context:
+
+```bash
+npx skills add https://hobbyist-e43fa225.mintlify.app
+```
+
+This registers the Foundry skill so agents can take actions on behalf of users based on the documentation content. The `skill.md` file follows the [agentskills.io specification](https://agentskills.io/specification), which provides a structured, machine-readable format for agent capabilities, required inputs, and constraints.
+
+Use `skill.md` when registering Foundry documentation as a skill or capability in an AI agent framework.
+
+## Choosing the right format
+
+| Format | Best for | Size |
+|---|---|---|
+| **Markdown pages** (`.md`) | Pasting a single page into an AI tool | Small (per page) |
+| **llms.txt** | Understanding site structure, finding relevant pages | Small |
+| **llms-full.txt** | Loading the entire site as context | Large |
+| **MCP server** | Ongoing AI tool integration with automatic search | N/A (live search) |
+| **skill.md** | Registering Foundry as a capability in an AI agent | Medium |
+
+## Related content
+
+- [Connect AI tools to Foundry docs](/get-started/connect-ai-tools)
+- [Ask AI for help in the Foundry portal](/get-started/ask-ai)

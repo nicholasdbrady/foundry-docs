@@ -1,0 +1,148 @@
+---
+title: "Connect AI tools to Foundry docs"
+description: "Connect your AI tools to Microsoft Foundry documentation for accurate, up-to-date answers directly in your workflow."
+---
+
+Microsoft Foundry documentation is available as an MCP (Model Context Protocol) server that AI tools can connect to directly. When connected, your AI tool searches the current documentation to answer questions instead of relying on training data.
+
+## MCP server URL
+
+```
+https://hobbyist-e43fa225.mintlify.app/mcp
+```
+
+## Quick access with the contextual menu
+
+Every documentation page includes a contextual menu with shortcuts to open the page in your preferred AI tool or connect via MCP. Look for the menu icon in the page header.
+
+Available options include:
+- **Copy page** — copies the page as Markdown for pasting into any AI tool
+- **View as Markdown** — opens the raw Markdown version of the page
+- **Open in ChatGPT, Claude, Perplexity, Grok** — starts a conversation with the page as context
+- **Connect to VS Code** — installs the MCP server in VS Code
+- **Copy MCP server URL** — copies the MCP URL for manual configuration
+
+## Connect by tool
+
+<Tabs>
+<Tab title="Claude Desktop">
+
+Add the MCP server to your Claude Desktop configuration:
+
+1. Open Claude Desktop settings.
+2. Navigate to the **MCP Servers** section.
+3. Click **Add Server** and enter:
+   - **Name**: `Foundry Docs`
+   - **URL**: `https://hobbyist-e43fa225.mintlify.app/mcp`
+4. Save and restart Claude Desktop.
+
+Claude automatically searches Foundry documentation when your questions are relevant.
+
+</Tab>
+
+<Tab title="ChatGPT">
+
+ChatGPT supports MCP server connections for users with Plus or Team plans:
+
+1. Open ChatGPT settings.
+2. Navigate to **Connected Tools** or **MCP Servers**.
+3. Add a new server with the URL:
+   ```
+   https://hobbyist-e43fa225.mintlify.app/mcp
+   ```
+4. Save the configuration.
+
+Alternatively, use the contextual menu on any documentation page and select **Open in ChatGPT** to start a conversation with that page as context.
+
+</Tab>
+
+<Tab title="GitHub Copilot">
+
+### VS Code / VS Code Insiders
+
+Use the contextual menu on any page and select **Connect to VS Code** to install the MCP server automatically.
+
+Or add it manually to your VS Code MCP configuration (`.vscode/mcp.json` or user settings):
+
+```json
+{
+  "servers": {
+    "foundry-docs": {
+      "type": "http",
+      "url": "https://hobbyist-e43fa225.mintlify.app/mcp"
+    }
+  }
+}
+```
+
+### Copilot CLI
+
+If using GitHub Copilot CLI, add the MCP server to your configuration:
+
+```json
+{
+  "mcpServers": {
+    "foundry-docs": {
+      "type": "http",
+      "url": "https://hobbyist-e43fa225.mintlify.app/mcp"
+    }
+  }
+}
+```
+
+</Tab>
+
+<Tab title="Cursor">
+
+1. Open Cursor settings (**Cmd+,** on macOS, **Ctrl+,** on Windows).
+2. Navigate to **MCP Servers**.
+3. Click **Add Server** and enter:
+   - **Name**: `Foundry Docs`
+   - **URL**: `https://hobbyist-e43fa225.mintlify.app/mcp`
+4. Save the configuration.
+
+Or install via the command line:
+
+```bash
+npx add-mcp --url https://hobbyist-e43fa225.mintlify.app/mcp
+```
+
+</Tab>
+
+<Tab title="Perplexity">
+
+Use the contextual menu on any documentation page and select **Open in Perplexity** to start a Perplexity session with the page content as context.
+
+</Tab>
+
+<Tab title="Grok">
+
+Use the contextual menu on any documentation page and select **Open in Grok** to start a Grok conversation with the page content as context.
+
+</Tab>
+</Tabs>
+
+## How MCP search works
+
+When your AI tool connects to the MCP server, it gains access to a `search` tool that queries all indexed Foundry documentation. The AI tool decides when to use this search based on your questions — you do not need to explicitly ask it to search the documentation.
+
+Each search returns relevant content with page titles and links. The AI tool uses this content to generate accurate, cited responses.
+
+## Other ways to access documentation for AI
+
+In addition to MCP, Foundry documentation provides several formats optimized for AI consumption:
+
+| Resource | URL | Description |
+|---|---|---|
+| **llms.txt** | [/llms.txt](https://hobbyist-e43fa225.mintlify.app/llms.txt) | Structured index of all pages with descriptions |
+| **llms-full.txt** | [/llms-full.txt](https://hobbyist-e43fa225.mintlify.app/llms-full.txt) | Entire documentation site as a single Markdown file |
+| **skill.md** | [/skill.md](https://hobbyist-e43fa225.mintlify.app/skill.md) | Agent skill definition with product context and decision guidance |
+| **Markdown pages** | Append `.md` to any page URL | Individual page content as Markdown |
+
+For a detailed guide on these formats, see [AI ingestion](/get-started/ai-ingestion).
+
+## Related content
+
+- [AI ingestion formats](/get-started/ai-ingestion)
+- [Ask AI for help in the Foundry portal](/get-started/ask-ai)
+- [MCP tools for Foundry agents](/agents/tools/model-context-protocol)

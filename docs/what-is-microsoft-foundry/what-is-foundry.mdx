@@ -1,0 +1,253 @@
+---
+title: "What is Microsoft Foundry?"
+description: "Microsoft Foundry is a trusted platform that empowers developers to drive innovation and shape the future with AI in a safe, secure, and responsible way."
+---
+
+**Microsoft Foundry** is a unified Azure platform-as-a-service offering for enterprise AI operations, model builders, and application development. This foundation combines production-grade infrastructure with friendly interfaces, enabling developers to focus on building applications rather than managing infrastructure.
+
+Microsoft Foundry unifies agents, models, and tools under a single management grouping with built-in enterprise-readiness capabilities including tracing, monitoring, evaluations, and customizable enterprise setup configurations. The platform provides streamlined management through unified role-based access control (RBAC), networking, and policies under one Azure resource provider namespace.
+
+<Tip>
+
+* Coming from Azure OpenAI? [Upgrade your Azure OpenAI resource to a Foundry resource](/setup/upgrade-azure-openai) while preserving your endpoint, API keys, and existing state. 
+* Using hub-based projects? Hub-based projects are accessible in the [Foundry (classic) portal](https://learn.microsoft.com/en-us/azure/foundry-classic/what-is-foundry). New investments are focused on Foundry projects in the new portal.
+
+</Tip>
+
+## Evolution of Foundry
+
+Foundry consolidates several previous Azure AI services and tools into a unified platform. The following table maps previous concepts to their current equivalents. For detailed guidance on transitioning, see [Navigate from classic to the new experience](../how-to/navigate-from-classic).
+
+| Dimension | Previous | Current |
+|-----------|---------|-----|
+| Brand | Azure AI Studio / Azure AI Foundry | Microsoft Foundry |
+| Brand | Azure AI Services | Foundry Tools |
+| Portal | [Foundry (classic)](https://learn.microsoft.com/azure/foundry-classic/) | [Foundry](https://learn.microsoft.com/azure/foundry) |
+| Agent API | Assistants API (Agents v0.5/v1) | Responses API (Agents v2) |
+| API versioning | Monthly `api-version` params | v1 stable routes (`/openai/v1/`) |
+| Resource model | Hub + Azure OpenAI + Azure AI Services | Foundry resource (single, with projects) |
+| SDKs & endpoints | Multiple packages (`azure-ai-inference`, `azure-ai-generative`, `azure-ai-ml`, `AzureOpenAI()`) against 5+ endpoints | Unified project client (`azure-ai-projects` 2.x) + `OpenAI()` against one project endpoint. |
+| Terminology | Threads, Messages, Runs, Assistants | Conversations, Items, Responses, Agent Versions |
+
+## Your first API call
+
+**Get started now** — [Quickstart: Build with models and agents](/get-started/get-started-code) | [Open Foundry portal](https://ai.azure.com) | [Get an Azure account](https://azure.microsoft.com/pricing/purchase-options/azure-account)
+
+Send a prompt and get a response from a model in a few lines of code:
+
+<Tabs>
+  <Tab title="Python">
+
+    ```python
+    import os
+    from dotenv import load_dotenv
+    from azure.identity import DefaultAzureCredential
+    from azure.ai.projects import AIProjectClient
+
+    load_dotenv()
+
+    print(f"Using PROJECT_ENDPOINT: {os.environ['PROJECT_ENDPOINT']}")
+    print(f"Using MODEL_DEPLOYMENT_NAME: {os.environ['MODEL_DEPLOYMENT_NAME']}")
+
+    project_client = AIProjectClient(
+        endpoint=os.environ["PROJECT_ENDPOINT"],
+        credential=DefaultAzureCredential(),
+    )
+
+    openai_client = project_client.get_openai_client()
+
+    response = openai_client.responses.create(
+        model=os.environ["MODEL_DEPLOYMENT_NAME"],
+        input="What is the size of France in square miles?",
+    )
+    print(f"Response output: {response.output_text}")
+    ```
+
+  </Tab>
+  <Tab title="C#">
+
+    ```csharp
+    using Azure.AI.Projects;
+    using Azure.AI.Projects.OpenAI;
+    using Azure.Identity;
+    using OpenAI.Responses;
+
+    #pragma warning disable OPENAI001
+
+    string projectEndpoint = Environment.GetEnvironmentVariable("PROJECT_ENDPOINT")
+    ?? throw new InvalidOperationException("Missing environment variable 'PROJECT_ENDPOINT'");
+    string modelDeploymentName = Environment.GetEnvironmentVariable("MODEL_DEPLOYMENT_NAME")
+    ?? throw new InvalidOperationException("Missing environment variable 'MODEL_DEPLOYMENT_NAME'");
+
+    AIProjectClient projectClient = new(new Uri(projectEndpoint), new AzureCliCredential());
+
+    ProjectResponsesClient responseClient = projectClient.OpenAI.GetProjectResponsesClientForModel(modelDeploymentName);
+    ResponseResult response = await responseClient.CreateResponseAsync("What is the size of France in square miles?");
+
+    Console.WriteLine(response.GetOutputText());
+    ```
+
+  </Tab>
+  <Tab title="TypeScript">
+
+    ```typescript
+    import { DefaultAzureCredential } from "@azure/identity";
+    import { AIProjectClient } from "@azure/ai-projects";
+    import "dotenv/config";
+
+    const projectEndpoint = process.env["PROJECT_ENDPOINT"] || "<project endpoint>";
+    const deploymentName = process.env["MODEL_DEPLOYMENT_NAME"] || "<model deployment name>";
+
+    async function main(): Promise<void> {
+        const project = new AIProjectClient(projectEndpoint, new DefaultAzureCredential());
+        const openAIClient = project.getOpenAIClient();
+        const response = await openAIClient.responses.create({
+            model: deploymentName,
+            input: "What is the size of France in square miles?",
+        });
+        console.log(`Response output: ${response.output_text}`);
+    }
+
+    main().catch(console.error);
+    ```
+
+  </Tab>
+  <Tab title="REST API">
+
+    Replace `YOUR-FOUNDRY-RESOURCE-NAME` with your values:
+
+    ```console
+    curl -X POST https://YOUR-FOUNDRY-RESOURCE-NAME.services.ai.azure.com/api/projects/YOUR-PROJECT-NAME/openai/responses?api-version=2025-11-15-preview \
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer $AZURE_AI_AUTH_TOKEN" \
+    -d '{
+            "model": "gpt-4.1-mini",
+            "input": "What is the size of France in square miles?"
+    }'
+    ```
+
+  </Tab>
+</Tabs>
+
+For the full walkthrough, see the [Microsoft Foundry quickstart](/get-started/get-started-code).
+
+## Available models
+
+Foundry gives you access to over 1,900 models from Microsoft, OpenAI, Anthropic, Mistral, xAI, Meta, DeepSeek, Hugging Face, and more. The following table highlights popular model families to help you choose a starting point.
+
+| Model family | Best for | 
+|---|---|
+| **GPT-5** | Most capable — complex reasoning, multi-step tasks, and multimodal scenarios |
+| **GPT-4.1** | Best balance of capability and cost for production workloads |
+| **GPT-4.1 mini** | Fastest — low-latency, high-throughput scenarios |
+| **Claude** | Advanced reasoning, code generation, and multimodal tasks |
+| **Grok** | Reasoning, coding, and data extraction |
+| **Mistral** | Code generation, multilingual, and general-purpose chat |
+| **DeepSeek-R1** | Open-weight reasoning at scale |
+| **Phi-4** | Small language model — on-device or resource-constrained environments |
+| **Meta Llama** | Open models — customization and fine-tuning |
+
+For help choosing between models, see the [GPT-5 vs GPT-4.1 model choice guide](/foundry-models/model-choice-guide). Browse the full catalog in the [Foundry Models overview](/foundry-models/foundry-models-overview).
+
+## What's new
+
+Foundry is evolving fast. Here are some of the latest additions:
+
+- [Prompt Optimizer (preview)](/agent-service/prompt-optimizer) — Automatically improve agent prompts based on evaluation results.
+- [Task Adherence guardrails (preview)](/guardrails/task-adherence) — Keep agentic workflows on track with built-in adherence controls.
+- [LangChain and LangGraph integration](/developer-experience/langchain) — Build and trace agents with popular open-source frameworks.
+- [Fireworks model import (preview)](/developer-experience/enable-fireworks-models) — Bring custom models into Foundry through Fireworks.
+
+See [What's new in Microsoft Foundry](/operate/whats-new-foundry) for the full list.
+
+## Choose your path
+
+Foundry supports multiple developer surfaces. Use the following table to find the right starting point for your scenario.
+
+| I want to... | Start here |
+|---|---|
+| Call a model from code | [Quickstart: Your first API call](/get-started/get-started-code) |
+| Build an agent with tools and memory | [Agent Service overview](/agent-service/workflow) |
+| Explore models in the browser | [Foundry portal playgrounds](/foundry-models/concept-playgrounds) |
+| Deploy and manage models at scale | [Foundry Models overview](/foundry-models/foundry-models-overview) |
+| Develop in VS Code | [Foundry for VS Code](/developer-experience/get-started-projects-vs-code) |
+| Set up governance and security | [Foundry Control Plane](/manage/overview) |
+
+## Who is Foundry for?
+
+Microsoft Foundry serves three primary audiences:
+
+* **Application developers** building AI-powered products with agents, models, and tools. Start with the [quickstart](/get-started/get-started-code).
+* **ML engineers and data scientists** who [fine-tune models](/foundry-models/fine-tuning-considerations), [run evaluations](/agent-service/trace-agent-concept), and [manage model deployments](/observability/monitor-models).
+* **IT administrators and platform engineers** who govern AI resources, enforce policies, and manage access across teams. See [security](/security/architecture#security-driven-separation-of-concerns) and governance and [Foundry Control Plane](/manage/overview).
+
+## Key capabilities
+
+### Build agents
+
+**[Multi-agent orchestration](/agent-service/workflow)** — Build collaborative agent behavior and complex workflow execution using SDKs for C# and Python.
+
+**[Tool catalog](/agent-service/tool-catalog)** — Connect over 1,400 tools through public and private catalogs.
+
+**[Memory](/agent-service/what-is-memory)** — Retain and recall contextual information across interactions without requiring repeated input.
+
+**[Foundry IQ knowledge integration](/agent-service/what-is-foundry-iq)** — Ground agent responses in enterprise or web content with citation-backed answers.
+
+**[Publishing](/agent-service/publish-copilot)** — Publish agents to Microsoft 365, Teams, BizChat, or containerized deployments.
+
+### Operate and govern
+
+**[Real-time observability](/agent-service/how-to-monitor-agents-dashboard#set-up-continuous-evaluation)** — Monitor performance and governance with built-in metrics and model tracking.
+
+**Centralized AI asset management** — Manage all agents, models, and tools from the **Operate** section, including agents registered from other clouds.
+
+**Enterprise controls** — Full authentication support for MCP and A2A, AI gateway integration, and Azure Policy integration.
+
+## Microsoft Foundry API and SDKs
+
+The [Microsoft Foundry API](https://learn.microsoft.com/rest/api/aifoundry/) provides a consistent contract for building agentic applications across different model providers. [SDK client libraries](/api-sdk/sdk-overview) are available for:
+
+- Python
+- C#
+- JavaScript/TypeScript (preview)
+- Java (preview)
+
+The [Microsoft Foundry for VS Code Extension](/developer-experience/get-started-projects-vs-code) helps you explore models and develop agents directly in your development environment.
+
+## Foundry portal
+
+The [Microsoft Foundry portal](https://ai.azure.com) is where you manage projects, deploy models, build agents, and monitor your AI assets. To use the current version, make sure the **New Foundry** toggle in the banner is set to on.
+
+<img src="/images/new-foundry.png" />
+
+<Tip>
+
+See [Find features in the Foundry portal](/get-started/navigate-from-classic) if you're used to the Foundry (classic) portal and not sure where to find things now.
+
+</Tip>
+
+For details on switching between projects or finding resources created in Foundry (classic), see [Find features in the Foundry portal](/get-started/navigate-from-classic).
+
+## Pricing and billing
+
+The platform is free to use and explore. Pricing occurs at the deployment level. Each product within Foundry (models, agents, tools) has its own billing model and price.
+
+Using Foundry also incurs costs associated with the underlying services. To learn more, read [Plan and manage costs for Foundry Tools](/foundry-models/manage-costs).
+
+Use the [Total Economic Impact calculator for Foundry](https://aka.ms/Foundry-ROI-Calculator) to estimate your return on investment.
+
+## Region availability
+
+Foundry is available in most regions where Foundry Tools are available. For more information, see [region support for Microsoft Foundry](/foundry-models/region-support).
+
+## How to get access
+
+You need an [Azure account](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn). Then sign in to [Microsoft Foundry](https://ai.azure.com?cid=learnDocs).
+
+## Related content
+
+- [Quickstart: Get started with Microsoft Foundry](/get-started/get-started-code)
+- [Quickstart: Set up Foundry resources](/get-started/quickstart-create-foundry-resources)
+- [Create a project](/setup/create-projects)
+- [Get started with an AI template](/developer-experience/ai-template-get-started)
+- [What's new in Microsoft Foundry documentation?](/operate/whats-new-foundry)

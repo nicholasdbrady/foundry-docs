@@ -1,0 +1,30 @@
+resource_group,operation_id,operation_name,http_method,path,has_runnable_example,has_error_section,has_preview_flags,has_sdk_links,has_required_params_documented,priority,notes
+Agents,listAgents,List agents,GET,/agents,partial,no,n-a,partial,partial,P0,High discovery traffic; should show project scope and default pagination behavior.
+Agents,createAgent,Create agent,POST,/agents,partial,partial,yes,partial,partial,P0,Needs minimal create body plus model and instructions requirements.
+Agents,getAgent,Get agent,GET,/agents/{agent_id},yes,no,n-a,partial,yes,P0,Common lookup path; error section should explain missing or cross-project agent IDs.
+Agents,updateAgent,Update agent,PATCH,/agents/{agent_id},partial,no,yes,partial,partial,P1,Needs partial-update semantics and immutable-field guidance.
+Agents,listAgentVersions,List agent versions,GET,/agents/{agent_id}/versions,partial,no,yes,partial,partial,P1,Version history is important for rollout and rollback workflows.
+Agents,createAgentSession,Create agent session,POST,/agents/{agent_id}/sessions,yes,partial,n-a,partial,yes,P0,Common runtime entry point; example should be copy-run-edit ready.
+Agents,streamAgentLogs,Stream agent logs,GET,/agents/{agent_id}/sessions/{session_id}/logs:stream,partial,partial,yes,no,partial,P0,Must document SSE framing, preview gating, and reconnect guidance.
+Responses,listResponses,List responses,GET,/responses,partial,no,n-a,partial,partial,P0,High traffic for retrieval and dashboards; pagination details are usually missing.
+Responses,createResponse,Create response,POST,/responses,yes,partial,yes,yes,yes,P0,Most important generation endpoint; should document streaming flag and model or deployment requirements.
+Responses,getResponse,Get response,GET,/responses/{response_id},yes,no,n-a,partial,yes,P0,Needs state model for queued or running responses.
+Responses,cancelResponse,Cancel response,POST,/responses/{response_id}:cancel,partial,partial,yes,no,partial,P1,Should explain which response states are cancelable.
+Responses,listResponseEvents,List response events,GET,/responses/{response_id}/events,partial,no,yes,no,partial,P1,Useful for debugging streamed and asynchronous runs.
+Responses,streamResponse,Stream response events,GET,/responses/{response_id}:stream,yes,partial,yes,partial,partial,P0,Must explain SSE event types, end-of-stream signal, and retry behavior.
+Evals,listEvaluations,List evaluations,GET,/evals,partial,no,n-a,partial,partial,P1,Needs project scoping and pagination examples.
+Evals,createEvaluation,Create evaluation,POST,/evals,partial,partial,yes,partial,partial,P0,Should show the smallest valid evaluator configuration and dataset reference.
+Evals,getEvaluation,Get evaluation,GET,/evals/{evaluation_id},partial,no,n-a,partial,yes,P1,Needs state transitions and retention notes.
+Evals,runEvaluation,Run evaluation,POST,/evals/{evaluation_id}:run,partial,partial,yes,no,partial,P0,High-value workflow; error section should cover invalid datasets and unsupported evaluators.
+Evals,listEvaluationRuns,List evaluation runs,GET,/evals/{evaluation_id}/runs,partial,no,n-a,no,partial,P1,Should explain latest-run ordering and continuation behavior.
+Connections,listConnections,List connections,GET,/connections,partial,no,n-a,partial,partial,P1,Needs auth scope and redaction behavior notes.
+Connections,createConnection,Create connection,POST,/connections,partial,partial,yes,partial,partial,P0,Needs secure example that shows metadata without exposing secrets.
+Connections,getConnection,Get connection,GET,/connections/{connection_id},yes,no,n-a,partial,yes,P1,Should explain which secret fields are omitted from reads.
+Connections,updateConnection,Update connection,PATCH,/connections/{connection_id},partial,partial,yes,no,partial,P1,Needs secret rotation guidance and patch semantics.
+Connections,deleteConnection,Delete connection,DELETE,/connections/{connection_id},partial,no,n-a,no,yes,P1,Should warn about dependent agents or deployments.
+Deployments,listDeployments,List deployments,GET,/deployments,partial,no,n-a,partial,partial,P0,High navigation traffic; pagination and filter examples should be explicit.
+Deployments,createDeployment,Create deployment,POST,/deployments,partial,partial,yes,partial,partial,P0,Needs model, SKU, and region prerequisites plus long-running operation notes.
+Deployments,getDeployment,Get deployment,GET,/deployments/{deployment_id},yes,no,n-a,partial,yes,P0,Should document provisioning states and eventual consistency.
+Deployments,updateDeployment,Update deployment,PATCH,/deployments/{deployment_id},partial,partial,yes,no,partial,P1,Needs mutable-field guidance and rollout timing notes.
+Deployments,deleteDeployment,Delete deployment,DELETE,/deployments/{deployment_id},partial,no,n-a,no,yes,P1,Should explain active-traffic impact and cleanup timing.
+Deployments,listDeploymentOperations,List deployment operations,GET,/deployments/{deployment_id}/operations,partial,partial,yes,no,partial,P1,Useful for long-running create or scale workflows; needs polling example.

@@ -1,0 +1,283 @@
+# Smoke tests assume the current project data-plane API version unless a management-plane
+# endpoint requires an explicit service API version in the runtime harness.
+smoke_tests:
+  - operation_id: createAgent
+    method: POST
+    path: /agents
+    description: Creates a Foundry agent by using a deployed model and verifies the agent resource shape.
+    expected_status: 201
+    required_headers:
+      - Authorization
+      - Content-Type
+    sample_body:
+      name: support-agent
+      model: gpt-4.1-mini
+      instructions: Answer support questions with concise troubleshooting steps.
+    expected_response_fields:
+      - id
+      - object
+      - name
+      - model
+    tier: 1
+
+  - operation_id: listAgents
+    method: GET
+    path: /agents
+    description: Lists agents in the project to verify collection pagination and auth wiring.
+    expected_status: 200
+    required_headers:
+      - Authorization
+    expected_response_fields:
+      - data
+      - first_id
+    tier: 1
+
+  - operation_id: getAgent
+    method: GET
+    path: /agents/{agentId}
+    description: Retrieves a single agent and verifies stable agent metadata fields.
+    expected_status: 200
+    required_headers:
+      - Authorization
+    expected_response_fields:
+      - id
+      - name
+      - model
+    tier: 1
+
+  - operation_id: createThread
+    method: POST
+    path: /threads
+    description: Creates a conversation thread for run and message smoke tests.
+    expected_status: 201
+    required_headers:
+      - Authorization
+      - Content-Type
+    sample_body: {}
+    expected_response_fields:
+      - id
+      - object
+    tier: 1
+
+  - operation_id: getThread
+    method: GET
+    path: /threads/{threadId}
+    description: Verifies thread retrieval for a previously created thread.
+    expected_status: 200
+    required_headers:
+      - Authorization
+    expected_response_fields:
+      - id
+      - object
+    tier: 1
+
+  - operation_id: createMessage
+    method: POST
+    path: /threads/{threadId}/messages
+    description: Appends a user message to a thread and validates message content serialization.
+    expected_status: 201
+    required_headers:
+      - Authorization
+      - Content-Type
+    sample_body:
+      role: user
+      content: Summarize the latest support ticket triage process.
+    expected_response_fields:
+      - id
+      - role
+      - content
+    tier: 1
+
+  - operation_id: listMessages
+    method: GET
+    path: /threads/{threadId}/messages
+    description: Lists thread messages to verify ordering and collection response shape.
+    expected_status: 200
+    required_headers:
+      - Authorization
+    expected_response_fields:
+      - data
+      - first_id
+    tier: 1
+
+  - operation_id: getMessage
+    method: GET
+    path: /threads/{threadId}/messages/{messageId}
+    description: Retrieves a single thread message and verifies the content envelope.
+    expected_status: 200
+    required_headers:
+      - Authorization
+    expected_response_fields:
+      - id
+      - role
+      - content
+    tier: 1
+
+  - operation_id: createRun
+    method: POST
+    path: /threads/{threadId}/runs
+    description: Starts an agent run against an existing thread and validates run state creation.
+    expected_status: 201
+    required_headers:
+      - Authorization
+      - Content-Type
+    sample_body:
+      assistant_id: agent_123
+    expected_response_fields:
+      - id
+      - status
+      - assistant_id
+    tier: 1
+
+  - operation_id: getRun
+    method: GET
+    path: /threads/{threadId}/runs/{runId}
+    description: Retrieves the latest run state to confirm polling and terminal status fields.
+    expected_status: 200
+    required_headers:
+      - Authorization
+    expected_response_fields:
+      - id
+      - status
+      - thread_id
+    tier: 1
+
+  - operation_id: cancelRun
+    method: POST
+    path: /threads/{threadId}/runs/{runId}/cancel
+    description: Cancels an in-flight run to validate run lifecycle controls.
+    expected_status: 200
+    required_headers:
+      - Authorization
+    expected_response_fields:
+      - id
+      - status
+    tier: 2
+
+  - operation_id: submitToolOutputsToRun
+    method: POST
+    path: /threads/{threadId}/runs/{runId}/submit-tool-outputs
+    description: Submits tool outputs for a run that entered requires_action.
+    expected_status: 200
+    required_headers:
+      - Authorization
+      - Content-Type
+    sample_body:
+      tool_outputs:
+        - tool_call_id: call_123
+          output: '{"temperature_f":72,"condition":"sunny"}'
+    expected_response_fields:
+      - id
+      - status
+    tier: 2
+
+  - operation_id: listProjectConnections
+    method: GET
+    path: /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CognitiveServices/accounts/{accountName}/projects/{projectName}/connections
+    description: Lists Foundry project connections through the management plane.
+    expected_status: 200
+    required_headers:
+      - Authorization
+    expected_response_fields:
+      - value
+    tier: 2
+
+  - operation_id: createOrUpdateProjectConnection
+    method: PUT
+    path: /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CognitiveServices/accounts/{accountName}/projects/{projectName}/connections/{connectionName}
+    description: Creates or updates a project connection used by agents or evaluation flows.
+    expected_status: 201
+    required_headers:
+      - Authorization
+      - Content-Type
+    sample_body:
+      properties:
+        category: AzureAISearch
+        target: https://contoso-search.search.windows.net
+        authType: ApiKey
+        credentials:
+          key: '{{ secrets.SEARCH_API_KEY }}'
+    expected_response_fields:
+      - id
+      - name
+      - properties.authType
+    tier: 2
+
+  - operation_id: listDeployments
+    method: GET
+    path: /deployments
+    description: Lists model deployments available to the project for agent configuration checks.
+    expected_status: 200
+    required_headers:
+      - Authorization
+    expected_response_fields:
+      - data
+    tier: 2
+
+  - operation_id: getDeployment
+    method: GET
+    path: /deployments/{deploymentName}
+    description: Retrieves one deployment to verify model readiness and deployment metadata.
+    expected_status: 200
+    required_headers:
+      - Authorization
+    expected_response_fields:
+      - name
+      - model
+      - status
+    tier: 2
+
+  - operation_id: createEvaluation
+    method: POST
+    path: /evaluations
+    description: Starts an evaluation job for a curated dataset and evaluator set.
+    expected_status: 202
+    required_headers:
+      - Authorization
+      - Content-Type
+      - x-ms-enable-preview
+    sample_body:
+      name: support-agent-regression
+      data_source:
+        type: jsonl_uri
+        uri: https://contoso.blob.core.windows.net/evals/support-agent.jsonl
+      target:
+        type: azure_ai_agent
+        name: support-agent
+        version: '3'
+      evaluators:
+        - name: relevance
+          type: built_in
+        - name: groundedness
+          type: built_in
+    expected_response_fields:
+      - id
+      - status
+      - created_at
+    tier: 3
+
+  - operation_id: getEvaluation
+    method: GET
+    path: /evaluations/{evaluationId}
+    description: Retrieves evaluation status and summary metrics for a submitted evaluation.
+    expected_status: 200
+    required_headers:
+      - Authorization
+      - x-ms-enable-preview
+    expected_response_fields:
+      - id
+      - status
+      - summary
+    tier: 3
+
+  - operation_id: listEvaluationRuns
+    method: GET
+    path: /evaluations/{evaluationId}/runs
+    description: Lists evaluation runs to verify pagination and run-level status reporting.
+    expected_status: 200
+    required_headers:
+      - Authorization
+      - x-ms-enable-preview
+    expected_response_fields:
+      - data
+    tier: 3
