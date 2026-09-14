@@ -36,6 +36,7 @@ from run_docs_eval import (  # noqa: E402
     _sanitize_text,
     build_copilot_command,
     build_mcp_config,
+    build_prompt,
     compare_results,
     parse_event_stream,
     run_evaluation,
@@ -297,6 +298,18 @@ def test_run_single_eval_passes_only_selected_config_across_process_boundary(mon
     assert result["response_present"] is True
     assert result["status"] == "success"
     assert result["failure_reason"] is None
+
+
+def test_eval_prompt_names_allowed_tools_and_forbids_guessed_paths():
+    tools = ("foundry_docs-search_docs", "foundry_docs-get_doc")
+
+    prompt = build_prompt("How do I create an agent?", "foundry_docs", tools)
+
+    assert all(f"`{tool}`" in prompt for tool in tools)
+    assert "never call view, bash, shell, web" in prompt
+    assert "exact page paths or identifiers returned by search" in prompt
+    assert "never guess or rewrite paths" in prompt
+    assert "under 1,200 words" in prompt
 
 
 @pytest.mark.parametrize(
