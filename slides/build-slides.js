@@ -13,6 +13,7 @@ const ReactDOMServer = require("react-dom/server");
 const sharp = require("sharp");
 const path = require("path");
 const fs = require("fs");
+const { execFileSync } = require("child_process");
 
 const {
   FaServer, FaRobot, FaBook, FaSearch, FaList, FaSync, FaArrowRight,
@@ -37,38 +38,86 @@ const C = {
   lightTeal: "B8DADD",   // Subtle teal
 };
 
-// ── LIVE DATA — computed from repo ────────────────────────────────────────
+// ── LIVE DATA — computed from the repository at build time ────────────────
+const repoRoot = path.resolve(__dirname, "..");
+
+function walkFiles(dir, extension) {
+  if (!fs.existsSync(dir)) return [];
+  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const fullPath = path.join(dir, entry.name);
+    return entry.isDirectory()
+      ? walkFiles(fullPath, extension)
+      : entry.name.endsWith(extension) ? [fullPath] : [];
+  });
+}
+
+const docFiles = walkFiles(path.join(repoRoot, "docs-vnext"), ".mdx");
+const canonicalDocFiles = walkFiles(path.join(repoRoot, "docs"), ".mdx");
+const workflowFiles = walkFiles(path.join(repoRoot, ".github", "workflows"), ".md");
+const workflowText = workflowFiles.map((file) => ({ file, text: fs.readFileSync(file, "utf8") }));
+const sectionCounts = new Map();
+for (const file of docFiles) {
+  const section = path.relative(path.join(repoRoot, "docs-vnext"), file).split(path.sep)[0];
+  sectionCounts.set(section, (sectionCounts.get(section) || 0) + 1);
+}
+const sectionLabel = (name) => name.split("-").map((word) => word[0].toUpperCase() + word.slice(1)).join(" ");
+const triggerCount = (name) => workflowText.filter(({ text }) => new RegExp(`^  ${name}:`, "m").test(text)).length;
+const sdkMonitor = fs.readFileSync(path.join(repoRoot, ".github", "workflows", "sdk-release-monitor.md"), "utf8");
+const sdkRepos = new Set(sdkMonitor.match(/Azure\/azure-sdk-for-(?:python|js|net|java)/g) || []).size;
+const glossaryTerms = (fs.readFileSync(path.join(repoRoot, "docs-vnext", "reference", "glossary.mdx"), "utf8")
+  .match(/^## /gm) || []).length;
+const canonicalNames = new Set(canonicalDocFiles.map((file) => path.basename(file)));
+const vnextOnly = docFiles.filter((file) => !canonicalNames.has(path.basename(file))).length;
+
+function workflowCategoryCount(pattern) {
+  return workflowFiles.filter((file) => pattern.test(path.basename(file))).length;
+}
+
+function liveGitHubPrCounts() {
+  const fallback = { merged: 14, agentic: 12, asOf: "2026-09-14" };
+  try {
+    const query = (q) => {
+      const input = JSON.stringify({ query: q, perPage: 100, fields: ["number", "title", "url"] });
+      return JSON.parse(execFileSync("github", ["search_pull_requests", "."], {
+        cwd: repoRoot, input, encoding: "utf8", stdio: ["pipe", "pipe", "ignore"],
+      }));
+    };
+    const merged = query("repo:nicholasdbrady/foundry-docs is:pr is:merged label:docs-vnext").length;
+    const agentic = query(
+      "repo:nicholasdbrady/foundry-docs is:pr is:merged label:docs-vnext author:app/github-actions"
+    ).length;
+    return { merged, agentic, asOf: new Date().toISOString().slice(0, 10) };
+  } catch {
+    console.warn("GitHub metrics unavailable; using the dated snapshot from 2026-09-14.");
+    return fallback;
+  }
+}
+
+const GITHUB = liveGitHubPrCounts();
 const DATA = {
-  mdxDocs:           274,
-  agenticWorkflows:  26,
-  totalWorkflows:    31,
-  slashCommands:     7,
-  workflowChains:    4,
-  scheduleWorkflows: 12,
-  pushWorkflows:     1,
-  prWorkflows:       3,
-  issueWorkflows:    25,
-  dispatchWorkflows: 22,
-  sdkRepos:          4,
-  docSections:       16,
-  sections: [
-    { name: "Models",            count: 72 },
-    { name: "Agents",            count: 57 },
-    { name: "Observability",     count: 24 },
-    { name: "Setup",             count: 20 },
-    { name: "Security",          count: 20 },
-    { name: "API & SDK",         count: 17 },
-    { name: "Guardrails",        count: 15 },
-    { name: "Dev Experience",    count: 11 },
-    { name: "Manage",            count: 9  },
-    { name: "Responsible AI",    count: 8  },
-    { name: "Operate",           count: 7  },
-    { name: "Best Practices",    count: 5  },
-    { name: "Get Started",       count: 4  },
-    { name: "Overview",          count: 3  },
-    { name: "Reference",         count: 1  },
-    { name: "Glossary",          count: 1  },
-  ],
+  mdxDocs: docFiles.length,
+  canonicalDocs: canonicalDocFiles.length,
+  agenticWorkflows: workflowFiles.length,
+  slashCommands: triggerCount("slash_command"),
+  workflowChains: triggerCount("workflow_run"),
+  scheduleWorkflows: triggerCount("schedule"),
+  pushWorkflows: triggerCount("push"),
+  prWorkflows: triggerCount("pull_request"),
+  issueWorkflows: triggerCount("issues"),
+  dispatchWorkflows: triggerCount("workflow_dispatch") + triggerCount("repository_dispatch"),
+  sdkRepos,
+  glossaryTerms,
+  vnextOnly,
+  docSections: sectionCounts.size,
+  sections: [...sectionCounts.entries()]
+    .map(([name, count]) => ({ name: sectionLabel(name), count }))
+    .sort((a, b) => b.count - a.count),
+  workflowCategories: {
+    monitoring: workflowCategoryCount(/monitor|diff|dependabot/),
+    testing: workflowCategoryCount(/test|audit|review|verify/),
+    updating: workflowCategoryCount(/updater|sync|unbloat|glossary|fix|changelog|catalog/),
+    community: workflowCategoryCount(/community|reddit|triage/),
+  },
 };
 
 // ── Icon helper ───────────────────────────────────────────────────────────
@@ -291,7 +340,7 @@ async function buildPresentation() {
     const boxes = [
       { label: "MicrosoftDocs\nupstream", sub: "azure-ai-docs", color: C.darkBg,   textCol: C.white,  subCol: C.lightTeal },
       { label: "Sync &\nConvert",         sub: "scripts/",         color: C.primary,  textCol: C.white,  subCol: C.accent },
-      { label: "docs-vnext/",             sub: "274 MDX pages",    color: C.secondary,textCol: C.white,  subCol: C.darkBg },
+      { label: "docs-vnext/",             sub: `${DATA.mdxDocs} MDX pages`, color: C.secondary,textCol: C.white, subCol: C.darkBg },
       { label: "FastMCP\nServer",         sub: "foundry_docs_mcp/",color: C.primary,  textCol: C.white,  subCol: C.accent },
       { label: "AI Assistants\n& IDEs",   sub: "via MCP protocol", color: C.darkBg,   textCol: C.white,  subCol: C.lightTeal },
     ];
@@ -432,12 +481,12 @@ async function buildPresentation() {
 
     // Category cards — 2 rows × 3 cols
     const categories = [
-      { icon: FaEye,           label: "Monitoring",     count: 6,  desc: "Upstream, SDK, community,\nReddit, diff reports, Dependabot" },
-      { icon: FaFlask,         label: "Testing",        count: 4,  desc: "Noob tester, multi-device,\nsearch quality, testbench" },
-      { icon: MdUpdate,        label: "Content Updates",count: 7,  desc: "Healer, updater, unbloat,\nglossary, labels, sync" },
-      { icon: FaShieldAlt,     label: "Quality Review", count: 5,  desc: "Auditor, PR reviewer,\nmerge verify, push check" },
-      { icon: FaUsers,         label: "Community",      count: 3,  desc: "Discussion monitor,\nresponder, auto-triage" },
-      { icon: FaCog,           label: "Operations",     count: 1,  desc: "Slide deck maintainer\n(this deck!)" },
+      { icon: FaEye, label: "Monitoring", count: DATA.workflowCategories.monitoring, desc: "Upstream, SDK, community,\nReddit, diff reports, Dependabot" },
+      { icon: FaFlask, label: "Testing & Review", count: DATA.workflowCategories.testing, desc: "Noob tests, search quality,\naudits, PR and merge checks" },
+      { icon: MdUpdate, label: "Content Updates", count: DATA.workflowCategories.updating, desc: "Updater, sync, unbloat,\nglossary, fixes, catalog" },
+      { icon: FaBolt, label: "Slash Commands", count: DATA.slashCommands, desc: "On-demand operations from\nissues and pull requests" },
+      { icon: FaUsers, label: "Community", count: DATA.workflowCategories.community, desc: "Discussions, Reddit signals,\nand automated triage" },
+      { icon: FaCog, label: "Total Fleet", count: DATA.agenticWorkflows, desc: "Post-consolidation workflow\ndefinitions in the repository" },
     ];
 
     const cardW = 2.95, cardH = 1.55;
@@ -652,7 +701,231 @@ async function buildPresentation() {
   }
 
   // ══════════════════════════════════════════════════════════════════════
-  // SLIDE 8 — Evaluation Harness Results (Dark)
+  // SLIDE 8 — docs-vnext History & Impact
+  // ══════════════════════════════════════════════════════════════════════
+  {
+    const s = pres.addSlide();
+    s.background = { color: C.white };
+    s.addShape(pres.shapes.RECTANGLE, {
+      x: 0, y: 0, w: 10, h: 0.28,
+      fill: { color: C.primary }, line: { color: C.primary, width: 0 },
+    });
+    s.addText("docs-vnext History & Impact", {
+      x: 0.4, y: 0.38, w: 9.2, h: 0.62,
+      fontSize: 36, fontFace: "Trebuchet MS", bold: true, color: C.darkBg, margin: 0,
+    });
+    s.addText(`GitHub snapshot ${GITHUB.asOf} · repository metrics calculated at build time`, {
+      x: 0.4, y: 1.0, w: 9.2, h: 0.28,
+      fontSize: 10.5, fontFace: "Calibri", color: C.textMuted, margin: 0,
+    });
+
+    const impact = [
+      { value: GITHUB.merged, label: "Merged docs-vnext PRs", color: C.primary },
+      { value: GITHUB.agentic, label: "Agent-created merges", color: C.secondary },
+      { value: GITHUB.merged - GITHUB.agentic, label: "Human-created merges", color: C.darkBg },
+      { value: DATA.vnextOnly, label: "Filename additions vs docs/", color: "025E6A" },
+    ];
+    impact.forEach((item, index) => {
+      const x = 0.35 + index * 2.4;
+      s.addShape(pres.shapes.RECTANGLE, {
+        x, y: 1.38, w: 2.15, h: 1.15,
+        fill: { color: item.color }, line: { color: item.color, width: 0 }, shadow: mkShadowSm(),
+      });
+      s.addText(String(item.value), {
+        x, y: 1.48, w: 2.15, h: 0.58,
+        fontSize: 34, fontFace: "Trebuchet MS", bold: true, color: C.white, align: "center", margin: 0,
+      });
+      s.addText(item.label, {
+        x: x + 0.08, y: 2.08, w: 1.99, h: 0.28,
+        fontSize: 10.5, fontFace: "Calibri", color: C.accent, align: "center", margin: 0,
+      });
+    });
+
+    s.addText("Milestone arc", {
+      x: 0.4, y: 2.82, w: 2.2, h: 0.32,
+      fontSize: 14, fontFace: "Trebuchet MS", bold: true, color: C.primary, margin: 0,
+    });
+    s.addShape(pres.shapes.LINE, {
+      x: 0.75, y: 3.65, w: 8.5, h: 0,
+      line: { color: C.primary, width: 3 },
+    });
+    const milestones = [
+      { date: "Mar 1", title: "Unbloat PR #23", note: "Cloud evaluation simplified" },
+      { date: "Mar 2", title: "Glossary PR #28", note: "35 terms created from zero" },
+      { date: "Mar 5", title: "Monitor issues #53/#54", note: "SDK + upstream chains proven" },
+      { date: "Current", title: `${DATA.mdxDocs} pages`, note: `${DATA.docSections} top-level sections` },
+    ];
+    milestones.forEach((item, index) => {
+      const x = 0.55 + index * 2.35;
+      s.addShape(pres.shapes.OVAL, {
+        x: x + 0.72, y: 3.48, w: 0.34, h: 0.34,
+        fill: { color: index === milestones.length - 1 ? C.accent : C.primary },
+        line: { color: C.white, width: 1.5 },
+      });
+      s.addText(item.date, {
+        x, y: 3.12, w: 1.8, h: 0.25,
+        fontSize: 10, fontFace: "Calibri", bold: true, color: C.textMuted, align: "center", margin: 0,
+      });
+      s.addText(item.title, {
+        x, y: 3.95, w: 1.8, h: 0.3,
+        fontSize: 11.5, fontFace: "Trebuchet MS", bold: true, color: C.darkBg, align: "center", margin: 0,
+      });
+      s.addText(item.note, {
+        x, y: 4.33, w: 1.8, h: 0.5,
+        fontSize: 9.5, fontFace: "Calibri", color: C.textMuted, align: "center", margin: 0,
+      });
+    });
+    s.addText(
+      `Automation evidence: SDK release issue #53 and upstream-sync issue #54 were both created, assessed, and closed.`,
+      {
+        x: 0.5, y: 5.05, w: 9, h: 0.3,
+        fontSize: 10.5, fontFace: "Calibri", italic: true, color: C.textMuted, align: "center", margin: 0,
+      }
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // SLIDE 9 — Deep Dive: Agentic Chain
+  // ══════════════════════════════════════════════════════════════════════
+  {
+    const s = pres.addSlide();
+    s.background = { color: C.darkBg };
+    s.addShape(pres.shapes.RECTANGLE, {
+      x: 0, y: 0, w: 10, h: 0.25,
+      fill: { color: C.accent }, line: { color: C.accent, width: 0 },
+    });
+    s.addText("Deep Dive: Agentic Chain in Action", {
+      x: 0.4, y: 0.36, w: 9.2, h: 0.62,
+      fontSize: 34, fontFace: "Trebuchet MS", bold: true, color: C.white, margin: 0,
+    });
+    s.addText("A real upstream commit becomes an assessed documentation action without manual routing", {
+      x: 0.4, y: 1.0, w: 9.2, h: 0.3,
+      fontSize: 12.5, fontFace: "Calibri", color: C.accent, margin: 0,
+    });
+
+    const chain = [
+      { n: "1", title: "Upstream Docs Monitor", detail: "Detected MicrosoftDocs commit 34b7019\n(blocklist instruction update)" },
+      { n: "2", title: "Issue #54", detail: "Recorded 1 changed commit and impact\nRun 22709537548 · succeeded" },
+      { n: "3", title: "sync-and-convert", detail: "Dispatched extraction + MDX conversion\nOutcome: sync requested" },
+      { n: "4", title: "Post-Sync Updater", detail: "Analyzes resulting delta\nCreates docs-vnext PR or noops" },
+    ];
+    chain.forEach((item, index) => {
+      const x = 0.35 + index * 2.42;
+      s.addShape(pres.shapes.RECTANGLE, {
+        x, y: 1.62, w: 2.12, h: 2.22,
+        fill: { color: index % 2 ? "025E6A" : C.primary },
+        line: { color: C.accent, width: 1 }, shadow: mkShadow(),
+      });
+      s.addShape(pres.shapes.OVAL, {
+        x: x + 0.72, y: 1.82, w: 0.68, h: 0.68,
+        fill: { color: C.accent }, line: { color: C.accent, width: 0 },
+      });
+      s.addText(item.n, {
+        x: x + 0.72, y: 1.94, w: 0.68, h: 0.34,
+        fontSize: 18, fontFace: "Trebuchet MS", bold: true, color: C.darkBg, align: "center", margin: 0,
+      });
+      s.addText(item.title, {
+        x: x + 0.12, y: 2.68, w: 1.88, h: 0.42,
+        fontSize: 12, fontFace: "Trebuchet MS", bold: true, color: C.white, align: "center", margin: 0,
+      });
+      s.addText(item.detail, {
+        x: x + 0.12, y: 3.15, w: 1.88, h: 0.55,
+        fontSize: 9.2, fontFace: "Calibri", color: C.lightTeal, align: "center", margin: 0,
+      });
+      if (index < chain.length - 1) {
+        s.addShape(pres.shapes.LINE, {
+          x: x + 2.14, y: 2.72, w: 0.25, h: 0,
+          line: { color: C.accent, width: 2.5, beginArrowType: "none", endArrowType: "triangle" },
+        });
+      }
+    });
+
+    s.addShape(pres.shapes.RECTANGLE, {
+      x: 0.35, y: 4.15, w: 9.3, h: 0.88,
+      fill: { color: "022C33" }, line: { color: C.primary, width: 1 },
+    });
+    s.addText("Parallel SDK chain", {
+      x: 0.55, y: 4.36, w: 1.6, h: 0.3,
+      fontSize: 12.5, fontFace: "Trebuchet MS", bold: true, color: C.accent, margin: 0,
+    });
+    s.addText(
+      "SDK Release Monitor → Java 2.0.0-beta.2 → Issue #53 → breaking-change assessment (Index rename, flags removed, DayOfWeek import change)",
+      {
+        x: 2.15, y: 4.32, w: 7.15, h: 0.4,
+        fontSize: 10.5, fontFace: "Calibri", color: C.lightTeal, margin: 0,
+      }
+    );
+    s.addText("Run durations are not exposed by the available read interface; outcomes and run IDs are cited instead.", {
+      x: 0.5, y: 5.18, w: 9, h: 0.22,
+      fontSize: 9, fontFace: "Calibri", italic: true, color: C.textMuted, align: "center", margin: 0,
+    });
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // SLIDE 10 — Deep Dive: Content Improvements
+  // ══════════════════════════════════════════════════════════════════════
+  {
+    const s = pres.addSlide();
+    s.background = { color: C.lightBg };
+    s.addShape(pres.shapes.RECTANGLE, {
+      x: 0, y: 0, w: 10, h: 0.28,
+      fill: { color: C.secondary }, line: { color: C.secondary, width: 0 },
+    });
+    s.addText("Deep Dive: Content Improvements", {
+      x: 0.4, y: 0.38, w: 9.2, h: 0.62,
+      fontSize: 34, fontFace: "Trebuchet MS", bold: true, color: C.darkBg, margin: 0,
+    });
+
+    const cards = [
+      {
+        x: 0.35, color: C.primary, eyebrow: "PR #28 · GLOSSARY MAINTAINER",
+        title: "From zero to a usable glossary",
+        metric: "35 terms · 16 alphabetical sections · 1 run",
+        before: "Before: no docs-vnext glossary or Reference navigation group.",
+        after: `After: generated glossary, navigation wiring, and terminology coverage. Current glossary has ${DATA.glossaryTerms} top-level term groups after later restructuring.`,
+      },
+      {
+        x: 5.08, color: C.darkBg, eyebrow: "PR #23 · DOCUMENTATION UNBLOAT",
+        title: "Cloud evaluation, less repetition",
+        metric: "3,412 → 3,180 words · bullets −34.5%",
+        before: "Before: duplicate intro text, four repetitive prerequisite tips, verbose lists, and a trivial tip.",
+        after: "After: one reference table, direct prose, and retained technical content. Net change: +10/−39 lines.",
+      },
+    ];
+    cards.forEach((card) => {
+      s.addShape(pres.shapes.RECTANGLE, {
+        x: card.x, y: 1.25, w: 4.57, h: 3.88,
+        fill: { color: card.color }, line: { color: card.color, width: 0 }, shadow: mkShadow(),
+      });
+      s.addText(card.eyebrow, {
+        x: card.x + 0.22, y: 1.52, w: 4.13, h: 0.28,
+        fontSize: 9.5, fontFace: "Consolas", bold: true, color: C.accent, margin: 0,
+      });
+      s.addText(card.title, {
+        x: card.x + 0.22, y: 1.92, w: 4.13, h: 0.55,
+        fontSize: 20, fontFace: "Trebuchet MS", bold: true, color: C.white, margin: 0,
+      });
+      s.addShape(pres.shapes.RECTANGLE, {
+        x: card.x + 0.22, y: 2.66, w: 4.13, h: 0.52,
+        fill: { color: C.accent, transparency: 8 }, line: { color: C.accent, width: 0 },
+      });
+      s.addText(card.metric, {
+        x: card.x + 0.3, y: 2.78, w: 3.97, h: 0.24,
+        fontSize: 11, fontFace: "Trebuchet MS", bold: true, color: C.darkBg, align: "center", margin: 0,
+      });
+      s.addText(card.before, {
+        x: card.x + 0.22, y: 3.45, w: 4.13, h: 0.62,
+        fontSize: 11, fontFace: "Calibri", color: C.lightTeal, margin: 0,
+      });
+      s.addText(card.after, {
+        x: card.x + 0.22, y: 4.18, w: 4.13, h: 0.68,
+        fontSize: 11, fontFace: "Calibri", color: C.white, margin: 0,
+      });
+    });
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // SLIDE 11 — Evaluation Harness Results (Dark)
   // ══════════════════════════════════════════════════════════════════════
   {
     const s = pres.addSlide();
@@ -671,7 +944,7 @@ async function buildPresentation() {
       color: C.white, margin: 0,
     });
 
-    s.addText("300 evaluations · 4 servers · 3 frontier models · 2026-03-05", {
+    s.addText("Latest readable snapshot · 300 evaluations · 4 servers · 3 frontier models · 2026-03-05", {
       x: 0.4, y: 0.98, w: 9.2, h: 0.28,
       fontSize: 11.5, fontFace: "Calibri",
       color: C.textMuted, margin: 0,
@@ -1028,12 +1301,12 @@ async function buildPresentation() {
     });
 
     const metrics = [
-      { val: `${DATA.mdxDocs}`,           label: "MDX Pages",            sub: "in docs-vnext/",            icon: FaFileAlt },
-      { val: `${DATA.agenticWorkflows}`,  label: "Agentic Workflows",    sub: ".md definitions",           icon: FaRobot },
-      { val: `${DATA.docSections}`,       label: "Doc Sections",         sub: "topic areas covered",       icon: FaList },
-      { val: `${DATA.slashCommands}`,     label: "Slash Commands",       sub: "/audit /unbloat /sdk-check…", icon: FaBolt },
-      { val: `${DATA.sdkRepos}`,          label: "SDK Repos Tracked",    sub: "Python · JS · .NET · Java", icon: FaCode },
-      { val: `${DATA.scheduleWorkflows}`, label: "Scheduled Jobs",       sub: "daily/weekly cron",         icon: FaTachometerAlt },
+      { val: `${DATA.mdxDocs}`,          label: "MDX Pages",           sub: `${DATA.docSections} top-level sections`, icon: FaFileAlt },
+      { val: `${DATA.agenticWorkflows}`, label: "Agentic Workflows",   sub: "post-consolidation definitions", icon: FaRobot },
+      { val: `${DATA.slashCommands}`,    label: "Slash Commands",      sub: "on-demand agent entry points", icon: FaBolt },
+      { val: `${DATA.vnextOnly}`,        label: "Filename Additions",  sub: "docs-vnext vs canonical docs/", icon: FaList },
+      { val: `${GITHUB.agentic}`,        label: "Agentic PR Merges",   sub: `of ${GITHUB.merged} docs-vnext merges`, icon: FaCodeBranch },
+      { val: "0.906",                    label: "Eval Average",        sub: "latest readable 4×3 snapshot", icon: FaChartBar },
     ];
 
     const mW = 2.9, mH = 2.15;
@@ -1103,12 +1376,12 @@ async function buildPresentation() {
     });
 
     const roadmap = [
-      { icon: FaGlobe,        item: "Structured overview page generated from agent-surfaced coverage gaps" },
-      { icon: FaChartBar,     item: "Search quality dashboard — track MRR/NDCG trends over time" },
-      { icon: FaRocket,       item: "Proactive gap filling — auto-draft missing pages from upstream signals" },
-      { icon: FaSync,         item: "Docs-vnext → Mintlify deployment via GitHub Pages or Vercel" },
-      { icon: FaShieldAlt,    item: "Responsible AI guardrails section expansion with worked examples" },
-      { icon: MdOutlineMonitor, item: "Real-time ops dashboard embedding MCP server telemetry" },
+      { icon: MdOutlineMonitor, item: "Improve observability coverage — the latest readable evaluation remains weakest in this category" },
+      { icon: FaCodeBranch, item: "Increase agentic PR merge rate while preserving reviewer and post-merge quality gates" },
+      { icon: FaFlask, item: "Expand evaluation scenarios across new Foundry capabilities, SDK changes, and operational journeys" },
+      { icon: FaChartBar, item: "Track category-level scores over time so content changes connect to measurable retrieval outcomes" },
+      { icon: FaEye, item: "Add durable workflow-duration telemetry for end-to-end chain performance reporting" },
+      { icon: FaUsers, item: "Close the loop from community signals to documented fixes and validated reader outcomes" },
     ];
 
     for (let i = 0; i < roadmap.length; i++) {
