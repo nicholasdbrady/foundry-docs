@@ -12,6 +12,13 @@ For information on optimizing tool usage, see [best practices](/agents/tools/too
 
 You can extend the capabilities of your Microsoft Foundry agent by adding an Agent2Agent (A2A) agent endpoint that supports the [A2A protocol](https://a2a-protocol.org/latest/). The A2A tool enables agent-to-agent communication, making it easier to share context between Foundry agents and external agent endpoints through a standardized protocol. This guide shows you how to configure and use the A2A tool in your Foundry Agent Service.
 
+Use the generally available `a2a` tool type for new integrations. The earlier `a2a_preview` tool type remains in preview for existing integrations.
+
+| Tool definition | A2A protocol version | Status |
+| --- | --- | --- |
+| `a2a` (`A2ATool` or `A2AToolboxTool`) | 1.0 | Generally available (GA) |
+| `a2a_preview` (`A2APreviewTool` or `A2APreviewToolboxTool`) | 0.3 | Preview |
+
 Connecting agents via the A2A tool versus a multi-agent workflow:
 
 - **Using the A2A tool**: When Agent A calls Agent B through the A2A tool, Agent B's answer goes back to Agent A. Agent A then summarizes the answer and generates a response for the user. Agent A keeps control and continues to handle future user input.
@@ -31,7 +38,7 @@ The following table shows SDK and setup support. ✔️ (GA) indicates general a
 - A model deployment (for example, `gpt-5-mini`) in your Foundry project.
 - Required Azure role: On the Foundry resource, **Contributor** or **Owner** for management and **Azure AI User** for building an agent.
 - SDK installation:
-  - Python (GA): `pip install "azure-ai-projects>=2.0.0"`
+  - Python (GA): `pip install "azure-ai-projects>=2.5.0"`
   - C# (Preview): `Azure.AI.Projects` prerelease NuGet package
   - TypeScript (GA): `@azure/ai-projects` npm package
   - Java (Preview): `com.azure:azure-ai-agents:2.0.0-beta.1` Maven dependency
@@ -79,8 +86,9 @@ The .NET and Java SDKs are currently in preview. See the [quickstart](/get-start
 from azure.identity import DefaultAzureCredential
 from azure.ai.projects import AIProjectClient
 from azure.ai.projects.models import (
+    A2AProtocolVersion,
+    A2ATool,
     PromptAgentDefinition,
-    A2APreviewTool,
 )
 
 # Format: "https://resource_name.ai.azure.com/api/projects/project_name"
@@ -97,7 +105,8 @@ openai = project.get_openai_client()
 
 a2a_connection = project.connections.get(A2A_CONNECTION_NAME)
 
-tool = A2APreviewTool(
+tool = A2ATool(
+    a2a_version=A2AProtocolVersion.V1_0,
     project_connection_id=a2a_connection.id,
 )
 
@@ -151,6 +160,7 @@ This example creates an agent that can call a remote A2A endpoint. For the conne
 ```csharp
 using System;
 using Azure.AI.Projects;
+using Azure.AI.Projects.Agents;
 using Azure.AI.Projects.OpenAI;
 using Azure.Identity;
 
@@ -160,9 +170,9 @@ var a2aBaseUri = "https://<a2a-endpoint>"; // Optional for non-RemoteA2A connect
 
 AIProjectClient projectClient = new(endpoint: new Uri(projectEndpoint), tokenProvider: new DefaultAzureCredential());
 
-// Create the A2ATool and provide it with the A2A connection ID.
+// Create the A2A tool and provide it with the A2A connection ID.
 AIProjectConnection a2aConnection = projectClient.Connections.GetConnection(connectionName: a2aConnectionName);
-A2APreviewTool a2aTool = new()
+A2ATool a2aTool = new(A2AProtocolVersion.V10)
 {
     ProjectConnectionId = a2aConnection.Id
 };
@@ -172,9 +182,7 @@ if (!string.Equals(a2aConnection.Type.ToString(), "RemoteA2A"))
     {
     throw new InvalidOperationException($"The connection {a2aConnection.Name} is of {a2aConnection.Type.ToString()} type and does not carry the A2A service base URI. Set a2aBaseUri before running this sample.");
     }
-    // Provide the service endpoint as a baseUri parameter
-    // if the connection is not of a RemoteA2A type.
-    a2aTool.BaseUri = new Uri(a2aBaseUri);
+    a2aTool.BaseUrl = new Uri(a2aBaseUri);
 }
 PromptAgentDefinition agentDefinition = new(model: "gpt-5-mini")
 {
@@ -407,7 +415,8 @@ curl --request POST \
     "model": "{{model}}",
     "tools": [ 
       {
-         "type": "a2a_preview",
+         "type": "a2a",
+         "a2a_version": "1.0",
          "base_url": "{{a2a_endpoint}}",
          "project_connection_id": "{{project_connection_id}}"
       }
@@ -444,7 +453,8 @@ export async function main(): Promise<void> {
     // Define A2A tool for agent-to-agent communication
     tools: [
       {
-        type: "a2a_preview",
+        type: "a2a",
+        a2a_version: "1.0",
         project_connection_id: a2aConnection.id,
       },
     ],
