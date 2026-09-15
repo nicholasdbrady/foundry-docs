@@ -19,6 +19,13 @@ For information on optimizing tool usage, see [best practices](/agent-service/to
 
 You can extend the capabilities of your Microsoft Foundry agent by connecting to a remote Agent2Agent (A2A) endpoint that supports the [A2A protocol](https://a2a-protocol.org/latest/). The A2A tool enables agent-to-agent communication, making it easier to share context between Foundry-model-powered agents and external agent endpoints through a standardized protocol. This guide shows you how to configure a connection and call a remote A2A endpoint from your Foundry Agent Service agent.
 
+Use the generally available `a2a` tool type for new integrations. The earlier `a2a_preview` tool type remains in preview for existing integrations.
+
+| Tool definition | A2A protocol version | Status |
+| --- | --- | --- |
+| `a2a` (`A2ATool` or `A2AToolboxTool`) | 1.0 | Generally available (GA) |
+| `a2a_preview` (`A2APreviewTool` or `A2APreviewToolboxTool`) | 0.3 | Preview |
+
 <Tip>
 
 This article covers how to **call** a remote A2A endpoint from your Foundry agent. If you want to **expose** your own agent as an A2A endpoint that other agents can call, see [Host an A2A-compatible agent endpoint](#host-an-a2a-compatible-agent-endpoint) later in this article.
@@ -61,7 +68,7 @@ The following table shows SDK and setup support.
 
 > The Foundry RBAC roles were recently renamed. **Foundry User**, **Foundry Owner**, **Foundry Account Owner**, and **Foundry Project Manager** were previously named Azure AI User, Azure AI Owner, Azure AI Account Owner, and Azure AI Project Manager. You might still see the previous names in some places while the rename rolls out. The role IDs and core permissions are unchanged by the rename.
 - SDK installation:
-  - Python (GA): `pip install "azure-ai-projects>=2.0.0"`
+  - Python (GA): `pip install "azure-ai-projects>=2.5.0"`
   - C#: `Azure.AI.Projects` NuGet package
   - TypeScript (GA): `@azure/ai-projects` npm package
   - Java: `com.azure:azure-ai-agents:2.0.0` Maven dependency
@@ -114,8 +121,9 @@ Select **Prompt Agents** to use the Azure AI Projects SDK to create a server-sid
     from azure.identity import DefaultAzureCredential
     from azure.ai.projects import AIProjectClient
     from azure.ai.projects.models import (
+        A2AProtocolVersion,
+        A2ATool,
         PromptAgentDefinition,
-        A2APreviewTool,
     )
 
     # Format: "https://resource_name.ai.azure.com/api/projects/project_name"
@@ -132,7 +140,8 @@ Select **Prompt Agents** to use the Azure AI Projects SDK to create a server-sid
 
     a2a_connection = project.connections.get(A2A_CONNECTION_NAME)
 
-    tool = A2APreviewTool(
+    tool = A2ATool(
+        a2a_version=A2AProtocolVersion.V1_0,
         project_connection_id=a2a_connection.id,
     )
 
@@ -242,6 +251,7 @@ This example creates an agent that can call a remote A2A endpoint. For the conne
     ```csharp
     using System;
     using Azure.AI.Projects;
+    using Azure.AI.Projects.Agents;
     using Azure.AI.Extensions.OpenAI;
     using Azure.Identity;
 
@@ -251,9 +261,9 @@ This example creates an agent that can call a remote A2A endpoint. For the conne
 
     AIProjectClient projectClient = new(endpoint: new Uri(projectEndpoint), tokenProvider: new DefaultAzureCredential());
 
-    // Create the A2ATool and provide it with the A2A connection ID.
+    // Create the A2A tool and provide it with the A2A connection ID.
     AIProjectConnection a2aConnection = projectClient.Connections.GetConnection(connectionName: a2aConnectionName);
-    A2APreviewTool a2aTool = new()
+    A2ATool a2aTool = new(A2AProtocolVersion.V10)
     {
         ProjectConnectionId = a2aConnection.Id
     };
@@ -263,9 +273,7 @@ This example creates an agent that can call a remote A2A endpoint. For the conne
         {
         throw new InvalidOperationException($"The connection {a2aConnection.Name} is of {a2aConnection.Type.ToString()} type and does not carry the A2A service base URI. Set a2aBaseUri before running this sample.");
         }
-        // Provide the service endpoint as a baseUri parameter
-        // if the connection is not of a RemoteA2A type.
-        a2aTool.BaseUri = new Uri(a2aBaseUri);
+        a2aTool.BaseUrl = new Uri(a2aBaseUri);
     }
     DeclarativeAgentDefinition agentDefinition = new(model: "gpt-4.1-mini")
     {
@@ -557,7 +565,8 @@ curl --request POST \
     "model": "{{model}}",
     "tools": [ 
       {
-         "type": "a2a_preview",
+         "type": "a2a",
+         "a2a_version": "1.0",
          "base_url": "{{a2a_endpoint}}",
          "project_connection_id": "{{project_connection_id}}"
       }
@@ -572,7 +581,7 @@ To delete an agent version, send a `DELETE` request to the same endpoint with th
 </ZoneContent>
 <ZoneContent group="csharp__java__python__rest-api__typescript" value="typescript" options={[{"id": "python", "title": "Python"}, {"id": "csharp", "title": "C#"}, {"id": "rest-api", "title": "REST API"}, {"id": "typescript", "title": "TypeScript"}, {"id": "java", "title": "Java"}]} values={["python", "csharp", "rest-api", "typescript", "java"]} defaultValue="python">
 
-This sample demonstrates how to create an AI agent with A2A capabilities by using the `a2a_preview` tool type and the Azure AI Projects client. The agent can communicate with other agents and provide responses based on inter-agent interactions by using the A2A protocol.
+This sample demonstrates how to create an AI agent with A2A capabilities by using the generally available `a2a` tool type, A2A protocol version 1.0, and the Azure AI Projects client.
 
 ```typescript
 import { DefaultAzureCredential } from "@azure/identity";
@@ -597,7 +606,8 @@ export async function main(): Promise<void> {
     // Define A2A tool for agent-to-agent communication
     tools: [
       {
-        type: "a2a_preview",
+        type: "a2a",
+        a2a_version: "1.0",
         project_connection_id: a2aConnection.id,
       },
     ],
