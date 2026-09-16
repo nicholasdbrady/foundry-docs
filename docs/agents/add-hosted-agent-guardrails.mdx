@@ -14,7 +14,7 @@ You reference the guardrail by its RAI policy resource ID on the agent definitio
 
 * A [Microsoft Foundry project](../../how-to/create-projects).
 * A hosted agent, or a container image ready to deploy as one. See [Deploy a hosted agent](/agents/deploy-hosted-agent).
-* A guardrail (RAI policy) already created on the Foundry resource, and its full Azure Resource Manager (ARM) resource ID. To create one, see [Configure guardrails and controls](../../guardrails/how-to-create-guardrails). The ARM resource ID has this form:
+* A guardrail (RAI policy) on the Foundry resource, and its full Azure Resource Manager (ARM) resource ID. To create one in the Foundry portal, see [Configure guardrails and controls](../../guardrails/how-to-create-guardrails). For a network egress guardrail, you can also [create the policy with `azd provision`](#add-egress-rules-by-using-the-azure-developer-cli). The ARM resource ID has this form:
 
     ```text
     /subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.CognitiveServices/accounts/<account>/raiPolicies/<policy-name>
@@ -334,6 +334,58 @@ Deploy in **Audit** mode first, review the egress decisions, refine your rules, 
 Audit mode changes only how **Deny** actions behave: a request that would be denied is logged instead of blocked. **Transform** and **Rewrite** actions are applied in both Audit and Enforce modes, so header transforms and redirects still take effect while you audit.
 
 </Note>
+
+### Add egress rules by using the Azure Developer CLI
+
+Add the RAI policy ARM resource to your `azd` project's Bicep infrastructure. The `azd provision` command deploys the resource through ARM.
+
+1. Add the following Bicep to the resource-group-scoped infrastructure for the resource group that contains your Foundry resource:
+
+    ```bicep
+    @description('Name of the existing Foundry resource.')
+    param accountName string
+
+    resource account 'Microsoft.CognitiveServices/accounts@2026-05-15-preview' existing = {
+      name: accountName
+    }
+
+    resource egressPolicy 'Microsoft.CognitiveServices/accounts/raiPolicies@2026-05-15-preview' = {
+      parent: account
+      name: 'allow-contoso'
+      properties: {
+        mode: 'Blocking'
+        basePolicyName: 'Microsoft.DefaultV2'
+        egressPolicy: {
+          mode: 'Enforced'
+          defaultAction: 'Deny'
+          rules: [
+            {
+              name: 'allow-contoso'
+              ruleType: 'Fqdn'
+              match: {
+                host: '*.contoso.com'
+              }
+              action: {
+                actionType: 'Allow'
+              }
+            }
+          ]
+        }
+      }
+    }
+
+    output RAI_POLICY_ID string = egressPolicy.id
+    ```
+
+    Reference: [Microsoft.CognitiveServices accounts/raiPolicies](https://learn.microsoft.com/azure/templates/microsoft.cognitiveservices/2026-05-15-preview/accounts/raipolicies).
+
+1. Provision the policy:
+
+    ```bash
+    azd provision
+    ```
+
+The command creates or updates the `Microsoft.CognitiveServices/accounts/raiPolicies` child resource. Use the `RAI_POLICY_ID` output as the full policy resource ID when you attach the guardrail to a hosted agent.
 
 ### Add egress rules by using the REST API
 
