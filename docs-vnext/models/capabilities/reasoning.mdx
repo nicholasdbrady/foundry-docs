@@ -1,6 +1,6 @@
 ---
-title: "Azure OpenAI reasoning models - GPT-5 series, o3-mini, o1, o1-mini"
-description: "Learn how to use Azure OpenAI's advanced GPT-5 series, o3-mini, o1, & o1-mini reasoning models"
+title: "Azure OpenAI reasoning models - GPT-6 Astra and GPT-5"
+description: "Learn how to use Azure OpenAI reasoning models, including GPT-6 Astra, GPT-5 models, and o-series models."
 ---
 Azure OpenAI reasoning models are designed to tackle reasoning and problem-solving tasks with increased focus and capability. These models spend more time processing and understanding the user's request, making them exceptionally strong in areas like science, coding, and math compared to previous iterations.
 
@@ -921,6 +921,7 @@ print(response.model_dump_json(indent=2))
 
 | Model | Region | Limited access |
 |---|---|---|
+| `gpt-6-astra` | [Model availability](/foundry-models/models-sold-directly-by-azure-region-availability) | No access request needed. A quota request is required for some [quota tiers](/setup/quotas-limits); Tier 5 and Tier 6 subscriptions have quota by default. |
 | `gpt-5.4-pro` | [Model availability](/models/catalog/models-sold-directly-by-azure#global-standard-model-availability) | Request access: [Limited access model application](https://aka.ms/OAI/gpt53codexaccess). If you already have access to a limited access model no request is required. |
 | `gpt-5.4` | [Model availability](/models/catalog/models-sold-directly-by-azure#global-standard-model-availability) | Request access: [Limited access model application](https://aka.ms/OAI/gpt53codexaccess). If you already have access to a limited access model no request is required. |
 | `gpt-5.3-codex` | [Model availability](/models/catalog/models-sold-directly-by-azure#global-standard-model-availability) | Request access: [Limited access model application](https://aka.ms/OAI/gpt53codexaccess). If you already have access to a limited access model no request is required. |
@@ -946,6 +947,27 @@ print(response.model_dump_json(indent=2))
 ## API & feature support
 
 <Tabs>
+  <Tab title="GPT-6 reasoning models">
+
+    | Feature | `gpt-6-astra` (2026-09-03) |
+    | --- | --- |
+    | Structured outputs | ✅ |
+    | Context window | 1,050,000 tokens |
+    | Maximum input tokens | 922,000 tokens |
+    | Maximum output tokens | 128,000 tokens |
+    | Input modalities | Text and images |
+    | Output modalities | Text |
+    | Chat Completions API | ✅ |
+    | Responses API | ✅ |
+    | Streaming | ✅ |
+    | Functions and tools | ✅ |
+    | Reasoning effort | ✅, including `none` |
+    | Verbosity | ✅ |
+    | `logprobs` | ✅ |
+    | `temperature` | ✅ |
+    | `top_p` | ✅ |
+
+  </Tab>
   <Tab title="GPT-5 Reasoning Models">
 
     | **Feature**  | **gpt-5.4-pro**  | **gpt-5.4**, **2026-03-05** | **gpt-5.3-codex**, **2026-02-24** | **gpt-5.2-codex**, **2026-01-14**  | **gpt-5.2**, **2025-12-11** | **gpt-5.1-codex-max**, **2025-12-04** | **gpt-5.1**, **2025-11-13** | **gpt-5.1-chat**, **2025-11-13** | **gpt-5.1-codex**, **2025-11-13** | **gpt-5.1-codex-mini**, **2025-11-13** | **gpt-5-pro**, **2025-10-06** | **gpt-5-codex**, **2025-09-011**  | **gpt-5**, **2025-08-07**  | **gpt-5-mini**, **2025-08-07**   | **gpt-5-nano**, **2025-08-07**  |
@@ -1018,9 +1040,9 @@ print(response.model_dump_json(indent=2))
 - `o3-pro` does not currently support image generation.
 </Note>
 
-### Not Supported
+### Unsupported parameters
 
-The following are currently unsupported with reasoning models:
+Reasoning models other than GPT-6 Astra don't support the following parameters:
 
 - `temperature`, `top_p`, `presence_penalty`, `frequency_penalty`, `logprobs`, `top_logprobs`, `logit_bias`, `max_tokens`
 
