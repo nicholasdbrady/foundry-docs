@@ -1,0 +1,133 @@
+---
+title: "Use GPT-Live for real-time voice"
+description: "Connect to GPT-Live over WebSocket, configure a session, stream audio, and process transcripts and turns."
+sidebarTitle: "Use GPT-Live over WebSocket"
+---
+
+This guide shows how to connect to GPT-Live over WebSocket, configure a session, stream audio, and process the events GPT-Live returns. For a capability overview, see [What is GPT-Live?](https://learn.microsoft.com/azure/foundry/openai/concepts/gpt-live).
+
+## Prerequisites
+
+- An [Azure subscription](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn)
+- A [Microsoft Foundry resource](https://learn.microsoft.com/azure/ai-services/multi-service-resource)
+- An API key or Microsoft Entra ID credentials
+- A deployment of the `gpt-live-1` model
+
+## Connect over WebSocket
+
+Open a WebSocket connection to the live endpoint, then send a `session.start` event. Wait for `session.started` before treating the session as ready.
+
+```javascript
+import WebSocket from "ws";
+
+const resourceName = process.env.FOUNDRY_RESOURCE_NAME;
+const apiKey = process.env.AZURE_OPENAI_API_KEY;
+
+const ws = new WebSocket(
+  `wss://${resourceName}.openai.azure.com/openai/v1/live`,
+  { headers: { "api-key": apiKey } },
+);
+
+ws.on("open", () => {
+  ws.send(JSON.stringify({
+    type: "session.start",
+    event_id: "event_start",
+    session: {
+      model: "gpt-live-1",
+      instructions: "Be concise and ask before taking an external action.",
+      audio: { output: { voice: "marin" } },
+      delegation: { type: "client" },
+    },
+  }));
+});
+
+ws.on("message", (data) => {
+  const event = JSON.parse(data.toString());
+  console.log(event.type, event);
+});
+```
+
+For production applications, prefer [Microsoft Entra ID authentication](https://learn.microsoft.com/azure/foundry-classic/openai/how-to/managed-identity).
+
+## Configure the session
+
+The `session` object in `session.start` rejects unknown fields.
+
+| Field | Notes |
+|---|---|
+| `model` | Required. The GPT-Live deployment, such as `gpt-live-1`. Immutable after startup. |
+| `instructions` | System instructions. Immutable after startup; add context with `session.instructions.append`. |
+| `audio.output.voice` | Output voice. Defaults to `marin` and is immutable after startup. |
+| `delegation` | Either `{ type: "client" }` or `{ type: "responses", responses: {...} }`. Omitting it or setting it to `null` selects client delegation. |
+
+Later `session.update` calls are sparse: omitted fields keep their current values, and only `delegation.responses` settings can change. A successful update produces `session.updated` with the complete public session resource.
+
+## Stream audio
+
+Audio input and output use raw, headerless, mono, signed 16-bit little-endian PCM sampled at 24,000 Hz. Base64-encode the raw PCM bytes, not a WAV file or another container, and send them in `session.input_audio.append`. Each sample is two bytes, so the decoded payload must contain an even number of bytes.
+
+```javascript
+ws.send(JSON.stringify({
+  type: "session.input_audio.append",
+  event_id: "event_audio_1",
+  audio: "BASE64_ENCODED_24KHZ_PCM16LE_MONO_AUDIO",
+}));
+```
+
+GPT-Live streams output as `session.output_audio.delta` events in the same PCM16 format. Each event has a server-assigned half-open time range in `start_ms` and `end_ms`. A gap between ranges represents omitted silence.
+
+## Process transcripts
+
+`session.input_transcript.delta` and `session.output_transcript.delta` emit timed transcript fragments. Append fragments in order for each speaker.
+
+Because listening and speaking can overlap, user and assistant fragments can interleave. Fragment boundaries reflect audio cadence rather than semantic turns, and GPT-Live doesn't emit an authoritative turn-completed event. Group fragments into turns in your application when needed.
+
+## Add context
+
+Use append events to feed text into a running session. Each event requires a plain-string `content` value of up to 500 tokens and a `delegation_id`. Use `null` for general session context or a client delegation ID for a delegated task.
+
+| Event | Use | Acknowledgment |
+|---|---|---|
+| `session.instructions.append` | Trusted application instructions that change behavior or speech | `session.instructions.appended` |
+| `session.thinking.append` | Quiet context that the model can use without saying it immediately | `session.thinking.appended` |
+| `session.commentary.append` | Information the model should say aloud, possibly paraphrased | `session.commentary.appended` |
+
+```javascript
+ws.send(JSON.stringify({
+  type: "session.thinking.append",
+  event_id: "event_context_1",
+  delegation_id: null,
+  content: "The user has already accepted the terms.",
+}));
+```
+
+An acknowledgment confirms that context was accepted for injection. It doesn't confirm that the model consumed or spoke the update. Quiet context can still influence later speech, so don't use it for secrets.
+
+## Observe a session with a sideband WebSocket
+
+A trusted application server can attach a second sideband WebSocket to a running session:
+
+```text
+wss://YOUR_RESOURCE_NAME.openai.azure.com/openai/v1/live/sessions/SESSION_ID/attach
+```
+
+Don't send `session.start` on the sideband connection. It receives the same JSON events as the primary connection, and its commands enter the same session stream.
+
+## Close a session
+
+Send `session.close`, then continue reading events until `session.closed` arrives.
+
+```javascript
+ws.send(JSON.stringify({
+  type: "session.close",
+  event_id: "event_close",
+}));
+```
+
+The service drains active delegation and output work before it emits `session.closed`. Read the final cumulative `usage` from that event.
+
+## Related content
+
+- [Use GPT-Live via WebRTC](/models/capabilities/gpt-live-webrtc)
+- [Delegate work in GPT-Live](/models/capabilities/gpt-live-delegation)
+- [GPT-Live event API reference](https://learn.microsoft.com/azure/foundry/openai/gpt-live-reference)
