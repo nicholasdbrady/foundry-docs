@@ -3,19 +3,15 @@ title: "Enable incoming A2A on a Foundry agent"
 description: "Expose your Foundry Agent Service agent as an A2A endpoint so other agents can discover and call it using the Agent2Agent protocol."
 ---
 
+You can expose your Foundry Agent Service agent as an Agent2Agent (A2A) endpoint so that other agents can discover and call it through the [A2A protocol](https://a2a-protocol.org/latest/). When incoming A2A is enabled, Foundry publishes an agent card for your agent and accepts inbound A2A requests from external callers.
+
+Foundry Agent Service supports generally available A2A protocol **version 1.0** and preview **version 0.3**. New integrations should target version 1.0. For details about how clients select a version, see [A2A protocol versions](#a2a-protocol-versions).
+
 <Info>
 
 Items marked (preview) in this article are currently in public preview. This preview is provided without a service-level agreement, and we don't recommend it for production workloads. Certain features might not be supported or might have constrained capabilities. For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
 
 </Info>
-
-You can expose your Foundry Agent Service agent as an Agent2Agent (A2A) endpoint so that other agents can discover and call it through the [A2A protocol](https://a2a-protocol.org/latest/). When incoming A2A is enabled, Foundry publishes an agent card for your agent and accepts inbound A2A requests from external callers.
-
-<Note>
-
-Foundry Agent Service supports A2A protocol **version 1.0** and **version 0.3**. New integrations should target version 1.0. For details about how clients select a version, see [A2A protocol versions](#a2a-protocol-versions).
-
-</Note>
 
 ## Supported agent types
 
@@ -136,46 +132,43 @@ Enabling incoming A2A requires two things: an **agent card** that describes your
     Install the required package:
 
     ```bash
-    pip install "azure-ai-projects>=2.0.0"
+    pip install "azure-ai-projects>=2.5.0"
     ```
 
-    Use the `patch_agent_details` method to add the A2A protocol to your agent's endpoint:
+    Use the `update_details` method to add the agent card and A2A protocol to your agent's endpoint:
 
     ```python
     from azure.identity import DefaultAzureCredential
     from azure.ai.projects import AIProjectClient
     from azure.ai.projects.models import (
-        AgentEndpoint,
-        AgentEndpointProtocol,
+        A2AProtocolConfiguration, AgentCard, AgentCardSkill, AgentEndpointConfig,
+        ProtocolConfiguration, ResponsesProtocolConfiguration,
     )
-
-    # Format: "https://{account}.ai.azure.com/api/projects/{project}"
-    PROJECT_ENDPOINT = "your_project_endpoint"
-    AGENT_NAME = "your_agent_name"
 
     project_client = AIProjectClient(
-        endpoint=PROJECT_ENDPOINT,
+        endpoint="your_project_endpoint",
         credential=DefaultAzureCredential(),
     )
-
-    endpoint_config = AgentEndpoint(
-        protocols=[
-            AgentEndpointProtocol.RESPONSES,
-            AgentEndpointProtocol.A2A,
-        ],
+    patched_agent = project_client.agents.update_details(
+        agent_name="your_agent_name",
+        agent_endpoint=AgentEndpointConfig(
+            protocol_configuration=ProtocolConfiguration(
+                responses=ResponsesProtocolConfiguration(),
+                a2a=A2AProtocolConfiguration(),
+            ),
+        ),
+        agent_card=AgentCard(
+            version="1.0",
+            description="A helpful assistant that answers questions.",
+            skills=[AgentCardSkill(
+                id="general-qa",
+                name="General Q&A",
+                description="Answers general questions.",
+            )],
+        ),
     )
-
-    patched_agent = project_client.beta.agents.patch_agent_details(
-        agent_name=AGENT_NAME,
-        agent_endpoint=endpoint_config,
-    )
+    print(f"Enabled incoming A2A for agent: {patched_agent.name}")
     ```
-
-    <Note>
-
-    Setting the agent card through the Python SDK isn't supported yet. Use the REST API to configure the agent card.
-
-    </Note>
 
   </Tab>
 </Tabs>
@@ -190,7 +183,7 @@ Foundry serves both A2A protocol versions on the same base path (`…/endpoint/p
 
 <Info>
 
-If a request doesn't specify a version through the `A2A-Version` header or `a2a-version` query string, Foundry serves A2A v0.3 by default, in accordance with the A2A specification. To use v1.0, set the header, set the query string, or have your client fetch the v1.0 agent card so the SDK negotiates v1.0 automatically.
+If a request doesn't specify a version through the `A2A-Version` header or `a2a-version` query string, Foundry serves preview A2A v0.3 by default, in accordance with the A2A specification. For production integrations, explicitly select generally available v1.0 by setting the header, setting the query string, or having your client fetch the v1.0 agent card so the SDK negotiates v1.0 automatically.
 
 </Info>
 
@@ -198,8 +191,12 @@ The following table summarizes the supported versions:
 
 | Version | Status | Recommended for |
 |---|---|---|
-| 1.0 | Supported | New integrations |
-| 0.3 | Supported | Existing integrations that already target v0.3 |
+| 1.0 | Generally available (GA) | New integrations |
+| 0.3 | Preview | Existing integrations that already target v0.3 |
+
+## Understand A2A task and context retention
+
+Foundry retains A2A tasks and contexts for 60 days from their most recent write. Each new write to a task or context resets its 60-day retention period.
 
 ## Verify the agent card
 
@@ -445,14 +442,15 @@ For other authentication options (key-based, OAuth, managed identity), see [Crea
 
 ### Step 2: Create the calling agent with the A2A tool
 
-After the connection exists, create an agent that uses the `A2APreviewTool` to call the target agent:
+After the connection exists, create an agent that uses the `A2ATool` to call the target agent:
 
 ```python
 from azure.identity import DefaultAzureCredential
 from azure.ai.projects import AIProjectClient
 from azure.ai.projects.models import (
+    A2AProtocolVersion,
+    A2ATool,
     PromptAgentDefinition,
-    A2APreviewTool,
 )
 
 PROJECT_ENDPOINT = "your_project_endpoint"
@@ -467,7 +465,8 @@ openai = project.get_openai_client()
 
 a2a_connection = project.connections.get(A2A_CONNECTION_NAME)
 
-tool = A2APreviewTool(
+tool = A2ATool(
+    a2a_version=A2AProtocolVersion.V1_0,
     project_connection_id=a2a_connection.id,
 )
 
@@ -511,12 +510,12 @@ For more language examples (C#, JavaScript, Java, REST), see [Connect to an A2A 
 
 ## Limitations
 
-- A2A protocol versions 1.0 and 0.3 are supported. Other versions aren't supported.
+- Generally available A2A protocol version 1.0 and preview version 0.3 are supported. Other versions aren't supported.
 - For A2A v1.0, only the JSONRPC transport is supported. HTTP+JSON and gRPC aren't supported for v1.0. See [Supported A2A transports](#supported-a2a-transports).
 - Only **text** modality is supported. File data and other nontext modalities aren't supported.
 - Streaming responses (server-sent events) aren't supported.
 - Incoming A2A requires the responses protocol. Agents that don't use the responses protocol can't be exposed as A2A endpoints.
-- This feature is in preview and isn't recommended for production workloads.
+- A2A v0.3 is in preview and isn't recommended for production workloads. Use v1.0 for production integrations.
 
 ## Related content
 
