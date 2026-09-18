@@ -226,10 +226,14 @@ By default, the routing policy is **Always use latest**. To pin traffic to a spe
       },
     };
 
-    const patchedAgent = await project.agents.patchAgentObject(agentName, {
-      agentEndpoint: endpointConfig,
-    });
-    console.log(`Agent endpoint configured for agent: ${patchedAgent.name}`);
+    async function configureAgentEndpoint() {
+      const patchedAgent = await project.agents.patchAgentObject(agentName, {
+        agentEndpoint: endpointConfig,
+      });
+      console.log(`Agent endpoint configured for agent: ${patchedAgent.name}`);
+    }
+
+    void configureAgentEndpoint();
     ```
 
     Reference: [AIProjectClient](https://learn.microsoft.com/javascript/api/overview/azure/ai-projects-readme)
@@ -384,12 +388,16 @@ An agent can expose multiple protocols simultaneously. Configure protocols and i
       authorization_schemes: [{ type: "Entra" }, { type: "BotServiceRbac" }],
     };
 
-    const patchedAgent = await project.agents.patchAgentObject(agentName, {
-      agentEndpoint: endpointConfig,
-    });
-    console.log(
-      `Protocols and authorization updated for agent: ${patchedAgent.name}`,
-    );
+    async function configureProtocolsAndAuthorization() {
+      const patchedAgent = await project.agents.patchAgentObject(agentName, {
+        agentEndpoint: endpointConfig,
+      });
+      console.log(
+        `Protocols and authorization updated for agent: ${patchedAgent.name}`,
+      );
+    }
+
+    void configureProtocolsAndAuthorization();
     ```
 
     Reference: [AIProjectClient](https://learn.microsoft.com/javascript/api/overview/azure/ai-projects-readme)
@@ -581,10 +589,14 @@ An agent card surfaces details and capabilities to consumers, including for agen
       ],
     };
 
-    const patchedAgent = await project.agents.patchAgentObject(agentName, {
-      agentCard,
-    });
-    console.log(`Added an agent card to: ${patchedAgent.name}`);
+    async function addAgentCard() {
+      const patchedAgent = await project.agents.patchAgentObject(agentName, {
+        agentCard,
+      });
+      console.log(`Added an agent card to: ${patchedAgent.name}`);
+    }
+
+    void addAgentCard();
     ```
 
     Reference: [AIProjectClient](https://learn.microsoft.com/javascript/api/overview/azure/ai-projects-readme)
