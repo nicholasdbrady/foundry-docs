@@ -1,0 +1,200 @@
+---
+title: "Add guardrails to a hosted agent"
+description: "Attach content safety and network egress guardrails to a hosted agent, including moderation for custom invocations payloads."
+---
+
+Attach a Responsible AI (RAI) policy to a hosted agent to screen content or control outbound network access. The agent definition references the policy by its full Azure Resource Manager resource ID.
+
+## Prerequisites
+
+- A [Microsoft Foundry project](/setup/create-projects)
+- A hosted agent or a container image ready to deploy as one
+- An RAI policy on the Foundry resource
+- `azd ai agent` extension version 1.0.0-beta.12 or later for Azure Developer CLI deployments
+- `azure-ai-projects` version 2.2.0 or later for Python; invocations moderation requires version 2.7.0 or later
+
+The policy ID has this format:
+
+```text
+/subscriptions/YOUR_SUBSCRIPTION_ID/resourceGroups/YOUR_RESOURCE_GROUP/providers/Microsoft.CognitiveServices/accounts/YOUR_ACCOUNT/raiPolicies/YOUR_POLICY
+```
+
+## Choose configuration by protocol
+
+| Protocol | Required configuration |
+| --- | --- |
+| `responses` | Set `rai_policy_name`. Foundry knows where request and response text appears. |
+| `invocations` | Set `rai_policy_name` and `invocations_moderation`. You must identify the fields that contain text. |
+| `invocations_ws` | Content safety moderation isn't available. |
+
+<Warning>
+For the `invocations` protocol, attaching a policy without `invocations_moderation` doesn't screen content. The agent can deploy successfully even though requests pass through unfiltered.
+</Warning>
+
+## Attach a guardrail
+
+<Tabs>
+  <Tab title="Azure Developer CLI">
+
+Add a `rai_policy` entry to the hosted-agent service in `azure.yaml`:
+
+```yaml
+services:
+  my-agent:
+    host: azure.ai.agent
+    project: src/my-agent
+    kind: hosted
+    policies:
+      - type: rai_policy
+        raiPolicyName: /subscriptions/YOUR_SUBSCRIPTION_ID/resourceGroups/YOUR_RESOURCE_GROUP/providers/Microsoft.CognitiveServices/accounts/YOUR_ACCOUNT/raiPolicies/YOUR_POLICY
+    protocols:
+      - protocol: responses
+        version: "2.0.0"
+```
+
+Deploy the agent:
+
+```bash
+azd deploy
+```
+
+  </Tab>
+  <Tab title="Python">
+
+Pass a `RaiConfig` to `HostedAgentDefinition`:
+
+```python
+from azure.ai.projects import AIProjectClient
+from azure.ai.projects.models import HostedAgentDefinition, RaiConfig
+from azure.identity import DefaultAzureCredential
+
+client = AIProjectClient(
+    endpoint="https://YOUR_RESOURCE.services.ai.azure.com/api/projects/YOUR_PROJECT",
+    credential=DefaultAzureCredential(),
+    allow_preview=True,
+)
+
+client.agents.create_version(
+    agent_name="my-agent",
+    definition=HostedAgentDefinition(
+        cpu="1",
+        memory="2Gi",
+        rai_config=RaiConfig(
+            rai_policy_name="/subscriptions/YOUR_SUBSCRIPTION_ID/resourceGroups/YOUR_RESOURCE_GROUP/providers/Microsoft.CognitiveServices/accounts/YOUR_ACCOUNT/raiPolicies/YOUR_POLICY"
+        ),
+    ),
+)
+```
+
+  </Tab>
+  <Tab title="REST">
+
+Include `rai_config` in the hosted-agent definition:
+
+```json
+{
+  "name": "my-agent",
+  "definition": {
+    "kind": "hosted",
+    "rai_config": {
+      "rai_policy_name": "/subscriptions/YOUR_SUBSCRIPTION_ID/resourceGroups/YOUR_RESOURCE_GROUP/providers/Microsoft.CognitiveServices/accounts/YOUR_ACCOUNT/raiPolicies/YOUR_POLICY"
+    }
+  }
+}
+```
+
+  </Tab>
+</Tabs>
+
+Always use the full policy resource ID. A missing or invalid policy can fail open, so verify the policy and test filtering before relying on it.
+
+## Configure invocations moderation
+
+The `invocations` protocol accepts custom request and response bodies. Configure where Foundry should find text:
+
+| Setting | Required when | Purpose |
+| --- | --- | --- |
+| `response_mode` | Always | Declares `non_streaming`, `streaming`, or `both`. |
+| `input_content_type` | Optional | Sets request parsing to `json` (default) or `text`. |
+| `output_content_type` | Optional | Sets response parsing to `json` (default) or `text`. |
+| `input_paths` | JSON input | Selects user text in the request body. |
+| `output_paths` | Buffered JSON output | Selects agent text in the response body. |
+| `stream_selectors` | Streaming JSON output | Maps an event `type` to the top-level field that contains text. |
+
+Paths support `$`, member access, array indexes, and `[*]` wildcards. For example, `$.messages[*].content` selects every message's `content` field. Stream selector names are exact and case-sensitive.
+
+<Tabs>
+  <Tab title="Azure Developer CLI">
+
+```yaml
+policies:
+  - type: rai_policy
+    raiPolicyName: /subscriptions/YOUR_SUBSCRIPTION_ID/resourceGroups/YOUR_RESOURCE_GROUP/providers/Microsoft.CognitiveServices/accounts/YOUR_ACCOUNT/raiPolicies/YOUR_POLICY
+    invocationsModeration:
+      responseMode: both
+      inputContentType: json
+      outputContentType: json
+      inputPaths:
+        - $.message
+      outputPaths:
+        - $.full_text
+      streamSelectors:
+        - eventType: token
+          textField: content
+```
+
+  </Tab>
+  <Tab title="REST">
+
+```json
+{
+  "rai_config": {
+    "rai_policy_name": "/subscriptions/YOUR_SUBSCRIPTION_ID/resourceGroups/YOUR_RESOURCE_GROUP/providers/Microsoft.CognitiveServices/accounts/YOUR_ACCOUNT/raiPolicies/YOUR_POLICY",
+    "invocations_moderation": {
+      "response_mode": "both",
+      "input_content_type": "json",
+      "output_content_type": "json",
+      "input_paths": ["$.message"],
+      "output_paths": ["$.full_text"],
+      "stream_selectors": [
+        {
+          "event_type": "token",
+          "text_field": "content"
+        }
+      ]
+    }
+  }
+}
+```
+
+  </Tab>
+</Tabs>
+
+<Info>
+Input bodies larger than 2 MB are forwarded without input screening. Buffered responses larger than 1 MB are rejected, and a single content check is limited to 10,000 characters.
+</Info>
+
+## Verify the guardrail
+
+Get the deployed agent version and inspect `definition.rai_config`. Then send content that the policy is configured to block and confirm the platform blocks it.
+
+```bash
+curl -s \
+  -H "Authorization: Bearer $TOKEN" \
+  "$PROJECT_ENDPOINT/agents/my-agent/versions/1?api-version=v1" \
+  | jq '.definition.rai_config'
+```
+
+A blocked request or buffered response returns HTTP 400 with a `content_filter` error. A blocked streamed response can retain HTTP 200 because headers were already sent; handle the terminal `error` event instead of treating the status alone as success.
+
+## Network egress controls
+
+Network egress guardrails can allow, deny, audit, or transform outbound requests from a hosted agent. Rules are evaluated in order, and the first matching rule wins. Use the portal's **Guardrails** area to add network rules, then attach the resulting RAI policy to the agent with the same `rai_policy_name` configuration.
+
+The hosted-agent runtime supplies the egress proxy certificate authority through standard environment variables such as `SSL_CERT_FILE`, `REQUESTS_CA_BUNDLE`, `GRPC_DEFAULT_SSL_ROOTS_FILE_PATH`, and `NODE_EXTRA_CA_CERTS`. Don't pin or persist this certificate because it can rotate or differ by cluster.
+
+## Related content
+
+- [Guardrails and controls overview](/guardrails/guardrails-overview)
+- [Configure guardrails and controls](/guardrails/how-to-create-guardrails)
+- [Deploy a hosted agent](/agents/development/deploy-hosted-agent)

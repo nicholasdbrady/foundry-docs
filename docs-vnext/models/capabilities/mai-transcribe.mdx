@@ -1,0 +1,109 @@
+---
+title: "Use MAI-Transcribe-2 with Azure Speech"
+description: "Transcribe audio with MAI-Transcribe-2, speaker diarization, timestamps, keyword biasing, and automatic language detection."
+---
+
+<Note>
+MAI-Transcribe is in public preview and is provided without a service-level agreement. It isn't recommended for production workloads.
+</Note>
+
+MAI-Transcribe-2 is a speech-to-text model for transcription across 60 languages and real-world audio conditions. It supports speaker diarization, word-level timestamps, automatic language identification, keyword biasing, code switching, and clean or verbatim transcript styles.
+
+Supported versions are:
+
+- `MAI-Transcribe-2`
+- `MAI-Transcribe-1.5`
+- `MAI-Transcribe-1`, deprecated August 20, 2026
+
+## Prerequisites
+
+- An Azure subscription
+- A Microsoft Foundry resource for Speech
+- The Speech resource key and region
+- A WAV, MP3, or FLAC audio file
+
+## Configure transcription
+
+| Feature | Parameter | Values | Default |
+| --- | --- | --- | --- |
+| Model | `enhancedMode.model` | `MAI-Transcribe-2` | Required |
+| Enhanced mode | `enhancedMode.enabled` | `true`, `false` | `false` |
+| Speaker diarization | `diarization.enabled` | `true`, `false` | `false` |
+| Timestamps | `modelOptions.timestamps` | `word`, `segment`, `none` | `none` |
+| Transcript style | `modelOptions.transcribeStyle` | `verbatim`, `clean` | `verbatim` |
+| Keyword biasing | `phraseList.phrases` | Array of strings | Empty |
+| Language | `locales` | One language code | Automatic detection |
+
+Only set `locales` when you know the recording language and automatic detection doesn't work. The value is a strong hint and only one language is supported per request.
+
+## Transcribe an audio file
+
+Send a multipart request to the Fast Transcription API:
+
+```bash
+curl --location \
+  "https://YOUR_RESOURCE.cognitiveservices.azure.com/speechtotext/transcriptions:transcribe?api-version=2025-10-15" \
+  --header "Ocp-Apim-Subscription-Key: YOUR_SPEECH_RESOURCE_KEY" \
+  --form "audio=@YOUR_AUDIO_FILE.wav" \
+  --form 'definition={
+    "enhancedMode": {
+      "enabled": true,
+      "model": "MAI-Transcribe-2"
+    }
+  }'
+```
+
+### Add diarization and timestamps
+
+```bash
+curl --location \
+  "https://YOUR_RESOURCE.cognitiveservices.azure.com/speechtotext/transcriptions:transcribe?api-version=2025-10-15" \
+  --header "Ocp-Apim-Subscription-Key: YOUR_SPEECH_RESOURCE_KEY" \
+  --form "audio=@YOUR_AUDIO_FILE.wav" \
+  --form 'definition={
+    "enhancedMode": {
+      "enabled": true,
+      "model": "MAI-Transcribe-2"
+    },
+    "diarization": {
+      "enabled": true
+    },
+    "modelOptions": {
+      "timestamps": "word",
+      "transcribeStyle": "clean"
+    }
+  }'
+```
+
+`clean` removes fillers and formats common speech patterns. Use `verbatim` when you need fillers, false starts, and self-corrections preserved.
+
+### Bias domain-specific terms
+
+```json
+{
+  "enhancedMode": {
+    "enabled": true,
+    "model": "MAI-Transcribe-2"
+  },
+  "phraseList": {
+    "phrases": [
+      "YOUR_PRODUCT_NAME",
+      "YOUR_DOMAIN_TERM"
+    ]
+  }
+}
+```
+
+Phrase-list entries are recognition hints, not forced output.
+
+## Language support
+
+MAI-Transcribe-2 supports 60 languages, including Arabic, Chinese, Dutch, English, French, German, Hindi, Italian, Japanese, Korean, Portuguese, Spanish, and many regional languages. It also handles common code-switching patterns such as Hinglish and Spanglish.
+
+For the current language matrix and regional availability, see [MAI-Transcribe in Azure Speech](https://learn.microsoft.com/azure/ai-services/speech-service/mai-transcribe).
+
+## Related content
+
+- [Speech service regions](https://learn.microsoft.com/azure/ai-services/speech-service/regions)
+- [Fast Transcription API quickstart](https://learn.microsoft.com/azure/ai-services/speech-service/llm-speech)
+- [Transcriptions REST reference](https://learn.microsoft.com/rest/api/speechtotext/transcriptions/transcribe)
