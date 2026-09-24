@@ -1,0 +1,143 @@
+---
+title: "Publish private-network agents to Microsoft 365 and Teams"
+description: "Publish a Microsoft Foundry agent by REST API and enable a source-IP-filtered Activity Protocol endpoint for Microsoft 365 and Teams."
+---
+
+Use this REST flow to publish an agent to Microsoft 365 and Teams when the Foundry project disables public network access. The configuration exposes only the Activity Protocol route to service-managed Microsoft 365 and Azure Bot Service source ranges. Agent management APIs and other protocols remain private.
+
+<Warning>
+Microsoft 365 and Teams process and store publishing metadata and agent conversations under their applicable compliance, data residency, and data handling terms. Confirm that these data flows meet your organization's requirements before publishing.
+</Warning>
+
+## Prerequisites
+
+- A Foundry project with an agent that you tested
+- A client that can reach the project's private endpoint
+- **Foundry User** on the project
+- Permission to create Azure Bot Service resources and channels
+- Azure CLI signed in to the target subscription
+- The `Microsoft.BotService` resource provider registered
+
+```bash
+az provider register --namespace Microsoft.BotService
+```
+
+## Publishing flow
+
+1. Get the agent identity and tenant ID.
+1. Create an Azure Bot Service resource.
+1. Enable the public Activity Protocol route and a Bot Service authorization scheme.
+1. Call the Microsoft 365 publish API.
+1. Test the agent in Microsoft Copilot or Teams.
+
+## Get the required IDs
+
+Get a bearer token for the Foundry API:
+
+```bash
+TOKEN=$(az account get-access-token \
+  --resource https://ai.azure.com \
+  --query accessToken \
+  --output tsv)
+```
+
+Read the agent and save `instance_identity.client_id`:
+
+```bash
+curl -s \
+  -H "Authorization: Bearer $TOKEN" \
+  "$PROJECT_ENDPOINT/agents/$AGENT_NAME?api-version=v1" \
+  | jq -r '.instance_identity.client_id'
+```
+
+Get the tenant ID:
+
+```bash
+az account show --query tenantId --output tsv
+```
+
+## Create the Azure Bot Service resource
+
+Configure the bot endpoint as:
+
+```text
+https://YOUR_RESOURCE.services.ai.azure.com/api/projects/YOUR_PROJECT/agents/YOUR_AGENT/endpoint/protocols/activityProtocol?api-version=2025-05-15-preview
+```
+
+Create the bot with public network access disabled. The bot's `msaAppId` is the agent identity client ID, and `msaAppTenantId` is your Microsoft Entra tenant ID. Enable the `MsTeamsChannel`, then save the bot resource ID for the publish request.
+
+## Enable Activity Protocol access
+
+Set `enable_m365_public_endpoint` to `true` and retain every existing protocol and authorization scheme that the endpoint needs.
+
+<Warning>
+The update replaces `protocol_configuration` and `authorization_schemes`. Omitting an existing entry, such as `responses` or `Entra`, removes it from the endpoint.
+</Warning>
+
+Choose the authorization scheme that matches the publish scope:
+
+| Publish scope | Authorization scheme | Who can call the agent |
+| --- | --- | --- |
+| `Shared` or `Personal` | `BotServiceRbac` | Users with the required Foundry permissions |
+| `Tenant` | `BotServiceTenant` | Users in the project's tenant |
+
+```http
+PATCH {{PROJECT_ENDPOINT}}/agents/{{AGENT_NAME}}?api-version=v1
+Authorization: Bearer {{TOKEN}}
+Content-Type: application/merge-patch+json
+
+{
+  "agent_endpoint": {
+    "protocol_configuration": {
+      "responses": {},
+      "activity": {
+        "enable_m365_public_endpoint": true
+      }
+    },
+    "authorization_schemes": [
+      {
+        "type": "Entra"
+      },
+      {
+        "type": "BotServiceRbac"
+      }
+    ]
+  }
+}
+```
+
+The public route still requires valid Bot Service or Microsoft Entra authentication and authorization. Source IP filtering is a defense-in-depth network control, not proof of caller identity.
+
+## Publish the agent
+
+Call the Foundry Microsoft 365 publish API with the Azure Bot Service resource ID and app metadata. Use `Shared` for personal visibility without admin approval or `Tenant` for organization-wide visibility that requires Microsoft 365 admin approval.
+
+Keep names, descriptions, and publisher metadata free of secrets because users can see these fields.
+
+## Verify the published agent
+
+1. Open the agent store in Microsoft Copilot or Teams.
+1. Find the agent under **Your agents** for `Shared` scope, or **Built by your org** after approval for `Tenant` scope.
+1. Send a message and confirm the agent replies.
+1. Verify that agent tools can still reach required outbound destinations.
+
+## Troubleshooting
+
+| Symptom | Resolution |
+| --- | --- |
+| Portal publishing returns HTTP 403 | Use this API flow from a client that can reach the private endpoint. |
+| `403 NetworkAccessDenied` from the channel | Confirm `enable_m365_public_endpoint` is `true` and traffic comes through Microsoft 365, Teams, or Azure Bot Service. |
+| Requests reach the endpoint but fail authorization | Configure `BotServiceRbac` or `BotServiceTenant` and verify the caller's tenant or RBAC access. |
+| Direct public test requests fail | Test through Microsoft Copilot or Teams; arbitrary public source addresses aren't allowed. |
+
+## Limitations
+
+- Microsoft 365 doesn't support file uploads or image generation for published agents; Teams does.
+- Channel traffic doesn't use Private Link.
+- Published agents don't support streaming responses or citations.
+
+## Related content
+
+- [Publish agents to Microsoft 365 and Teams](/agents/development/publish-copilot)
+- [Hosted agents](/agents/development/hosted-agents)
+- [Set up private networking](/setup/virtual-networks)
