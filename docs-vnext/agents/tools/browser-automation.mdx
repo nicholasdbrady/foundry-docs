@@ -42,6 +42,41 @@ An example flow is:
 
    The Browser Automation tool supports multi-turn conversations, allowing the user to refine their request and complete a booking.
 
+## Choose a setup path
+
+Choose how the agent runs before configuring Browser Automation:
+
+| Agent type | Use it when |
+| --- | --- |
+| **Prompt agent** | You want Foundry to run an agent defined by a model, instructions, and tools. |
+| **Hosted agent with Microsoft Agent Framework** | You need custom code with Foundry-managed hosting, scaling, identity, and observability. |
+| **Hosted agent with another framework** | You need to keep orchestration built with LangGraph, OpenAI Agents SDK, Semantic Kernel, or custom code. Connect the framework to the Browser Automation toolbox through its MCP client. |
+
+## Choose an authentication type
+
+| Authentication type | Use it when | Considerations |
+| --- | --- | --- |
+| **API key** | You are prototyping or your organization permits service access tokens. | Foundry stores the key in the project connection. Never put it in source code, prompts, or logs. Rotate it according to your organization's policy. |
+| **Project managed identity** | Agents in one Foundry project share a Playwright workspace. | Grant the project identity only the permissions it needs. Use this option as the enterprise default when the connection supports it. |
+| **Agent identity** | A hosted agent needs an access boundary separate from other agents in the project. | Grant the deployed agent's dedicated identity access to the downstream resources it needs. |
+
+### Grant Playwright workspace access
+
+Browser Automation uses the **Foundry project managed identity** to access the Playwright workspace, not the hosted agent's dedicated agent identity.
+
+1. Open the Playwright workspace in the Azure portal.
+1. Select **Access control (IAM)** > **Add** > **Add role assignment**.
+1. Select a custom role containing only the required Playwright permissions. If no custom role is available, assign **Playwright Workspace Contributor** at the Playwright workspace resource scope.
+1. Select the Foundry project managed identity, then select **Review + assign**.
+
+## Monitor browser automation sessions
+
+- **Live View** shows the active session while you develop and test.
+- **Session recording** captures video, actions, logs, and metadata for completed sessions.
+- **Take control** lets a person intervene before the agent continues.
+
+For production investigations, use run summaries, traces, and diagnostic logs instead of continuously monitoring active sessions.
+
 ## Prerequisites
 
 Before you begin, make sure you have:
@@ -590,9 +625,10 @@ Browser automation can take longer than typical requests.
 
 ## Example scenarios
 
-- Booking and reservations: Automate form filling and schedule confirmation across booking portals.
-
-- Product discovery: Navigate ecommerce or review sites, search by criteria, and extract summaries.
+- **Form filling and integration**: Move information between browser-based applications when an API isn't available.
+- **Research and data extraction**: Navigate sites, filter results, and compare information across sources.
+- **Quality assurance**: Validate end-to-end flows and reproduce reported browser issues.
+- **Legacy-system automation**: Automate repetitive interactions with internal or vendor portals.
 
 ## Transparency note
 
