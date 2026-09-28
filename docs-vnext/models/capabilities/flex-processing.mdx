@@ -1,0 +1,122 @@
+---
+title: "Use Flex processing with Azure OpenAI in Foundry Models"
+description: "Use lower-cost Flex processing for delay-tolerant Azure OpenAI workloads and implement an explicit Standard fallback."
+---
+
+Flex processing provides discounted inference for workloads that can tolerate variable latency and temporary capacity unavailability. Select it per request by setting `service_tier` to `flex`.
+
+<Info>
+
+Flex has no latency or availability SLA. Unsupported models return HTTP 400 and don't fall back to Standard automatically.
+
+</Info>
+
+## Choose Flex processing
+
+Use Flex for evaluations, enrichment, document analysis, and background work. Keep interactive or deadline-sensitive requests on Standard, Priority, or provisioned throughput.
+
+| Option | Selection | Best for |
+|---|---|---|
+| Flex | Set `service_tier` to `flex` per request. | Delay-tolerant work where cost matters more than latency. |
+| Standard | Set `service_tier` to `default`. | General online workloads. |
+| Priority | Configure Priority or set `service_tier` to `priority`. | Latency-sensitive online applications. |
+| Batch | Submit an asynchronous batch job. | Large offline jobs that can wait for completion. |
+| Provisioned throughput | Purchase provisioned throughput units. | Predictable, high-volume production traffic. |
+
+Flex and Standard use the same Global Standard deployment and share its quota. Flex changes price, latency, and availability, not model quality.
+
+## Send a Flex request
+
+```python
+import os
+
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="https://YOUR_RESOURCE_NAME.openai.azure.com/openai/v1/",
+    api_key=os.environ["AZURE_OPENAI_API_KEY"],
+    timeout=900.0,
+)
+
+response = client.responses.create(
+    model="YOUR_DEPLOYMENT_NAME",
+    input="Analyze these records and summarize the recurring themes.",
+    service_tier="flex",
+)
+
+print(response.output_text)
+print(response.service_tier)
+```
+
+Check `response.service_tier` to confirm which tier processed the request.
+
+## Fall back explicitly
+
+Flex doesn't route to Standard when capacity is unavailable. If completion matters more than retaining Flex pricing, retry an HTTP 429 response with `service_tier="default"`:
+
+```python
+import os
+
+from openai import OpenAI, RateLimitError
+
+client = OpenAI(
+    base_url="https://YOUR_RESOURCE_NAME.openai.azure.com/openai/v1/",
+    api_key=os.environ["AZURE_OPENAI_API_KEY"],
+    timeout=900.0,
+)
+
+request = {
+    "model": "YOUR_DEPLOYMENT_NAME",
+    "input": "Analyze these records and summarize the recurring themes.",
+}
+
+try:
+    response = client.responses.create(**request, service_tier="flex")
+except RateLimitError:
+    response = client.responses.create(**request, service_tier="default")
+```
+
+Fallback changes pricing and performance. A 429 can also indicate exhausted shared quota, so the Standard request might fail too. Bound retries and propagate the second failure.
+
+## Handle errors
+
+| HTTP status | Cause | Handling |
+|---|---|---|
+| `400` | The model, context, API, or request doesn't support Flex. | Don't retry unchanged. Select a supported configuration or explicitly use Standard. |
+| `408` | The request exceeded a timeout. | Increase the client timeout and retry with bounded exponential backoff. |
+| `429` | Flex capacity is unavailable or quota is exhausted. | Honor `Retry-After`, retry with jitter, or explicitly use Standard if higher cost is acceptable. |
+| `500`, `502`, `503`, `504` | A transient service or gateway failure occurred. | Retry with bounded exponential backoff. |
+| `401`, `403` | Authentication or authorization failed. | Correct the credential or role assignment before retrying. |
+| `404` | The deployment name or endpoint is wrong. | Verify both values. |
+
+## Select a tier with a header
+
+Gateways can select a tier without changing the body by sending `x-ms-service-tier`. Valid values are `flex`, `priority`, `default`, and `auto`. A valid header overrides `service_tier` in the body; an invalid value returns HTTP 400.
+
+```bash
+curl -X POST https://YOUR_RESOURCE_NAME.openai.azure.com/openai/v1/responses \
+  -H "Content-Type: application/json" \
+  -H "api-key: $AZURE_OPENAI_API_KEY" \
+  -H "x-ms-service-tier: flex" \
+  -d '{
+    "model": "YOUR_DEPLOYMENT_NAME",
+    "input": "Analyze these records and summarize recurring themes.",
+    "service_tier": "default"
+  }'
+```
+
+## Monitor production usage
+
+Track Flex request count, successful Flex rate, latency, HTTP 429 responses, Standard fallbacks, and token usage. In Azure Monitor, filter Azure OpenAI metrics where **ServiceTierRequest** equals `flex`. In Cost Analysis, group by **Meter** to separate Flex and Standard usage.
+
+- Use a longer client timeout suited to the workload.
+- Honor `Retry-After` and add random jitter to bounded retries.
+- Record the processed `service_tier` with latency, status, and token usage.
+- Keep interactive and background traffic separate.
+- Test HTTP 400, 408, 429, and transient 5xx paths before production use.
+
+## Related content
+
+- [Enable Priority processing](/models/capabilities/priority-processing)
+- [Use global batch processing](/models/capabilities/batch)
+- [Review deployment types](/models/capabilities/deployment-types)

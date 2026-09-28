@@ -1,0 +1,105 @@
+---
+title: "Use on-behalf-of flow with hosted agents in Microsoft Foundry"
+description: "Configure delegated access for hosted agents with an on-behalf-of token exchange and trusted request headers."
+---
+
+Use an on-behalf-of (OBO) flow when a hosted agent must call a downstream API as the signed-in user. The application backend exchanges the user's token for a downstream token, authenticates to Foundry separately, and forwards the delegated token to trusted agent code.
+
+<Warning>
+
+Foundry doesn't perform or refresh the OBO exchange. The application owns consent, token acquisition, forwarding, expiration, and error handling.
+
+</Warning>
+
+## Prerequisites
+
+- A hosted agent using container protocol version 2.0.0.
+- A confidential backend application with consent for the required downstream delegated scopes.
+- A backend workload identity with **Foundry Agent Consumer** at the agent or project scope.
+- The `Microsoft.CognitiveServices/accounts/AIServices/agents/endpoints/UserIdentityImpersonation/action` data action assigned to the backend identity.
+
+## Understand the request flow
+
+1. The backend validates a user token issued for the backend API.
+1. The backend exchanges that token for a delegated token issued for the downstream API.
+1. The backend obtains a separate workload token for the `https://ai.azure.com/.default` scope.
+1. The backend invokes Foundry with the workload token, delegated token, and authenticated user's object ID.
+1. Foundry validates the workload and user-impersonation permission, then forwards approved `x-client-*` headers.
+1. Agent code uses the delegated token to call the downstream API.
+
+The workload token and delegated token aren't interchangeable. End users don't need Foundry role assignments in this pattern.
+
+## Send the delegated context
+
+| Header | Value | Purpose |
+|---|---|---|
+| `Authorization` | The backend's Foundry workload token | Authenticates the immediate caller. Foundry doesn't forward this header. |
+| `x-client-graph-access-token` | A delegated Microsoft Graph token without a `Bearer` prefix | Forwards the downstream token to agent code. The suffix is application-defined. |
+| `x-ms-user-identity` | The authenticated user's Microsoft Entra object ID | Associates the request with the represented user for isolation. |
+
+Derive `x-ms-user-identity` from the validated identity used for the OBO exchange. Never trust a client-supplied object ID or delegated-token header.
+
+```http
+POST YOUR_HOSTED_AGENT_RESPONSES_ENDPOINT HTTP/1.1
+Authorization: Bearer YOUR_FOUNDRY_WORKLOAD_TOKEN
+Content-Type: application/json
+x-client-graph-access-token: YOUR_DELEGATED_GRAPH_TOKEN
+x-ms-user-identity: AUTHENTICATED_USER_OBJECT_ID
+
+{
+  "input": "Show my profile.",
+  "stream": false,
+  "background": false,
+  "store": false
+}
+```
+
+## Read the forwarded token
+
+The Python Responses adapter exposes forwarded headers through `ResponseContext.client_headers` with lowercase keys:
+
+```python
+import httpx
+from azure.ai.agentserver.responses import ResponseContext
+
+
+async def read_user_profile(context: ResponseContext) -> str:
+    token = context.client_headers.get("x-client-graph-access-token")
+    if not token:
+        raise PermissionError("A delegated Graph token is required.")
+
+    async with httpx.AsyncClient(timeout=30, follow_redirects=False) as client:
+        response = await client.get(
+            "https://graph.microsoft.com/v1.0/me",
+            headers={"Authorization": f"Bearer {token}"},
+            params={"$select": "displayName"},
+        )
+        response.raise_for_status()
+        return response.json()["displayName"]
+```
+
+Keep the destination fixed or allowlisted. Don't let model output select a URL that receives a bearer token.
+
+## Protect identity and tokens
+
+- Keep tokens out of prompts, model inputs, logs, exceptions, conversation history, checkpoints, and outputs.
+- Request only required delegated scopes and use a separate token for each audience.
+- Keep tokens request-scoped. Don't persist token-bearing headers for background execution or recovery.
+- Partition container-owned state by the trusted user context, not by an arbitrary `x-client-user-id`.
+- Return authentication failures to the backend. Never silently switch to app-only access.
+
+## Troubleshoot the flow
+
+| Symptom | Check |
+|---|---|
+| OBO rejects the assertion. | Confirm the incoming token represents a user and has the backend API as its audience. Check consent and Conditional Access. |
+| Foundry returns `403`. | Confirm the backend has **Foundry Agent Consumer** and the user-impersonation data action. |
+| The custom header is missing. | Use the `x-client-` prefix and a lowercase lookup key. Check whether a proxy removed it. |
+| Microsoft Graph returns `401` or `403`. | Check expiration, audience, delegated scopes, consent, policy, and the user's access. |
+| Users see another user's data. | Align the OBO user with `x-ms-user-identity` and partition container state by trusted user context. |
+
+## Related content
+
+- [Hosted agents](/agents/development/hosted-agents)
+- [Hosted agent permissions](/agent-service/hosted-agent-permissions)
+- [Microsoft identity platform OBO flow](https://learn.microsoft.com/entra/identity-platform/v2-oauth2-on-behalf-of-flow)
