@@ -1,0 +1,64 @@
+---
+title: "Troubleshoot publishing agents to Microsoft Copilot and Microsoft Teams"
+description: "Resolve publishing, discovery, authorization, runtime, and network issues for Microsoft Foundry agents in Microsoft Copilot and Teams."
+---
+
+Use this guide when publishing fails, an agent doesn't appear in the agent store, or a published agent fails at runtime.
+
+## Resolve publishing issues
+
+| Symptom | Cause | Resolution |
+|---|---|---|
+| The request fails validation. | The version, metadata, scope, or icon is invalid. | Correct the field named in the error. Versions can contain only digits and periods and can't start with `0`. Use `Personal`, `Shared`, or `Tenant` for the API publish scope. |
+| The app version already exists. | The request reused an existing `appVersion`. | Increment `appVersion`. To change agent behavior, update the agent version that receives traffic instead. |
+| **Download ZIP** doesn't return a package. | The request or generated manifest failed validation. | Correct the validation error and retry. Foundry doesn't return an invalid package. |
+| The package API returns `401` or `403`. | The token is invalid, the caller lacks agent write permission, or the project endpoint wasn't used. | Request a token for `https://ai.azure.com`, assign **Foundry User** or equivalent permissions, and use the project endpoint. |
+| The package API returns `429`. | The service is throttling the request. | Wait for the `Retry-After` duration, then retry. |
+| Azure Bot Service creation fails. | The caller lacks permission or the resource provider isn't registered. | Register `Microsoft.BotService` and verify that the caller can create resources in the target resource group. |
+| The portal returns `403 AuthorizationFailed` for `Microsoft.BotService/botServices/write`. | The caller can't create or update the bot resource. | Assign **Azure Bot Service Contributor**, **Contributor**, or **Owner** on the resource group, refresh credentials, and retry. |
+| The request reports that `agent.identity` is null. | The agent doesn't have a unique identity. | [Migrate the agent application](/agent-service/migrate-agent-applications), then publish the migrated agent. |
+
+## Find a published agent
+
+| Symptom | Cause | Resolution |
+|---|---|---|
+| The agent doesn't appear immediately. | The store cache hasn't refreshed, or tenant approval is pending. | For `Shared` scope, sign out and back in. For `Tenant` scope, confirm approval in the [Microsoft 365 admin center](https://admin.cloud.microsoft/?#/agents/all/requested). |
+| The agent isn't in the expected store section. | The publish scope controls placement. | Look under **Your agents** for `Shared` agents and **Built by your org** for approved `Tenant` agents. |
+
+## Resolve runtime issues
+
+<Note>
+
+End users don't need a Microsoft 365 Copilot license to use a published agent in Microsoft Copilot Chat. Access to shared tenant data might incur usage-based charges.
+
+</Note>
+
+| Symptom | Cause | Resolution |
+|---|---|---|
+| The agent stops responding or returns `no tool output found`. | A tool failure locked the conversation. | [Reset the conversation](#reset-a-conversation). |
+| The user receives an authorization error. | The user lacks project access, or a `Shared` agent requires Azure role-based access control. | Grant the appropriate project role or use `Tenant` scope with admin approval. |
+| The agent works in the playground but fails after publishing. | The agent identity lacks access to an Azure dependency. | Assign the required role to the agent identity on each resource it uses. |
+| An MCP request fails. | A required tool approval was missed or dismissed. | Approve the request, or start a new conversation and retry. |
+| Sign-in redirects fail. | A firewall or proxy blocks the redirect domain. | Allow outbound HTTPS on TCP 443 to `*.azureml.ms`. |
+| Requests are rate limited. | The model deployment has insufficient capacity. | Retry later, reduce request frequency, or increase deployment capacity. |
+| Another response is already in progress. | The previous response is still active. | Wait for it to finish. If the session remains stuck, start a new conversation. |
+
+### Reset a conversation
+
+- In Microsoft Copilot, start a new chat with the agent.
+- In Microsoft Teams, send `/foundry_new_preview`.
+
+Resetting doesn't restore the previous conversation.
+
+## Resolve virtual network issues
+
+| Symptom | Cause | Resolution |
+|---|---|---|
+| Publishing from the portal returns `403`. | Public network access is disabled. | Use the REST API from a client that can reach the private endpoint, or download the package and create the agent in the Microsoft 365 admin center. |
+| The channel adapter receives `403 NetworkAccessDenied`. | `enable_m365_public_endpoint` is disabled, or the source isn't an allowed Microsoft service. | Set `agent_endpoint.protocol_configuration.activity.enable_m365_public_endpoint` to `true` and invoke through Azure Bot Service, Copilot, or Teams. |
+| Activity Protocol requests are rejected. | Bot Service authorization isn't configured, or the caller is in another tenant. | Configure `BotServiceRbac` or `BotServiceTenant` and use an account from the project tenant. |
+
+## Related content
+
+- [Publish agents to Microsoft Copilot and Microsoft Teams](/agents/development/publish-copilot)
+- [Configure your agent endpoint and settings](/agent-service/configure-agent)
