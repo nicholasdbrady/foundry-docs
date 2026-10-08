@@ -3,19 +3,11 @@ title: "Build with agents, conversations, and responses in Foundry Agent Service
 description: "Learn how to create agents, manage conversations, and generate responses in Microsoft Foundry Agent Service with code examples in Python, C#, JavaScript, Java, and REST API."
 ---
 
-Microsoft Foundry Agent Service uses three core runtime components—**agents**, **conversations**, and **responses**—to power stateful, multi-turn interactions. An agent uses a model from the Foundry model catalog, along with instructions and tools. A conversation persists history across turns. A response is the output the agent produces when it processes input.
-
-This article walks through each component and shows how to use them together in code. You'll learn how to create an agent, start a conversation, generate responses (with or without an agent), add follow-up messages, and stream results—with examples in Python, C#, JavaScript, Java, and REST API.
+Microsoft Foundry Agent Service uses three components for stateful, multi-turn interactions: an **agent** combines a Foundry model with instructions and tools, a **conversation** persists history across turns, and a **response** contains the agent's output. This article shows how to create and combine these components, add follow-up messages, and stream results in Python, C#, JavaScript, Java, and REST.
 
 ## How runtime components work together
 
-When you work with an agent, you follow a consistent pattern:
-
-- **Create an agent**: Define an agent to start sending messages and receiving responses.
-- **Create a conversation (optional)**: Use a conversation to maintain history across turns. If you don't use a conversation, carry forward context by using the output from a previous response.
-- **Generate a response**: The agent's Foundry model processes input items in the conversation and any instructions provided in the request. The agent might append items to the conversation.
-- **Check response status**: Monitor the response until it finishes (especially in streaming or background mode).
-- **Retrieve the response**: Display the generated response to the user.
+Define an agent, then optionally create a conversation to maintain history. Generate a response from the conversation items and request instructions, monitor it until completion when using streaming or background mode, and display the output. Without a conversation, pass output from the previous response as context for the next request.
 
 The following diagram illustrates how these components interact in a typical agent loop.
 
@@ -1046,11 +1038,7 @@ The following example creates a conversation with an initial user message. Use t
 
 ### When to use a conversation
 
-Use a conversation when you want:
-
-- **Multi-turn continuity**: Keep a stable history across turns without rebuilding context yourself.
-- **Cross-session continuity**: Reuse the same conversation for a user who returns later.
-- **Easier debugging**: Inspect what happened over time (for example, tool calls and outputs).
+Use a conversation to maintain multi-turn history without rebuilding context, preserve continuity when a user returns in another session, and inspect tool calls and outputs during debugging.
 
 When a conversation is used to generate a response (with or without an agent), the full conversation is provided as input to the model. The generated response is then appended to the same conversation.
 
@@ -1066,12 +1054,12 @@ If you don't create a conversation, you can still build multi-turn flows by usin
 
 Conversations store **items** rather than only chat messages. Items capture what happened during response generation so the next turn can reuse that context.
 
-Common item types include:
-
-- **Message items**: User or assistant messages.
-- **Tool call items**: Records of tool invocations the agent attempted.
-- **Tool output items**: Outputs returned by tools (for example, retrieval results).
-- **Output items**: The response content you display back to the user.
+| Item type | Contents |
+| --- | --- |
+| Message | User or assistant messages |
+| Tool call | Tool invocations attempted by the agent |
+| Tool output | Results returned by tools, such as retrieval results |
+| Output | Response content to display to the user |
 
 ### Add items to a conversation
 
@@ -1813,11 +1801,7 @@ For conceptual details, see [Memory in Foundry Agent Service](/agent-service/wha
 
 ## Security and data handling
 
-Because conversations and responses can persist user-provided content and tool outputs, treat runtime data like application data:
-
-- **Avoid storing secrets in prompts or conversation history**. Use connections and managed secret stores instead (for example, [Set up a Key Vault connection](/security/set-up-key-vault-connection)).
-- **Use least privilege for tool access**. When a tool accesses external systems, the agent can potentially read or send data through that tool.
-- **Be careful with non-Microsoft services**. If your agent calls tools backed by non-Microsoft services, some data might flow to those services. For related considerations, see [Discover tools in the Foundry Tools](/agent-service/tool-catalog).
+Because conversations and responses can persist user content and tool outputs, treat runtime data like application data. Don't store secrets in prompts or conversation history; use connections and managed secret stores such as a [Key Vault connection](/security/set-up-key-vault-connection). Grant tools least-privilege access because they can read from or send data to external systems. Data can flow to non-Microsoft services when an agent calls tools backed by those services; see [Discover tools in the Foundry Tools](/agent-service/tool-catalog).
 
 ## Limits and constraints
 
