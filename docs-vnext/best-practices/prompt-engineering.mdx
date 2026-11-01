@@ -3,9 +3,9 @@ title: "Prompt engineering techniques | Microsoft Foundry Models"
 description: "Learn how to use prompt engineering to optimize your work with Azure OpenAI."
 ---
 
-These techniques aren't recommended for reasoning models like gpt-5 and o-series models.
+These techniques aren't recommended for reasoning models such as GPT-5 and o-series models.
 
-Prompt construction can be difficult. In practice, the prompt acts to help the model complete the desired task, but it's more of an art than a science, often requiring experience and intuition to craft a successful prompt. The goal of this article is to help get you started with this learning process. This article attempts to capture general concepts and patterns that apply to all GPT models. However, it's important to understand that each model behaves differently, so the learnings might not apply equally to all models.
+Prompt engineering combines instructions, context, examples, and output constraints to guide a model toward a task. Because behavior varies by model and version, validate each prompt against representative inputs.
 
 <Note>
 
@@ -15,85 +15,48 @@ For current API guidance and examples, see [Responses API](/foundry-models/respo
 
 ## Basics
 
-This section covers the basic concepts and elements of GPT prompts.
-
-Text prompts are how users interact with GPT models. As with all generative language models, GPT models attempt to produce the next series of words that are most likely to follow from the previous text. It's as if we're saying *What is the first thing that comes to your mind when I say `<prompt>`?* The examples below demonstrate this behavior. Given the first words of famous content, the model is able to accurately continue the text.
-
-| Prompt | Completion |
-| ------ | ---------- |
-| Four score and seven years ago our | fathers brought forth on this continent, a new nation, conceived in Liberty, and dedicated to the proposition that all men are created equal. […] |
-| "Call me Ishmael."                 | "Some years ago—never mind how long precisely—having little or no money in my purse, and nothing particular to interest me on shore, I thought I would sail about a little and see the watery part of the world." […] |
-
-As you develop more complex prompts, it's helpful to keep this fundamental behavior in mind. Regardless of the prompt that is provided, the model is simply responding with what it determines is most likely (given its training data and training targets). If you ask a question in your prompt, the model isn't following a separate “Q&A” code path, but rather it appears to answer the question because an answer is the most likely sort of response for the given question as input.
+GPT models generate likely continuations from the supplied text and conversation context. A prompt shapes that continuation by defining the task, the content to process, examples of the desired behavior, and relevant context.
 
 ### Prompt components
 
-When you use the Completion API and there's no differentiation between different parts of the prompt, it can still be useful for learning and discussion to identify the underlying prompt components. With the [Chat Completion API](/foundry-models/chatgpt), distinct sections of the prompt are sent to the API as an array of dictionaries with associated roles: system, user, and assistant. This guidance focuses more generally on how to think about prompt construction rather than providing prescriptive guidance that is specific to one API over another.
-
-It's also important to understand that while there could be other valid ways to dissect prompts, the goal of this breakdown is to provide a relatively simple way to think about prompt construction. With the Completion API, all the components are optional, but at least one must be present and most prompts include more than one component. There can be some grey area between components as well. The order presented in the following section roughly corresponds to how commonly each component is used, from most to least.
+The [Chat Completion API](/foundry-models/chatgpt) separates content by system, user, and assistant roles. Regardless of API shape, most prompts combine several of the following components.
 
 #### Instructions
 
-Instructions are likely the most commonly used prompt component. Instructions are simply that: instructions to the model on what to do. While simple in concept, they can be complex in practice. The following table illustrates this complexity by showing both simple and more complex instructions, in two different forms.
+Instructions state the task and constraints. Include the audience, required details, tone, length, and output format when they matter.
 
-|Instruction Type                |  Prompt      | Completion    |
-|--------------------------------|---------------|--------------|
-Simple instructions | Write an introduction for a weekly newsletter. | Welcome to our weekly newsletter. This week we have a special focus on productivity. We'll share tips and tricks on how to be productive in all areas of your life. We hope you enjoy and please share with your friends! |
-| Complex instructions | Write an introduction for a weekly newsletter to my company named Contoso. It should mention the great all hands meeting we had last week and thank the team for all their hard work over the tough past few months. | Welcome to Contoso's weekly newsletter! We had a great all hands meeting last week and I want to thank the team for all their hard work over the tough past few months. We're looking forward to a bright future and I'm confident that with our team's dedication and commitment, we'll achieve great things. Thank you for being a part of our team and I look forward to working with you all in the coming weeks and months. Sincerely, [Your name]. |
-| Complex instructions | Write an introduction for a weekly newsletter, including the following: <br />- My company is named contoso <br />- An exuberant greeting <br />- Thanking the team for their hard work over a couple tough months <br />- Positive outlook for the coming quarter<br />- Signed by the SLT |	Hello Contoso team! I wanted to take a moment to thank you for all your hard work over the past few months. It's been a tough couple of months, but you all pulled together and did an amazing job. I'm really proud of you all. Looking ahead to the next quarter, I'm feeling really positive. I think we're going to achieve some great things. Thanks again, The Senior Leadership Team.|
+| Less specific | More specific |
+| --- | --- |
+| Write a newsletter introduction. | Write a 100-word introduction for Contoso's weekly newsletter. Thank the team for its recent work, mention the all-hands meeting, and end with a positive outlook for the next quarter. |
 
 ### Primary content
 
-Primary content refers to text that the model processes or transforms. Typically, you use primary content with instructions. A simple example is language translation. In the following example, the English text is the primary content, and "Translate to French:" is an instruction.
+Primary content is the material the model processes, such as text to translate, an excerpt to summarize, or tabular data to analyze. Separate it clearly from the instruction, especially for long inputs such as the [time complexity example](https://en.wikipedia.org/wiki/Time_complexity).
 
-| Prompt | Completion|
-|--------|-----------|
-| Can you please tell me how to get to the museum?<br />Translate to French: |`Pouvez-vous s'il vous plaît me dire comment aller au musée?` |
-
-Primary content can also be much longer. In the following example, the primary content is the introduction section from the [Wikipedia entry on time complexity](https://en.wikipedia.org/wiki/Time_complexity), which is almost 300 words long. This content is abbreviated in the table for ease of display.
-
-| Prompt | Completion|
-|--------|-----------|
-| In computer science, the time complexity is the computational complexity that describes the amount of computer time it takes to run an algorithm. Time complexity is commonly estimated by [...]<br />Summarize the previous text in a few sentences:| Time complexity is a measure of how long an algorithm takes to run. It's typically expressed as a function of the size of the input. The most common measure is worst-case time complexity, which is the maximum amount of time required for inputs of a given size.|
-| In computer science, the time complexity is the computational complexity that describes the amount of computer time it takes to run an algorithm. Time complexity is commonly estimated by [...]<br />`TL;DR` (Too long didn't read) | The time complexity of an algorithm is the amount of time it takes to run an algorithm. Time complexity is commonly estimated by counting the number of elementary operations the algorithm performs, assuming that each elementary operation takes a fixed amount of time. The time complexity is generally expressed as a function of the size of the input.|
-
-GPT models can also handle primary content that is structured. In the following example, a TSV about beers in Belgium (abbreviated for display in this article) is part of the prompt. The model can properly interpret the content and answer questions about the data.
-
-| Prompt | Completion |
-|--------|------------|
-| `Belgian Beer Brands` <br />`Beer name	Beer style	color	ABV	Brewery`<br />`"Chimay Gold: ""Doree"""	trappist pale ale	gold	4.80%	Chimay Brewery (official trappist)`<br />`"Chimay Blue: ""Grande Reserve"""	trappist dark ale	dark	9.00%`<br />[…]<br />Referencing the table above, how many beers are less than 6% ABV? |	There are 10 beers in the table that are less than 6% ABV. |
+```text
+Translate the following sentence to French:
+Can you please tell me how to get to the museum?
+```
 
 ### Examples
 
-Successful prompts often rely on the practice of "one-shot" or "few-shot" learning. This practice involves including one or more examples of the desired behavior of the model, typically by including input and output pairs. This approach isn't learning in the sense that the model is permanently changed, but rather that the examples better condition the model to respond as desired for only the current inference. The use of prompts with no examples is sometimes referred to as "zero-shot" learning. Note that with the Chat Completion API, you typically add few-shot learning examples to the `messages` array in the form of example user and assistant interactions after the initial system message.
+One-shot and few-shot prompts include input-output pairs that demonstrate the expected behavior for the current request; they don't permanently change the model. In chat APIs, add example user and assistant messages after the system message.
 
-| Learning Type|  Prompt| Completion|
-|------------------------------------- |-------|-----|
-| Zero-shot | Headline: Coach confident injury won't derail Warriors<br />Topic:| The coach is confident that the injury won't derail the Warriors' season. The team is still focused on their goals and that they'll continue to work hard to achieve them.|
-| Few-shot | Headline: Twins' Correa to use opt-out, test free agency<br />Topic: Baseball<br />Headline: Qatar World Cup to have zones for sobering up<br />Topic: Soccer<br />Headline: Yates: Fantasy football intel for Week 6<br />Topic: Football<br />Headline: Coach confident injury won't derail Warriors<br />Topic: | Basketball |
+```text
+Headline: Qatar World Cup to have zones for sobering up
+Topic: Soccer
 
-The preceding example illustrates the utility of few-shot learning. Without the examples, the model seems to be guessing at the desired behavior, while the examples cleanly show the model how to operate. This example also demonstrates the power of the model. It can infer the category of label that is wanted, even without a "basketball" label in the examples.
+Headline: Coach confident injury won't derail Warriors
+Topic: Basketball
+```
 
 ### Cue
 
-Cues act as the "jumpstart" for the output of the model, helping to direct the model to the desired output. They're often a prefix that the model can build onto. In the following example, the cue directs the story to include key elements. You often use cues along with instructions, but not always. In the following examples, the model is being used to summarize a long announcement email. A cue is used in one case to help focus the output of the model and to suggest a specific output format (bullet points).  
-
-In the context of the Chat Completion API, instructions take the form of the system message, and few-shot examples are indicated by providing a series of example user and assistant interactions to help prime the model.
-
-| Number of Cues|Prompt | Completion|
-|----------|-------|-----------|
-| 0 | Performance reviews are a core component of our Performance & Development approach at Contoso. […] <br /> Summarize the above email message: | The purpose of this email is to inform employees of recent changes to the performance review experience, which is part of Contoso's Performance & Development approach. The changes include an improved structure, upgraded in-tool user experience, and focused prompts. Additionally, there's now an optional Conversation Starters section for employees to flag topics they'd like to discuss with their managers. |
-| 1 | Performance reviews are a core component of our Performance & Development approach at Contoso. […] <br /> Summarize the above email message:<br /> The key takeaway of the message is | that Contoso is improving the performance review experience by making it more focused on core priorities, expectations, and impact. Additionally, they're upgrading the in-tool user experience with tips, resources, and guidance. Finally, they're adding guidance on how to activate company-wide core priorities. | 
-|2 | Performance reviews are a core component of our Performance & Development approach at Contoso. […] <br /> Summarize the above email message: <br />Key Points:<br />• | Contoso is introducing changes to the performance review experience, based on feedback from employees.<br />• The changes include a new focus on core priorities, expectations, and impact; an upgraded user experience; and new guidance on company-wide core priorities.<br />• Performance reviews are a time to reflect on past performance and learning as well as to plan for future priorities and growth opportunities.<br />• Employees and managers should write comments in advance of the performance review meeting.<br />• There should be at least two performance reviews per year.<br />• The time investment for each review should remain about the same. |
+Cues provide the start of the expected response, such as `The key takeaway is` or `Key points:`. Use them when a short prefix can clarify the response's focus or format. In chat APIs, assistant examples can provide the same type of guidance.
 
 ### Supporting content
 
-Supporting content is information that the model can use to influence the output. It differs from primary content in that it's not the main target of the task, but it's typically used along with primary content. Common examples include contextual information such as the current date, the name of the user, user preferences, and so on. The following example uses supporting content to help organize a set of planned workshops for the user. Without the supporting content (important topics), the model simply lists the workshops (truncated for display). When informed of my important topics, the model accurately groups the meetings.
-
-| Supporting Content| Prompt | Completion|
-|--------|-------------|-----------------|
-| Without | Workshop list:<br />Title	Description<br /> Planning Workshop Kickoff Please join us to kick off our workshop! Hear from our leaders about cross group priorities and learnings for the year ahead. The invitation to this event has already been sent to everyone in […]<br />Summarize the workshops above, grouped by topic: | Workshop list: <br /> Planning Workshop Kickoff <br /> -Planning Workshop Wrap-up<br />- Core MeetUp<br />- Customer Driven Perspectives<br />-Impact and Key Focus Areas<br />-Best practices<br />-Accelerating app adoption […] |
-| With | Workshop list: <br />Title	Description<br />Planning Workshop Kickoff	Please join us to kick off our workshop! Hear from our leaders about cross group priorities and learnings for the year ahead. The invitation to this event has already been sent to everyone in […] <br />My Important Topics: prompt engineering, search, GPT models<br />Summarize the workshops above, grouped by my important topics:| 1. Prompt Engineering: <br />- New prompt engineering tips<br />- The art of prompt engineering<br />2. Search:<br />-Intro to vector search with embedding<br />3. GPT Models:<br />- Intro to GPT-4<br />- GPT-35-Turbo in-depth.|
+Supporting content influences the response but isn't the primary material being transformed. Examples include the current date, user preferences, domain definitions, and categories to use when organizing results.
 
 ## Scenario-specific guidance
 
