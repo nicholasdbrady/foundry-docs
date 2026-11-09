@@ -13,6 +13,7 @@ const ReactDOMServer = require("react-dom/server");
 const sharp = require("sharp");
 const path = require("path");
 const fs = require("fs");
+const { spawnSync } = require("child_process");
 
 const {
   FaServer, FaRobot, FaBook, FaSearch, FaList, FaSync, FaArrowRight,
@@ -37,38 +38,103 @@ const C = {
   lightTeal: "B8DADD",   // Subtle teal
 };
 
-// ── LIVE DATA — computed from repo ────────────────────────────────────────
+// ── LIVE DATA — computed from the checked-out repo and GitHub MCP CLI ─────
+const repoRoot = path.resolve(__dirname, "..");
+
+function walkFiles(dir, predicate) {
+  if (!fs.existsSync(dir)) return [];
+  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const fullPath = path.join(dir, entry.name);
+    return entry.isDirectory() ? walkFiles(fullPath, predicate) : (predicate(fullPath) ? [fullPath] : []);
+  });
+}
+
+function workflowFrontmatter(filePath) {
+  const content = fs.readFileSync(filePath, "utf8");
+  return content.split("---", 3)[1] || "";
+}
+
+function workflowTriggers(frontmatter) {
+  return frontmatter.match(/\non:\n([\s\S]*?)\n\n/)?.[1] || "";
+}
+
+function githubRead(command, input) {
+  const result = spawnSync("github", [command, "."], {
+    cwd: repoRoot,
+    input: JSON.stringify(input),
+    encoding: "utf8",
+    maxBuffer: 8 * 1024 * 1024,
+  });
+  if (result.status !== 0) {
+    throw new Error(`github ${command} failed: ${result.stderr || result.stdout}`);
+  }
+  return JSON.parse(result.stdout);
+}
+
+const docsRoot = path.join(repoRoot, "docs");
+const docsVnextRoot = path.join(repoRoot, "docs-vnext");
+const workflowRoot = path.join(repoRoot, ".github", "workflows");
+const mdxFiles = walkFiles(docsVnextRoot, (file) => file.endsWith(".mdx"));
+const canonicalNames = new Set(walkFiles(docsRoot, (file) => file.endsWith(".mdx")).map((file) => path.basename(file)));
+const workflowFiles = walkFiles(workflowRoot, (file) => file.endsWith(".md"));
+const activeWorkflowFiles = workflowFiles.filter((file) => path.dirname(file) === workflowRoot);
+const workflowMetadata = activeWorkflowFiles.map((file) => {
+  const frontmatter = workflowFrontmatter(file);
+  return { file, frontmatter, triggers: workflowTriggers(frontmatter) };
+});
+const sectionCounts = new Map();
+for (const file of mdxFiles) {
+  const relative = path.relative(docsVnextRoot, file);
+  const section = relative.includes(path.sep) ? relative.split(path.sep)[0] : "root";
+  sectionCounts.set(section, (sectionCounts.get(section) || 0) + 1);
+}
+
+const mergedDocsVnextPRs = githubRead("search_pull_requests", {
+  owner: "nicholasdbrady",
+  repo: "foundry-docs",
+  query: "docs-vnext is:merged",
+  sort: "updated",
+  order: "desc",
+  perPage: 100,
+  fields: ["number", "title", "user", "created_at", "closed_at", "pull_request"],
+});
+const closedAutomationIssues = githubRead("list_issues", {
+  owner: "nicholasdbrady",
+  repo: "foundry-docs",
+  state: "CLOSED",
+  labels: ["automation"],
+  orderBy: "UPDATED_AT",
+  direction: "DESC",
+  perPage: 100,
+  fields: ["number", "title", "labels", "created_at", "updated_at", "user"],
+});
+
 const DATA = {
-  mdxDocs:           274,
-  agenticWorkflows:  26,
-  totalWorkflows:    31,
-  slashCommands:     7,
-  workflowChains:    4,
-  scheduleWorkflows: 12,
-  pushWorkflows:     1,
-  prWorkflows:       3,
-  issueWorkflows:    25,
-  dispatchWorkflows: 22,
-  sdkRepos:          4,
-  docSections:       16,
-  sections: [
-    { name: "Models",            count: 72 },
-    { name: "Agents",            count: 57 },
-    { name: "Observability",     count: 24 },
-    { name: "Setup",             count: 20 },
-    { name: "Security",          count: 20 },
-    { name: "API & SDK",         count: 17 },
-    { name: "Guardrails",        count: 15 },
-    { name: "Dev Experience",    count: 11 },
-    { name: "Manage",            count: 9  },
-    { name: "Responsible AI",    count: 8  },
-    { name: "Operate",           count: 7  },
-    { name: "Best Practices",    count: 5  },
-    { name: "Get Started",       count: 4  },
-    { name: "Overview",          count: 3  },
-    { name: "Reference",         count: 1  },
-    { name: "Glossary",          count: 1  },
-  ],
+  mdxDocs: mdxFiles.length,
+  agenticWorkflows: activeWorkflowFiles.length,
+  sharedWorkflowImports: workflowFiles.length - activeWorkflowFiles.length,
+  totalWorkflowMarkdown: workflowFiles.length,
+  slashCommands: workflowMetadata.filter(({ triggers }) => /\n  slash_command:/.test(`\n${triggers}`)).length,
+  workflowChains: workflowMetadata.filter(({ triggers }) => /\n  workflow_run:/.test(`\n${triggers}`)).length,
+  scheduleWorkflows: workflowMetadata.filter(({ triggers }) => /\n  schedule:/.test(`\n${triggers}`)).length,
+  pushWorkflows: workflowMetadata.filter(({ triggers }) => /\n  push:/.test(`\n${triggers}`)).length,
+  prWorkflows: workflowMetadata.filter(({ triggers }) => /\n  pull_request:/.test(`\n${triggers}`)).length,
+  issueWorkflows: workflowMetadata.filter(({ triggers }) => /\n  issues:/.test(`\n${triggers}`)).length,
+  dispatchWorkflows: workflowMetadata.filter(({ triggers }) => (
+    /\n  workflow_dispatch:/.test(`\n${triggers}`) || /\n  repository_dispatch:/.test(`\n${triggers}`)
+  )).length,
+  sdkRepos: 4,
+  docSections: sectionCounts.size,
+  sections: [...sectionCounts.entries()]
+    .map(([name, count]) => ({ name: name.replaceAll("-", " ").replace(/\b\w/g, (c) => c.toUpperCase()), count }))
+    .sort((a, b) => b.count - a.count),
+  vnextOnlyFiles: mdxFiles.filter((file) => !canonicalNames.has(path.basename(file))).length,
+  commonFiles: mdxFiles.filter((file) => canonicalNames.has(path.basename(file))).length,
+  mergedDocsVnextPRs: mergedDocsVnextPRs.length,
+  agenticPRs: mergedDocsVnextPRs.filter(({ user }) => ["github-actions", "github-actions[bot]"].includes(user?.login)).length,
+  humanPRs: mergedDocsVnextPRs.filter(({ user }) => !["github-actions", "github-actions[bot]"].includes(user?.login)).length,
+  closedAutomationIssues: closedAutomationIssues.length,
+  latestAutomationIssue: closedAutomationIssues[0],
 };
 
 // ── Icon helper ───────────────────────────────────────────────────────────
@@ -142,7 +208,7 @@ async function buildPresentation() {
 
     // Tagline text
     s.addText(
-      `${DATA.mdxDocs} docs  ·  ${DATA.agenticWorkflows} agentic workflows  ·  ${DATA.sdkRepos} SDK repos monitored  ·  FastMCP server`,
+      `${DATA.mdxDocs} docs  ·  ${DATA.agenticWorkflows} active workflows + ${DATA.sharedWorkflowImports} shared imports  ·  ${DATA.sdkRepos} SDK repos monitored`,
       {
         x: 0.4, y: 4.95, w: 9.2, h: 0.5,
         fontSize: 13, fontFace: "Calibri", color: C.lightTeal,
@@ -432,11 +498,11 @@ async function buildPresentation() {
 
     // Category cards — 2 rows × 3 cols
     const categories = [
-      { icon: FaEye,           label: "Monitoring",     count: 6,  desc: "Upstream, SDK, community,\nReddit, diff reports, Dependabot" },
-      { icon: FaFlask,         label: "Testing",        count: 4,  desc: "Noob tester, multi-device,\nsearch quality, testbench" },
-      { icon: MdUpdate,        label: "Content Updates",count: 7,  desc: "Healer, updater, unbloat,\nglossary, labels, sync" },
-      { icon: FaShieldAlt,     label: "Quality Review", count: 5,  desc: "Auditor, PR reviewer,\nmerge verify, push check" },
-      { icon: FaUsers,         label: "Community",      count: 3,  desc: "Discussion monitor,\nresponder, auto-triage" },
+      { icon: FaEye,           label: "Monitoring",     count: 6,  desc: "Upstream, SDK, community,\nReddit, diff, Dependabot" },
+      { icon: FaFlask,         label: "Testing",        count: 3,  desc: "Noob tester, search quality,\npost-index testbench" },
+      { icon: MdUpdate,        label: "Content Updates",count: 8,  desc: "Updater, sync, unbloat,\nglossary, catalog, changelog" },
+      { icon: FaShieldAlt,     label: "Quality Review", count: 3,  desc: "Auditor, PR reviewer,\npost-merge verification" },
+      { icon: FaUsers,         label: "Triage & Labels",count: 2,  desc: "Auto-triage and\nlabel-driven docs fixes" },
       { icon: FaCog,           label: "Operations",     count: 1,  desc: "Slide deck maintainer\n(this deck!)" },
     ];
 
@@ -507,7 +573,12 @@ async function buildPresentation() {
       { icon: FaTachometerAlt, label: "Schedule",  count: DATA.scheduleWorkflows, sub: "daily/weekly cron jobs" },
       { icon: FaCodeBranch, label: "Pull Request", count: DATA.prWorkflows,       sub: "PR open/sync/merge" },
       { icon: FaLayerGroup, label: "Workflow Run", count: DATA.workflowChains,    sub: "chained workflow triggers" },
-      { icon: FaTag,        label: "Push",         count: DATA.pushWorkflows,     sub: "commit to main branch" },
+      {
+        icon: FaTag,
+        label: "Push",
+        count: DATA.pushWorkflows,
+        sub: DATA.pushWorkflows ? "commit to main branch" : "consolidated into chained checks",
+      },
     ];
 
     const boxW = 2.9, boxH = 1.8;
@@ -572,7 +643,7 @@ async function buildPresentation() {
     const stages = [
       {
         icon: FaCodeBranch, label: "Pre-Merge",
-        items: ["on-push-docs-check", "pr-docs-reviewer"],
+        items: ["pr-docs-reviewer", "audit-file"],
         color: C.primary,
       },
       {
@@ -582,12 +653,12 @@ async function buildPresentation() {
       },
       {
         icon: FaHeartbeat, label: "Daily Healing",
-        items: ["docs-auditor", "daily-doc-healer", "daily-doc-updater"],
+        items: ["docs-auditor", "daily-doc-updater"],
         color: C.secondary,
       },
       {
         icon: FaFlask, label: "Testing",
-        items: ["docs-noob-tester", "multi-device-tester", "search-test"],
+        items: ["docs-noob-tester", "mobile · tablet · desktop", "search-test"],
         color: C.primary,
       },
     ];
@@ -652,7 +723,283 @@ async function buildPresentation() {
   }
 
   // ══════════════════════════════════════════════════════════════════════
-  // SLIDE 8 — Evaluation Harness Results (Dark)
+  // SLIDE 8 — docs-vnext History & Impact
+  // ══════════════════════════════════════════════════════════════════════
+  {
+    const s = pres.addSlide();
+    s.background = { color: C.white };
+
+    s.addShape(pres.shapes.RECTANGLE, {
+      x: 0, y: 0, w: 10, h: 0.28,
+      fill: { color: C.primary },
+      line: { color: C.primary, width: 0 },
+    });
+    s.addText("docs-vnext History & Impact", {
+      x: 0.4, y: 0.38, w: 9.2, h: 0.62,
+      fontSize: 36, fontFace: "Trebuchet MS", bold: true,
+      color: C.darkBg, margin: 0,
+    });
+
+    const impact = [
+      { val: DATA.mergedDocsVnextPRs, label: "Merged PRs", sub: "live GitHub search" },
+      { val: DATA.agenticPRs, label: "Agentic PRs", sub: "GitHub Actions authors" },
+      { val: DATA.humanPRs, label: "Human PRs", sub: "review and platform work" },
+      { val: `${DATA.closedAutomationIssues}+`, label: "Resolved Signals", sub: "API page limit reached" },
+    ];
+    for (let i = 0; i < impact.length; i++) {
+      const card = impact[i];
+      const x = 0.35 + i * 2.4;
+      s.addShape(pres.shapes.RECTANGLE, {
+        x, y: 1.15, w: 2.18, h: 1.2,
+        fill: { color: i % 2 ? C.darkBg : C.primary },
+        line: { color: i % 2 ? C.darkBg : C.primary, width: 0 },
+        shadow: mkShadowSm(),
+      });
+      s.addText(String(card.val), {
+        x: x + 0.12, y: 1.28, w: 1.94, h: 0.5,
+        fontSize: 30, fontFace: "Trebuchet MS", bold: true,
+        color: C.white, align: "center", margin: 0,
+      });
+      s.addText(card.label, {
+        x: x + 0.1, y: 1.8, w: 1.98, h: 0.25,
+        fontSize: 11.5, fontFace: "Trebuchet MS", bold: true,
+        color: C.accent, align: "center", margin: 0,
+      });
+      s.addText(card.sub, {
+        x: x + 0.1, y: 2.08, w: 1.98, h: 0.18,
+        fontSize: 8.5, fontFace: "Calibri",
+        color: C.lightTeal, align: "center", margin: 0,
+      });
+    }
+
+    s.addText("Milestones", {
+      x: 0.4, y: 2.65, w: 4.7, h: 0.35,
+      fontSize: 16, fontFace: "Trebuchet MS", bold: true,
+      color: C.primary, margin: 0,
+    });
+    const milestones = [
+      ["Feb 28", "#2 launches agentic docs-vnext workflows"],
+      ["Mar 1", "#23 removes 7% of cloud-evaluation prose"],
+      ["Mar 2", "#28 creates a 35-term glossary"],
+      ["Sep 30", "#1080 syncs and converts the upstream corpus"],
+    ];
+    milestones.forEach(([date, text], i) => {
+      const y = 3.08 + i * 0.52;
+      s.addShape(pres.shapes.OVAL, {
+        x: 0.45, y: y + 0.04, w: 0.24, h: 0.24,
+        fill: { color: C.secondary }, line: { color: C.secondary, width: 0 },
+      });
+      if (i < milestones.length - 1) {
+        s.addShape(pres.shapes.LINE, {
+          x: 0.57, y: y + 0.28, w: 0, h: 0.32,
+          line: { color: C.lightTeal, width: 2 },
+        });
+      }
+      s.addText(date, {
+        x: 0.82, y, w: 0.7, h: 0.3,
+        fontSize: 10.5, fontFace: "Trebuchet MS", bold: true,
+        color: C.primary, margin: 0,
+      });
+      s.addText(text, {
+        x: 1.48, y, w: 3.7, h: 0.34,
+        fontSize: 10.5, fontFace: "Calibri",
+        color: C.textDark, margin: 0,
+      });
+    });
+
+    s.addText("Corpus Delta", {
+      x: 5.45, y: 2.65, w: 4.1, h: 0.35,
+      fontSize: 16, fontFace: "Trebuchet MS", bold: true,
+      color: C.primary, margin: 0,
+    });
+    const deltaData = [{
+      name: "Files",
+      labels: ["Shared with docs/", "Only in docs-vnext"],
+      values: [DATA.commonFiles, DATA.vnextOnlyFiles],
+    }];
+    s.addChart(pres.charts.DOUGHNUT, deltaData, {
+      x: 5.35, y: 3.0, w: 2.5, h: 2.15,
+      holeSize: 58,
+      chartColors: [C.primary, C.accent],
+      showLegend: false,
+      showTitle: false,
+      showValue: true,
+      dataLabelColor: C.darkBg,
+      dataLabelPosition: "bestFit",
+    });
+    s.addText(`${DATA.vnextOnlyFiles} agent-created or reorganized pages`, {
+      x: 7.55, y: 3.45, w: 2.05, h: 0.55,
+      fontSize: 15, fontFace: "Trebuchet MS", bold: true,
+      color: C.secondary, margin: 0,
+    });
+    s.addText(`${DATA.commonFiles} filenames remain shared with the canonical docs/ corpus.`, {
+      x: 7.55, y: 4.18, w: 2.05, h: 0.65,
+      fontSize: 11, fontFace: "Calibri",
+      color: C.textMuted, margin: 0,
+    });
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // SLIDE 9 — Agentic Chain in Action
+  // ══════════════════════════════════════════════════════════════════════
+  {
+    const s = pres.addSlide();
+    s.background = { color: C.darkBg };
+    s.addShape(pres.shapes.RECTANGLE, {
+      x: 0, y: 0, w: 10, h: 0.25,
+      fill: { color: C.accent }, line: { color: C.accent, width: 0 },
+    });
+    s.addText("Deep Dive: Agentic Chain in Action", {
+      x: 0.4, y: 0.35, w: 9.2, h: 0.62,
+      fontSize: 36, fontFace: "Trebuchet MS", bold: true,
+      color: C.white, margin: 0,
+    });
+    s.addText("Real examples from March 5, 2026", {
+      x: 0.4, y: 0.98, w: 9.2, h: 0.3,
+      fontSize: 12, fontFace: "Calibri", color: C.accent, margin: 0,
+    });
+
+    const chain = [
+      ["1", "docs-upstream-monitor", "Detects azure-ai-docs commit 34b7019"],
+      ["2", "Issue #54", "Reports use-blocklists.mdx change in ~3 min"],
+      ["3", "sync-and-convert", "Dispatches extraction and MDX conversion"],
+      ["4", "post-sync-updater", "Analyzes delta; creates a PR or noops"],
+    ];
+    chain.forEach(([step, title, detail], i) => {
+      const x = 0.35 + i * 2.38;
+      s.addShape(pres.shapes.RECTANGLE, {
+        x, y: 1.55, w: 2.08, h: 1.65,
+        fill: { color: i % 2 ? "025E6A" : C.primary },
+        line: { color: i % 2 ? "025E6A" : C.primary, width: 0 },
+        shadow: mkShadow(),
+      });
+      s.addShape(pres.shapes.OVAL, {
+        x: x + 0.12, y: 1.7, w: 0.42, h: 0.42,
+        fill: { color: C.accent }, line: { color: C.accent, width: 0 },
+      });
+      s.addText(step, {
+        x: x + 0.12, y: 1.77, w: 0.42, h: 0.22,
+        fontSize: 12, fontFace: "Trebuchet MS", bold: true,
+        color: C.darkBg, align: "center", margin: 0,
+      });
+      s.addText(title, {
+        x: x + 0.18, y: 2.2, w: 1.72, h: 0.38,
+        fontSize: 12, fontFace: "Consolas", bold: true,
+        color: C.white, align: "center", margin: 0,
+      });
+      s.addText(detail, {
+        x: x + 0.14, y: 2.62, w: 1.8, h: 0.45,
+        fontSize: 9.5, fontFace: "Calibri",
+        color: C.lightTeal, align: "center", margin: 0,
+      });
+      if (i < chain.length - 1) {
+        s.addShape(pres.shapes.CHEVRON, {
+          x: x + 2.12, y: 2.15, w: 0.2, h: 0.42,
+          fill: { color: C.accent }, line: { color: C.accent, width: 0 },
+        });
+      }
+    });
+
+    s.addShape(pres.shapes.RECTANGLE, {
+      x: 0.35, y: 3.55, w: 9.25, h: 1.42,
+      fill: { color: "022C33" }, line: { color: C.primary, width: 1 },
+    });
+    const sdkIcon = await iconPng(FaBoxOpen, "#" + C.accent, 128);
+    s.addImage({ data: sdkIcon, x: 0.62, y: 3.88, w: 0.62, h: 0.62 });
+    s.addText("Parallel SDK release chain", {
+      x: 1.45, y: 3.78, w: 2.4, h: 0.34,
+      fontSize: 15, fontFace: "Trebuchet MS", bold: true,
+      color: C.white, margin: 0,
+    });
+    s.addText("sdk-release-monitor → Issue #53 in ~4 min", {
+      x: 1.45, y: 4.16, w: 3.15, h: 0.3,
+      fontSize: 11, fontFace: "Consolas", color: C.accent, margin: 0,
+    });
+    s.addText(
+      "Detected Java 2.0.0-beta.2; flagged Index → AIProjectIndex, DayOfWeek import changes, and removed preview constants with high/medium/low documentation impact.",
+      {
+        x: 4.65, y: 3.82, w: 4.55, h: 0.82,
+        fontSize: 11.5, fontFace: "Calibri", color: C.lightTeal, margin: 0,
+      }
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // SLIDE 10 — Content Improvements
+  // ══════════════════════════════════════════════════════════════════════
+  {
+    const s = pres.addSlide();
+    s.background = { color: C.lightBg };
+    s.addShape(pres.shapes.RECTANGLE, {
+      x: 0, y: 0, w: 10, h: 0.28,
+      fill: { color: C.secondary }, line: { color: C.secondary, width: 0 },
+    });
+    s.addText("Deep Dive: Content Improvements", {
+      x: 0.4, y: 0.38, w: 9.2, h: 0.62,
+      fontSize: 36, fontFace: "Trebuchet MS", bold: true,
+      color: C.darkBg, margin: 0,
+    });
+
+    const examples = [
+      {
+        title: "PR #28 · Glossary from zero",
+        stat: "35 terms · 16 sections · 1 run",
+        color: C.primary,
+        before: "No centralized terminology reference",
+        after: "Core Foundry, MCP, search, agent tools, evaluation, and developer tooling terms",
+      },
+      {
+        title: "PR #23 · Cloud evaluation unbloat",
+        stat: "−232 words · −29 lines · −34.5% bullets",
+        color: C.darkBg,
+        before: "Duplicate intro, four repeated tips, redundant prose, verbose bullet lists",
+        after: "Concise tables and prose while preserving code, links, callouts, and technical detail",
+      },
+    ];
+    examples.forEach((ex, i) => {
+      const x = 0.35 + i * 4.78;
+      s.addShape(pres.shapes.RECTANGLE, {
+        x, y: 1.25, w: 4.52, h: 3.9,
+        fill: { color: ex.color }, line: { color: ex.color, width: 0 },
+        shadow: mkShadow(),
+      });
+      s.addText(ex.title, {
+        x: x + 0.22, y: 1.48, w: 4.08, h: 0.45,
+        fontSize: 18, fontFace: "Trebuchet MS", bold: true,
+        color: C.white, margin: 0,
+      });
+      s.addText(ex.stat, {
+        x: x + 0.22, y: 1.98, w: 4.08, h: 0.32,
+        fontSize: 12, fontFace: "Consolas", bold: true,
+        color: C.accent, margin: 0,
+      });
+      s.addText("BEFORE", {
+        x: x + 0.22, y: 2.55, w: 0.9, h: 0.25,
+        fontSize: 10, fontFace: "Trebuchet MS", bold: true,
+        color: "FFCC66", margin: 0,
+      });
+      s.addText(ex.before, {
+        x: x + 0.22, y: 2.86, w: 4.05, h: 0.75,
+        fontSize: 12, fontFace: "Calibri", color: C.lightTeal, margin: 0,
+      });
+      s.addShape(pres.shapes.LINE, {
+        x: x + 0.22, y: 3.7, w: 4.0, h: 0,
+        line: { color: C.accent, width: 1.3, transparency: 30 },
+      });
+      s.addText("AFTER", {
+        x: x + 0.22, y: 3.88, w: 0.9, h: 0.25,
+        fontSize: 10, fontFace: "Trebuchet MS", bold: true,
+        color: C.accent, margin: 0,
+      });
+      s.addText(ex.after, {
+        x: x + 0.22, y: 4.2, w: 4.05, h: 0.72,
+        fontSize: 12, fontFace: "Calibri", color: C.white, margin: 0,
+      });
+    });
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // SLIDE 11 — Evaluation Harness Results (Dark)
   // ══════════════════════════════════════════════════════════════════════
   {
     const s = pres.addSlide();
@@ -671,7 +1018,7 @@ async function buildPresentation() {
       color: C.white, margin: 0,
     });
 
-    s.addText("300 evaluations · 4 servers · 3 frontier models · 2026-03-05", {
+    s.addText("200 evaluations · 4 servers · 2 frontier models · latest eval report #1138 · 2026-10-11", {
       x: 0.4, y: 0.98, w: 9.2, h: 0.28,
       fontSize: 11.5, fontFace: "Calibri",
       color: C.textMuted, margin: 0,
@@ -686,38 +1033,33 @@ async function buildPresentation() {
     const tableData = [
       [
         { text: "Server",               options: { bold: true, color: "FFFFFF", fill: hdrFill, align: "left" } },
-        { text: "claude-opus-4.6",      options: { bold: true, color: "FFFFFF", fill: hdrFill, align: "center" } },
-        { text: "gemini-3-pro",         options: { bold: true, color: "FFFFFF", fill: hdrFill, align: "center" } },
-        { text: "gpt-5.3-codex",        options: { bold: true, color: "FFFFFF", fill: hdrFill, align: "center" } },
+        { text: "claude-sonnet-5",      options: { bold: true, color: "FFFFFF", fill: hdrFill, align: "center" } },
+        { text: "gpt-5.4",              options: { bold: true, color: "FFFFFF", fill: hdrFill, align: "center" } },
         { text: "Avg",                  options: { bold: true, color: "FFFFFF", fill: hdrFill, align: "center" } },
       ],
       [
-        { text: "MS Learn 🥇",          options: { color: "1A2E30", fill: bodyFill } },
-        { text: "0.933",                options: { color: "1A2E30", fill: bodyFill, align: "center" } },
-        { text: "0.882",                options: { color: "1A2E30", fill: bodyFill, align: "center" } },
-        { text: "0.906",                options: { color: "1A2E30", fill: bodyFill, align: "center" } },
-        { text: "0.908",                options: { bold: true, color: "1A2E30", fill: bodyFill, align: "center" } },
-      ],
-      [
-        { text: "Mintlify MCP 🥈",      options: { color: "1A2E30", fill: bodyFill } },
-        { text: "0.949",                options: { color: "1A2E30", fill: bodyFill, align: "center" } },
-        { text: "0.868",                options: { color: "1A2E30", fill: bodyFill, align: "center" } },
-        { text: "0.905",                options: { color: "1A2E30", fill: bodyFill, align: "center" } },
-        { text: "0.908",                options: { bold: true, color: "1A2E30", fill: bodyFill, align: "center" } },
-      ],
-      [
-        { text: "docs-vnext/ 🥉",       options: { bold: true, color: C.accent, fill: vnextFill } },
-        { text: "0.927",                options: { bold: true, color: C.accent, fill: vnextFill, align: "center" } },
+        { text: "docs-vnext/ 🥇",       options: { bold: true, color: C.accent, fill: vnextFill } },
         { text: "0.879",                options: { bold: true, color: C.accent, fill: vnextFill, align: "center" } },
-        { text: "0.912",                options: { bold: true, color: C.accent, fill: vnextFill, align: "center" } },
-        { text: "0.906",                options: { bold: true, color: C.accent, fill: vnextFill, align: "center" } },
+        { text: "0.880",                options: { bold: true, color: C.accent, fill: vnextFill, align: "center" } },
+        { text: "0.880",                options: { bold: true, color: C.accent, fill: vnextFill, align: "center" } },
       ],
       [
-        { text: "docs/ (baseline)",     options: { color: "5A8087", fill: baseFill } },
-        { text: "0.924",                options: { color: "5A8087", fill: baseFill, align: "center" } },
-        { text: "0.860",                options: { color: "5A8087", fill: baseFill, align: "center" } },
-        { text: "0.931",                options: { color: "5A8087", fill: baseFill, align: "center" } },
-        { text: "0.904",                options: { color: "5A8087", fill: baseFill, align: "center" } },
+        { text: "docs/ (baseline) 🥈",  options: { color: "1A2E30", fill: bodyFill } },
+        { text: "0.783",                options: { color: "1A2E30", fill: bodyFill, align: "center" } },
+        { text: "0.755",                options: { color: "1A2E30", fill: bodyFill, align: "center" } },
+        { text: "0.769",                options: { bold: true, color: "1A2E30", fill: bodyFill, align: "center" } },
+      ],
+      [
+        { text: "MS Learn 🥉",          options: { color: "1A2E30", fill: bodyFill } },
+        { text: "0.796",                options: { color: "1A2E30", fill: bodyFill, align: "center" } },
+        { text: "0.740",                options: { color: "1A2E30", fill: bodyFill, align: "center" } },
+        { text: "0.768",                options: { bold: true, color: "1A2E30", fill: bodyFill, align: "center" } },
+      ],
+      [
+        { text: "Mintlify MCP",         options: { color: "5A8087", fill: baseFill } },
+        { text: "0.788",                options: { color: "5A8087", fill: baseFill, align: "center" } },
+        { text: "0.743",                options: { color: "5A8087", fill: baseFill, align: "center" } },
+        { text: "0.765",                options: { color: "5A8087", fill: baseFill, align: "center" } },
       ],
     ];
 
@@ -725,7 +1067,7 @@ async function buildPresentation() {
       x: 0.35, y: 1.3, w: 5.65, h: 1.9,
       fontSize: 11, fontFace: "Calibri",
       border: { type: "solid", pt: 0.5, color: "028090" },
-      colW: [1.8, 0.97, 0.97, 0.97, 0.94],
+      colW: [2.05, 1.2, 1.2, 1.2],
     });
 
     // ── Hypothesis results ────────────────────────────────────────────────
@@ -736,10 +1078,10 @@ async function buildPresentation() {
     });
 
     const hyps = [
-      { id: "H1", badge: "⚠️ MARGINAL", detail: "docs-vnext (0.906) vs docs/ (0.904), δ=+0.002",  badgeColor: "C9A800" },
-      { id: "H2", badge: "❌ REJECTED",  detail: "vs Mintlify MCP (0.908), δ=−0.002",              badgeColor: "C04040" },
-      { id: "H3", badge: "❌ REJECTED",  detail: "vs MS Learn (0.908), δ=−0.002",                  badgeColor: "C04040" },
-      { id: "H4", badge: "⚠️ MIXED",     detail: "Rankings vary: gpt-5.3 ranks docs-vnext 2nd",   badgeColor: "C9A800" },
+      { id: "H1", badge: "SUPPORTED", detail: "docs-vnext 0.880 vs docs/ 0.769, delta +0.111", badgeColor: C.accent },
+      { id: "H2", badge: "SUPPORTED", detail: "docs-vnext beats Mintlify by +0.115", badgeColor: C.accent },
+      { id: "H3", badge: "SUPPORTED", detail: "docs-vnext beats MS Learn by +0.112", badgeColor: C.accent },
+      { id: "H4", badge: "MIXED", detail: "docs-vnext leads both; control ranking varies", badgeColor: "C9A800" },
     ];
 
     for (let i = 0; i < hyps.length; i++) {
@@ -776,11 +1118,11 @@ async function buildPresentation() {
     });
 
     const cats = [
-      { name: "agent-development",   vnext: 0.971, docs: 0.962, lead: true  },
-      { name: "getting-started",     vnext: 0.887, docs: 0.867, lead: true  },
-      { name: "infra-security",      vnext: 0.927, docs: 0.918, lead: true  },
-      { name: "observability",       vnext: 0.802, docs: 0.829, lead: false },
-      { name: "sdk-api",             vnext: 0.947, docs: 0.947, lead: false },
+      { name: "agent-development",   vnext: 0.812, docs: 0.677, lead: true },
+      { name: "getting-started",     vnext: 0.853, docs: 0.763, lead: true },
+      { name: "infra-security",      vnext: 0.960, docs: 0.680, lead: true },
+      { name: "observability",       vnext: 0.800, docs: 0.763, lead: true },
+      { name: "sdk-api",             vnext: 0.973, docs: 0.960, lead: true },
     ];
 
     const barMaxW = 3.1;
@@ -824,7 +1166,7 @@ async function buildPresentation() {
       line: { color: C.primary, transparency: 70, width: 0 },
     });
     s.addText(
-      "docs-vnext leads in agent-development (0.971) and getting-started (0.887) — areas benefiting most from Mintlify MDX enhancements",
+      "docs-vnext leads every category; the largest gains are infrastructure-security (+0.280) and agent-development (+0.135)",
       {
         x: 0.4, y: 5.24, w: 9.2, h: 0.35,
         fontSize: 10.5, fontFace: "Calibri", italic: true,
@@ -863,16 +1205,16 @@ async function buildPresentation() {
       },
       {
         icon: FaUsers,
-        title: "Discussion Feedback Responder",
-        repo: "issue_comment events",
-        desc: "Automatically responds to discussions referencing documentation gaps. Surfaces the most relevant docs and flags content needing improvement.",
+        title: "Foundry Samples Signals",
+        repo: "microsoft-foundry/foundry-samples",
+        desc: "The daily updater searches sample-repository issues for documentation requests, broken guidance, and examples that should be reflected in docs-vnext.",
         color: C.darkBg,
       },
       {
-        icon: FaBug,
-        title: "Auto-Triage Issues",
-        repo: "issues: opened, labeled",
-        desc: "Labels and triages new GitHub issues, routing documentation bugs to the appropriate agent workflows. Integrates with label-ops for structured labeling.",
+        icon: FaComments,
+        title: "Reddit Community Signals",
+        repo: "Devvit → repository_dispatch",
+        desc: "Reddit mentions are classified as documentation gaps, errors, or recurring questions. Genuine gaps become actionable issues; irrelevant signals noop.",
         color: C.secondary,
       },
     ];
@@ -1006,6 +1348,15 @@ async function buildPresentation() {
         color: C.accent, align: "center", margin: 0,
       });
     }
+
+    s.addText(
+      "Example: Issue #53 detected Java 2.0.0-beta.2 and identified three breaking-change documentation impacts in about four minutes.",
+      {
+        x: 0.4, y: 5.08, w: 9.2, h: 0.3,
+        fontSize: 10.5, fontFace: "Calibri", italic: true,
+        color: C.accent, align: "center", margin: 0,
+      }
+    );
   }
 
   // ══════════════════════════════════════════════════════════════════════
@@ -1030,10 +1381,10 @@ async function buildPresentation() {
     const metrics = [
       { val: `${DATA.mdxDocs}`,           label: "MDX Pages",            sub: "in docs-vnext/",            icon: FaFileAlt },
       { val: `${DATA.agenticWorkflows}`,  label: "Agentic Workflows",    sub: ".md definitions",           icon: FaRobot },
-      { val: `${DATA.docSections}`,       label: "Doc Sections",         sub: "topic areas covered",       icon: FaList },
+      { val: `${DATA.mergedDocsVnextPRs}`,label: "Merged vnext PRs",      sub: `${DATA.agenticPRs} agentic · ${DATA.humanPRs} human`, icon: FaCodeBranch },
       { val: `${DATA.slashCommands}`,     label: "Slash Commands",       sub: "/audit /unbloat /sdk-check…", icon: FaBolt },
-      { val: `${DATA.sdkRepos}`,          label: "SDK Repos Tracked",    sub: "Python · JS · .NET · Java", icon: FaCode },
-      { val: `${DATA.scheduleWorkflows}`, label: "Scheduled Jobs",       sub: "daily/weekly cron",         icon: FaTachometerAlt },
+      { val: `${DATA.vnextOnlyFiles}`,    label: "vnext-Only Pages",      sub: `${DATA.commonFiles} filenames shared with docs/`, icon: FaFileAlt },
+      { val: "0.880",                     label: "Latest Eval Score",     sub: "+0.111 over docs/ baseline", icon: FaChartBar },
     ];
 
     const mW = 2.9, mH = 2.15;
@@ -1103,12 +1454,12 @@ async function buildPresentation() {
     });
 
     const roadmap = [
-      { icon: FaGlobe,        item: "Structured overview page generated from agent-surfaced coverage gaps" },
-      { icon: FaChartBar,     item: "Search quality dashboard — track MRR/NDCG trends over time" },
-      { icon: FaRocket,       item: "Proactive gap filling — auto-draft missing pages from upstream signals" },
-      { icon: FaSync,         item: "Docs-vnext → Mintlify deployment via GitHub Pages or Vercel" },
-      { icon: FaShieldAlt,    item: "Responsible AI guardrails section expansion with worked examples" },
-      { icon: MdOutlineMonitor, item: "Real-time ops dashboard embedding MCP server telemetry" },
+      { icon: MdOutlineMonitor, item: "Improve observability and evaluation coverage — the lowest-scoring content category" },
+      { icon: FaCodeBranch,     item: "Increase the agentic PR merge rate while preserving human review gates" },
+      { icon: FaFlask,          item: "Expand evaluation scenarios, model coverage, and regression thresholds" },
+      { icon: FaChartBar,       item: "Track quality, latency, tool calls, and error trends across eval runs" },
+      { icon: FaRocket,         item: "Turn upstream, SDK, sample, and community signals into targeted drafts" },
+      { icon: FaShieldAlt,      item: "Continue consolidation so fewer workflows cover more maintenance paths" },
     ];
 
     for (let i = 0; i < roadmap.length; i++) {
